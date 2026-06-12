@@ -100,16 +100,16 @@
 
 ## 5. Structure de la Base de Données
 
-### PostgreSQL (Données relationnelles — 12 entités)
+### PostgreSQL (Données relationnelles — 10 entités)
 
 ```
 users                    (auth, rôles, status, tokens)
   ├── eco_travelers      (profils voyageurs, scores, préférences)
   ├── guides             (profils guides, spécialités, expérience)
-  │     └── offers       (offres éco-touristiques des guides)
   └── project_owners     (profils propriétaires, organisation)
-        ├── projects     (projets éco-touristiques CRUD)
-        └── offers       (offres éco-touristiques des propriétaires)
+
+project_owners
+  └── projects           (projets éco-touristiques CRUD)
 
 questionnaires            (questionnaires par type)
   └── questions            (questions avec poids)
@@ -121,7 +121,7 @@ questionnaire_attempts     (tentatives de l'utilisateur)
   └── user_answers         (réponses données)
 ```
 
-### MongoDB (Données NoSQL — 6 collections)
+### MongoDB (Données NoSQL — 5 collections)
 
 | Collection | Usage |
 |---|---|
@@ -129,7 +129,6 @@ questionnaire_attempts     (tentatives de l'utilisateur)
 | `traveler_engagement` | Engagement voyageur (score, badges, stats) |
 | `guide_skills` | Compétences guide (activités, paysages, certifications) |
 | `guide_engagement` | Engagement guide (score, badges, stats) |
-| `project_engagement` | Engagement propriétaire (score, badges, réservations) |
 | `project_services` | Services des projets éco (offerts, pratiques) |
 
 ---
@@ -394,7 +393,7 @@ Le panneau d'administration permet de gérer l'ensemble du contenu soumis.
 | **Signalements** | Résoudre les signalements (bannissement) |
 | **Utilisateurs** | Bannir / Débannir |
 
-### 12.3 Système de signalement
+### 12.3 Systeme de signalement
 Tout utilisateur peut signaler un contenu inapproprié. L'admin examine et peut bannir l'utilisateur (temporairement ou définitivement). Un email est envoyé automatiquement lors du bannissement/débannissement.
 
 ---

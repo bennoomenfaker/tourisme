@@ -30,7 +30,7 @@
 | **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
 | **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
 | **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
-| **Upload** | Upload d'images vers MinIO (S3-compatible) |
+| **Upload** | Upload d'images avec compression et stockage |
 | **Authentification Google** | Google OAuth2 avec redirect + création de compte auto |
 | **Swagger API** | Documentation auto-générée de l'API |
 
@@ -39,18 +39,17 @@
 ## 3. Architecture Technique
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  Docker Compose                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌───────────┐  ┌──────┐ │
-│  │ PostgreSQL 15 │  │  MongoDB 7   │  │  MinIO   │  │ NestJS    │  │Next.js│ │
-│  │  (relationnel)│  │  (NoSQL)     │  │ S3:9000  │  │ API:3003  │  │:3004  │ │
-│  │               │  │              │  │ Web:9001 │  │           │  │       │ │
-│  └──────────────┘  └──────────────┘  └───────────┘  └─────┬─────┘  └──┬───┘ │
-│         ▲                  ▲              ▲               │            │      │
-│         │                  │              │               │  HTTP API  │      │
-│         └──────────────────┴──────────────┴───────────────┘────────────┘      │
-│                          réseau interne tourisme_net                        │
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Docker Compose                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌──────┐ │
+│  │ PostgreSQL 15 │  │  MongoDB 7   │  │ NestJS   │  │Next.js│ │
+│  │  (relationnel)│  │  (NoSQL)     │  │ API:3003 │  │:3004  │ │
+│  └──────────────┘  └──────────────┘  └────┬─────┘  └──┬───┘ │
+│         ▲                  ▲              │            │      │
+│         │                  │              │  HTTP API  │      │
+│         └──────────────────┴──────────────┘────────────┘      │
+│                    réseau interne tourisme_net                │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -91,10 +90,9 @@
 
 | Technologie | Usage |
 |---|---|
-| **Docker** + **Docker Compose** | Conteneurisation (5 services : db, mongo, minio, api, web) |
-| **MinIO** | Stockage S3-compatible (images uploadées), console web sur `:9001` |
+| **Docker** + **Docker Compose** | Conteneurisation (4 services : db, mongo, api, web) |
 | **Réseau** | `tourisme_net` (external) |
-| **Ports exposés** | MinIO API sur `9000`, MinIO Console sur `9001`, API sur `3003`, Frontend sur `3004` |
+| **Ports exposés** | API sur `3003`, Frontend sur `3004` |
 
 ---
 
@@ -161,8 +159,7 @@ src/
 ├── follow/           Système d'abonnement entre utilisateurs
 ├── reports/          Signalements et modération
 ├── admin/            Panneau d'administration (validation, bannissement)
-├── storage/          Service MinIO (S3-compatible, upload/suppression d'images)
-├── upload/           Upload d'images (utilise StorageService)
+├── upload/           Upload d'images
 ├── mail/             Service d'envoi d'emails (Nodemailer)
 ├── config/           Configuration (env vars, validation Joi)
 ├── database/         Connexions DB (TypeORM + Mongoose)
@@ -347,7 +344,7 @@ Messagerie interne entre utilisateurs avec système de **conversations**.
 | `POST` | `/api/messages` | Envoyer un message |
 
 ### 10.4 Use cases
-- 🧳 **Voyageur** : Contacte un guide ou propriétaire pour réserver
+- 🧳 **Voyageur** : Contacte un guide ou propriétaire
 - 🗺️ **Guide** : Répond aux voyageurs, contacte propriétaires
 - 🏗️ **Propriétaire** : Répond aux voyageurs et guides
 
@@ -356,7 +353,7 @@ Messagerie interne entre utilisateurs avec système de **conversations**.
 ## 11. Système de Follow (Abonnements)
 
 ### 11.1 Concept
-Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaires) pour rester informés.
+Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaires).
 
 ### 11.2 Règles de follow
 | Followeur | Followé |
@@ -392,10 +389,7 @@ Le panneau d'administration permet de gérer l'ensemble du contenu soumis.
 | **Projets** | Approuver / Refuser les projets |
 | **Publications** | Approuver / Refuser les places partagées |
 | **Signalements** | Résoudre les signalements (bannissement) |
-| **Utilisateurs** | Bannir / Débannir |
-
-### 12.3 Système de signalement
-Tout utilisateur peut signaler un contenu inapproprié. L'admin examine et peut bannir l'utilisateur (temporairement ou définitivement). Un email est envoyé automatiquement lors du bannissement/débannissement.
+| **Utilisateurs** | Bannir / Débannir (temporaire ou permanent, email automatique) |
 
 ---
 
@@ -439,6 +433,14 @@ Niveaux :
 | `/dashboard/ecovoyageur` | Dashboard voyageur |
 | `/dashboard/guide` | Dashboard guide |
 | `/dashboard/project-owner` | Dashboard propriétaire |
+| `/destinations` | Vitrine publique des offres avec filtres et carte |
+| `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
+| `/messagerie` | Messagerie privée |
+| `/profile/ecovoyageur` | Profil public voyageur |
+| `/profile/ecovoyageur/[userId]` | Profil public voyageur (dynamique) |
+| `/profile/guide` | Profil public guide |
+| `/profile/project-owner` | Profil public propriétaire |
+| `/profile/project-owner/[userId]` | Profil public propriétaire (dynamique) |
 | `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
 | `/messagerie` | Messagerie privée |
@@ -496,41 +498,11 @@ Niveaux :
 ## 16. Déploiement
 
 L'infrastructure est **100% Docker** :
-- `docker compose up` démarre les 5 services (db, mongo, minio, api, web)
+- `docker compose up` démarre les 4 services
 - Le réseau `tourisme_net` doit être créé au préalable (`external: true`)
 - Variables d'environnement dans `.env` / `.env.production`
 - Adresse de prod frontend : `http://91.134.139.163:3004`
 - Adresse de prod API : `http://91.134.139.163:3003/api`
-
-### MinIO (Stockage d'images)
-
-MinIO est un stockage S3-compatible auto-hébergé. Il remplace Cloudinary.
-
-**Accès :**
-| Environnement | API S3 | Console Web |
-|---|---|---|
-| Développement | `http://localhost:9000` | `http://localhost:9001` |
-| Production | `http://91.134.139.163:9000` | `http://91.134.139.163:9001` |
-
-**Identifiants par défaut :** `minioadmin` / `minioadmin`
-
-**Bucket utilisé :** `eco-tourism` (créé automatiquement au démarrage de l'API)
-
-**Fonctionnement :**
-1. L'utilisateur upload une image via `POST /api/upload` (auth requis)
-2. L'API sauvegarde le fichier dans MinIO avec un nom unique (UUID)
-3. L'API retourne l'URL publique de l'image
-4. Pour supprimer : `UploadService.deleteByUrl(url)`
-
-**Variables d'environnement :**
-
-```
-MINIO_ENDPOINT=http://minio:9000    # Interne (API → MinIO)
-MINIO_PUBLIC_URL=http://localhost:9000  # Publique (retournée au frontend)
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=eco-tourism
-```
 
 ---
 
