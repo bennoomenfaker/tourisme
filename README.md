@@ -30,7 +30,7 @@
 | **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
 | **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
 | **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
-| **Upload** | Upload d'images vers MinIO (S3-compatible) |
+| **Upload** | Upload d'images vers Cloudinary |
 | **Authentification Google** | Google OAuth2 avec redirect + création de compte auto |
 | **Swagger API** | Documentation auto-générée de l'API |
 
@@ -92,9 +92,9 @@
 | Technologie | Usage |
 |---|---|
 | **Docker** + **Docker Compose** | Conteneurisation (5 services : db, mongo, minio, api, web) |
-| **MinIO** | Stockage S3-compatible (images uploadées), console web sur `:9001` |
+| **Cloudinary** | Stockage d'images en cloud (upload via SDK cloudinary) |
 | **Réseau** | `tourisme_net` (external) |
-| **Ports exposés** | MinIO API sur `9000`, MinIO Console sur `9001`, API sur `3003`, Frontend sur `3004` |
+| **Ports exposés** | API sur `3003`, Frontend sur `3004` |
 
 ---
 
@@ -159,10 +159,10 @@ src/
 ├── publication/      Publications sociales (places, expériences, likes, commentaires)
 ├── messages/         Messagerie privée (conversations, blocage)
 ├── follow/           Système d'abonnement entre utilisateurs
+├── interactions/     Likes et commentaires génériques (multi-entités)
 ├── reports/          Signalements et modération
 ├── admin/            Panneau d'administration (validation, bannissement)
-├── storage/          Service MinIO (S3-compatible, upload/suppression d'images)
-├── upload/           Upload d'images (utilise StorageService)
+├── upload/           Upload d'images (Cloudinary)
 ├── mail/             Service d'envoi d'emails (Nodemailer)
 ├── config/           Configuration (env vars, validation Joi)
 ├── database/         Connexions DB (TypeORM + Mongoose)
@@ -502,34 +502,22 @@ L'infrastructure est **100% Docker** :
 - Adresse de prod frontend : `http://91.134.139.163:3004`
 - Adresse de prod API : `http://91.134.139.163:3003/api`
 
-### MinIO (Stockage d'images)
+### Cloudinary (Stockage d'images)
 
-MinIO est un stockage S3-compatible auto-hébergé. Il remplace Cloudinary.
-
-**Accès :**
-| Environnement | API S3 | Console Web |
-|---|---|---|
-| Développement | `http://localhost:9000` | `http://localhost:9001` |
-| Production | `http://91.134.139.163:9000` | `http://91.134.139.163:9001` |
-
-**Identifiants par défaut :** `minioadmin` / `minioadmin`
-
-**Bucket utilisé :** `eco-tourism` (créé automatiquement au démarrage de l'API)
+Le projet utilise **Cloudinary** comme service de stockage d'images.
 
 **Fonctionnement :**
-1. L'utilisateur upload une image via `POST /api/upload` (auth requis)
-2. L'API sauvegarde le fichier dans MinIO avec un nom unique (UUID)
-3. L'API retourne l'URL publique de l'image
-4. Pour supprimer : `UploadService.deleteByUrl(url)`
+1. L'utilisateur upload une image via `POST /api/upload` (auth requis, multer, limite 10MB)
+2. L'API téléverse le fichier vers Cloudinary via `cloudinary.uploader.upload_stream()` dans le dossier `eco-tourism`
+3. L'API retourne l'URL sécurisée Cloudinary
+4. Pour supprimer : `UploadService.deleteByUrl(url)` — extrait le public_id et appelle `cloudinary.uploader.destroy()`
 
 **Variables d'environnement :**
 
 ```
-MINIO_ENDPOINT=http://minio:9000    # Interne (API → MinIO)
-MINIO_PUBLIC_URL=http://localhost:9000  # Publique (retournée au frontend)
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=eco-tourism
+CLOUDINARY_CLOUD_NAME=votre_cloud
+CLOUDINARY_API_KEY=votre_api_key
+CLOUDINARY_API_SECRET=votre_api_secret
 ```
 
 ---
@@ -547,3 +535,68 @@ MINIO_BUCKET=eco-tourism
 - **Authentification avec refresh token rotation** (sécurité renforcée)
 - **Modules sociaux complets :** Publications (places/expériences), Messagerie privée, Follow, Signalements
 - **Panneau Admin :** validation offres/projets/publications, gestion des signalements, bannissement
+
+---
+
+## 18. Structure Git & Workflow
+
+### Dépôts GitHub
+
+| Dépôt | URL | Branche principale |
+|---|---|---|
+| **tourisme** (root) | `github.com/bennoomenfaker/tourisme` | `main` |
+| **frontend** (sous-module) | `github.com/Maram172003/eco-tourism-platform-front` | `Faker` |
+| **backend** (sous-module) | `github.com/Maram172003/eco-tourism-platform-backend` | `Faker` |
+
+### Structure
+
+```
+tourisme/                          # Root repo (bennoomenfaker)
+├── docker-compose.yml
+├── README.md
+├── frontend/                      # Sous-module → Maram172003/eco-tourism-platform-front (branche Faker)
+└── backend/                       # Sous-module → Maram172003/eco-tourism-platform-backend (branche Faker)
+```
+
+### Commandes essentielles
+
+```bash
+# Cloner le projet complet (avec les sous-modules)
+git clone --recurse-submodules https://github.com/bennoomenfaker/tourisme.git
+
+# Mettre à jour le root repo
+git pull
+
+# Mettre à jour les sous-modules (frontend + backend) vers leur dernier commit
+git submodule update --remote
+
+# Travailler sur le frontend
+cd frontend
+git checkout Faker
+# ... modifications ...
+git add .
+git commit -m "..."
+git push origin Faker
+
+# Travailler sur le backend
+cd backend
+git checkout Faker
+# ... modifications ...
+git add .
+git commit -m "..."
+git push origin Faker
+
+# Revenir au root et commit la nouvelle référence des sous-modules
+cd ..
+git add frontend backend
+git commit -m "Update submodules"
+git push
+```
+
+### Synchronisation
+
+Les 3 dépôts sont indépendants mais liés par le sous-module :
+
+1. **Frontend/Backend** → modifications sur la branche `Faker` → push vers Maram's repo
+2. **Root tourisme** → référence le commit des sous-modules → push vers bennoomenfaker
+3. Pour garder tout à jour : `git pull && git submodule update --remote`
