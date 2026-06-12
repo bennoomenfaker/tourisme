@@ -39,18 +39,17 @@
 ## 3. Architecture Technique
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  Docker Compose                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌───────────┐  ┌──────┐ │
-│  │ PostgreSQL 15 │  │  MongoDB 7   │  │  MinIO   │  │ NestJS    │  │Next.js│ │
-│  │  (relationnel)│  │  (NoSQL)     │  │ S3:9000  │  │ API:3003  │  │:3004  │ │
-│  │               │  │              │  │ Web:9001 │  │           │  │       │ │
-│  └──────────────┘  └──────────────┘  └───────────┘  └─────┬─────┘  └──┬───┘ │
-│         ▲                  ▲              ▲               │            │      │
-│         │                  │              │               │  HTTP API  │      │
-│         └──────────────────┴──────────────┴───────────────┘────────────┘      │
-│                          réseau interne tourisme_net                        │
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Docker Compose                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐  ┌──────┐ │
+│  │ PostgreSQL 15 │  │  MongoDB 7   │  │ NestJS    │  │Next.js│ │
+│  │  (relationnel)│  │  (NoSQL)     │  │ API:3003  │  │:3004  │ │
+│  └──────────────┘  └──────────────┘  └─────┬─────┘  └──┬───┘ │
+│         ▲                  ▲               │            │      │
+│         │                  │               │  HTTP API  │      │
+│         └──────────────────┴───────────────┘────────────┘      │
+│                    réseau interne tourisme_net                 │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -91,7 +90,7 @@
 
 | Technologie | Usage |
 |---|---|
-| **Docker** + **Docker Compose** | Conteneurisation (5 services : db, mongo, minio, api, web) |
+| **Docker** + **Docker Compose** | Conteneurisation (4 services : db, mongo, api, web + minio unused) |
 | **Cloudinary** | Stockage d'images en cloud (upload via SDK cloudinary) |
 | **Réseau** | `tourisme_net` (external) |
 | **Ports exposés** | API sur `3003`, Frontend sur `3004` |
@@ -436,9 +435,8 @@ Niveaux :
 | `/questionnaire/guide` | QCM durabilité guide |
 | `/questionnaire/project-owner` | QCM durabilité propriétaire |
 | `/dashboard` | Dashboard générique |
-| `/dashboard/ecovoyageur` | Dashboard voyageur |
-| `/dashboard/guide` | Dashboard guide |
-| `/dashboard/project-owner` | Dashboard propriétaire |
+| `/dashboard/profile` | Profil / paramètres |
+| `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
 | `/messagerie` | Messagerie privée |
@@ -496,7 +494,7 @@ Niveaux :
 ## 16. Déploiement
 
 L'infrastructure est **100% Docker** :
-- `docker compose up` démarre les 5 services (db, mongo, minio, api, web)
+- `docker compose up` démarre les services (db, mongo, api, web ; minio présent mais non utilisé — images via Cloudinary)
 - Le réseau `tourisme_net` doit être créé au préalable (`external: true`)
 - Variables d'environnement dans `.env` / `.env.production`
 - Adresse de prod frontend : `http://91.134.139.163:3004`

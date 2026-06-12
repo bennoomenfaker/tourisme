@@ -409,8 +409,8 @@ Composant **lecture seule** pour afficher un marqueur sur une carte.
 
 ### Upload
 - Module : `backend/src/upload/`
-- External service : Cloudinary
-- Champs : `image` (multer), retourne URL de l'image uploadée
+- Service : Cloudinary (via multer + `cloudinary.uploader.upload_stream`)
+- Champs : `image` (multer, limite 10MB), retourne l'URL sécurisée Cloudinary
 
 ### Notifications & Modération Admin
 - Les projets/offres en `pending` apparaissent dans le panneau admin

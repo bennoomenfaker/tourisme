@@ -1017,9 +1017,8 @@ questionnaire_attempts
 | `/questionnaire/guide` | QCM durabilité guide (10 questions) |
 | `/questionnaire/project-owner` | QCM durabilité propriétaire (10 questions) |
 | `/dashboard` | Dashboard générique |
-| `/dashboard/ecovoyageur` | Dashboard voyageur |
-| `/dashboard/guide` | Dashboard guide |
-| `/dashboard/project-owner` | Dashboard propriétaire |
+| `/dashboard/profile` | Profil / paramètres |
+| `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
 | `/messagerie` | Messagerie privée |
@@ -1047,7 +1046,8 @@ src/
 ├── follow/           Système d'abonnement entre utilisateurs
 ├── reports/          Signalements et modération
 ├── admin/            Panneau d'administration (validation offres/projets/pubs, bannissement)
-├── upload/           Upload d'images
+├── interactions/     Likes et commentaires génériques (multi-entités)
+├── upload/           Upload d'images (Cloudinary)
 ├── mail/             Service d'envoi d'emails (Nodemailer, SMTP Gmail)
 ├── config/           Configuration (env vars, validation Joi)
 ├── database/         Connexions DB (TypeORM + Mongoose)
@@ -1065,7 +1065,7 @@ docker network create tourisme_net
 docker compose up -d
 ```
 
-4 services : `db` (PostgreSQL), `mongo` (MongoDB), `api` (NestJS), `web` (Next.js)
+5 services : `db` (PostgreSQL), `mongo` (MongoDB), `api` (NestJS), `web` (Next.js) + minio (S3, inutilisé — images via Cloudinary)
 
 ### Ports
 

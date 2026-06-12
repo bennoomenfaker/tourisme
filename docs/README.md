@@ -30,7 +30,7 @@
 | **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
 | **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
 | **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
-| **Upload** | Upload d'images vers MinIO (S3-compatible) |
+| **Upload** | Upload d'images vers Cloudinary |
 | **Authentification Google** | Google OAuth2 avec redirect + création de compte auto |
 | **Swagger API** | Documentation auto-générée de l'API |
 
@@ -39,18 +39,17 @@
 ## 3. Architecture Technique
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  Docker Compose                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌───────────┐  ┌──────┐ │
-│  │ PostgreSQL 15 │  │  MongoDB 7   │  │  MinIO   │  │ NestJS    │  │Next.js│ │
-│  │  (relationnel)│  │  (NoSQL)     │  │ S3:9000  │  │ API:3003  │  │:3004  │ │
-│  │               │  │              │  │ Web:9001 │  │           │  │       │ │
-│  └──────────────┘  └──────────────┘  └───────────┘  └─────┬─────┘  └──┬───┘ │
-│         ▲                  ▲              ▲               │            │      │
-│         │                  │              │               │  HTTP API  │      │
-│         └──────────────────┴──────────────┴───────────────┘────────────┘      │
-│                          réseau interne tourisme_net                        │
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Docker Compose                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐  ┌──────┐ │
+│  │ PostgreSQL 15 │  │  MongoDB 7   │  │ NestJS    │  │Next.js│ │
+│  │  (relationnel)│  │  (NoSQL)     │  │ API:3003  │  │:3004  │ │
+│  └──────────────┘  └──────────────┘  └─────┬─────┘  └──┬───┘ │
+│         ▲                  ▲               │            │      │
+│         │                  │               │  HTTP API  │      │
+│         └──────────────────┴───────────────┘────────────┘      │
+│                    réseau interne tourisme_net                 │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -91,10 +90,10 @@
 
 | Technologie | Usage |
 |---|---|
-| **Docker** + **Docker Compose** | Conteneurisation (5 services : db, mongo, minio, api, web) |
-| **MinIO** | Stockage S3-compatible (images uploadées), console web sur `:9001` |
+| **Docker** + **Docker Compose** | Conteneurisation (4 services : db, mongo, api, web + minio unused) |
+| **Cloudinary** | Stockage d'images en cloud (upload via SDK cloudinary) |
 | **Réseau** | `tourisme_net` (external) |
-| **Ports exposés** | MinIO API sur `9000`, MinIO Console sur `9001`, API sur `3003`, Frontend sur `3004` |
+| **Ports exposés** | API sur `3003`, Frontend sur `3004` |
 
 ---
 
@@ -160,8 +159,8 @@ src/
 ├── follow/           Système d'abonnement entre utilisateurs
 ├── reports/          Signalements et modération
 ├── admin/            Panneau d'administration (validation, bannissement)
-├── storage/          Service MinIO (S3-compatible, upload/suppression d'images)
-├── upload/           Upload d'images (utilise StorageService)
+├── interactions/     Likes et commentaires génériques (multi-entités)
+├── upload/           Upload d'images (Cloudinary)
 ├── mail/             Service d'envoi d'emails (Nodemailer)
 ├── config/           Configuration (env vars, validation Joi)
 ├── database/         Connexions DB (TypeORM + Mongoose)
@@ -435,9 +434,8 @@ Niveaux :
 | `/questionnaire/guide` | QCM durabilité guide |
 | `/questionnaire/project-owner` | QCM durabilité propriétaire |
 | `/dashboard` | Dashboard générique |
-| `/dashboard/ecovoyageur` | Dashboard voyageur |
-| `/dashboard/guide` | Dashboard guide |
-| `/dashboard/project-owner` | Dashboard propriétaire |
+| `/dashboard/profile` | Profil / paramètres |
+| `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
 | `/messagerie` | Messagerie privée |
@@ -495,40 +493,28 @@ Niveaux :
 ## 16. Déploiement
 
 L'infrastructure est **100% Docker** :
-- `docker compose up` démarre les 5 services (db, mongo, minio, api, web)
+- `docker compose up` démarre les services (db, mongo, api, web ; minio présent mais non utilisé — images via Cloudinary)
 - Le réseau `tourisme_net` doit être créé au préalable (`external: true`)
 - Variables d'environnement dans `.env` / `.env.production`
 - Adresse de prod frontend : `http://91.134.139.163:3004`
 - Adresse de prod API : `http://91.134.139.163:3003/api`
 
-### MinIO (Stockage d'images)
+### Cloudinary (Stockage d'images)
 
-MinIO est un stockage S3-compatible auto-hébergé. Il remplace Cloudinary.
-
-**Accès :**
-| Environnement | API S3 | Console Web |
-|---|---|---|
-| Développement | `http://localhost:9000` | `http://localhost:9001` |
-| Production | `http://91.134.139.163:9000` | `http://91.134.139.163:9001` |
-
-**Identifiants par défaut :** `minioadmin` / `minioadmin`
-
-**Bucket utilisé :** `eco-tourism` (créé automatiquement au démarrage de l'API)
+Le projet utilise **Cloudinary** comme service de stockage d'images.
 
 **Fonctionnement :**
-1. L'utilisateur upload une image via `POST /api/upload` (auth requis)
-2. L'API sauvegarde le fichier dans MinIO avec un nom unique (UUID)
-3. L'API retourne l'URL publique de l'image
-4. Pour supprimer : `UploadService.deleteByUrl(url)`
+1. L'utilisateur upload une image via `POST /api/upload` (auth requis, multer, limite 10MB)
+2. L'API téléverse le fichier vers Cloudinary via `cloudinary.uploader.upload_stream()` dans le dossier `eco-tourism`
+3. L'API retourne l'URL sécurisée Cloudinary
+4. Pour supprimer : `UploadService.deleteByUrl(url)` — extrait le public_id et appelle `cloudinary.uploader.destroy()`
 
 **Variables d'environnement :**
 
 ```
-MINIO_ENDPOINT=http://minio:9000    # Interne (API → MinIO)
-MINIO_PUBLIC_URL=http://localhost:9000  # Publique (retournée au frontend)
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=eco-tourism
+CLOUDINARY_CLOUD_NAME=votre_cloud
+CLOUDINARY_API_KEY=votre_api_key
+CLOUDINARY_API_SECRET=votre_api_secret
 ```
 
 ---

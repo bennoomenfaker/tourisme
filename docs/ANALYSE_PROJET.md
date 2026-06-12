@@ -30,7 +30,7 @@
 | **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
 | **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
 | **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
-| **Upload** | Upload d'images avec compression et stockage |
+| **Upload** | Upload d'images vers Cloudinary |
 | **Authentification Google** | Google OAuth2 avec redirect + création de compte auto |
 | **Swagger API** | Documentation auto-générée de l'API |
 
@@ -90,7 +90,8 @@
 
 | Technologie | Usage |
 |---|---|
-| **Docker** + **Docker Compose** | Conteneurisation (4 services : db, mongo, api, web) |
+| **Docker** + **Docker Compose** | Conteneurisation (4 services : db, mongo, api, web + minio unused) |
+| **Cloudinary** | Stockage d'images en cloud |
 | **Réseau** | `tourisme_net` (external) |
 | **Ports exposés** | API sur `3003`, Frontend sur `3004` |
 
@@ -159,7 +160,8 @@ src/
 ├── follow/           Système d'abonnement entre utilisateurs
 ├── reports/          Signalements et modération
 ├── admin/            Panneau d'administration (validation, bannissement)
-├── upload/           Upload d'images
+├── upload/           Upload d'images (Cloudinary)
+├── interactions/     Likes et commentaires génériques (multi-entités)
 ├── mail/             Service d'envoi d'emails (Nodemailer)
 ├── config/           Configuration (env vars, validation Joi)
 ├── database/         Connexions DB (TypeORM + Mongoose)
@@ -430,9 +432,8 @@ Niveaux :
 | `/questionnaire/guide` | QCM durabilité guide |
 | `/questionnaire/project-owner` | QCM durabilité propriétaire |
 | `/dashboard` | Dashboard générique |
-| `/dashboard/ecovoyageur` | Dashboard voyageur |
-| `/dashboard/guide` | Dashboard guide |
-| `/dashboard/project-owner` | Dashboard propriétaire |
+| `/dashboard/profile` | Profil / paramètres |
+| `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/destinations` | Vitrine publique des offres avec filtres et carte |
 | `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
 | `/messagerie` | Messagerie privée |
@@ -498,7 +499,7 @@ Niveaux :
 ## 16. Déploiement
 
 L'infrastructure est **100% Docker** :
-- `docker compose up` démarre les 4 services
+- `docker compose up` démarre les services (db, mongo, api, web ; minio présent mais non utilisé — images via Cloudinary)
 - Le réseau `tourisme_net` doit être créé au préalable (`external: true`)
 - Variables d'environnement dans `.env` / `.env.production`
 - Adresse de prod frontend : `http://91.134.139.163:3004`

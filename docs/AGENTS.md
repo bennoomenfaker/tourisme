@@ -23,12 +23,11 @@ Both use **Yarn** (not npm). No test framework in frontend.
 
 ## Docker
 
-5 services orchestrated by `docker-compose.yml`: db (PostgreSQL 15), mongo (MongoDB 7), minio (S3-compatible storage), api, web.
+5 services orchestrated by `docker-compose.yml`: db (PostgreSQL 15), mongo (MongoDB 7), minio (S3, unused — images via Cloudinary), api, web.
 External network `tourisme_net` must be created before `docker compose up`:
 ```
 docker network create tourisme_net
 ```
-To run only MinIO: `docker compose up -d minio` (ports 9000 API, 9001 Console).
 Backend Dockerfile: multi-stage, node:20-alpine, `yarn install --frozen-lockfile`.
 Frontend Dockerfile: multi-stage, node:20-alpine, `output: "standalone"`, needs `NEXT_PUBLIC_API_URL` build arg.
 

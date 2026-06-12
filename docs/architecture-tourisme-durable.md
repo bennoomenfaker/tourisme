@@ -1047,7 +1047,7 @@ backend/src/
 ├── common/               ← Guards, decorators, enums, interfaces
 ├── config/               ← Configuration (env, Joi)
 ├── database/             ← TypeORM + Mongoose connections, migrations
-├── storage/              ← MinIO/S3 file storage
+├── upload/               ← Cloudinary file storage
 ├── mail/                 ← Nodemailer service
 │
 ├── users/                ← User entity + CRUD
