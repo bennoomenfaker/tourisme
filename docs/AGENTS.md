@@ -1,5 +1,15 @@
 # Tourisme (Eco-Voyage)
 
+## Git Workflow (OBLIGATOIRE)
+
+**NE JAMAIS push directement sur `main`.** Toujours :
+1. `git checkout -b feat/ma-feature`
+2. Travailler, commit, push
+3. Ouvrir une PR sur GitHub (base: `main` ← compare: `feat/ma-feature`)
+4. Attendre la review de Maram → merge
+
+Voir `GIT_WORKFLOW.md` à la racine.
+
 ## Structure
 
 Two independent packages under `backend/` and `frontend/`. No monorepo tooling. No shared code. No CI/CD.
