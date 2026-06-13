@@ -1,65 +1,109 @@
 # Tourisme (Eco-Voyage)
 
-## Git Workflow (OBLIGATOIRE)
+## 🧑‍🤝‍🧑 Binôme
+- **Maram** — propriétaire des repos frontend & backend
+- **Moi** — je travaille dans `tourisme/` (root) qui contient frontend/backend en **sous-modules**
+- **NE JAMAIS toucher au code de Maram directement.** Toujours PR.
 
-**NE JAMAIS push directement sur `main`.** Toujours :
-1. `git checkout -b feat/ma-feature`
-2. Travailler, commit, push
-3. Ouvrir une PR sur GitHub (base: `main` ← compare: `feat/ma-feature`)
-4. Attendre la review de Maram → merge
+## 📦 Structure — 3 repos liés (sous-modules)
 
-Voir `GIT_WORKFLOW.md` à la racine.
-
-## Structure
-
-Two independent packages under `backend/` and `frontend/`. No monorepo tooling. No shared code. No CI/CD.
-
-| Package | What | Scripts |
-|---|---|---|
-| `backend/` | NestJS 11 API (TypeORM + PostgreSQL, Mongoose + MongoDB) | `yarn start:dev`, `yarn build`, `yarn test`, `yarn lint`, `yarn format` (Prettier) |
-| `frontend/` | Next.js 16 SPA (React 19, Tailwind v4) | `yarn dev`, `yarn build`, `yarn lint` |
-
-Both use **Yarn** (not npm). No test framework in frontend.
-
-## Commands
-
-- Backend test (unit): `yarn test` (jest, `*.spec.ts` in `src/`)
-- Backend test (e2e): `yarn test:e2e` (jest config `test/jest-e2e.json`, `*.e2e-spec.ts`)
-- Backend lint: `yarn lint` (ESLint flat config — `no-explicit-any: off`, `no-floating-promises: warn`)
-- Backend format: `yarn format` (Prettier — `singleQuote: true`, `trailingComma: "all"`)
-- Backend seeds: `yarn seed:eco-traveler-questionnaire`, `yarn seed:guide-questionnaire`, `yarn seed:project-questionnaire`
-- Frontend lint: `yarn lint` (ESLint — `eslint-config-next/core-web-vitals`)
-- Dev: `yarn start:dev` in `backend/`, `yarn dev` in `frontend/`
-
-## Docker
-
-5 services orchestrated by `docker-compose.yml`: db (PostgreSQL 15), mongo (MongoDB 7), minio (S3, unused — images via Cloudinary), api, web.
-External network `tourisme_net` must be created before `docker compose up`:
 ```
-docker network create tourisme_net
+tourisme/ (mon repo: bennoomenfaker/tourisme)
+├── frontend/ → sous-module → repo Maram (eco-tourism-platform-front)  [branche: main]
+├── backend/  → sous-module → repo Maram (eco-tourism-platform-backend) [branche: main]
 ```
-Backend Dockerfile: multi-stage, node:20-alpine, `yarn install --frozen-lockfile`.
-Frontend Dockerfile: multi-stage, node:20-alpine, `output: "standalone"`, needs `NEXT_PUBLIC_API_URL` build arg.
 
-## Config
+**Important** : `frontend/` et `backend/` ne sont PAS de simples dossiers. Ce sont des **sous-modules git** — ils pointent vers des repos GitHub différents.
 
-- Dev env: `backend/.env`, Prod env: `backend/.env.production`
-- No `.env` in frontend; API URL is a build arg (`NEXT_PUBLIC_API_URL`) or hardcoded in `lib/api.ts`
-- `synchronize: true` in TypeORM — drops/recreates schema on every dev start
-- `noImplicitAny: false` in backend `tsconfig.json` — explicit `any` is fine
-- `FRONTEND_URL` must match the frontend dev server for OAuth redirects
+## 🔀 Git Workflow (OBLIGATOIRE — ne jamais casser le code de Maram)
 
-## Frontend particulars
+Toujours :
+1. `git checkout main && git pull origin main` (dans frontend/ ou backend/)
+2. `git checkout -b feat/ma-feature`
+3. Coder, commiter, pusher SUR LA BRANCHE FEATURE
+4. Ouvrir une PR sur GitHub : **base: `main`** ← **compare: `feat/ma-feature`**
+5. Maram review → merge → je synchronise le root
 
-- `@/*` maps to `frontend/` root (e.g. `@/lib/api`)
-- Material You design, 100% French UI
-- No state library — uses `localStorage` + manual `apiFetch` (auto-refresh token rotation in `lib/api.ts`)
-- Next.js 16 has breaking changes from prior versions; **read `node_modules/next/dist/docs/` before writing code**
-- Tailwind CSS v4 with `@tailwindcss/postcss` plugin and `@theme` directive
+## ❓ Pourquoi le code modifié n'apparaît pas sur ma branche main ?
 
-## Caveats
+**C'est normal.** C'est le principe des sous-modules + feature branches.
 
-- Secrets committed to repo (SMTP creds, Google OAuth, JWT secret in `.env` files)
-- No tests in frontend
-- No formatter config in frontend
-- `synchronize: true` is dev-only — unsafe for production
+| Si je suis sur | Je vois |
+|---|---|
+| `main` (frontend ou backend) | Le code **stable** de Maram (sans mes modifs) |
+| `feat/ma-feature` (frontend ou backend) | Mes **nouvelles modifs** |
+
+Tant que Maram n'a pas merge ma PR, mes changements **ne sont que sur ma branche feature**, pas sur `main`.
+
+**Pour tester mes modifs en local :**
+```bash
+cd frontend    # ou backend
+git checkout feat/ma-feature
+# ici je vois mes changements
+```
+
+**Pour revenir au code stable de Maram :**
+```bash
+git checkout main
+```
+
+**Après le merge de la PR par Maram :**
+```bash
+git checkout main
+git pull origin main
+# maintenant main contient mes modifs ✅
+```
+
+## 🔒 Sécurité implémentée (déjà pushé sur les branches feat/)
+
+### Frontend — Eye icon (show/hide password)
+- **Login** : `app/auth/login/page.tsx` — icône œil sur mot de passe
+- **Register** : `app/auth/register/page.tsx` — icône œil sur password + confirmation
+- **Reset password** : `app/auth/reset-password/page.tsx` — icône œil sur confirmation
+
+### Backend — Anti brute force (`feat/brute-force-protection`)
+- **Rate limiting** : login (5/min), register (3/min), forgot-password (3/min)
+- **Lockout** : 5 échecs connexion → verrouillé 15 min
+- **Forgot-password** : email inexistant → message "Aucun compte trouvé"
+- **Tous les messages en français**
+
+## 🔧 Commandes essentielles
+
+```bash
+# Backend (dev)
+cd backend
+cp .env.dev .env   # une fois
+yarn start:dev
+
+# Frontend (dev, autre terminal)
+cd frontend
+yarn dev
+```
+
+### Synchronisation après merge PR
+
+```bash
+# Après que Maram merge ma PR frontend/backend
+cd frontend    # ou backend
+git checkout main
+git pull origin main
+
+cd ..
+git add frontend    # ou backend
+git commit -m "chore: update submodule after PR merge"
+git push origin main
+```
+
+## 📝 Fichiers .env (backend)
+
+| Fichier | Usage |
+|---|---|
+| `.env.dev` | Dev local (localhost, root/root, port 3001) |
+| `.env.production` | Production / Docker (db, marammejri, port 3000) |
+| `.env` | Celui chargé par NestJS (copier .env.dev → .env) |
+
+## ⚠️ Règles à ne JAMAIS faire
+- ❌ Push directement sur `main` (frontend ou backend)
+- ❌ Travailler sur `main` (toujours branche feature)
+- ❌ Modifier le code de Maram sans PR
+- ❌ Commiter `.env` avec des tokens réels
