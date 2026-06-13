@@ -21,8 +21,12 @@ Toujours :
 1. `git checkout main && git pull origin main` (dans frontend/ ou backend/)
 2. `git checkout -b feat/ma-feature`
 3. Coder, commiter, pusher SUR LA BRANCHE FEATURE
-4. Ouvrir une PR sur GitHub : **base: `main`** ← **compare: `feat/ma-feature`**
-5. Maram review → merge → je synchronise le root
+4. Ouvrir une PR sur GitHub :
+   - **Lien direct frontend** : `https://github.com/Maram172003/eco-tourism-platform-front/pull/new/feat/ma-feature?base=main`
+   - **Lien direct backend**  : `https://github.com/Maram172003/eco-tourism-platform-backend/pull/new/feat/ma-feature?base=main`
+   - Config : **base: `main`** ← **compare: `feat/ma-feature`**, cliquer "Create Pull Request"
+5. **Vérifier** : les PR listées sur `https://github.com/Maram172003/eco-tourism-platform-front/pulls` et `...backend/pulls`
+6. Maram review → merge → je synchronise le root
 
 ## ❓ Pourquoi le code modifié n'apparaît pas sur ma branche main ?
 

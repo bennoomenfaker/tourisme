@@ -48,19 +48,44 @@ git push origin feat/nom-de-ta-feature
 
 ### 3. Ouvrir une Pull Request (PR)
 
-Aller sur GitHub → **New Pull Request** :
+```bash
+# Lien direct à ouvrir dans le navigateur :
+# Frontend :
+#   https://github.com/Maram172003/eco-tourism-platform-front/pull/new/feat/nom-de-ta-feature?base=main
+# Backend :
+#   https://github.com/Maram172003/eco-tourism-platform-backend/pull/new/feat/nom-de-ta-feature?base=main
+```
+
+Configuration dans GitHub :
 - **base**: `main` (la branche protégée de Maram)
 - **compare**: `feat/nom-de-ta-feature`
 - **Titre**: clair et descriptif
 - **Description**: détailler chaque changement
+- **Ne pas toucher à "base repository"** (c'est déjà celui de Maram)
 
-### 4. Review & merge
+👉 Puis cliquer sur **"Create Pull Request"**.
+
+### 4. Vérifier que la PR est bien envoyée
+
+```bash
+# Lien pour voir toutes les PR ouvertes :
+# Frontend : https://github.com/Maram172003/eco-tourism-platform-front/pulls
+# Backend  : https://github.com/Maram172003/eco-tourism-platform-backend/pulls
+
+# En CLI (si gh est installé) :
+gh pr list --repo Maram172003/eco-tourism-platform-front
+gh pr list --repo Maram172003/eco-tourism-platform-backend
+```
+
+Tu dois voir ta PR listée avec ton titre et le label "open".
+
+### 5. Review & merge
 
 - Maram review le code
-- Une fois approuvée, merger la PR sur GitHub
-- Supprimer la branche feature après merge
+- Une fois approuvée, merger la PR sur GitHub (bouton vert "Merge pull request")
+- Supprimer la branche feature après merge (bouton "Delete branch")
 
-### 5. Synchroniser le root tourisme
+### 6. Synchroniser le root tourisme
 
 ```bash
 # Après le merge de la PR frontend/backend par Maram
