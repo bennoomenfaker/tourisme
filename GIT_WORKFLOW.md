@@ -5,6 +5,41 @@
 > **NE JAMAIS push directement sur `main`.**  
 > Toujours passer par une **branche feature** + **Pull Request** vers Maram.
 
+## Architecture des 3 branches
+
+```
+Maram172003/eco-tourism-platform-front (main)    ← Source de vérité
+Maram172003/eco-tourism-platform-backend (main)   ← Source de vérité
+         │
+         ▼ (sous-modules pointent sur main de Maram)
+bennoomenfaker/tourisme:Faker                     ← Pointe sur le main de Maram
+         │
+         ▼ (git merge Faker)
+bennoomenfaker/tourisme:main                      ← PR target vers Maram
+```
+
+| Branche | Repo | Rôle |
+|---|---|---|
+| `Maram/*:main` | `Maram172003/eco-tourism-platform-*` | **Source de vérité**. Maram merge les PR ici. |
+| `Faker` | `bennoomenfaker/tourisme` | Pointe sur le `main` de Maram via sous-modules. Branche de **travail**. |
+| `main` | `bennoomenfaker/tourisme` | Créée pour envoyer les PR à Maram. Synchro : `main == Faker == Maram/main` |
+
+### Synchronisation après merge Maram
+
+```bash
+# 1. Mettre à jour Faker avec le main de Maram
+cd frontend && git checkout main && git pull origin main
+cd backend  && git checkout main && git pull origin main
+cd ..
+git add frontend backend
+git commit -m "chore: update submodules to main (PR mergée par Maram)"
+git push origin Faker
+
+# 2. Sync main du root avec Faker
+git checkout main && git merge Faker && git push origin main
+git checkout Faker
+```
+
 ## Dépôts GitHub
 
 | Dépôt | URL | Branche protégée |
