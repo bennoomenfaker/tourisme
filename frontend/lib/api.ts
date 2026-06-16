@@ -6,7 +6,7 @@ let refreshQueue: Array<(token: string) => void> = [];
 
 async function doRefresh(): Promise<string> {
   const refresh_token = localStorage.getItem("refresh_token");
-  if (!refresh_token) throw new Error("No refresh token");
+  if (!refresh_token) throw new Error("Aucun jeton de rafraîchissement.");
 
   const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
     method: "POST",
@@ -14,7 +14,7 @@ async function doRefresh(): Promise<string> {
     body: JSON.stringify({ refresh_token }),
   });
 
-  if (!res.ok) throw new Error("Refresh failed");
+  if (!res.ok) throw new Error("Échec du rafraîchissement du jeton.");
 
   const data = await res.json();
   localStorage.setItem("access_token", data.access_token);

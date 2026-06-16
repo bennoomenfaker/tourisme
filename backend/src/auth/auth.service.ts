@@ -24,7 +24,7 @@ export class AuthService {
         const existingUser = await this.usersService.findByEmail(dto.email);
 
         if (existingUser) {
-            throw new BadRequestException('Email already exists');
+            throw new BadRequestException('Cet email est déjà utilisé.');
         }
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -47,11 +47,11 @@ export class AuthService {
         try {
             await this.mailService.sendVerificationEmail(user.email, verificationToken);
         } catch (error) {
-            console.warn('Failed to send verification email:', error.message);
+            console.warn('Échec de l\'envoi de l\'email de vérification:', error.message);
         }
 
         return {
-            message: 'User created. Verification email sent.',
+            message: 'Compte créé. Email de vérification envoyé.',
         };
     }
 
@@ -60,7 +60,7 @@ export class AuthService {
         const user = await this.usersService.activateUserByToken(token);
 
         if (!user) {
-            throw new NotFoundException('Invalid verification token');
+            throw new NotFoundException('Jeton de vérification invalide.');
         }
 
         const accessToken = await this.generateAccessToken(user);
@@ -185,7 +185,7 @@ export class AuthService {
         await this.usersService.removeRefreshToken(userId);
 
         return {
-            message: 'Logout successful',
+            message: 'Déconnexion réussie.',
         };
     }
 

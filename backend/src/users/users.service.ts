@@ -49,7 +49,7 @@ export class UsersService {
         const user = await this.findById(id);
 
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new NotFoundException('Utilisateur introuvable.');
         }
 
         user.status = UserStatus.ACTIVE;
@@ -64,7 +64,7 @@ export class UsersService {
         const user = await this.findById(userId);
 
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new NotFoundException('Utilisateur introuvable.');
         }
 
         user.verification_token = token;
@@ -85,15 +85,15 @@ export class UsersService {
         const user = await this.findByVerificationToken(token);
 
         if (!user) {
-            throw new NotFoundException('Invalid verification token');
+            throw new NotFoundException('Jeton de vérification invalide.');
         }
 
         if (!user.verification_token_expires_at) {
-            throw new UnauthorizedException('Verification token expiry missing');
+            throw new UnauthorizedException('Date d\'expiration du jeton de vérification manquante.');
         }
 
         if (user.verification_token_expires_at.getTime() < Date.now()) {
-            throw new UnauthorizedException('Verification token expired');
+            throw new UnauthorizedException('Le jeton de vérification a expiré.');
         }
 
         user.status = UserStatus.ACTIVE;
@@ -110,7 +110,7 @@ export class UsersService {
         const user = await this.findById(userId);
 
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new NotFoundException('Utilisateur introuvable.');
         }
 
         user.refresh_token = refreshToken;
@@ -133,15 +133,15 @@ export class UsersService {
         const user = await this.findByRefreshToken(refreshToken);
 
         if (!user) {
-            throw new UnauthorizedException('Invalid refresh token');
+            throw new UnauthorizedException('Jeton de rafraîchissement invalide.');
         }
 
         if (!user.refresh_token_expires_at) {
-            throw new UnauthorizedException('Refresh token expiry missing');
+            throw new UnauthorizedException('Date d\'expiration du jeton de rafraîchissement manquante.');
         }
 
         if (user.refresh_token_expires_at.getTime() < Date.now()) {
-            throw new UnauthorizedException('Refresh token expired');
+            throw new UnauthorizedException('Le jeton de rafraîchissement a expiré.');
         }
 
         return user;
@@ -171,7 +171,7 @@ export class UsersService {
         const user = await this.findById(userId);
 
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new NotFoundException('Utilisateur introuvable.');
         }
 
         user.refresh_token = null;
