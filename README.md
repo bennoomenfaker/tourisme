@@ -538,63 +538,34 @@ CLOUDINARY_API_SECRET=votre_api_secret
 
 ## 18. Structure Git & Workflow
 
-### Dépôts GitHub
+### Dépôt unique
 
-| Dépôt | URL | Branche principale |
+| Dépôt | URL | Branche |
 |---|---|---|
-| **tourisme** (root) | `github.com/bennoomenfaker/tourisme` | `main` |
-| **frontend** (sous-module) | `github.com/Maram172003/eco-tourism-platform-front` | `Faker` |
-| **backend** (sous-module) | `github.com/Maram172003/eco-tourism-platform-backend` | `Faker` |
+| **tourisme** | `github.com/bennoomenfaker/tourisme` | `main` |
 
 ### Structure
 
 ```
-tourisme/                          # Root repo (bennoomenfaker)
+tourisme/                          # Repo unique (bennoomenfaker/tourisme)
 ├── docker-compose.yml
 ├── README.md
-├── frontend/                      # Sous-module → Maram172003/eco-tourism-platform-front (branche Faker)
-└── backend/                       # Sous-module → Maram172003/eco-tourism-platform-backend (branche Faker)
+├── frontend/                      # Dossier normal (clone de Maram172003/eco-tourism-platform-front)
+└── backend/                       # Dossier normal (clone de Maram172003/eco-tourism-platform-backend)
 ```
 
 ### Commandes essentielles
 
 ```bash
-# Cloner le projet complet (avec les sous-modules)
-git clone --recurse-submodules https://github.com/bennoomenfaker/tourisme.git
+# Cloner
+git clone https://github.com/bennoomenfaker/tourisme.git
 
-# Mettre à jour le root repo
-git pull
-
-# Mettre à jour les sous-modules (frontend + backend) vers leur dernier commit
-git submodule update --remote
-
-# Travailler sur le frontend
-cd frontend
-git checkout Faker
-# ... modifications ...
+# Travailler et push
 git add .
-git commit -m "..."
-git push origin Faker
-
-# Travailler sur le backend
-cd backend
-git checkout Faker
-# ... modifications ...
-git add .
-git commit -m "..."
-git push origin Faker
-
-# Revenir au root et commit la nouvelle référence des sous-modules
-cd ..
-git add frontend backend
-git commit -m "Update submodules"
-git push
+git commit -m "feat: description"
+git push origin main
 ```
 
-### Synchronisation
+### Mise à jour depuis Maram
 
-Les 3 dépôts sont indépendants mais liés par le sous-module :
-
-1. **Frontend/Backend** → modifications sur la branche `Faker` → push vers Maram's repo
-2. **Root tourisme** → référence le commit des sous-modules → push vers bennoomenfaker
-3. Pour garder tout à jour : `git pull && git submodule update --remote`
+Demander à l'agent IA de vérifier et mettre à jour.
