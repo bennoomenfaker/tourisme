@@ -4,17 +4,20 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Project } from '../../project-owner/entities/project.entity';
+import { OfferCategory } from './offer-category.entity';
+import { OfferItem } from './offer-item.entity';
 
 @Entity('offers')
 export class Offer {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  // Qui a créé cette offre
+  // Qui a créé cette offre (polymorphisme guide / project_owner)
   @Column('uuid')
   author_id!: string;
 
@@ -29,6 +32,14 @@ export class Offer {
   @JoinColumn({ name: 'project_id' })
   project!: Project | null;
 
+  // Catégorie (remplace progressivement offer_type)
+  @Column({ type: 'uuid', nullable: true })
+  category_id!: string | null;
+
+  @ManyToOne(() => OfferCategory, { nullable: true })
+  @JoinColumn({ name: 'category_id' })
+  category!: OfferCategory | null;
+
   @Column({ type: 'varchar' })
   title!: string;
 
@@ -42,7 +53,7 @@ export class Offer {
   @Column({ type: 'varchar', nullable: true })
   duration!: string | null;
 
-  // Type d'offre : eco_tour | accommodation | activity | restaurant | craft
+  // Type d'offre (déprécié, migrer vers category_id)
   @Column({ type: 'varchar', nullable: true })
   offer_type!: string | null;
 
@@ -54,6 +65,17 @@ export class Offer {
 
   @Column({ type: 'varchar', nullable: true })
   region!: string | null;
+
+  // Adresse postale complète (distincte du point de rendez-vous)
+  @Column({ type: 'varchar', nullable: true })
+  address!: string | null;
+
+  // Coordonnées GPS de l'adresse (vs meeting_lat/lng pour le point de rendez-vous)
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude!: number | null;
 
   @Column({ type: 'varchar', nullable: true })
   meeting_point!: string | null;
@@ -79,12 +101,19 @@ export class Offer {
   @Column({ type: 'int', nullable: true })
   sustainability_score!: number | null;
 
-  // pending = en attente de validation / approved = visible publiquement / rejected = refusé
+  // 'automatic' = confirmation instantanée, 'manual' = le provider valide
+  @Column({ type: 'varchar', default: 'automatic' })
+  confirmation_mode!: string;
+
+  // pending = en attente / approved = visible / rejected = refusé
   @Column({ type: 'varchar', default: 'pending' })
   status!: string;
 
   @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;
+
+  @OneToMany(() => OfferItem, (item) => item.offer)
+  items!: OfferItem[];
 
   @CreateDateColumn()
   created_at!: Date;

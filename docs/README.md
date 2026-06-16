@@ -152,7 +152,10 @@ src/
 ├── eco-traveler/     Profil & scoring des voyageurs
 ├── guide/            Profil & scoring des guides
 ├── project-owner/    Profil & CRUD projets des propriétaires
-├── offer/            Offres éco-touristiques (CRUD, scoring, workflow modération)
+├── offer/            Offres éco-touristiques (CRUD, scoring, workflow modération, catalogue items, prix, disponibilités, sessions)
+├── booking/          Réservations (bookings, participants, confirmation, annulation)
+├── circuit/          Circuits multi-jours (jours, programme, options, réservations)
+├── notification/     Notifications utilisateur (création, lecture, compteur non-lues)
 ├── questionnaire/    QCM durabilité (soumission, scoring)
 ├── publication/      Publications sociales (places, expériences, likes, commentaires)
 ├── messages/         Messagerie privée (conversations, blocage)
@@ -195,6 +198,29 @@ src/
 | `PATCH /offers/:id` | Auth (Guide/Projet) | Modifier une offre |
 | `PATCH /offers/:id/sustainability` | Auth (Guide/Projet) | Màj score durabilité |
 | `DELETE /offers/:id` | Auth (Guide/Projet) | Supprimer une offre |
+| `POST /offers/:offerId/items` | Auth (Guide/Projet) | Créer un item vendable |
+| `GET /offers/:offerId/items` | Public | Items d'une offre |
+| `PATCH /offers/items/:itemId` | Auth (Guide/Projet) | Modifier un item |
+| `DELETE /offers/items/:itemId` | Auth (Guide/Projet) | Supprimer un item |
+| `POST /offers/items/:itemId/prices` | Auth (Guide/Projet) | Ajouter un prix à un item |
+| `POST /offers/items/:itemId/availability` | Auth (Guide/Projet) | Règle de disponibilité |
+| `POST /offers/items/:itemId/sessions` | Auth (Guide/Projet) | Créer une session |
+| `GET /offers/items/:itemId/sessions` | Public | Sessions disponibles |
+| `POST /bookings` | Auth (Éco-voyageur) | Créer une réservation |
+| `GET /bookings/mine` | Auth (Éco-voyageur) | Mes réservations |
+| `GET /bookings/incoming` | Auth (Guide/Projet) | Réservations reçues |
+| `PATCH /bookings/:id/cancel` | Auth (Éco-voyageur) | Annuler une réservation |
+| `PATCH /bookings/:id/confirm` | Auth (Guide/Projet) | Confirmer (mode manuel) |
+| `POST /circuits` | Auth (Guide/Projet) | Créer un circuit |
+| `GET /circuits` | Public | Circuits approuvés |
+| `GET /circuits/:id` | Public | Détail circuit |
+| `POST /circuits/:id/days` | Auth (Guide/Projet) | Ajouter un jour |
+| `POST /circuits/:id/options` | Auth (Guide/Projet) | Ajouter une option |
+| `POST /circuits/:id/reserve` | Auth (Éco-voyageur) | Réserver un circuit |
+| `GET /notifications` | Auth (Tous) | Mes notifications |
+| `PATCH /notifications/:id/read` | Auth (Tous) | Marquer lue |
+| `PATCH /notifications/read-all` | Auth (Tous) | Tout marquer lu |
+| `GET /notifications/unread` | Auth (Tous) | Compteur non lues |
 | `GET /admin/offers/pending` | Admin | Offres en attente |
 | `PATCH /admin/offers/:id/approve` | Admin | Approuver une offre |
 | `PATCH /admin/offers/:id/reject` | Admin | Refuser une offre |

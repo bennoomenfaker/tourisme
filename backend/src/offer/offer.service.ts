@@ -2,17 +2,43 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Offer } from './entities/offer.entity';
+import { OfferCategory } from './entities/offer-category.entity';
+import { OfferItem } from './entities/offer-item.entity';
+import { OfferItemPrice } from './entities/offer-item-price.entity';
+import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
+import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Project } from '../project-owner/entities/project.entity';
-import { CreateOfferDto, OfferSustainabilityDto, UpdateOfferDto } from './dto/offer.dto';
+import {
+  CreateOfferDto,
+  OfferSustainabilityDto,
+  UpdateOfferDto,
+  CreateOfferItemDto,
+  UpdateOfferItemDto,
+  CreateOfferItemPriceDto,
+  CreateAvailabilityRuleDto,
+  CreateOfferItemSessionDto,
+} from './dto/offer.dto';
 
 @Injectable()
 export class OfferService {
   constructor(
     @InjectRepository(Offer)
     private readonly repo: Repository<Offer>,
+    @InjectRepository(OfferCategory)
+    private readonly categoryRepo: Repository<OfferCategory>,
+    @InjectRepository(OfferItem)
+    private readonly itemRepo: Repository<OfferItem>,
+    @InjectRepository(OfferItemPrice)
+    private readonly priceRepo: Repository<OfferItemPrice>,
+    @InjectRepository(OfferItemAvailabilityRule)
+    private readonly ruleRepo: Repository<OfferItemAvailabilityRule>,
+    @InjectRepository(OfferItemSession)
+    private readonly sessionRepo: Repository<OfferItemSession>,
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
   ) {}
+
+  // ─── Offer CRUD ────────────────────────────────────────
 
   async create(authorId: string, authorType: string, dto: CreateOfferDto, initialStatus: string = 'pending'): Promise<Offer> {
     if (dto.project_id) {
@@ -31,23 +57,27 @@ export class OfferService {
       price: dto.price ?? null,
       duration: dto.duration ?? null,
       offer_type: dto.offer_type ?? null,
-      images:              dto.images?.length ? dto.images : null,
-      inclusions:          dto.inclusions ?? null,
-      region:              dto.region ?? null,
-      meeting_point:       dto.meeting_point ?? null,
-      meeting_lat:         dto.meeting_lat ?? null,
-      meeting_lng:         dto.meeting_lng ?? null,
-      min_group_size:      dto.min_group_size ?? null,
-      max_group_size:      dto.max_group_size ?? null,
-      min_age:             dto.min_age ?? null,
+      category: dto.category_id ? ({ id: dto.category_id } as OfferCategory) : null,
+      images: dto.images?.length ? dto.images : null,
+      inclusions: dto.inclusions ?? null,
+      region: dto.region ?? null,
+      address: dto.address ?? null,
+      latitude: dto.latitude ?? null,
+      longitude: dto.longitude ?? null,
+      meeting_point: dto.meeting_point ?? null,
+      meeting_lat: dto.meeting_lat ?? null,
+      meeting_lng: dto.meeting_lng ?? null,
+      min_group_size: dto.min_group_size ?? null,
+      max_group_size: dto.max_group_size ?? null,
+      min_age: dto.min_age ?? null,
       cancellation_policy: dto.cancellation_policy ?? null,
-      project_id:          dto.project_id ?? null,
+      confirmation_mode: dto.confirmation_mode ?? 'automatic',
+      project_id: dto.project_id ?? null,
       status: initialStatus,
     });
     return this.repo.save(offer);
   }
 
-  // Toutes les offres d'un auteur (son propre dashboard)
   async findByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { author_id: authorId },
@@ -55,7 +85,6 @@ export class OfferService {
     });
   }
 
-  // Offres publiques d'un auteur (page profil vue par d'autres) — approuvées uniquement
   async findPublishedByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { author_id: authorId, status: 'approved' },
@@ -63,21 +92,23 @@ export class OfferService {
     });
   }
 
-  // Toutes les offres approuvées (page publique Destinations)
   async findAllPublic(): Promise<Offer[]> {
     return this.repo.find({
       where: { status: 'approved' },
       order: { created_at: 'DESC' },
+      relations: ['items', 'items.prices'],
     });
   }
 
   async findById(id: string): Promise<Offer> {
-    const offer = await this.repo.findOne({ where: { id } });
+    const offer = await this.repo.findOne({
+      where: { id },
+      relations: ['items', 'items.prices', 'items.sessions', 'category'],
+    });
     if (!offer) throw new NotFoundException('Offre introuvable.');
     return offer;
   }
 
-  // Offres rattachées à un projet spécifique — approuvées uniquement
   async findByProject(projectId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { project_id: projectId, status: 'approved' },
@@ -94,17 +125,22 @@ export class OfferService {
     if (dto.price !== undefined) offer.price = dto.price;
     if (dto.duration !== undefined) offer.duration = dto.duration;
     if (dto.offer_type !== undefined) offer.offer_type = dto.offer_type;
+    if (dto.category_id !== undefined) offer.category = { id: dto.category_id } as OfferCategory;
     if (dto.images !== undefined) offer.images = dto.images.length ? dto.images : null;
-    if (dto.inclusions          !== undefined) offer.inclusions          = dto.inclusions;
-    if (dto.region              !== undefined) offer.region              = dto.region;
-    if (dto.meeting_point       !== undefined) offer.meeting_point       = dto.meeting_point;
-    if (dto.meeting_lat         !== undefined) offer.meeting_lat         = dto.meeting_lat ?? null;
-    if (dto.meeting_lng         !== undefined) offer.meeting_lng         = dto.meeting_lng ?? null;
-    if (dto.min_group_size      !== undefined) offer.min_group_size      = dto.min_group_size;
-    if (dto.max_group_size      !== undefined) offer.max_group_size      = dto.max_group_size;
-    if (dto.min_age             !== undefined) offer.min_age             = dto.min_age;
+    if (dto.inclusions !== undefined) offer.inclusions = dto.inclusions;
+    if (dto.region !== undefined) offer.region = dto.region;
+    if (dto.address !== undefined) offer.address = dto.address;
+    if (dto.latitude !== undefined) offer.latitude = dto.latitude ?? null;
+    if (dto.longitude !== undefined) offer.longitude = dto.longitude ?? null;
+    if (dto.meeting_point !== undefined) offer.meeting_point = dto.meeting_point;
+    if (dto.meeting_lat !== undefined) offer.meeting_lat = dto.meeting_lat ?? null;
+    if (dto.meeting_lng !== undefined) offer.meeting_lng = dto.meeting_lng ?? null;
+    if (dto.min_group_size !== undefined) offer.min_group_size = dto.min_group_size;
+    if (dto.max_group_size !== undefined) offer.max_group_size = dto.max_group_size;
+    if (dto.min_age !== undefined) offer.min_age = dto.min_age;
     if (dto.cancellation_policy !== undefined) offer.cancellation_policy = dto.cancellation_policy;
-    if (dto.status              !== undefined) offer.status              = dto.status;
+    if (dto.confirmation_mode !== undefined) offer.confirmation_mode = dto.confirmation_mode;
+    if (dto.status !== undefined) offer.status = dto.status;
 
     return this.repo.save(offer);
   }
@@ -127,5 +163,110 @@ export class OfferService {
     const offer = await this.repo.findOne({ where: { id } });
     if (!offer) throw new NotFoundException('Offre introuvable.');
     return offer;
+  }
+
+  // ─── OfferItem ─────────────────────────────────────────
+
+  async createItem(offerId: string, dto: CreateOfferItemDto): Promise<OfferItem> {
+    await this.findOrFail(offerId);
+    const item = this.itemRepo.create({
+      offer: { id: offerId } as Offer,
+      name: dto.name,
+      description: dto.description ?? null,
+      item_type: dto.item_type ?? null,
+      details_json: dto.details_json ?? null,
+      requires_confirmation: dto.requires_confirmation ?? false,
+      confirmation_mode: dto.confirmation_mode ?? null,
+      booking_deadline_days: dto.booking_deadline_days ?? null,
+      cancellation_deadline_days: dto.cancellation_deadline_days ?? null,
+      production_delay_days: dto.production_delay_days ?? null,
+    });
+    return this.itemRepo.save(item);
+  }
+
+  async findItems(offerId: string): Promise<OfferItem[]> {
+    return this.itemRepo.find({
+      where: { offer: { id: offerId } },
+      relations: ['prices', 'sessions'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async findItemById(itemId: string): Promise<OfferItem> {
+    const item = await this.itemRepo.findOne({
+      where: { id: itemId },
+      relations: ['prices', 'sessions'],
+    });
+    if (!item) throw new NotFoundException('Élément d\'offre introuvable.');
+    return item;
+  }
+
+  async updateItem(itemId: string, dto: UpdateOfferItemDto): Promise<OfferItem> {
+    const item = await this.findItemById(itemId);
+    Object.assign(item, dto);
+    return this.itemRepo.save(item);
+  }
+
+  async removeItem(itemId: string): Promise<{ message: string }> {
+    const item = await this.findItemById(itemId);
+    await this.itemRepo.remove(item);
+    return { message: 'Élément supprimé.' };
+  }
+
+  // ─── OfferItem Prices ──────────────────────────────────
+
+  async addPrice(itemId: string, dto: CreateOfferItemPriceDto): Promise<OfferItemPrice> {
+    await this.findItemById(itemId);
+    const price = this.priceRepo.create({
+      offerItem: { id: itemId } as OfferItem,
+      label: dto.label,
+      price: dto.price,
+      currency: dto.currency ?? 'XAF',
+      pricing_unit: dto.pricing_unit ?? 'per_person',
+      min_quantity: dto.min_quantity ?? null,
+      max_quantity: dto.max_quantity ?? null,
+      is_default: dto.is_default ?? false,
+    });
+    return this.priceRepo.save(price);
+  }
+
+  // ─── OfferItem Availability Rules ──────────────────────
+
+  async addAvailabilityRule(itemId: string, dto: CreateAvailabilityRuleDto): Promise<OfferItemAvailabilityRule> {
+    await this.findItemById(itemId);
+    const rule = this.ruleRepo.create({
+      offerItem: { id: itemId } as OfferItem,
+      availability_type: dto.availability_type,
+      start_date: dto.start_date ?? null,
+      end_date: dto.end_date ?? null,
+      weekdays: dto.weekdays ?? null,
+      start_time: dto.start_time ?? null,
+      end_time: dto.end_time ?? null,
+      recurrence_rule: dto.recurrence_rule ?? null,
+    });
+    return this.ruleRepo.save(rule);
+  }
+
+  // ─── OfferItem Sessions ────────────────────────────────
+
+  async createSession(itemId: string, dto: CreateOfferItemSessionDto): Promise<OfferItemSession> {
+    await this.findItemById(itemId);
+    const session = this.sessionRepo.create({
+      offerItem: { id: itemId } as OfferItem,
+      date: dto.date,
+      start_time: dto.start_time,
+      end_time: dto.end_time,
+      total_capacity: dto.total_capacity ?? null,
+      remaining_capacity: dto.remaining_capacity ?? dto.total_capacity ?? null,
+      price_override: dto.price_override ?? null,
+    });
+    return this.sessionRepo.save(session);
+  }
+
+  async findSessions(itemId: string): Promise<OfferItemSession[]> {
+    return this.sessionRepo.find({
+      where: { offerItem: { id: itemId } },
+      order: { date: 'ASC', start_time: 'ASC' },
+    });
   }
 }

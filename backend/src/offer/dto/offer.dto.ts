@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateOfferDto {
@@ -25,6 +25,10 @@ export class CreateOfferDto {
   offer_type?: string;
 
   @IsOptional()
+  @IsUUID()
+  category_id?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   images?: string[];
@@ -36,6 +40,20 @@ export class CreateOfferDto {
   @IsOptional()
   @IsString()
   region?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  longitude?: number;
 
   @IsOptional()
   @IsString()
@@ -72,6 +90,10 @@ export class CreateOfferDto {
   @IsOptional()
   @IsString()
   cancellation_policy?: string;
+
+  @IsOptional()
+  @IsString()
+  confirmation_mode?: string;
 
   // Seulement pour project_owner
   @IsOptional()
@@ -110,6 +132,10 @@ export class UpdateOfferDto {
   offer_type?: string;
 
   @IsOptional()
+  @IsUUID()
+  category_id?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   images?: string[];
@@ -121,6 +147,20 @@ export class UpdateOfferDto {
   @IsOptional()
   @IsString()
   region?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  longitude?: number;
 
   @IsOptional()
   @IsString()
@@ -160,5 +200,188 @@ export class UpdateOfferDto {
 
   @IsOptional()
   @IsString()
+  confirmation_mode?: string;
+
+  @IsOptional()
+  @IsString()
   status?: string;
+}
+
+// ─── OfferItem DTOs ──────────────────────────────────────
+
+export class CreateOfferItemDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  item_type?: string;
+
+  @IsOptional()
+  details_json?: Record<string, any>;
+
+  @IsOptional()
+  @IsBoolean()
+  requires_confirmation?: boolean;
+
+  @IsOptional()
+  @IsString()
+  confirmation_mode?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  booking_deadline_days?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  cancellation_deadline_days?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  production_delay_days?: number;
+}
+
+export class UpdateOfferItemDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  item_type?: string;
+
+  @IsOptional()
+  details_json?: Record<string, any>;
+
+  @IsOptional()
+  @IsBoolean()
+  requires_confirmation?: boolean;
+
+  @IsOptional()
+  @IsString()
+  confirmation_mode?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  booking_deadline_days?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  cancellation_deadline_days?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  production_delay_days?: number;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+}
+
+export class CreateOfferItemPriceDto {
+  @IsString()
+  @IsNotEmpty()
+  label!: string;
+
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price!: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  pricing_unit?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  min_quantity?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  max_quantity?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_default?: boolean;
+}
+
+export class CreateAvailabilityRuleDto {
+  @IsString()
+  @IsNotEmpty()
+  availability_type!: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  start_date?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  end_date?: Date;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  weekdays?: number[];
+
+  @IsOptional()
+  @IsString()
+  start_time?: string;
+
+  @IsOptional()
+  @IsString()
+  end_time?: string;
+
+  @IsOptional()
+  @IsString()
+  recurrence_rule?: string;
+}
+
+export class CreateOfferItemSessionDto {
+  @Type(() => Date)
+  date!: Date;
+
+  @IsString()
+  @IsNotEmpty()
+  start_time!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  end_time!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  total_capacity?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  remaining_capacity?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price_override?: number;
 }

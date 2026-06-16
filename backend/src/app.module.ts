@@ -23,6 +23,9 @@ import { MessagesModule } from './messages/messages.module';
 import { ReportsModule } from './reports/reports.module';
 import { InteractionsModule } from './interactions/interactions.module';
 import { PlaceContributionModule } from './place-contribution/place-contribution.module';
+import { BookingModule } from './booking/booking.module';
+import { CircuitModule } from './circuit/circuit.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -50,6 +53,9 @@ import { PlaceContributionModule } from './place-contribution/place-contribution
     ReportsModule,
     InteractionsModule,
     PlaceContributionModule,
+    BookingModule,
+    CircuitModule,
+    NotificationModule,
   ],
   providers: [GoogleStrategy, {
     provide: APP_GUARD,

@@ -12,7 +12,16 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { OfferService } from './offer.service';
-import { CreateOfferDto, OfferSustainabilityDto, UpdateOfferDto } from './dto/offer.dto';
+import {
+  CreateOfferDto,
+  OfferSustainabilityDto,
+  UpdateOfferDto,
+  CreateOfferItemDto,
+  UpdateOfferItemDto,
+  CreateOfferItemPriceDto,
+  CreateAvailabilityRuleDto,
+  CreateOfferItemSessionDto,
+} from './dto/offer.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { GuideMongoService } from '../guide/guide-mongo.service';
 import { ProjectOwnerMongoService } from '../project-owner/project-owner-mongo.service';
@@ -29,7 +38,9 @@ export class OfferController {
     private readonly projectOwnerMongoService: ProjectOwnerMongoService,
   ) {}
 
-  // Guide ou Project Owner crée une offre
+  // ─── Offer ─────────────────────────────────────────
+
+  /** Guide ou Project Owner crée une offre */
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Post()
@@ -37,15 +48,13 @@ export class OfferController {
     const userId = req.user.sub;
     const isGuide = req.user.role === Role.GUIDE;
     const authorType = isGuide ? 'guide' : 'project_owner';
-
     const badgeLabel = isGuide ? GUIDE_AMBASSADOR_BADGE : PROJECT_AMBASSADOR_BADGE;
     const mongoService = isGuide ? this.guideMongoService : this.projectOwnerMongoService;
     const hasAmbassador = await mongoService.hasBadge(userId, badgeLabel);
-
     return this.service.create(userId, authorType, dto, hasAmbassador ? 'approved' : 'pending');
   }
 
-  // Mes propres offres (dashboard)
+  /** Mes propres offres (dashboard) */
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Get('mine')
@@ -53,35 +62,35 @@ export class OfferController {
     return this.service.findByAuthor(req.user.sub);
   }
 
-  // Toutes les offres approuvées (page Destinations publique)
+  /** Toutes les offres approuvées (page Destinations) */
   @Public()
   @Get()
   findAllPublic() {
     return this.service.findAllPublic();
   }
 
-  // Offres publiées d'un auteur (page profil publique)
+  /** Offres publiées d'un auteur (page profil) */
   @Public()
   @Get('author/:authorId')
   findByAuthor(@Param('authorId') authorId: string) {
     return this.service.findPublishedByAuthor(authorId);
   }
 
-  // Offres d'un projet spécifique (page profil projet)
+  /** Offres d'un projet spécifique */
   @Public()
   @Get('project/:projectId')
   findByProject(@Param('projectId') projectId: string) {
     return this.service.findByProject(projectId);
   }
 
-  // Détail d'une offre par ID (public)
+  /** Détail d'une offre (public) */
   @Public()
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.service.findById(id);
   }
 
-  // Score de durabilité d'une offre
+  /** Score de durabilité */
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Patch(':id/sustainability')
@@ -89,7 +98,7 @@ export class OfferController {
     return this.service.updateOfferSustainability(req.user.sub, id, dto);
   }
 
-  // Modifier une offre
+  /** Modifier une offre */
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Patch(':id')
@@ -97,11 +106,88 @@ export class OfferController {
     return this.service.update(req.user.sub, id, dto);
   }
 
-  // Supprimer une offre
+  /** Supprimer une offre */
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.service.remove(req.user.sub, id);
+  }
+
+  // ─── OfferItems ────────────────────────────────────
+
+  /** Liste des items d'une offre (public) */
+  @Public()
+  @Get(':offerId/items')
+  findItems(@Param('offerId') offerId: string) {
+    return this.service.findItems(offerId);
+  }
+
+  /** Crée un item (variante) pour une offre */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Post(':offerId/items')
+  createItem(@Param('offerId') offerId: string, @Body() dto: CreateOfferItemDto) {
+    return this.service.createItem(offerId, dto);
+  }
+
+  /** Détail d'un item */
+  @Public()
+  @Get('items/:itemId')
+  findItemById(@Param('itemId') itemId: string) {
+    return this.service.findItemById(itemId);
+  }
+
+  /** Modifier un item */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Patch('items/:itemId')
+  updateItem(@Param('itemId') itemId: string, @Body() dto: UpdateOfferItemDto) {
+    return this.service.updateItem(itemId, dto);
+  }
+
+  /** Supprimer un item */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete('items/:itemId')
+  removeItem(@Param('itemId') itemId: string) {
+    return this.service.removeItem(itemId);
+  }
+
+  // ─── OfferItem Prices ──────────────────────────────
+
+  /** Ajoute un prix à un item */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Post('items/:itemId/prices')
+  addPrice(@Param('itemId') itemId: string, @Body() dto: CreateOfferItemPriceDto) {
+    return this.service.addPrice(itemId, dto);
+  }
+
+  // ─── Availability Rules ────────────────────────────
+
+  /** Ajoute une règle de disponibilité */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Post('items/:itemId/availability')
+  addAvailabilityRule(@Param('itemId') itemId: string, @Body() dto: CreateAvailabilityRuleDto) {
+    return this.service.addAvailabilityRule(itemId, dto);
+  }
+
+  // ─── Sessions ──────────────────────────────────────
+
+  /** Crée une session (créneau concret) */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Post('items/:itemId/sessions')
+  createSession(@Param('itemId') itemId: string, @Body() dto: CreateOfferItemSessionDto) {
+    return this.service.createSession(itemId, dto);
+  }
+
+  /** Sessions disponibles pour un item */
+  @Public()
+  @Get('items/:itemId/sessions')
+  findSessions(@Param('itemId') itemId: string) {
+    return this.service.findSessions(itemId);
   }
 }
