@@ -561,7 +561,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
           price: form.price ? Number(form.price) : undefined,
           duration: form.duration.trim() || undefined,
           region: form.region.trim() || undefined,
-          author_type: "project_owner",
+
         }),
       });
       onSuccess(created);
