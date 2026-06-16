@@ -57,7 +57,7 @@ export class Booking {
   @Column({ type: 'text', nullable: true })
   special_requests!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   confirmation_mode!: string | null;
   // Copié de l'offre/item au moment de la réservation ('automatic' | 'manual')
 

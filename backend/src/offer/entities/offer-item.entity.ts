@@ -33,7 +33,7 @@ export class OfferItem {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   item_type!: string | null;
   // 'room' | 'bed' | 'camping_space' | 'dish' | 'menu'
   // | 'equipment' | 'activity' | 'workshop' | 'transport_service'
@@ -45,7 +45,7 @@ export class OfferItem {
   @Column({ default: false })
   requires_confirmation!: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   confirmation_mode!: string | null;
   // 'automatic' | 'manual'
 

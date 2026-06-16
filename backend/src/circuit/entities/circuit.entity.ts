@@ -46,7 +46,7 @@ export class Circuit {
   @Column({ type: 'int', nullable: true })
   duration_nights!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   region!: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
@@ -61,7 +61,7 @@ export class Circuit {
   @Column({ type: 'int', nullable: true })
   booking_deadline_days!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   confirmation_mode!: string | null;
 
   @Column({ type: 'text', nullable: true })

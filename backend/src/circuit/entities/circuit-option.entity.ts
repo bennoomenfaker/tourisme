@@ -33,7 +33,7 @@ export class CircuitOption {
   offer_item_id!: string | null;
   // Lien vers l'OfferItem correspondant (pour stock et prix)
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   option_group!: string | null;
   // 'transport' | 'accommodation' | 'equipment' | 'activity' | 'food'
 
@@ -51,7 +51,7 @@ export class CircuitOption {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   extra_price!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   selection_mode!: string | null;
 
   @Column({ type: 'int', nullable: true })

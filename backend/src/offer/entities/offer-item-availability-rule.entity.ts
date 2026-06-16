@@ -47,7 +47,7 @@ export class OfferItemAvailabilityRule {
   @Column({ type: 'time', nullable: true })
   end_time!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   recurrence_rule!: string | null;
   // Format RRULE : 'FREQ=WEEKLY;BYDAY=MO,WE,FR'
 

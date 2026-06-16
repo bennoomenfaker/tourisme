@@ -28,11 +28,11 @@ export class BookingParticipant {
   @Column({ type: 'int', nullable: true })
   age!: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   document_type!: string | null;
   // 'passport' | 'id_card' | 'none'
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   document_number!: string | null;
 
   @Column({ default: false })

@@ -36,7 +36,7 @@ export class Notification {
   @Column({ type: 'text', nullable: true })
   body!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   link!: string | null;
   // Lien profond vers la page concernée (ex: "/bookings/123")
 
