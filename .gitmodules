@@ -1,8 +1,0 @@
-[submodule "frontend"]
-	path = frontend
-	url = https://github.com/Maram172003/eco-tourism-platform-front.git
-	branch = main
-[submodule "backend"]
-	path = backend
-	url = https://github.com/Maram172003/eco-tourism-platform-backend.git
-	branch = main
