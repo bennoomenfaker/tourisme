@@ -2,5 +2,5 @@
 .env.dev
 .env.production
 .opencode/
-archive
-session-ses_1265.md
+archive/
+session-ses*.md
