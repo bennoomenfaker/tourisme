@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { logoutUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import GuidedOfferWizard from "@/components/GuidedOfferWizard";
+import ImageUploader from "@/components/ImageUploader";
 
 const MapPicker = dynamic(
   () => import("@/components/map/MapPicker"),
@@ -1375,7 +1376,6 @@ function CreateCircuitModal({ onClose, onCreated }: { onClose: () => void; onCre
   const [basePrice, setBasePrice] = useState("");
   const [durationDays, setDurationDays] = useState("");
   const [images, setImages] = useState<string[]>([]);
-  const [newImageUrl, setNewImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -1421,25 +1421,7 @@ function CreateCircuitModal({ onClose, onCreated }: { onClose: () => void; onCre
             <input type="number" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} placeholder="Prix de base" className="text-slate-800 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
             <input type="number" value={durationDays} onChange={(e) => setDurationDays(e.target.value)} placeholder="Jours" className="text-slate-800 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 mb-1 block">Images (URLs)</label>
-            <div className="flex gap-2">
-              <input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://exemple.com/image.jpg" className="flex-1 text-slate-800 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" onKeyDown={(e) => {
-                if (e.key === "Enter" && newImageUrl.trim().startsWith("http")) { e.preventDefault(); setImages([...images, newImageUrl.trim()]); setNewImageUrl(""); }
-              }} />
-              <button type="button" onClick={() => { if (newImageUrl.trim().startsWith("http")) { setImages([...images, newImageUrl.trim()]); setNewImageUrl(""); } }} className="px-3 py-2 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20">Ajouter</button>
-            </div>
-            {images.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {images.map((url, i) => (
-                  <div key={i} className="relative group">
-                    <img src={url} alt="" className="w-14 h-14 rounded-xl object-cover border border-slate-200" />
-                    <button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100">✕</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <ImageUploader images={images} onChange={setImages} maxImages={5} label="Images du circuit" />
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50">Annuler</button>
             <button type="submit" disabled={submitting} className="flex-1 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-2">

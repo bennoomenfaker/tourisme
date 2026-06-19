@@ -11,6 +11,7 @@ import {
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
 import CircuitMap from "@/components/map/CircuitMap";
+import ImageUploader from "@/components/ImageUploader";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), { ssr: false });
 
@@ -102,7 +103,6 @@ export default function CircuitDetailPage() {
   const [editLng, setEditLng] = useState<number | null>(null);
   const [editAddress, setEditAddress] = useState("");
   const [editImages, setEditImages] = useState<string[]>([]);
-  const [editNewImageUrl, setEditNewImageUrl] = useState("");
 
   const [showAddDay, setShowAddDay] = useState(false);
   const [dayTitle, setDayTitle] = useState("");
@@ -428,7 +428,7 @@ export default function CircuitDetailPage() {
 
             {isAuthor && (
               <div className="flex flex-wrap gap-2 mb-4">
-                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setEditNewImageUrl(""); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
+                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
                   <Edit size={14} /> Modifier
                 </button>
                 <button onClick={() => setShowAddDay(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-primary border border-emerald-200 hover:bg-emerald-100">
@@ -673,25 +673,7 @@ export default function CircuitDetailPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Images (URLs)</label>
-                <div className="flex gap-2">
-                  <input value={editNewImageUrl} onChange={(e) => setEditNewImageUrl(e.target.value)} placeholder="https://exemple.com/image.jpg" className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" onKeyDown={(e) => {
-                    if (e.key === "Enter" && editNewImageUrl.trim().startsWith("http")) { e.preventDefault(); setEditImages([...editImages, editNewImageUrl.trim()]); setEditNewImageUrl(""); }
-                  }} />
-                  <button type="button" onClick={() => { if (editNewImageUrl.trim().startsWith("http")) { setEditImages([...editImages, editNewImageUrl.trim()]); setEditNewImageUrl(""); } }} className="px-3 py-2 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20">Ajouter</button>
-                </div>
-                {editImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {editImages.map((url, i) => (
-                      <div key={i} className="relative group">
-                        <img src={url} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
-                        <button type="button" onClick={() => setEditImages(editImages.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ImageUploader images={editImages} onChange={setEditImages} maxImages={5} label="Images du circuit" />
 
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Localisation du circuit</label>

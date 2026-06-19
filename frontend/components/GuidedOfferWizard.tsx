@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
+import ImageUploader from "@/components/ImageUploader";
 import {
   ArrowLeft, ArrowRight, X, Plus, Trash2, Loader2, Check, MapPin, Upload,
 } from "lucide-react";
@@ -57,7 +58,6 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [minAge, setMinAge] = useState("");
   const [duration, setDuration] = useState("");
   const [images, setImages] = useState<string[]>([]);
-  const [newImageUrl, setNewImageUrl] = useState("");
 
   const [items, setItems] = useState<OfferItemForm[]>([]);
   const [sessions, setSessions] = useState<{ id?: string; date: string; start_time: string; end_time: string; capacity: string }[]>([]);
@@ -434,36 +434,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète" />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500">Images (URLs)</label>
-                <div className="flex gap-2">
-                  <input className={`${inputClass} flex-1`} value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://exemple.com/image.jpg" onKeyDown={(e) => {
-                    if (e.key === "Enter" && newImageUrl.trim()) {
-                      e.preventDefault();
-                      if (newImageUrl.trim().startsWith("http")) {
-                        setImages([...images, newImageUrl.trim()]);
-                        setNewImageUrl("");
-                      }
-                    }
-                  }} />
-                  <button type="button" onClick={() => {
-                    if (newImageUrl.trim() && newImageUrl.trim().startsWith("http")) {
-                      setImages([...images, newImageUrl.trim()]);
-                      setNewImageUrl("");
-                    }
-                  }} className="px-4 py-2.5 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20 transition-colors flex-shrink-0">Ajouter</button>
-                </div>
-                {images.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {images.map((url, i) => (
-                      <div key={i} className="relative group">
-                        <img src={url} alt="" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
-                        <button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ImageUploader images={images} onChange={setImages} maxImages={5} label="Images de l'offre" />
 
               {formFields.includes('gps') && (
                 <div className="space-y-1.5">
