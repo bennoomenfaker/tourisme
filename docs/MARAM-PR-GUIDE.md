@@ -1,58 +1,61 @@
-# 🚀 Guide de la Pull Request (Pour Maram)
+# Guide d'Intégration et Logique Métier
 
-Coucou Maram ! Cette PR vient s'ajouter à ton excellent travail sur l'architecture de base, la gestion des rôles et la table `users`. L'objectif de cette PR est de greffer tout le système de réservation et de catalogue **sans jamais toucher à ta table `users`**.
+Cette Pull Request apporte l'intégration globale du système de catalogue et de réservation. Voici l'explication détaillée de la logique métier implémentée et comment elle s'interface avec l'architecture existante.
 
-## 🌟 Ce que tu as déjà accompli (Ton périmètre)
-- **Authentification et Rôles** : Le système de base avec les rôles EcoTraveler, Guide, et ProjectOwner.
-- **La table `users`** : C'est le cœur du système, et elle est restée intacte !
-- **Questionnaires d'Onboarding** : Les formulaires initiaux (eco-traveler, guide, project-owner) pour comprendre les profils.
+## 1. Périmètre et Architecture
 
-## 🛠️ Ce que cette PR ajoute (La suite logique)
-Nous avons complété ton écosystème avec les fonctionnalités métiers :
-1. **Catalogue Avancé (Offres & Items)** : 
-   - Ajout de prix, de sessions datées, et de capacités.
-   - Les `offers` sont reliées aux owners, et les `offer_items` peuvent être de l'hébergement, des activités, etc.
-2. **Système de Réservation (Bookings)** : 
-   - Réservation complète avec la gestion des participants (adultes, enfants) et prévention des doubles réservations.
-   - Correctement relié à tes utilisateurs (ex: `traveler: { id }` au lieu de l'ID brut pour éviter les bugs TypeORM).
-3. **Circuits Multi-jours** :
-   - Packages touristiques avec programmes jour par jour, carte Leaflet (GPS) et gestion d'images (Cloudinary).
-4. **Plans de Voyage (Trip Plans)** :
-   - Permet à l'éco-voyageur de regrouper plusieurs offres dans un itinéraire personnalisé.
-5. **Notifications** :
-   - Alertes temps réel pour les confirmations de réservation.
+*   **Ce qui est déjà en place (Ton travail) :** Le module d'authentification, la gestion des rôles (EcoTraveler, Guide, ProjectOwner), la table `users`, ainsi que les scripts de seeding pour les questionnaires. Le cœur du système est protégé.
+*   **Ce qui est ajouté (Mes développements) :** Les modules `booking`, `circuit`, `trip-plan` et `notification`. Toutes ces nouvelles entités sont rattachées à tes utilisateurs via des clés étrangères sécurisées (par exemple, `traveler: { id }` au lieu d'un ID brut pour éviter les erreurs TypeORM), sans aucune modification du module Auth ou de la table `users`.
+
+## 2. Visuels et Résultats (Important)
+
+**Merci de consulter le fichier `README.md` à la racine du dépôt.** 
+J'y ai intégré une galerie complète de **captures d'écran**. Cela te permettra de visualiser immédiatement le rendu final côté frontend de toutes ces fonctionnalités : Dashboard dynamique, fiches d'offres détaillées, intégration des cartes interactives Leaflet, et processus de réservation fluide.
 
 ---
 
-## 🗄️ Comment migrer et mettre à jour ta Base de Données
+## 3. Logique de Fonctionnement des Fonctionnalités
 
-Pour tester tout ça sans casser tes utilisateurs existants, la migration est super simple :
+### A. Hébergement (Logique du Catalogue et des Offer Items)
+La structure de la base de données (`offer_items`) a été modélisée pour gérer dynamiquement plusieurs types d'hébergement, chacun avec sa propre logique :
+*   **Dortoir :** L'unité de réservation est le lit. Géré via le champ `bed_count`.
+*   **Chambre privée :** L'unité est la chambre, définie par le champ `room_type`.
+*   **Espace Tente (Camping) :** La capacité est gérée selon le nombre de personnes pouvant occuper l'emplacement, via le champ `tent_capacity`.
+Chaque item peut ensuite avoir des prix déclinés par profil (Adulte, Enfant, etc.) via `offer_item_prices` et des sessions datées définissant la disponibilité journalière via `offer_item_sessions`.
 
-### 1. Démarrer le Backend (Auto-migration)
+### B. Plans de Voyage (Trip Plans)
+La fonctionnalité Trip Plan agit comme un "panier" avancé pour l'éco-voyageur :
+*   L'utilisateur peut piocher différentes offres (un hébergement à Tozeur le jour 1, une activité à Douz le jour 2) et les regrouper dans un plan unique.
+*   **Réservation groupée :** En une seule action, le backend boucle sur les items du plan, vérifie la capacité restante pour chaque session, et génère toutes les réservations d'un coup.
+
+### C. Circuits Multi-jours
+Il s'agit de packages touristiques créés par les guides (ex: "Aventure dans le Sahara") :
+*   Ils incluent un programme détaillé jour par jour (`circuit_days` et `circuit_program_items`).
+*   Intégration GPS : Chaque circuit et journée possède des coordonnées (`lat`, `lng`) affichées dynamiquement sur les cartes Leaflet.
+*   Intégration de l'upload d'images réelles (via Cloudinary) et non plus de simples URLs.
+
+---
+
+## 4. Migration et Mise à jour de la Base de Données
+
+Pour intégrer ces changements et tester l'interface de manière réaliste, voici la marche à suivre :
+
+### Étape 1 : Démarrage et Auto-migration
+Lance le backend en développement :
 ```bash
 npm run start:dev
 ```
-*Cela va créer automatiquement toutes les nouvelles tables (offres, circuits, bookings, etc.) grâce à `synchronize: true` de TypeORM, en gardant tes tables intactes.*
+TypeORM (`synchronize: true`) créera automatiquement toutes les nouvelles tables sans écraser tes données `users`.
 
-### 2. Lancer les nouveaux Seeds (Catégories)
-Puisque tu as déjà testé tes propres scripts (ex: `npm run seed:eco-traveler-questionnaire`), tu vas utiliser la même logique pour les catégories d'offres :
+### Étape 2 : Lancer le nouveau Seed
+Tout comme tu as tes propres scripts définis dans le `package.json` (`npm run seed:eco-traveler-questionnaire`, `seed:guide-questionnaire`, etc.), lance le seed des catégories d'offres :
 ```bash
 npm run seed:offer-categories
 ```
 
-### 3. Exécuter le gros Seed SQL (Données de test Tunisiennes)
-Pour avoir un catalogue rempli (Djerba, Tataouine, Tozeur, etc.) et pouvoir tester le frontend sans devoir tout saisir à la main :
-1. Connecte-toi à ta base `tourism_db` (`localhost:5433`, user: `marammejri`, password: `Hermosa`).
-2. Ouvre le fichier `scripts/seed.sql` qui se trouve dans cette PR.
-3. **Avant de l'exécuter** : Au début du script, modifie les variables UUID (ex: `v_owner1_id`, `v_traveler1_id`) en copiant des vrais IDs depuis ta table `users` (`SELECT id, email, role FROM users;`).
-4. Exécute le script complet ! Il injectera des centaines de lignes (offres, circuits, réservations) parfaitement liées à tes utilisateurs.
-
----
-
-## 💻 Côté Code : Où regarder ?
-
-Si tu veux explorer le code ajouté par rapport au tien :
-- **Backend** : Regarde les dossiers `src/booking`, `src/circuit`, `src/trip-plan` et `src/notification`. Tu remarqueras qu'ils utilisent ton entité `User` comme clé étrangère de manière propre et sécurisée.
-- **Frontend** : Check `app/dashboard` pour voir l'intégration des filtres sur le tableau de bord que tu avais initié, `app/circuits` pour les cartes interactives, et le bouton "Réserver" dans `app/offers/[id]`.
-
-Bonne revue de code ! ✨
+### Étape 3 : Exécuter le script SQL (Données Tunisiennes)
+Pour voir l'application prendre vie, j'ai préparé un script SQL complet :
+1. Connecte-toi à ta base locale (`tourism_db`).
+2. Ouvre le fichier `scripts/seed.sql` inclus dans la PR.
+3. **Important :** Au tout début du script, remplace les identifiants statiques (UUID) par de vrais ID issus de ta table `users` existante (`SELECT id, email, role FROM users;`).
+4. Exécute le script. Il injectera un catalogue riche (Djerba, Ksar Ghilane, Matmata), des circuits, et des réservations pour tester l'ensemble du système.
