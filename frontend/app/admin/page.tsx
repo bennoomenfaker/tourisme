@@ -194,7 +194,7 @@ function DetailSustainability({ score }: { score: number | null }) {
   if (score === null) return null;
   const level =
     score >= 86 ? { label: "Ambassadeur Éco Voyage", color: "text-primary",      bar: "bg-primary" } :
-    score >= 71 ? { label: "Éco-Responsable",        color: "text-emerald-600", bar: "bg-emerald-500" } :
+    score >= 71 ? { label: "Éco-Responsable",        color: "text-primary", bar: "bg-primary" } :
     score >= 51 ? { label: "Engagé",                 color: "text-teal-600",    bar: "bg-teal-500" } :
     score >= 31 ? { label: "Sensibilisé",            color: "text-blue-600",    bar: "bg-blue-500" } :
                   { label: "Conventionnel",           color: "text-slate-500",   bar: "bg-slate-400" };
@@ -705,7 +705,7 @@ export default function AdminPage() {
                 tab === t
                   ? t === "reports" ? "bg-red-500 text-white shadow-md"
                   : t === "banned" ? "bg-orange-500 text-white shadow-md"
-                  : "bg-primary text-slate-900 shadow-md shadow-primary/20"
+                  : "bg-primary text-slate-900 shadow-md shadow-emerald-500/20"
                   : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
               }`}>
               {t === "reports" && <Flag size={14} />}

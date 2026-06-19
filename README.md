@@ -1,571 +1,322 @@
-# Rapport d'Analyse — Éco-Voyage
+# EcoVoyage — Plateforme d'Éco-Tourisme Tunisie
 
-## 1. Qu'est-ce que ce projet ?
-
-**Éco-Voyage** est une plateforme web de **tourisme durable / éco-tourisme** qui connecte trois types d'acteurs : les **voyageurs éco-responsables**, les **guides locaux**, et les **propriétaires de projets éco-touristiques** (hébergements, restaurants, agences, etc.). L'objectif est de promouvoir un tourisme respectueux de l'environnement avec un système de **score de durabilité** et de **badges** pour gamifier l'engagement écologique.
+> **PR pour Maram** — Catalogue, réservation, circuits, notifications, plans de voyage, onboarding, maps, partage, et correctifs de bugs
 
 ---
 
-## 2. Fonctionnalités (Use Cases)
+## 1. Ce qui a été ajouté / corrigé
 
-| Fonctionnalité | Description |
-|---|---|
-| **Inscription & Connexion** | Register/Login avec email + Google OAuth, avec 3 rôles |
-| **Vérification email** | Email de confirmation avec lien (via Nodemailer) |
-| **Mot de passe oublié** | Forgot/reset password avec token + email |
-| **Refresh Token** | Rafraîchissement automatique du JWT |
-| **Onboarding guidé** | Questionnaire onboarding multi-étapes pour chaque rôle |
-| **Profil utilisateur** | Profil complet avec bio, pays, langue, photo, etc. |
-| **Questionnaire durabilité** | QCM noté (catégories : environnemental, social, économique) |
-| **Score de durabilité** | Score pondéré (Questionnaire 20% + Réservations 40% + Feedbacks 20% + Partages 20%) |
-| **Badges** | Système de badges débloqués selon le score (Explorateur Durable, Ambassadeur, etc.) |
-| **Dashboard voyageur** | Tableau de bord avec stats, score breakdown, plans de voyage, badges |
-| **Dashboard guide** | Tableau de bord avec spécialités, certifications, langues, réservations |
-| **Dashboard propriétaire** | Tableau de bord avec CRUD de projets éco-touristiques, stats |
-| **Gestion de projets** | Création, modification, suppression de projets avec labels éco |
-| **Gestion d'offres** | Création, modification, suppression d'offres éco-touristiques (guides + propriétaires) |
-| **Page Destinations** | Vitrine publique des offres approuvées avec filtres, recherche et carte interactive |
-| **Modération Admin** | Workflow de validation : offres, projets, publications en attente d'approbation |
-| **Publications** | Réseau social interne : publications places/expériences, likes, commentaires |
-| **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
-| **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
-| **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
-| **Upload** | Upload d'images vers Cloudinary |
-| **Authentification Google** | Google OAuth2 avec redirect + création de compte auto |
-| **Swagger API** | Documentation auto-générée de l'API |
+### Fonctionnalités principales
 
----
+| Module | Description |
+|--------|-------------|
+| **Catalogue avancé** | Items vendables (hebergement, activite, restauration...), prix par categorie, sessions datées, capacite, disponibilites |
+| **Réservations** | Réservation d'offres/items/sessions avec participants, confirmation auto/manuelle, annulation, double reservation prevention |
+| **Circuits multi-jours** | Packages avec programme jour par jour, GPS, images, options, réservation avec verification des participants |
+| **Notifications** | Système de notifications (booking confirmé, annulation, demande, offre approuvée, nouveau message, circuit dispo) |
+| **Plans de voyage (TripPlan)** | Créer des plans multi-activités, réserver en groupe avec verification des limites de participants |
+| **Onboarding guidé** | Questionnaire onboarding multi-étapes pour chaque rôle (5 étapes pour eco-voyageur) |
+| **Cartes Leaflet/OpenStreetMap** | Cartes interactives sur circuits, plans de voyage, détail offre |
+| **Partage via messagerie** | Boutons de partage qui redirigent vers la messagerie interne |
+| **Login/Register validation** | Validation inline (email regex, password strength) |
+| **Badge notifications** | Compteur de notifications non-lues sur l'icone |
+| **Dashboard eco-voyageur** | Section "Offres" avec filtres (Toutes/Disponibles/Réservées), stats reelles PostgreSQL |
+| **Guided Offer Wizard** | Wizard 4 étapes adapte selon le type de projet, avec gestion d'images URL |
+| **Gestion d'offres (edit/view/delete)** | Boutons Editer/Supprimer sur les offres, editeur de prix/sessions |
+| **Circuit edit avec images** | Modal d'edition avec gestionnaire d'images URL et carte repositionnee |
+| **Reservation modification** | PATCH/DELETE sur les reservations pending pour les voyageurs |
 
-## 3. Architecture Technique
+### Correctifs de bugs
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Docker Compose                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐  ┌──────┐ │
-│  │ PostgreSQL 15 │  │  MongoDB 7   │  │ NestJS    │  │Next.js│ │
-│  │  (relationnel)│  │  (NoSQL)     │  │ API:3003  │  │:3004  │ │
-│  └──────────────┘  └──────────────┘  └─────┬─────┘  └──┬───┘ │
-│         ▲                  ▲               │            │      │
-│         │                  │               │  HTTP API  │      │
-│         └──────────────────┴───────────────┘────────────┘      │
-│                    réseau interne tourisme_net                 │
-└──────────────────────────────────────────────────────────────┘
-```
+| Bug | Correction |
+|-----|------------|
+| **Onboarding redirect loop** | `traveler_id` corrigé en `traveler: { id }` dans eco-traveler.service.ts (erreur TypeORM) |
+| **Reservation page loading** | `setLoading(false)` maintenant appele sur le chemin de succes (pas seulement en .catch) |
+| **Offer detail "Reserver" button** | Bouton toujours affiche pour les eco-voyageurs, meme si l'offre a des items |
+| **Circuit modal scroll** | Tous les modals ont `max-h-[90vh] overflow-y-auto` |
+| **Circuit edit map position** | MapPicker deplace avant le bouton sauvegarder |
+| **Messagerie useSearchParams** | Wrappe dans un `<Suspense>` boundary |
+| **apiFetch 204 handling** | Retourne null pour les reponses 204/vide |
+| **Double reservation prevention** | Offres et circuits verifient les reservations non-annulees existantes |
+| **Provider notifications** | Notifie l'auteur de l'offre/circuit lors d'une reservation |
 
 ---
 
-## 4. Stack Technologique Détaillé
+## 2. Stack Technique
 
 ### Backend (`/backend`)
 
-| Technologie | Version | Usage |
-|---|---|---|
-| **NestJS** | ^11.1.16 | Framework backend (Node.js, architecture modulaire) |
-| **TypeScript** | ^5.9.3 | Langage |
-| **PostgreSQL** | 15 (alpine) | Base relationnelle (via TypeORM) |
-| **MongoDB** | 7 | Base NoSQL (via Mongoose) |
-| **TypeORM** | ^0.3.28 | ORM PostgreSQL |
-| **Mongoose** | ^9.4.1 | ODM MongoDB |
-| **Passport** | ^0.7.0 | Authentification (JWT + Google OAuth2) |
-| **JWT** | @nestjs/jwt ^11 | Tokens d'authentification |
-| **bcrypt** | ^6.0.0 | Hash des mots de passe |
-| **Nodemailer** | ^8.0.5 | Envoi d'emails (SMTP) |
-| **Swagger** | @nestjs/swagger ^11 | Documentation API |
-| **class-validator** | ^0.15.1 | Validation des DTOs |
-| **Joi** | ^18.0.2 | Validation de config |
+| Technologie | Usage |
+|-------------|-------|
+| NestJS ^11 | Framework backend |
+| TypeORM ^0.3 | ORM PostgreSQL |
+| PostgreSQL 15 | Base relationnelle |
+| MongoDB 7 | Base NoSQL (prefs, engagement) |
+| class-validator | Validation DTOs |
 
 ### Frontend (`/frontend`)
 
-| Technologie | Version | Usage |
-|---|---|---|
-| **Next.js** | 16.2.1 | Framework React (App Router, Server Components) |
-| **React** | 19.2.4 | UI Library |
-| **TypeScript** | ^5 | Langage |
-| **Tailwind CSS** | ^4.2.2 | Styling utility-first |
-| **Framer Motion** | ^12.38.0 | Animations |
-| **Lucide React** | ^1.7.0 | Icônes |
-| **PostCSS** | ^8.5.8 | Transformation CSS |
-
-### Infrastructure
-
 | Technologie | Usage |
-|---|---|
-| **Docker** + **Docker Compose** | Conteneurisation (4 services : db, mongo, api, web + minio unused) |
-| **Cloudinary** | Stockage d'images en cloud (upload via SDK cloudinary) |
-| **Réseau** | `tourisme_net` (external) |
-| **Ports exposés** | API sur `3003`, Frontend sur `3004` |
+|-------------|-------|
+| Next.js 16 | Framework React (App Router) |
+| React 19 | UI Library |
+| Tailwind CSS ^4 | Styling |
+| Leaflet / react-leaflet | Cartes interactives |
+| Framer Motion | Animations |
+| Lucide React | Icones |
+
+### Configuration
+
+| Variable | Valeur |
+|----------|--------|
+| Backend port | 3001 |
+| Frontend port | 3000 |
+| PostgreSQL | localhost:5433, user: marammejri, db: tourism_db |
+| Currency | TND (Tunisian Dinar) |
 
 ---
 
-## 5. Structure de la Base de Données
-
-### PostgreSQL (Données relationnelles — 12 entités)
+## 3. Modules Backend Ajoutes
 
 ```
-users                    (auth, rôles, status, tokens)
-  ├── eco_travelers      (profils voyageurs, scores, préférences)
-  ├── guides             (profils guides, spécialités, expérience)
-  │     └── offers       (offres éco-touristiques des guides)
-  └── project_owners     (profils propriétaires, organisation)
-        ├── projects     (projets éco-touristiques CRUD)
-        └── offers       (offres éco-touristiques des propriétaires)
-
-questionnaires            (questionnaires par type)
-  └── questions            (questions avec poids)
-       └── answers          (réponses avec score 1-4)
-
-question_categories       (environmental, social, economic)
-
-questionnaire_attempts     (tentatives de l'utilisateur)
-  └── user_answers         (réponses données)
+backend/src/
+├── booking/           Réservations (bookings, participants, confirmation)
+├── circuit/           Circuits multi-jours (jours, programme, options, réservations)
+├── notification/      Notifications utilisateur
+├── trip-plan/         Plans de voyage (CRUD + réservation groupée)
 ```
 
-### MongoDB (Données NoSQL — 6 collections)
+### Nouvelles entites PostgreSQL
 
-| Collection | Usage |
-|---|---|
-| `traveler_preferences` | Préférences voyageur (interêts, activités, objectifs) |
-| `traveler_engagement` | Engagement voyageur (score, badges, stats) |
-| `guide_skills` | Compétences guide (activités, paysages, certifications) |
-| `guide_engagement` | Engagement guide (score, badges, stats) |
-| `project_engagement` | Engagement propriétaire (score, badges, réservations) |
-| `project_services` | Services des projets éco (offerts, pratiques) |
+| Table | Description |
+|-------|-------------|
+| `offers` (+5 colonnes) | category_id, address, latitude, longitude, confirmation_mode |
+| `offer_items` | Elements vendables avec type, details |
+| `offer_item_prices` | Prix par categorie (Adulte, Enfant, Etudiant...) |
+| `offer_item_sessions` | Creneaux datés avec capacite |
+| `bookings` | Reservations avec ref, status, participants |
+| `booking_participants` | Individus dans une reservation |
+| `circuits` (+images) | Circuits multi-jours avec GPS |
+| `circuit_days` | Jours du circuit |
+| `circuit_program_items` | Activites du programme |
+| `circuit_options` | Options additionnelles |
+| `circuit_reservations` | Reservations de circuits |
+| `notifications` | Notifications utilisateur |
+| `trip_plans` | Plans de voyage |
+| `trip_plan_items` | Items des plans |
+| `offer_categories` | Lookup (10 categories seedees) |
 
 ---
 
-## 6. Modèle de Données Hybride (Polyglot Persistence)
-
-Le projet utilise une approche **hybride PostgreSQL + MongoDB** :
-
-- **PostgreSQL** : source de vérité pour les profils, scores, questionnaires (données transactionnelles, relationnelles, avec ACID)
-- **MongoDB** : données flexibles et évolutives — préférences utilisateur, engagement, badges, compétences (documents JSON)
-
-**Pourquoi ce choix ?** Les profils et questionnaires sont relationnels (clés étrangères, intégrité). Les préférences et badges sont des documents semi-structurés qui peuvent évoluer sans migration de schéma.
-
----
-
-## 7. Architecture Modulaire Backend (NestJS)
-
-```
-src/
-├── auth/             Authentification (register, login, JWT, Google OAuth)
-├── users/            Gestion des utilisateurs (CRUD base)
-├── eco-traveler/     Profil & scoring des voyageurs
-├── guide/            Profil & scoring des guides
-├── project-owner/    Profil & CRUD projets des propriétaires
-├── offer/            Offres éco-touristiques (CRUD, scoring, workflow modération)
-├── questionnaire/    QCM durabilité (soumission, scoring)
-├── publication/      Publications sociales (places, expériences, likes, commentaires)
-├── messages/         Messagerie privée (conversations, blocage)
-├── follow/           Système d'abonnement entre utilisateurs
-├── interactions/     Likes et commentaires génériques (multi-entités)
-├── reports/          Signalements et modération
-├── admin/            Panneau d'administration (validation, bannissement)
-├── upload/           Upload d'images (Cloudinary)
-├── mail/             Service d'envoi d'emails (Nodemailer)
-├── config/           Configuration (env vars, validation Joi)
-├── database/         Connexions DB (TypeORM + Mongoose)
-└── common/           Guards, décorateurs, enums partagés
-```
-
-### Endpoints API principaux
-
-| Endpoint | Méthode | Description |
-|---|---|---|
-| `POST /api/auth/register` | Public | Inscription |
-| `POST /api/auth/login` | Public | Connexion |
-| `POST /api/auth/refresh` | Public | Refresh token |
-| `POST /api/auth/forgot-password` | Public | Mot de passe oublié |
-| `POST /api/auth/reset-password` | Public | Réinitialisation |
-| `GET /api/auth/google` | Public | Google OAuth |
-| `GET /eco-traveler/profile` | Auth | Profil voyageur |
-| `POST /eco-traveler/profile` | Auth | Compléter profil |
-| `PATCH /eco-traveler/interests` | Auth | Màj centres d'intérêt |
-| `POST /eco-traveler/onboarded` | Auth | Marquer onboarding |
-| `GET /guide/profile` | Auth | Profil guide |
-| `GET /project-owner/profile` | Auth | Profil propriétaire |
-| `GET /project-owner/projects` | Auth | Liste projets |
-| `POST /project-owner/projects` | Auth | Créer projet |
-| `GET /questionnaire/active` | Public | Questionnaire actif |
-| `POST /questionnaire/submit` | Auth | Soumettre réponses |
-| `POST /offers` | Auth (Guide/Projet) | Créer une offre |
-| `GET /offers` | Public | Toutes les offres approuvées |
-| `GET /offers/mine` | Auth (Guide/Projet) | Mes offres (dashboard) |
-| `GET /offers/author/:authorId` | Public | Offres publiques d'un auteur |
-| `GET /offers/project/:projectId` | Public | Offres liées à un projet |
-| `PATCH /offers/:id` | Auth (Guide/Projet) | Modifier une offre |
-| `PATCH /offers/:id/sustainability` | Auth (Guide/Projet) | Màj score durabilité |
-| `DELETE /offers/:id` | Auth (Guide/Projet) | Supprimer une offre |
-| `GET /admin/offers/pending` | Admin | Offres en attente |
-| `PATCH /admin/offers/:id/approve` | Admin | Approuver une offre |
-| `PATCH /admin/offers/:id/reject` | Admin | Refuser une offre |
-
----
-
-## 8. Module Offres Éco-Touristiques
-
-### 8.1 Qu'est-ce qu'une offre ?
-
-Une **offre éco-touristique** est une prestation/service proposée par un **guide** ou un **propriétaire de projet** sur la plateforme. Elle est visible sur la page publique **Destinations** après validation par l'administrateur.
-
-### 8.2 Types d'offres
-
-| Type | Description |
-|---|---|
-| `eco_tour` | Circuit / excursion écotouristique guidé |
-| `accommodation` | Hébergement durable |
-| `activity` | Activité ponctuelle (randonnée, kayak, etc.) |
-| `restaurant` | Restauration éco-responsable |
-| `craft` | Artisanat local |
-
-### 8.3 Workflow de validation
-
-```
-Création → status = "pending"
-              │
-      ┌───────┴───────┐
-      │               │
-   Ambassadeur     Non-ambassadeur
-      │               │
-   approved      Admin examine
-                     │
-              ┌──────┴──────┐
-              │             │
-          approved      rejected
-```
-
-- Les **ambassadeurs** (score ≥ 80) voient leurs offres auto-approuvées
-- Sinon l'offre reste en `pending` jusqu'à validation par l'admin
-- L'admin peut approuver ou refuser (avec raison)
-
-### 8.4 Structure de la table `offers` (PostgreSQL)
-
-| Champ | Type | Description |
-|---|---|---|
-| `id` | UUID (PK) | |
-| `author_id` | UUID | Créateur (guide ou project_owner) |
-| `author_type` | varchar | `guide` ou `project_owner` |
-| `project_id` | UUID (FK nullable) | Projet associé (propriétaires uniquement) |
-| `title` | varchar | Titre |
-| `description` | text | Description |
-| `price` | decimal | Prix |
-| `duration` | varchar | Durée (texte libre : "2h", "3 jours") |
-| `offer_type` | varchar | Type d'offre |
-| `images` | simple-array | URLs des images |
-| `inclusions` | text | Inclus dans l'offre |
-| `region` | varchar | Région |
-| `meeting_point` | varchar | Point de rendez-vous |
-| `meeting_lat/lng` | decimal | Coordonnées GPS |
-| `min/max_group_size` | int | Taille du groupe |
-| `min_age` | int | Âge minimum |
-| `cancellation_policy` | text | Politique d'annulation |
-| `sustainability_score` | int | Score éco (0-100) |
-| `status` | varchar | `pending`, `approved`, `rejected` |
-| `rejection_reason` | text | Motif du refus |
-
-### 8.5 Use Cases — Offres
-
-#### 🗺️ Guide
-- **Créer une offre** : Définit un circuit/activité (titre, description, prix, durée, lieu, groupe)
-- **Lier à son projet** : Les guides peuvent rattacher l'offre à un projet existant
-- **Voir ses offres** : Dashboard "Mes Offres" avec statut (en attente/approuvée/refusée)
-- **Modifier/Supprimer** : Éditer les détails ou retirer une offre
-- **Noter la durabilité** : Attribuer un score éco (0-100)
-
-#### 🏗️ Propriétaire de Projet
-- **Créer une offre liée** : Une offre rattachée à un projet (ex: "Séjour dans votre éco-gîte")
-- **CRUD complet** : Créer, consulter, modifier, supprimer ses offres
-- **Validation projet requis** : L'offre ne peut être créée que si le projet est `active`
-
-#### 🧳 Éco-Voyageur
-- **Parcourir les offres** : Page Destinations avec filtres (type, région, prix, score)
-- **Voir les détails** : Modal avec photos, description, inclus, carte, politique d'annulation
-- **Contacter le créateur** : Via messagerie intégrée
-
-#### 👑 Admin
-- **Modérer les offres** : Liste des offres en attente avec aperçu
-- **Approuver/Refuser** : Valide la qualité avant publication
-- **Motif de refus** : Raison communiquée au créateur
-
-### 8.6 Routes frontend liées aux offres
+## 4. Pages Frontend Ajoutees
 
 | Route | Page |
-|---|---|
-| `/destinations` | Vitrine publique des offres approuvées |
-| `/admin` | Gestion des offres en attente (onglet "Offers") |
-| Dashboard guide/propriétaire | CRUD de ses propres offres |
-| Profil public guide/propriétaire | Offres publiées par l'utilisateur |
+|-------|------|
+| `/offers/[id]` | Detail offre (items, prix, sessions, images, carte, bouton Reserver) |
+| `/reservations/new` | Formulaire reservation (item, session, participants, montant) |
+| `/dashboard/reservations` | Mes reservations voyageur (statut, annulation) |
+| `/dashboard/incoming` | Reservations recues provider (confirmer/refuser) |
+| `/circuits` | Liste publique circuits (filtre region) |
+| `/circuits/[id]` | Detail circuit (itineraire, images, options, carte, reservation) |
+| `/notifications` | Notifications (liste, marquer lu) |
+| `/trip-plans` | Plans de voyage (liste) |
+| `/trip-plans/new` | Creation plan |
+| `/trip-plans/[id]` | Detail plan (items, reservation groupee) |
 
 ---
 
-## 9. Publications — Partage de lieux & expériences
+## 5. Endpoints API Ajoutes
 
-### 9.1 Concept
-Les **voyageurs** peuvent partager leurs découvertes via des **publications** de deux types :
-- **`place`** : Recommandation d'un lieu (avec coordonnées GPS, nom du lieu, région)
-- **`experience`** : Récit d'expérience de voyage (avec photos, description)
+### Catalogue
 
-### 9.2 Workflow
-- Les **places** sont soumises à modération (sauf pour les **Ambassadeurs**)
-- Les **experiences** sont publiées immédiatement
-- Chaque publication contribue au score `partages` (20% du score final)
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/offers` | Guide/Project — creer offre |
+| PATCH | `/offers/:id` | Owner — modifier |
+| POST | `/offers/:offerId/items` | Creer item |
+| PATCH | `/offers/items/:itemId` | Modifier item |
+| DELETE | `/offers/items/:itemId` | Supprimer item |
+| POST | `/offers/items/:itemId/prices` | Ajouter prix |
+| PATCH | `/offers/items/prices/:priceId` | Modifier prix |
+| DELETE | `/offers/items/prices/:priceId` | Supprimer prix |
+| POST | `/offers/items/:itemId/sessions` | Creer session |
+| PATCH | `/offers/items/sessions/:sessionId` | Modifier session |
+| DELETE | `/offers/items/sessions/:sessionId` | Supprimer session |
+| GET | `/offers/:id` | Detail avec items, prix, sessions |
 
-### 9.3 Interactions sociales
-| Action | Description |
-|---|---|
-| **Like** | Toggle like sur une publication |
-| **Commentaire** | Texte avec replies (1 niveau) |
-| **Like commentaire** | Toggle like sur un commentaire |
+### Reservations
 
-### 9.4 Use cases
-- 🧳 **Voyageur** : Crée des publications (places/expériences), like, commente
-- 👑 **Admin** : Modère les places en attente, approuve/refuse
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/bookings` | Eco-voyageur |
+| GET | `/bookings/mine` | Eco-voyageur |
+| GET | `/bookings/incoming` | Provider |
+| GET | `/bookings/:id` | Tous (si concerne) |
+| PATCH | `/bookings/:id/cancel` | Eco-voyageur |
 
----
+### Circuits
 
-## 10. Messagerie privée
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/circuits` | Guide/Project |
+| GET | `/circuits` | Public (filtre status=approved) |
+| GET | `/circuits/:id` | Detail |
+| PATCH | `/circuits/:id` | Owner |
+| POST | `/circuits/:circuitId/days` | Owner |
+| PATCH | `/circuits/days/:dayId` | Owner |
+| DELETE | `/circuits/days/:dayId` | Owner |
+| POST | `/circuits/:circuitId/program` | Owner |
+| PATCH | `/circuits/program/:programId` | Owner |
+| DELETE | `/circuits/program/:programId` | Owner |
+| POST | `/circuits/:circuitId/reserve` | Eco-voyageur |
+| GET | `/circuits/reservations/mine` | Eco-voyageur |
+| GET | `/circuits/reservations/incoming` | Provider |
+| PATCH | `/circuits/reservations/:id/confirm` | Provider |
+| PATCH | `/circuits/reservations/:id` | Eco-voyageur (modifier) |
+| DELETE | `/circuits/reservations/:id` | Eco-voyageur (supprimer) |
 
-### 10.1 Concept
-Messagerie interne entre utilisateurs avec système de **conversations**.
+### Notifications
 
-### 10.2 Règles de messagerie
-| Expéditeur | Destinataire |
-|---|---|
-| Éco-voyageur | Guide ou Propriétaire |
-| Guide | Propriétaire |
-| Propriétaire | Guide |
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| GET | `/notifications` | Tous |
+| PATCH | `/notifications/:id/read` | Tous |
+| PATCH | `/notifications/read-all` | Tous |
+| GET | `/notifications/unread` | Tous — compteur |
 
-### 10.3 Endpoints
-| Méthode | Route | Description |
-|---|---|---|
-| `POST` | `/api/messages/conversations` | Créer/obtenir une conversation |
-| `GET` | `/api/messages/conversations` | Lister ses conversations |
-| `GET` | `/api/messages/conversations/:id` | Détails d'une conversation |
-| `DELETE` | `/api/messages/conversations/:id` | Supprimer une conversation |
-| `GET` | `/api/messages/conversations/:id/messages` | Messages (marque lus) |
-| `POST` | `/api/messages` | Envoyer un message |
+### Trip Plans
 
-### 10.4 Use cases
-- 🧳 **Voyageur** : Contacte un guide ou propriétaire pour réserver
-- 🗺️ **Guide** : Répond aux voyageurs, contacte propriétaires
-- 🏗️ **Propriétaire** : Répond aux voyageurs et guides
-
----
-
-## 11. Système de Follow (Abonnements)
-
-### 11.1 Concept
-Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaires) pour rester informés.
-
-### 11.2 Règles de follow
-| Followeur | Followé |
-|---|---|
-| Éco-voyageur | Guide ou Propriétaire |
-| Guide | Propriétaire |
-| Propriétaire | Guide |
-
-### 11.3 Endpoints
-| Méthode | Route | Description |
-|---|---|---|
-| `POST` | `/api/follows/:targetId/:targetType` | Follow un utilisateur |
-| `DELETE` | `/api/follows/:targetId` | Unfollow |
-| `GET` | `/api/follows/following` | Mes abonnements |
-| `GET` | `/api/follows/followers` | Mes followers |
-| `GET` | `/api/follows/following/profiles` | Abonnements avec profils |
-| `GET` | `/api/follows/followers/profiles` | Followers avec profils |
-| `GET` | `/api/follows/followers/public/:userId` | Followers d'un utilisateur |
-| `GET` | `/api/follows/count` | Nombre de followers |
-| `GET` | `/api/follows/status/:targetId` | Vérifier si je follow |
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/trip-plans` | Eco-voyageur |
+| GET | `/trip-plans/mine` | Eco-voyageur |
+| GET | `/trip-plans/:id` | Proprietaire |
+| PATCH | `/trip-plans/:id` | Proprietaire |
+| DELETE | `/trip-plans/:id` | Proprietaire |
+| POST | `/trip-plans/:id/items` | Proprietaire |
+| PATCH | `/trip-plans/:id/items/:itemId` | Proprietaire |
+| DELETE | `/trip-plans/:id/items/:itemId` | Proprietaire |
+| POST | `/trip-plans/:id/book` | Proprietaire |
 
 ---
 
-## 12. Administration & Modération
-
-### 12.1 Rôle Admin
-Le panneau d'administration permet de gérer l'ensemble du contenu soumis.
-
-### 12.2 Actions de modération
-| Contenu | Actions |
-|---|---|
-| **Offres** | Approuver / Refuser les offres en attente |
-| **Projets** | Approuver / Refuser les projets |
-| **Publications** | Approuver / Refuser les places partagées |
-| **Signalements** | Résoudre les signalements (bannissement) |
-| **Utilisateurs** | Bannir / Débannir |
-
-### 12.3 Système de signalement
-Tout utilisateur peut signaler un contenu inapproprié. L'admin examine et peut bannir l'utilisateur (temporairement ou définitivement). Un email est envoyé automatiquement lors du bannissement/débannissement.
-
----
-
-## 13. Système de Score de Durabilité (AFRATIM)
-
-Le score final est calculé avec cette pondération :
-
-```
-Score Final = Questionnaire × 20% + Réservations × 40% + Feedbacks × 20% + Partages × 20%
-```
-
-Niveaux :
-
-| Score | Label |
-|---|---|
-| ≥ 80 | Ambassadeur durable |
-| ≥ 60 | Écovoyageur engagé |
-| ≥ 40 | Voyageur sensible |
-| < 40 | Voyageur classique |
-
----
-
-## 14. Routes Frontend (Next.js App Router)
-
-| Route | Page |
-|---|---|
-| `/` | Landing page (Hero, HowItWorks, Featured, Newsletter) |
-| `/auth/login` | Connexion |
-| `/auth/register` | Inscription (avec choix de rôle) |
-| `/auth/forgot-password` | Mot de passe oublié |
-| `/auth/reset-password` | Réinitialisation |
-| `/auth/check-email` | Confirmation email envoyé |
-| `/auth/callback` | Callback OAuth (storing tokens) |
-| `/onboarding/eco-traveler` | Onboarding voyageur |
-| `/onboarding/guide` | Onboarding guide |
-| `/onboarding/project-owner` | Onboarding propriétaire |
-| `/questionnaire/eco-traveler` | QCM durabilité voyageur |
-| `/questionnaire/guide` | QCM durabilité guide |
-| `/questionnaire/project-owner` | QCM durabilité propriétaire |
-| `/dashboard` | Dashboard générique |
-| `/dashboard/profile` | Profil / paramètres |
-| `/destinations` | Vitrine publique des offres avec filtres et carte |
-| `/destinations` | Vitrine publique des offres avec filtres et carte |
-| `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
-| `/messagerie` | Messagerie privée |
-| `/profile/ecovoyageur` | Profil public voyageur |
-| `/profile/ecovoyageur/[userId]` | Profil public voyageur (dynamique) |
-| `/profile/guide` | Profil public guide |
-| `/profile/project-owner` | Profil public propriétaire |
-| `/profile/project-owner/[userId]` | Profil public propriétaire (dynamique) |
-
----
-
-## 15. Use Cases par Rôle
-
-### 🧳 Éco-Voyageur
-- S'inscrit, se connecte (email ou Google)
-- Complète son onboarding (type voyageur, motivations, intérêts, paysages, objectifs)
-- Passe le questionnaire de durabilité (score initial)
-- Parcourt les offres éco-touristiques sur la page Destinations (filtres, carte, recherche)
-- Consulte le détail d'une offre (photos, description, inclus, carte, politique d'annulation)
-- Contacte le créateur d'une offre via messagerie
-- **Follow des guides et propriétaires** pour suivre leurs actualités
-- **Partage des lieux (places)** et des **expériences de voyage (experiences)**
-- **Like et commente** les publications des autres voyageurs
-- **Voit ses followers et abonnements** sur son profil public
-- Voit son tableau de bord avec score, badges, plans de voyage, stats d'engagement
-- Consulte son **profil public** avec ses expériences, lieux partagés, et statistiques
-
-### 🗺️ Guide
-- Crée un profil (type guide, zone, spécialités, langues, années d'expérience, certifications)
-- Passe l'évaluation de durabilité
-- **Crée et gère ses offres éco-touristiques** (circuits, activités, etc.)
-- **Soumet ses offres à validation** (statut pending → approved/rejected)
-- **Auto-approbation si Ambassadeur** (score ≥ 80)
-- **Attribue un score de durabilité** à chaque offre (0-100)
-- **Reçoit des messages** des voyageurs intéressés par ses offres
-- **Follow des propriétaires de projet**
-- **Voit ses followers** (voyageurs et propriétaires)
-- Gère ses circuits et réservations
-- Reçoit des avis et accumule des badges
-
-### 🏗️ Propriétaire de Projet
-- Crée un profil (organisation, poste, bio)
-- Ajoute/modifie/supprime des projets éco-touristiques (hébergement, restauration, artisanat, etc.)
-- **Crée des offres liées à ses projets** (ex: séjour dans son éco-gîte)
-- **Soumet ses offres à validation** (nécessite un projet actif)
-- **Reçoit des messages** des voyageurs et guides
-- **Follow des guides**
-- **Voit ses followers** (voyageurs et guides)
-- Définit des labels éco (panneaux solaires, zéro plastique, etc.)
-- Passe l'évaluation de durabilité
-- Gère les réservations reçues
-
----
-
-## 16. Déploiement
-
-L'infrastructure est **100% Docker** :
-- `docker compose up` démarre les services (db, mongo, api, web ; minio présent mais non utilisé — images via Cloudinary)
-- Le réseau `tourisme_net` doit être créé au préalable (`external: true`)
-- Variables d'environnement dans `.env` / `.env.production`
-- Adresse de prod frontend : `http://91.134.139.163:3004`
-- Adresse de prod API : `http://91.134.139.163:3003/api`
-
-### Cloudinary (Stockage d'images)
-
-Le projet utilise **Cloudinary** comme service de stockage d'images.
-
-**Fonctionnement :**
-1. L'utilisateur upload une image via `POST /api/upload` (auth requis, multer, limite 10MB)
-2. L'API téléverse le fichier vers Cloudinary via `cloudinary.uploader.upload_stream()` dans le dossier `eco-tourism`
-3. L'API retourne l'URL sécurisée Cloudinary
-4. Pour supprimer : `UploadService.deleteByUrl(url)` — extrait le public_id et appelle `cloudinary.uploader.destroy()`
-
-**Variables d'environnement :**
-
-```
-CLOUDINARY_CLOUD_NAME=votre_cloud
-CLOUDINARY_API_KEY=votre_api_key
-CLOUDINARY_API_SECRET=votre_api_secret
-```
-
----
-
-## 17. Observations Techniques
-
-- **Projet en développement actif** (Next.js 16, React 19, NestJS 11 — versions très récentes)
-- **Pas de CI/CD** configuré dans le repo
-- **`synchronize: true`** en TypeORM (pratique en dev, dangereux en prod)
-- **Frontend sans gestion d'état** (localStorage uniquement — pas de Zustand/Redux/Context)
-- **Pas de tests e2e** complets (uniquement des fichiers `.spec.ts` dans le backend)
-- **Design Material You / Google-like** (Material Symbols, arrondis, ombres)
-- **Interface 100% en français**
-- **Double base de données** (PostgreSQL + MongoDB) pour un modèle hybride relationnel/NoSQL
-- **Authentification avec refresh token rotation** (sécurité renforcée)
-- **Modules sociaux complets :** Publications (places/expériences), Messagerie privée, Follow, Signalements
-- **Panneau Admin :** validation offres/projets/publications, gestion des signalements, bannissement
-
----
-
-## 18. Structure Git & Workflow
-
-### Dépôt unique
-
-| Dépôt | URL | Branche |
-|---|---|---|
-| **tourisme** | `github.com/bennoomenfaker/tourisme` | `main` |
-
-### Structure
-
-```
-tourisme/                          # Repo unique (bennoomenfaker/tourisme)
-├── docker-compose.yml
-├── README.md
-├── frontend/                      # Dossier normal (clone de Maram172003/eco-tourism-platform-front)
-└── backend/                       # Dossier normal (clone de Maram172003/eco-tourism-platform-backend)
-```
-
-### Commandes essentielles
+## 6. Seed Categories
 
 ```bash
-# Cloner
-git clone https://github.com/bennoomenfaker/tourisme.git
-
-# Travailler et push
-git add .
-git commit -m "feat: description"
-git push origin main
+cd backend && npm run seed:offer-categories
 ```
 
-### Mise à jour depuis Maram
+| slug | label | icon |
+|------|-------|------|
+| eco_tour | Eco-Tour | eco |
+| accommodation | Hebergement | house |
+| activity | Activite | target |
+| restaurant | Restauration | food |
+| craft | Artisanat | craft |
+| workshop | Atelier | tools |
+| transfer | Transfert | van |
+| sejour | Sejour | stay |
+| circuit | Circuit | route |
+| other | Autre | other |
 
-Demander à l'agent IA de vérifier et mettre à jour.
+---
+
+## 7. Donnees de test
+
+- 10 utilisateurs (admin + eco-voyageurs + guides + project-owners)
+- 12 offres avec items, prix, sessions (realistes Tunisie)
+- 6 circuits avec jours, programme, images, GPS
+- 8 bookings, 6 circuit_reservations
+- 3 trip plans avec items
+- 9 sessions avec capacite
+- 6 projets eco-touristiques
+- Notifications associees
+
+---
+
+## 8. Lancement
+
+```bash
+# Backend
+cd backend && npm install && npm run start:dev
+# -> http://localhost:3001/api
+# -> http://localhost:3001/swagger
+
+# Frontend
+cd frontend && npm install && npm run dev
+# -> http://localhost:3000
+```
+
+---
+
+## 9. Fichiers modifies/crees
+
+### Backend — Fichiers modifies
+
+| Fichier | Modifications |
+|---------|---------------|
+| `backend/src/app.module.ts` | +imports BookingModule, CircuitModule, NotificationModule, TripPlanModule |
+| `backend/src/offer/entities/offer.entity.ts` | +category_id, address, latitude, longitude, confirmation_mode |
+| `backend/src/offer/entities/offer-item.entity.ts` | +bed_count, nights, tent_capacity, room_type |
+| `backend/src/offer/dto/offer.dto.ts` | +DTOs prices, sessions, UpdateOfferItemPriceDto, UpdateOfferItemSessionDto |
+| `backend/src/offer/offer.service.ts` | +updatePrice, updateSession, removePrice, removeSession, PATCH returns JSON |
+| `backend/src/offer/offer.controller.ts` | +PATCH/DELETE endpoints prices, sessions |
+| `backend/src/circuit/entities/circuit.entity.ts` | +images (simple-array) |
+| `backend/src/circuit/dto/create-circuit.dto.ts` | +images field |
+| `backend/src/circuit/circuit.service.ts` | +images handling, findAll(status?) |
+| `backend/src/circuit/circuit.controller.ts` | +reserve() uses circuit.confirmation_mode, capacity check |
+| `backend/src/eco-traveler/eco-traveler.service.ts` | Imports Booking + CircuitReservation, counts reelles depuis PostgreSQL |
+| `backend/src/eco-traveler/eco-traveler.module.ts` | +Booking, CircuitReservation imports |
+
+### Backend — Fichiers crees
+
+| Fichier | Description |
+|---------|-------------|
+| `backend/src/booking/` | Module complet (entite, service, controller, DTO) |
+| `backend/src/circuit/` | Module complet (6 entites, service, controller, DTOs) |
+| `backend/src/notification/` | Module complet |
+| `backend/src/trip-plan/` | Module complet (2 entites, 4 DTOs, service, controller) |
+
+### Frontend — Fichiers modifies
+
+| Fichier | Modifications |
+|---------|---------------|
+| `frontend/app/dashboard/page.tsx` | EcoTravelerOffersSection, CreateCircuitModal, edit/view/delete offres |
+| `frontend/app/offers/[id]/page.tsx` | Bouton Reserver global, edit mode, images gallery |
+| `frontend/app/circuits/[id]/page.tsx` | Image gallery, edit modal with images, modals overflow-y-auto |
+| `frontend/app/reservations/new/page.tsx` | setLoading(false) sur succes |
+| `frontend/app/messagerie/page.tsx` | Suspense boundary pour useSearchParams |
+| `frontend/lib/api.ts` | apiFetch gere 204/empty responses |
+| `frontend/lib/offer-config.ts` | PROJECT_TYPES, OFFER_CATEGORIES, CATEGORY_FORM_FIELDS |
+| `frontend/components/GuidedOfferWizard.tsx` | Edit mode, image URL manager, PATCH on submit |
+
+### Frontend — Fichiers crees
+
+| Fichier | Description |
+|---------|-------------|
+| `frontend/app/offers/[id]/page.tsx` | Detail offre |
+| `frontend/app/reservations/new/page.tsx` | Formulaire reservation |
+| `frontend/app/dashboard/reservations/page.tsx` | Mes reservations |
+| `frontend/app/dashboard/incoming/page.tsx` | Reservations recues |
+| `frontend/app/circuits/page.tsx` | Liste circuits |
+| `frontend/app/circuits/[id]/page.tsx` | Detail circuit |
+| `frontend/app/notifications/page.tsx` | Notifications |
+| `frontend/app/trip-plans/` | 3 pages (liste, new, detail) |
+| `frontend/components/map/CircuitMap.tsx` | Carte Leaflet pour circuits |
+| `frontend/components/map/TripMap.tsx` | Carte Leaflet pour trip plans |
+| `frontend/components/home/DestinationsSection.tsx` | Real circuits from API |
+| `frontend/components/home/FeaturedExperiences.tsx` | Real offers from API |
+| `frontend/components/home/CircuitsSection.tsx` | Circuits on homepage |
+
+---
+
+## 10. Points importants
+
+- `synchronize: true` sur TypeORM (auto-sync entities en dev)
+- Les types de projet en DB sont en francais (`hebergement`, `artisanat`...)
+- Le wizard normalise les types en anglais pour la config
+- Les images des circuits/offres sont stockees comme URL (pas de file upload)
+- Les offres ont un champ `offer_type` varchar (pas `category_id` pour le wizard)
+- La table `trip_plans` utilise `eco_traveler_id` (pas `user_id`)
+- Le badge de notifications affiche le vrai compteur non-lues
+- La page destinations affiche les circuits reellement proposes

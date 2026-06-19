@@ -2,9 +2,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { CircuitDay } from './circuit-day.entity';
+import { CircuitOption } from './circuit-option.entity';
 
 /**
  * Circuit / Package multi-jours organisé par un guide ou project owner
@@ -70,12 +73,30 @@ export class Circuit {
   @Column({ type: 'text', nullable: true })
   exclusions!: string | null;
 
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lat!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lng!: number | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  address!: string | null;
+
+  @OneToMany(() => CircuitDay, (day) => day.circuit)
+  days?: CircuitDay[];
+
+  @OneToMany(() => CircuitOption, (option) => option.circuit)
+  options?: CircuitOption[];
+
   @Column({ default: 'pending' })
   status!: string;
   // 'pending' | 'approved' | 'rejected' | 'archived'
 
   @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;
+
+  @Column({ type: 'simple-array', nullable: true })
+  images!: string[] | null;
 
   @CreateDateColumn()
   created_at!: Date;

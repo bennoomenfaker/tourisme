@@ -37,6 +37,23 @@ export class OfferItem {
   item_type!: string | null;
   // 'room' | 'bed' | 'camping_space' | 'dish' | 'menu'
   // | 'equipment' | 'activity' | 'workshop' | 'transport_service'
+  // | 'dormitory' | 'private_room' | 'tent_space' | 'kayak' | 'restaurant'
+
+  @Column({ type: 'int', nullable: true })
+  bed_count!: number | null;
+  // Nombre de lits pour un hébergement
+
+  @Column({ type: 'int', nullable: true })
+  nights!: number | null;
+  // Nombre de nuits pour un séjour
+
+  @Column({ type: 'int', nullable: true })
+  tent_capacity!: number | null;
+  // Capacité en personnes pour un espace tente
+
+  @Column({ type: 'varchar', nullable: true })
+  room_type!: string | null;
+  // 'shared_dormitory' | 'private' | 'double' | 'family' | 'tent'
 
   @Column({ type: 'json', nullable: true })
   details_json!: Record<string, any> | null;

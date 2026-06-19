@@ -1,6 +1,7 @@
 import {
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -23,4 +24,18 @@ export class CreateCircuitDayDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  lat?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  lng?: number;
+
+  @IsOptional()
+  @IsString()
+  location_name?: string;
 }

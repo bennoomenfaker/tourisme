@@ -87,5 +87,9 @@ export async function apiFetch<T>(
     throw new Error(Array.isArray(message) ? message.join(", ") : message);
   }
 
+  if (res.status === 204 || data === null) {
+    return null as T;
+  }
+
   return data;
 }

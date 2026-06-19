@@ -1,0 +1,36 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { TripPlan } from './trip-plan.entity';
+import { OfferItem } from '../../offer/entities/offer-item.entity';
+
+@Entity('trip_plan_items')
+export class TripPlanItem {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @ManyToOne(() => TripPlan, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'trip_plan_id' })
+  tripPlan!: TripPlan;
+
+  @ManyToOne(() => OfferItem, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'offer_item_id' })
+  offerItem!: OfferItem | null;
+
+  @Column({ type: 'int', nullable: true })
+  day_number!: number | null;
+
+  @Column({ default: 0 })
+  sort_order!: number;
+
+  @Column({ type: 'text', nullable: true })
+  notes!: string | null;
+
+  @CreateDateColumn()
+  created_at!: Date;
+}

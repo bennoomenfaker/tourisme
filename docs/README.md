@@ -27,6 +27,10 @@
 | **Page Destinations** | Vitrine publique des offres approuvées avec filtres, recherche et carte interactive |
 | **Modération Admin** | Workflow de validation : offres, projets, publications en attente d'approbation |
 | **Publications** | Réseau social interne : publications places/expériences, likes, commentaires |
+| **Catalogue avancé** | Items, prix par catégorie, disponibilités, sessions — catalogue simple & complexe + page détail offre |
+| **Réservations** | Réservation d'offres/items/sessions avec participants, confirmation auto/manuelle, annulation + pages dashboard |
+| **Circuits multi-jours** | Packages avec programme jour par jour, options additionnelles, réservation + pages publiques |
+| **Notifications** | Système de notifications utilisateur (création, lecture, compteur) + page notifications |
 | **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
 | **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
 | **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
@@ -470,6 +474,13 @@ Niveaux :
 | `/profile/guide` | Profil public guide |
 | `/profile/project-owner` | Profil public propriétaire |
 | `/profile/project-owner/[userId]` | Profil public propriétaire (dynamique) |
+| `/offers/[id]` | Détail offre (items, prix, sessions, réserver) |
+| `/reservations/new` | Formulaire réservation |
+| `/dashboard/reservations` | Mes réservations voyageur |
+| `/dashboard/incoming` | Réservations reçues (provider) |
+| `/circuits` | Liste publique circuits |
+| `/circuits/[id]` | Détail circuit (itinéraire, options) |
+| `/notifications` | Notifications utilisateur |
 
 ---
 
@@ -481,6 +492,8 @@ Niveaux :
 - Passe le questionnaire de durabilité (score initial)
 - Parcourt les offres éco-touristiques sur la page Destinations (filtres, carte, recherche)
 - Consulte le détail d'une offre (photos, description, inclus, carte, politique d'annulation)
+- Réserve via la page détail offre ou circuit avec formulaire participants
+- Voit ses réservations dans le dashboard (statut, annulation)
 - Contacte le créateur d'une offre via messagerie
 - **Follow des guides et propriétaires** pour suivre leurs actualités
 - **Partage des lieux (places)** et des **expériences de voyage (experiences)**
@@ -500,6 +513,7 @@ Niveaux :
 - **Follow des propriétaires de projet**
 - **Voit ses followers** (voyageurs et propriétaires)
 - Gère ses circuits et réservations
+- Confirme/refuse les réservations reçues via le dashboard
 - Reçoit des avis et accumule des badges
 
 ### 🏗️ Propriétaire de Projet
@@ -512,7 +526,7 @@ Niveaux :
 - **Voit ses followers** (voyageurs et guides)
 - Définit des labels éco (panneaux solaires, zéro plastique, etc.)
 - Passe l'évaluation de durabilité
-- Gère les réservations reçues
+- Gère les réservations reçues via le dashboard (confirmation/refus)
 
 ---
 

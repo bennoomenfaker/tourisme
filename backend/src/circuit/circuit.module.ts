@@ -8,6 +8,7 @@ import { CircuitReservation } from './entities/circuit-reservation.entity';
 import { CircuitReservationOption } from './entities/circuit-reservation-option.entity';
 import { CircuitService } from './circuit.service';
 import { CircuitController } from './circuit.controller';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CircuitController } from './circuit.controller';
       CircuitReservation,
       CircuitReservationOption,
     ]),
+    NotificationModule,
   ],
   providers: [CircuitService],
   controllers: [CircuitController],

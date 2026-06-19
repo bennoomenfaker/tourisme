@@ -15,8 +15,10 @@ import {
   CreateOfferItemDto,
   UpdateOfferItemDto,
   CreateOfferItemPriceDto,
+  UpdateOfferItemPriceDto,
   CreateAvailabilityRuleDto,
   CreateOfferItemSessionDto,
+  UpdateOfferItemSessionDto,
 } from './dto/offer.dto';
 
 @Injectable()
@@ -81,6 +83,7 @@ export class OfferService {
   async findByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { author_id: authorId },
+      relations: ['items', 'items.prices'],
       order: { created_at: 'DESC' },
     });
   }
@@ -142,7 +145,8 @@ export class OfferService {
     if (dto.confirmation_mode !== undefined) offer.confirmation_mode = dto.confirmation_mode;
     if (dto.status !== undefined) offer.status = dto.status;
 
-    return this.repo.save(offer);
+    await this.repo.save(offer);
+    return this.findById(offerId);
   }
 
   async updateOfferSustainability(authorId: string, offerId: string, dto: OfferSustainabilityDto): Promise<Offer> {
@@ -230,6 +234,20 @@ export class OfferService {
     return this.priceRepo.save(price);
   }
 
+  async updatePrice(priceId: string, dto: UpdateOfferItemPriceDto): Promise<OfferItemPrice> {
+    const price = await this.priceRepo.findOne({ where: { id: priceId } });
+    if (!price) throw new NotFoundException('Prix introuvable.');
+    Object.assign(price, dto);
+    return this.priceRepo.save(price);
+  }
+
+  async removePrice(priceId: string): Promise<{ message: string }> {
+    const price = await this.priceRepo.findOne({ where: { id: priceId } });
+    if (!price) throw new NotFoundException('Prix introuvable.');
+    await this.priceRepo.remove(price);
+    return { message: 'Prix supprimé.' };
+  }
+
   // ─── OfferItem Availability Rules ──────────────────────
 
   async addAvailabilityRule(itemId: string, dto: CreateAvailabilityRuleDto): Promise<OfferItemAvailabilityRule> {
@@ -261,6 +279,20 @@ export class OfferService {
       price_override: dto.price_override ?? null,
     });
     return this.sessionRepo.save(session);
+  }
+
+  async updateSession(sessionId: string, dto: UpdateOfferItemSessionDto): Promise<OfferItemSession> {
+    const session = await this.sessionRepo.findOne({ where: { id: sessionId } });
+    if (!session) throw new NotFoundException('Session introuvable.');
+    Object.assign(session, dto);
+    return this.sessionRepo.save(session);
+  }
+
+  async removeSession(sessionId: string): Promise<{ message: string }> {
+    const session = await this.sessionRepo.findOne({ where: { id: sessionId } });
+    if (!session) throw new NotFoundException('Session introuvable.');
+    await this.sessionRepo.remove(session);
+    return { message: 'Session supprimée.' };
   }
 
   async findSessions(itemId: string): Promise<OfferItemSession[]> {

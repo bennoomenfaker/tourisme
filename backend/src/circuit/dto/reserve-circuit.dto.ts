@@ -31,8 +31,9 @@ export class CircuitOptionSelectionDto {
 }
 
 export class ReserveCircuitDto {
+  @IsOptional()
   @IsUUID()
-  circuit_id!: string;
+  circuit_id?: string;
 
   @IsOptional()
   @IsInt()

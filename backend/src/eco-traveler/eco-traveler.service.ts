@@ -4,6 +4,9 @@ import { Not, Or, Repository } from 'typeorm';
 import { EcoTraveler } from './entities/eco-traveler.entity';
 import { Friendship } from './entities/friendship.entity';
 import { Publication } from '../publication/entities/publication.entity';
+import { TripPlan } from '../trip-plan/entities/trip-plan.entity';
+import { Booking } from '../booking/entities/booking.entity';
+import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 import {
   CompleteProfileDto,
   UpdateGoalsDto,
@@ -22,16 +25,24 @@ export class EcoTravelerService {
     private readonly pubRepo: Repository<Publication>,
     @InjectRepository(Friendship)
     private readonly friendRepo: Repository<Friendship>,
+    @InjectRepository(TripPlan)
+    private readonly tripPlanRepo: Repository<TripPlan>,
+    @InjectRepository(Booking)
+    private readonly bookingRepo: Repository<Booking>,
+    @InjectRepository(CircuitReservation)
+    private readonly circuitResRepo: Repository<CircuitReservation>,
     private readonly mongoService: EcoTravelerMongoService,
   ) { }
 
   async getProfile(userId: string) {
-    // Les 4 requêtes partent en parallèle
-    const [sqlProfile, mongoPrefs, mongoEngagement, pubCount] = await Promise.all([
+    const [sqlProfile, mongoPrefs, mongoEngagement, pubCount, tripPlanCount, bookingCount, circuitResCount] = await Promise.all([
       this.repo.findOne({ where: { user_id: userId } }),
       this.mongoService.getPreferences(userId),
       this.mongoService.getEngagement(userId),
       this.pubRepo.count({ where: { author_id: userId } }),
+      this.tripPlanRepo.count({ where: { ecoTraveler: { id: userId } as any } }),
+      this.bookingRepo.count({ where: { traveler: { id: userId } as any } }),
+      this.circuitResRepo.count({ where: { user: { id: userId } as any } }),
     ]);
 
     // Recalcule et sauvegarde la completion + score_partages si nécessaire
@@ -89,8 +100,8 @@ export class EcoTravelerService {
       // (durability_score déjà dans SQL comme sustainability_score → pas répété)
       badges: mongoEngagement?.badges ?? [],
       feedback_given: mongoEngagement?.feedback_given ?? 0,
-      plans_shared: mongoEngagement?.plans_shared ?? 0,
-      reservations_made: mongoEngagement?.reservations_made ?? 0,
+      plans_shared: tripPlanCount || (mongoEngagement?.plans_shared ?? 0),
+      reservations_made: bookingCount + circuitResCount || (mongoEngagement?.reservations_made ?? 0),
     };
   }
 

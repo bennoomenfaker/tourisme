@@ -1,0 +1,446 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
+import {
+  ArrowLeft, Leaf, MapPin, Clock, Users, Star, Calendar,
+  DollarSign, ShieldCheck, Info, ChevronDown, ChevronUp,
+  ChevronRight, Check,
+} from "lucide-react";
+import AppNavbar from "@/components/nav/AppNavbar";
+import BackToDashboard from "@/components/nav/BackToDashboard";
+import dynamic from "next/dynamic";
+
+const GuidedOfferWizard = dynamic(() => import("@/components/GuidedOfferWizard"), { ssr: false });
+
+interface OfferItemPrice {
+  id: string;
+  label: string;
+  price: number;
+  currency: string;
+  is_default: boolean;
+}
+
+interface OfferItemSession {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  total_capacity: number | null;
+  remaining_capacity: number | null;
+  price_override: number | null;
+  status: string;
+}
+
+interface OfferItem {
+  id: string;
+  name: string;
+  description: string | null;
+  item_type: string | null;
+  bed_count: number | null;
+  nights: number | null;
+  tent_capacity: number | null;
+  room_type: string | null;
+  requires_confirmation: boolean;
+  booking_deadline_days: number | null;
+  cancellation_deadline_days: number | null;
+  status: string;
+  prices: OfferItemPrice[];
+  sessions: OfferItemSession[];
+}
+
+interface Offer {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  duration: string | null;
+  offer_type: string | null;
+  region: string | null;
+  images: string[] | null;
+  address: string | null;
+  meeting_point: string | null;
+  min_group_size: number | null;
+  max_group_size: number | null;
+  min_age: number | null;
+  inclusions: string | null;
+  cancellation_policy: string | null;
+  sustainability_score: number | null;
+  confirmation_mode: string;
+  status: string;
+  items: OfferItem[];
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  eco_tour: "Éco-tour",
+  accommodation: "Hébergement",
+  activity: "Activité",
+  restaurant: "Restaurant",
+  craft: "Artisanat",
+  workshop: "Atelier",
+  transfer: "Transfert",
+  sejour: "Séjour",
+  circuit: "Circuit",
+};
+
+export default function OfferDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [offer, setOffer] = useState<Offer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [user, setUser] = useState<{ role: string; sub?: string; id?: string } | null>(null);
+  const [existingBooking, setExistingBooking] = useState(false);
+  const [galleryIdx, setGalleryIdx] = useState(0);
+  const [showEditWizard, setShowEditWizard] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) setUser(JSON.parse(stored));
+    apiFetch<Offer>(`/offers/${id}`)
+      .then(setOffer)
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (!stored) return;
+    const u = JSON.parse(stored);
+    if (u.role !== "eco_traveler") return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } })
+      .then((bookings) => setExistingBooking(bookings.some((b) => b.offer?.id === id)))
+      .catch(() => {});
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!offer) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 flex items-center justify-center">
+        <p className="text-slate-500">Offre introuvable</p>
+      </div>
+    );
+  }
+
+  const canReserve = user?.role === "eco_traveler" && !existingBooking;
+  const images = offer.images?.filter(Boolean) ?? [];
+  const allImages = images.length > 0 ? images : null;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 pb-12">
+      <AppNavbar title={offer ? offer.title : "Offre"} />
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <BackToDashboard />
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          {allImages ? (
+            <div className="h-64 sm:h-80 relative bg-slate-900">
+              <img
+                src={allImages[galleryIdx]}
+                alt={offer.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+              {allImages.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setGalleryIdx((i) => (i - 1 + allImages.length) % allImages.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70"
+                  >
+                    <ChevronDown size={18} className="rotate-90" />
+                  </button>
+                  <button
+                    onClick={() => setGalleryIdx((i) => (i + 1) % allImages.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {allImages.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setGalleryIdx(i)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          i === galleryIdx ? "bg-white scale-125" : "bg-white/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+              {offer.sustainability_score !== null && (
+                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1.5 text-sm font-bold text-primary shadow-sm">
+                  <Star size={14} fill="currentColor" />
+                  {offer.sustainability_score}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="h-48 bg-gradient-to-br from-emerald-100 to-teal-200 flex items-center justify-center">
+              <Leaf size={48} className="text-emerald-400 opacity-50" />
+            </div>
+          )}
+
+          <div className="p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800">{offer.title}</h1>
+                {offer.offer_type && (
+                  <span className="inline-block mt-1 text-sm text-primary bg-emerald-50 rounded-full px-3 py-0.5 font-medium">
+                    {TYPE_LABELS[offer.offer_type] ?? offer.offer_type}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {(user?.role === "guide" || user?.role === "project") && (
+                  <button onClick={() => setShowEditWizard(true)} className="px-4 py-2 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors flex items-center gap-1.5">
+                    ✏️ Modifier
+                  </button>
+                )}
+              </div>
+              <div className="text-right">
+                {offer.price !== null && (
+                  <div className="text-primary font-bold text-2xl">
+                    {Number(offer.price).toLocaleString()} <span className="text-sm font-normal text-slate-400">TND</span>
+                  </div>
+                )}
+                {offer.confirmation_mode === "automatic" ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-primary bg-emerald-50 rounded-full px-2 py-0.5 mt-1">
+                    <ShieldCheck size={12} /> Confirmation instantanée
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5 mt-1">
+                    <Info size={12} /> Sur demande
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 text-sm text-slate-500 mb-4">
+              {offer.region && <span className="flex items-center gap-1"><MapPin size={14} /> {offer.region}</span>}
+              {offer.duration && <span className="flex items-center gap-1"><Clock size={14} /> {offer.duration}</span>}
+              {(offer.min_group_size || offer.max_group_size) && (
+                <span className="flex items-center gap-1">
+                  <Users size={14} />
+                  {offer.min_group_size && offer.max_group_size
+                    ? `${offer.min_group_size}–${offer.max_group_size} pers.`
+                    : offer.max_group_size ? `Max ${offer.max_group_size} pers.` : `Min ${offer.min_group_size} pers.`}
+                </span>
+              )}
+              {offer.min_age && <span className="flex items-center gap-1"><Calendar size={14} /> Âge min. {offer.min_age} ans</span>}
+            </div>
+
+            {offer.description && (
+              <p className="text-slate-600 leading-relaxed mb-4 whitespace-pre-line">{offer.description}</p>
+            )}
+
+            {offer.meeting_point && (
+              <div className="bg-slate-50 rounded-xl p-3 mb-4 flex items-start gap-2 text-sm">
+                <MapPin size={16} className="text-primary mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-medium text-slate-700">Point de rendez-vous :</span>
+                  <span className="text-slate-500 ml-1">{offer.meeting_point}</span>
+                </div>
+              </div>
+            )}
+
+            {offer.address && (
+              <div className="bg-slate-50 rounded-xl p-3 mb-4 flex items-start gap-2 text-sm">
+                <MapPin size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-medium text-slate-700">Adresse :</span>
+                  <span className="text-slate-500 ml-1">{offer.address}</span>
+                </div>
+              </div>
+            )}
+
+            {offer.inclusions && (
+              <div className="bg-emerald-50 rounded-xl p-3 mb-4 text-sm">
+                <span className="font-medium text-emerald-700">Inclus :</span>
+                <p className="text-primary mt-1 whitespace-pre-line">{offer.inclusions}</p>
+              </div>
+            )}
+
+            {offer.cancellation_policy && (
+              <div className="bg-amber-50 rounded-xl p-3 mb-4 text-sm">
+                <span className="font-medium text-amber-700">Politique d&apos;annulation :</span>
+                <p className="text-amber-600 mt-1 whitespace-pre-line">{offer.cancellation_policy}</p>
+              </div>
+            )}
+
+            {offer.items.length > 0 && (
+              <div className="mt-6">
+                <h2 className="text-lg font-bold text-slate-800 mb-3">Ce qui est proposé</h2>
+                <div className="space-y-3">
+                  {offer.items.filter((item) => item.status === "active").map((item) => (
+                    <div key={item.id} className="border border-slate-100 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
+                        className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
+                      >
+                        <div>
+                          <span className="font-medium text-slate-800">{item.name}</span>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {item.item_type && (
+                              <span className="text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
+                                {item.item_type}
+                              </span>
+                            )}
+                            {item.room_type && (
+                              <span className="text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
+                                {item.room_type === 'shared_dormitory' ? '🛏 Dortoir' :
+                                 item.room_type === 'private' ? '🏠 Privé' :
+                                 item.room_type === 'double' ? '👫 Double' :
+                                 item.room_type === 'family' ? '👨‍👩‍👧‍👦 Famille' :
+                                 item.room_type === 'tent' ? '⛺ Tente' :
+                                 item.room_type}
+                              </span>
+                            )}
+                            {item.bed_count != null && (
+                              <span className="text-xs text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">
+                                🛏 {item.bed_count} lit{item.bed_count > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {item.nights != null && (
+                              <span className="text-xs text-purple-600 bg-purple-50 rounded-full px-2 py-0.5">
+                                🌙 {item.nights} nuit{item.nights > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {item.tent_capacity != null && (
+                              <span className="text-xs text-green-600 bg-green-50 rounded-full px-2 py-0.5">
+                                ⛺ {item.tent_capacity} pers.
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {item.prices.find((p) => p.is_default) && (
+                            <span className="text-primary font-bold">
+                              {Number(item.prices.find((p) => p.is_default)!.price).toLocaleString()} TND
+                            </span>
+                          )}
+                          {expandedItem === item.id ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+                        </div>
+                      </button>
+
+                      {expandedItem === item.id && (
+                        <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-3">
+                          {item.description && (
+                            <p className="text-sm text-slate-500">{item.description}</p>
+                          )}
+
+                          {item.prices.length > 0 && (
+                            <div>
+                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tarifs</span>
+                              <div className="mt-1 space-y-1">
+                                {item.prices.map((p) => (
+                                  <div key={p.id} className="flex items-center justify-between text-sm bg-slate-50 rounded-lg px-3 py-1.5">
+                                    <span className="text-slate-600">{p.label}</span>
+                                    <span className="font-semibold text-primary">
+                                      {Number(p.price).toLocaleString()} {p.currency}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {item.sessions.length > 0 && (
+                            <div>
+                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sessions disponibles</span>
+                              <div className="mt-1 space-y-1">
+                                {item.sessions
+                                  .filter((s) => s.status === "available" && (!s.remaining_capacity || s.remaining_capacity > 0))
+                                  .map((session) => (
+                                    <div key={session.id} className="flex items-center justify-between text-sm bg-blue-50 rounded-lg px-3 py-1.5">
+                                      <span className="text-slate-600">
+                                        {new Date(session.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
+                                        {" — "}{session.start_time} à {session.end_time}
+                                      </span>
+                                      <span className="text-xs text-slate-400">
+                                        {session.remaining_capacity !== null ? `${session.remaining_capacity} places` : ""}
+                                      </span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {!user && (
+                            <button
+                              onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
+                              className="w-full mt-2 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-sm flex items-center justify-center gap-2"
+                            >
+                              <Check size={16} /> Réserver {item.name}
+                            </button>
+                          )}
+                          {canReserve && (
+                            <button
+                              onClick={() => router.push(`/reservations/new?offerId=${offer.id}&itemId=${item.id}`)}
+                              className="w-full mt-2 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-sm flex items-center justify-center gap-2"
+                            >
+                              <Check size={16} /> Réserver {item.name}
+                            </button>
+                          )}
+                          {existingBooking && (
+                            <div className="w-full mt-2 py-2 rounded-xl bg-blue-50 text-blue-700 text-sm text-center font-medium">
+                              Vous avez déjà réservé cette offre
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Global Réserver button */}
+            {!user && (
+              <button
+                onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
+                className="w-full mt-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"
+              >
+                <Check size={18} /> Réserver cette offre
+              </button>
+            )}
+            {user?.role === "eco_traveler" && !existingBooking && (
+              <button
+                onClick={() => router.push(`/reservations/new?offerId=${offer.id}`)}
+                className="w-full mt-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"
+              >
+                <Check size={18} /> Réserver cette offre
+              </button>
+            )}
+            {existingBooking && (
+              <div className="w-full mt-6 py-3 rounded-xl bg-blue-50 text-blue-700 text-base text-center font-medium">
+                Vous avez déjà réservé cette offre
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      {showEditWizard && (
+        <GuidedOfferWizard
+          token={localStorage.getItem("access_token") || ""}
+          userRole={user?.role || ""}
+          onClose={() => setShowEditWizard(false)}
+          onSuccess={(updated) => {
+            setOffer(updated);
+            setShowEditWizard(false);
+          }}
+          editOffer={offer}
+        />
+      )}
+    </div>
+  );
+}

@@ -251,14 +251,8 @@ export class AuthService {
 
     private getDashboardPathByRole(role: Role): string {
         switch (role) {
-            case Role.ECO_TRAVELER:
-                return '/dashboard/ecovoyageur';
-            case Role.GUIDE:
-                return '/dashboard/guide';
             case Role.ADMIN:
                 return '/dashboard/admin';
-            case Role.PROJECT:
-                return '/dashboard/project-owner';
             default:
                 return '/dashboard';
         }

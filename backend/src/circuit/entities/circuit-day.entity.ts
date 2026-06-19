@@ -4,9 +4,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Circuit } from './circuit.entity';
+import { CircuitProgramItem } from './circuit-program-item.entity';
 
 /**
  * Journée d'un circuit
@@ -33,6 +35,18 @@ export class CircuitDay {
 
   @Column({ type: 'text', nullable: true })
   description!: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lat!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lng!: number | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  location_name!: string | null;
+
+  @OneToMany(() => CircuitProgramItem, (item) => item.circuitDay)
+  programItems?: CircuitProgramItem[];
 
   @CreateDateColumn()
   created_at!: Date;

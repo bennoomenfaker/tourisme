@@ -102,7 +102,7 @@ function scoreLabel(score: number | null) {
 
 function scoreColor(score: number) {
   if (score >= 80) return { text: "text-primary", bar: "bg-primary" };
-  if (score >= 60) return { text: "text-emerald-600", bar: "bg-emerald-500" };
+  if (score >= 60) return { text: "text-primary", bar: "bg-primary" };
   if (score >= 40) return { text: "text-teal-600", bar: "bg-teal-500" };
   return { text: "text-blue-600", bar: "bg-blue-500" };
 }
@@ -701,7 +701,7 @@ export default function PublicEcoTravelerProfile() {
             {reportSent ? (
               <div className="text-center py-4">
                 <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
-                  <Check size={24} className="text-emerald-500" />
+                  <Check size={24} className="text-primary" />
                 </div>
                 <h3 className="text-lg font-extrabold text-slate-900 mb-2">Signalement envoyé</h3>
                 <p className="text-sm text-slate-500 mb-5">Notre équipe examinera ce profil dans les plus brefs délais.</p>
@@ -777,7 +777,7 @@ export default function PublicEcoTravelerProfile() {
                     </span>
                   ) : (
                     <>
-                      <span className="absolute bottom-3 left-3 text-[10px] font-black uppercase tracking-wide bg-emerald-500/90 text-white px-2.5 py-1 rounded-full shadow">
+                      <span className="absolute bottom-3 left-3 text-[10px] font-black uppercase tracking-wide bg-primary/90 text-white px-2.5 py-1 rounded-full shadow">
                         Communauté
                       </span>
                       {slides[safeIdx].authorName && (
@@ -873,7 +873,7 @@ export default function PublicEcoTravelerProfile() {
                         </div>
                         <span className="text-[11px] font-bold text-emerald-700">{topDesc.author.full_name}</span>
                       </button>
-                      <span className="ml-auto text-[9px] font-black uppercase tracking-wide bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                      <span className="ml-auto text-[9px] font-black uppercase tracking-wide bg-primary text-white px-2 py-0.5 rounded-full">
                         Communauté
                       </span>
                     </div>

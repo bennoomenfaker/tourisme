@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -71,6 +72,25 @@ export class CreateCircuitDto {
   @IsOptional()
   @IsString()
   exclusions?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  lat?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  lng?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
+
+  @IsOptional()
+  @IsString()
+  address?: string;
 
   @IsOptional()
   @IsUUID()

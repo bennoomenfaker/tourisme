@@ -1,35 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Leaf, Plus, X, Check, MapPin } from "lucide-react";
 import { logoutUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import GuidedOfferWizard from "@/components/GuidedOfferWizard";
 
 const MapPicker = dynamic(
   () => import("@/components/map/MapPicker"),
   { ssr: false, loading: () => <div className="h-[268px] rounded-2xl bg-slate-100 animate-pulse" /> }
 );
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type Role = "eco_traveler" | "guide" | "project";
-type Badge = { label: string; obtained_at: string };
 
-type Publication = {
+type Badge = {
+  label: string;
+  obtained_at: string;
+};
+
+type Participant = {
   id: string;
-  type: "place" | "experience";
-  title: string;
+  full_name: string;
+  email?: string;
+};
+
+type OfferItem = {
+  id: string;
+  name: string;
   description: string | null;
-  images: string[] | null;
-  latitude: number | null;
-  longitude: number | null;
-  place_name: string | null;
-  region: string | null;
+  item_type: string | null;
+  bed_count: number | null;
+  nights: number | null;
+  tent_capacity: number | null;
+  room_type: string | null;
   status: string;
-  rejection_reason: string | null;
-  created_at: string;
+  prices: { id: string; label: string; price: number; currency: string; is_default: boolean }[];
 };
 
 type Offer = {
@@ -43,6 +49,7 @@ type Offer = {
   rejection_reason: string | null;
   project_id?: string | null;
   created_at: string;
+  items?: OfferItem[];
 };
 
 type Project = {
@@ -67,6 +74,53 @@ type Project = {
   phone: string | null;
 };
 
+type Publication = {
+  id: string;
+  type: "place" | "experience";
+  title: string;
+  description: string | null;
+  images: string[] | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_name: string | null;
+  region: string | null;
+  status: string;
+  rejection_reason: string | null;
+  created_at: string;
+};
+
+type Booking = {
+  id: string;
+  offer?: { title: string };
+  traveler?: { full_name: string; photo?: string | null };
+  participants?: Participant[];
+  total_price: number;
+  status: string;
+  confirmation_mode?: string;
+  special_requests?: string;
+  created_at: string;
+};
+
+type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  link?: string;
+  created_at: string;
+};
+
+type SearchResult = {
+  user_id: string;
+  full_name: string;
+  photo: string | null;
+  zone?: string | null;
+  organization?: string | null;
+  guide_type?: string | null;
+  sustainability_score?: number | null;
+  _type?: string;
+};
+
 type AnyProfile = {
   full_name: string;
   bio?: string | null;
@@ -80,12 +134,10 @@ type AnyProfile = {
   score_reservations: number;
   score_feedbacks: number;
   badges: Badge[];
-  // eco_traveler
   score_partages?: number;
   feedback_given?: number;
   plans_shared?: number;
   reservations_made?: number;
-  // guide
   guide_type?: string | null;
   zone?: string | null;
   specialties?: string[] | null;
@@ -95,7 +147,6 @@ type AnyProfile = {
   certifications?: string[];
   feedback_received?: number;
   reservations_handled?: number;
-  // project_owner
   organization?: string | null;
   position?: string | null;
   phone?: string | null;
@@ -103,7 +154,12 @@ type AnyProfile = {
   projects?: Project[];
 };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+type DashConv = {
+  id: string;
+  other_user: { full_name: string | null; photo: string | null };
+  last_message: { content: string; is_mine: boolean } | null;
+  unread_count: number;
+};
 
 const GUIDE_OFFER_TYPES = [
   { value: "eco_tour", label: "Éco-Tour", icon: "hiking" },
@@ -148,7 +204,7 @@ const PROJECT_SERVICES = [
 const BADGE_CONFIGS: Record<Role, { label: string; icon: string; description: string }[]> = {
   eco_traveler: [
     { label: "Explorateur Durable", icon: "explore", description: "Onboarding complété" },
-    { label: "Ambassadeur ", icon: "stars", description: "Score ≥ 80%" },
+    { label: "Ambassadeur", icon: "stars", description: "Score ≥ 80%" },
     { label: "Contributeur Communautaire", icon: "groups", description: "3 plans partagés" },
     { label: "Protecteur de la Nature", icon: "eco", description: "10 réservations durables" },
   ],
@@ -165,8 +221,6 @@ const BADGE_CONFIGS: Record<Role, { label: string; icon: string; description: st
     { label: "Champion Durable", icon: "eco", description: "5 évaluations reçues" },
   ],
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getScoreLabel(score: number | null, role: Role): string {
   if (score === null) return "—";
@@ -198,8 +252,6 @@ function getBarColor(score: number | null): string {
   return "bg-red-400";
 }
 
-// ─── StatusBadge ──────────────────────────────────────────────────────────────
-
 function StatusBadge({ status, reason }: { status: string; reason?: string | null }) {
   if (status === "approved" || status === "active") {
     return <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">Publié</span>;
@@ -214,8 +266,6 @@ function StatusBadge({ status, reason }: { status: string; reason?: string | nul
   }
   return <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">En attente</span>;
 }
-
-// ─── ScoreBreakdown ───────────────────────────────────────────────────────────
 
 function ScoreBreakdown({ profile, role }: { profile: AnyProfile; role: Role }) {
   const components = role === "eco_traveler"
@@ -253,14 +303,33 @@ function ScoreBreakdown({ profile, role }: { profile: AnyProfile; role: Role }) 
   );
 }
 
-// ─── ProjectTypeIcon ──────────────────────────────────────────────────────────
-
 function ProjectTypeIcon({ types }: { types: string[] | null }) {
   const found = PROJECT_TYPES.find((t) => t.value === types?.[0]);
   return <span className="material-symbols-outlined text-2xl text-primary">{found?.icon ?? "domain"}</span>;
 }
 
-// ─── AddPublicationModal ──────────────────────────────────────────────────────
+function DeleteConfirmModal({ onClose, onConfirm, title, message }: {
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 text-center">
+          <span className="material-symbols-outlined text-5xl text-red-400 mb-3">delete</span>
+          <h3 className="text-lg font-extrabold text-slate-900 mb-2">{title}</h3>
+          <p className="text-sm text-slate-500 font-medium mb-6">{message}</p>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors text-sm">Annuler</button>
+            <button onClick={onConfirm} className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors text-sm">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AddPublicationModal({ onClose, onSuccess, token }: {
   onClose: () => void;
@@ -311,14 +380,14 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
             {step === null ? "Que voulez-vous partager ?" : step === "place" ? "Partager un lieu" : "Partager une expérience"}
           </h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
-            <X className="w-5 h-5 text-slate-500" />
+            <span className="material-symbols-outlined text-slate-500">close</span>
           </button>
         </div>
 
         {step === null && (
           <div className="p-6 grid grid-cols-2 gap-4">
             <button onClick={() => setStep("place")} className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-slate-200 hover:border-primary hover:bg-primary/5 transition-all">
-              <MapPin className="w-8 h-8 text-primary" />
+              <span className="material-symbols-outlined text-3xl text-primary">location_on</span>
               <span className="font-extrabold text-slate-800">Un lieu</span>
               <span className="text-xs text-slate-400 text-center">Recommandez un endroit sur la carte</span>
             </button>
@@ -334,12 +403,9 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700">Titre *</label>
-              <input
-                className={inputClass(!!titleError)}
-                value={form.title}
+              <input className={inputClass(!!titleError)} value={form.title}
                 onChange={(e) => { setForm({ ...form, title: e.target.value }); setTitleError(""); }}
-                placeholder={step === "place" ? "Oasis de Chebika, Djerba la Douce…" : "Trek dans le Jbel Chambi…"}
-              />
+                placeholder={step === "place" ? "Oasis de Chebika, Djerba la Douce..." : "Trek dans le Jbel Chambi..."} />
               {titleError && <p className="text-xs font-semibold text-red-500">{titleError}</p>}
             </div>
 
@@ -347,7 +413,7 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
               <>
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="material-symbols-outlined text-base text-primary">location_on</span>
                     Cliquez sur la carte pour placer le lieu
                   </label>
                   <MapPicker lat={form.lat} lng={form.lng} onPick={(lat, lng) => setForm({ ...form, lat, lng })} />
@@ -360,7 +426,7 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-bold text-slate-700">Région</label>
-                    <input className={inputClass(false)} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Tozeur, Nabeul…" />
+                    <input className={inputClass(false)} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Tozeur, Nabeul..." />
                   </div>
                 </div>
               </>
@@ -368,13 +434,9 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
 
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700">Description</label>
-              <textarea
-                className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium resize-none"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder={step === "place" ? "Pourquoi recommandez-vous ce lieu ?" : "Décrivez votre expérience…"}
-                rows={3}
-              />
+              <textarea className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium resize-none"
+                value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder={step === "place" ? "Pourquoi recommandez-vous ce lieu ?" : "Décrivez votre expérience..."} rows={3} />
             </div>
 
             {submitError && (
@@ -385,11 +447,9 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
             )}
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(null)} className="flex-1 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors">
-                Retour
-              </button>
-              <button type="submit" disabled={loading} className="flex-1 py-3 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all disabled:opacity-60">
-                {loading ? "Publication…" : "Publier"}
+              <button type="button" onClick={() => setStep(null)} className="flex-1 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors">Retour</button>
+              <button type="submit" disabled={loading} className="flex-1 py-3 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all disabled:opacity-60">
+                {loading ? "Publication..." : "Publier"}
               </button>
             </div>
           </form>
@@ -398,8 +458,6 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
     </div>
   );
 }
-
-// ─── GuideOfferModal ──────────────────────────────────────────────────────────
 
 function GuideOfferModal({ onClose, onSuccess, token }: {
   onClose: () => void;
@@ -452,7 +510,7 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">Ajouter une offre</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
-            <X className="w-5 h-5 text-slate-500" />
+            <span className="material-symbols-outlined text-slate-500">close</span>
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -460,7 +518,7 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
             <label className="text-sm font-bold text-slate-700">Titre de l'offre *</label>
             <input className={inputClass(!!fieldErrors.title)} value={form.title}
               onChange={(e) => { setForm({ ...form, title: e.target.value }); setFieldErrors((fe) => ({ ...fe, title: undefined })); }}
-              placeholder="Randonnée dans le Jbel Zaghouan…" />
+              placeholder="Randonnée dans le Jbel Zaghouan..." />
             {fieldErrors.title && <p className="text-xs font-semibold text-red-500">{fieldErrors.title}</p>}
           </div>
 
@@ -475,7 +533,7 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
                     <span className="material-symbols-outlined text-base">{t.icon}</span>
                     {t.label}
-                    {active && <Check className="w-3.5 h-3.5 ml-auto text-primary" />}
+                    {active && <span className="material-symbols-outlined text-base ml-auto text-primary">check</span>}
                   </button>
                 );
               })}
@@ -485,7 +543,7 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Description</label>
             <textarea className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium resize-none"
-              value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Décrivez votre offre…" rows={3} />
+              value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Décrivez votre offre..." rows={3} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -497,13 +555,13 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700">Durée</label>
-              <input className={inputClass(false)} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2h, 1 journée…" />
+              <input className={inputClass(false)} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2h, 1 journée..." />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Région / Emplacement</label>
-            <input className={inputClass(false)} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Tunis, Djerba, Sfax…" />
+            <input className={inputClass(false)} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Tunis, Djerba, Sfax..." />
           </div>
 
           {submitError && (
@@ -514,16 +572,14 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
           )}
 
           <button type="submit" disabled={loading}
-            className="w-full py-3.5 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60">
-            {loading ? "Publication en cours…" : "Publier l'offre"}
+            className="w-full py-3.5 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60">
+            {loading ? "Publication en cours..." : "Publier l'offre"}
           </button>
         </form>
       </div>
     </div>
   );
 }
-
-// ─── ProjectOfferModal ────────────────────────────────────────────────────────
 
 function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
   onClose: () => void;
@@ -561,7 +617,6 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
           price: form.price ? Number(form.price) : undefined,
           duration: form.duration.trim() || undefined,
           region: form.region.trim() || undefined,
-
         }),
       });
       onSuccess(created);
@@ -578,7 +633,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">Ajouter une offre</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
-            <X className="w-5 h-5 text-slate-500" />
+            <span className="material-symbols-outlined text-slate-500">close</span>
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -586,7 +641,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
             <label className="text-sm font-bold text-slate-700">Titre de l'offre *</label>
             <input className={inputClass(!!fieldErrors.title)} value={form.title}
               onChange={(e) => { setForm({ ...form, title: e.target.value }); setFieldErrors((fe) => ({ ...fe, title: undefined })); }}
-              placeholder="Week-end éco-lodge, Circuit des oasis…" />
+              placeholder="Week-end éco-lodge, Circuit des oasis..." />
             {fieldErrors.title && <p className="text-xs font-semibold text-red-500">{fieldErrors.title}</p>}
           </div>
 
@@ -629,7 +684,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Description</label>
             <textarea className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium resize-none"
-              value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Décrivez votre offre éco-touristique…" rows={3} />
+              value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Décrivez votre offre éco-touristique..." rows={3} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -641,13 +696,13 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700">Durée</label>
-              <input className={inputClass(false)} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2 jours, 1 semaine…" />
+              <input className={inputClass(false)} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2 jours, 1 semaine..." />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Région / Emplacement</label>
-            <input className={inputClass(false)} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Tunis, Djerba, Sfax…" />
+            <input className={inputClass(false)} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Tunis, Djerba, Sfax..." />
           </div>
 
           {submitError && (
@@ -658,16 +713,14 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
           )}
 
           <button type="submit" disabled={loading}
-            className="w-full py-3.5 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60">
-            {loading ? "Création en cours…" : "Publier l'offre"}
+            className="w-full py-3.5 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60">
+            {loading ? "Création en cours..." : "Publier l'offre"}
           </button>
         </form>
       </div>
     </div>
   );
 }
-
-// ─── AddProjectModal ──────────────────────────────────────────────────────────
 
 const PHONE_RE = /^(\+216|00216)?[2-9]\d{7}$|^\+?[0-9\s\-().]{7,20}$/;
 const URL_RE = /^https?:\/\/.+\..+/;
@@ -682,6 +735,113 @@ async function uploadImage(file: File, token: string): Promise<string> {
   });
   if (!res.ok) throw new Error("Upload échoué");
   return ((await res.json()) as { url: string }).url;
+}
+
+function EditProjectModal({ onClose, onSuccess, token, project }: {
+  onClose: () => void;
+  onSuccess: (p: Project) => void;
+  token: string;
+  project: Project;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [form, setForm] = useState({
+    name: project.name ?? "",
+    description: project.description ?? "",
+    region: project.region ?? "",
+    address: project.address ?? "",
+    website: project.website ?? "",
+    phone: project.phone ?? "",
+    opening_hours: project.opening_hours ?? "",
+    facebook: project.facebook ?? "",
+    instagram: project.instagram ?? "",
+  });
+  const [mapLat, setMapLat] = useState<number | null>(project.lat ?? null);
+  const [mapLng, setMapLng] = useState<number | null>(project.lng ?? null);
+
+  const inputClass = "w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
+
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!form.name.trim()) { setSubmitError("Le nom est obligatoire."); return; }
+    setSubmitError("");
+    setLoading(true);
+    try {
+      const updated = await apiFetch<Project>(`/project-owner/projects/${project.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          region: form.region.trim() || undefined,
+          address: form.address.trim() || undefined,
+          website: form.website.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          opening_hours: form.opening_hours.trim() || undefined,
+          facebook: form.facebook.trim() || undefined,
+          instagram: form.instagram.trim() || undefined,
+          lat: mapLat ?? undefined,
+          lng: mapLng ?? undefined,
+        }),
+      });
+      onSuccess(updated);
+    } catch (err: any) {
+      setSubmitError(err.message || "Erreur.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <h2 className="text-xl font-extrabold text-slate-900">Modifier le projet</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100"><span className="material-symbols-outlined text-slate-500">close</span></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Nom *</label>
+            <input className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Description</label>
+            <textarea className={`${inputClass} resize-none`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-bold text-slate-700">Région</label>
+              <input className={inputClass} value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-bold text-slate-700">Téléphone</label>
+              <input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Adresse</label>
+            <input className={inputClass} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Site web</label>
+            <input className={inputClass} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://..." />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Localisation</label>
+            <MapPicker lat={mapLat ?? 36.8065} lng={mapLng ?? 10.1815} onPick={(la: number, ln: number) => { setMapLat(la); setMapLng(ln); }} />
+          </div>
+          {submitError && <p className="text-sm text-red-500 font-semibold">{submitError}</p>}
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50">Annuler</button>
+            <button type="submit" disabled={loading} className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <span className="material-symbols-outlined text-base">check</span>}
+              {loading ? "Enregistrement..." : "Enregistrer"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function AddProjectModal({ onClose, onSuccess, token }: {
@@ -772,11 +932,12 @@ function AddProjectModal({ onClose, onSuccess, token }: {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">Ajouter un projet</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5 text-slate-500" /></button>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+            <span className="material-symbols-outlined text-slate-500">close</span>
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Photos */}
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Photos du projet</label>
             <label htmlFor="proj-images" className="flex flex-col items-center justify-center gap-2 w-full h-24 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all bg-slate-50/70">
@@ -794,7 +955,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
                       {i === coverIdx && <div className="absolute top-1 left-1 bg-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded-md leading-none">Cover</div>}
                       <button type="button" onClick={(e) => { e.stopPropagation(); URL.revokeObjectURL(img.preview); removeImage(i); }}
                         className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X size={10} />
+                        <span className="material-symbols-outlined text-xs">close</span>
                       </button>
                     </div>
                   ))}
@@ -804,15 +965,13 @@ function AddProjectModal({ onClose, onSuccess, token }: {
             )}
           </div>
 
-          {/* Nom */}
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Nom du projet *</label>
             <input value={form.name} onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setFieldErrors((fe) => ({ ...fe, name: undefined })); }}
-              placeholder="Éco-Lodge Sahara, Restaurant Terroir…" className={fc(!!fieldErrors.name)} />
+              placeholder="Éco-Lodge Sahara, Restaurant Terroir..." className={fc(!!fieldErrors.name)} />
             {fieldErrors.name && <p className="text-xs font-semibold text-red-500">{fieldErrors.name}</p>}
           </div>
 
-          {/* Types */}
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Type de projet <span className="ml-1.5 text-xs font-normal text-slate-400">(plusieurs choix possibles)</span></label>
             <div className="grid grid-cols-2 gap-2">
@@ -822,30 +981,27 @@ function AddProjectModal({ onClose, onSuccess, token }: {
                   <button key={t.value} type="button" onClick={() => toggle("project_types", t.value)}
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
                     <span className="material-symbols-outlined text-base">{t.icon}</span>{t.label}
-                    {active && <Check className="w-3.5 h-3.5 ml-auto text-primary" />}
+                    {active && <span className="material-symbols-outlined text-base ml-auto text-primary">check</span>}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Description</label>
             <textarea rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Décrivez votre projet éco-touristique…"
+              placeholder="Décrivez votre projet éco-touristique..."
               className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium resize-none" />
           </div>
 
-          {/* Région */}
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Région</label>
             <input value={form.region} onChange={(e) => { setForm((f) => ({ ...f, region: e.target.value })); setFieldErrors((fe) => ({ ...fe, region: undefined })); }}
-              placeholder="Tataouine, Djerba…" className={fc(!!fieldErrors.region)} />
+              placeholder="Tataouine, Djerba..." className={fc(!!fieldErrors.region)} />
             {fieldErrors.region && <p className="text-xs font-semibold text-red-500">{fieldErrors.region}</p>}
           </div>
 
-          {/* Phone + Website */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700">Téléphone</label>
@@ -861,7 +1017,6 @@ function AddProjectModal({ onClose, onSuccess, token }: {
             </div>
           </div>
 
-          {/* Services */}
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700">Services proposés <span className="ml-1.5 text-xs font-normal text-slate-400">(plusieurs choix possibles)</span></label>
             <div className="grid grid-cols-2 gap-2">
@@ -871,14 +1026,13 @@ function AddProjectModal({ onClose, onSuccess, token }: {
                   <button key={s.value} type="button" onClick={() => toggle("services", s.value)}
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
                     <span className="material-symbols-outlined text-base">{s.icon}</span>{s.label}
-                    {active && <Check className="w-3.5 h-3.5 ml-auto text-primary" />}
+                    {active && <span className="material-symbols-outlined text-base ml-auto text-primary">check</span>}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Map */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-slate-700">Localisation</label>
@@ -886,7 +1040,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
                 {showMap ? "Masquer la carte" : "Choisir sur la carte"}
               </button>
             </div>
-            <input readOnly value={form.address} placeholder="Auto-rempli par la carte…"
+            <input readOnly value={form.address} placeholder="Auto-rempli par la carte..."
               className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl text-slate-500 font-medium cursor-default" />
             {showMap && (
               <MapPicker lat={mapLat} lng={mapLng} onPick={(lat, lng, address) => {
@@ -896,7 +1050,6 @@ function AddProjectModal({ onClose, onSuccess, token }: {
             )}
           </div>
 
-          {/* Horaires */}
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Horaires d'ouverture</label>
             <input value={form.opening_hours} onChange={(e) => setForm((f) => ({ ...f, opening_hours: e.target.value }))}
@@ -904,7 +1057,6 @@ function AddProjectModal({ onClose, onSuccess, token }: {
               className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium" />
           </div>
 
-          {/* Réseaux sociaux */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700">Facebook</label>
@@ -918,7 +1070,6 @@ function AddProjectModal({ onClose, onSuccess, token }: {
             </div>
           </div>
 
-          {/* Éco-pratiques */}
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700">Pratiques éco-responsables</label>
             <div className="flex flex-wrap gap-2">
@@ -927,7 +1078,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
                 return (
                   <button key={p} type="button" onClick={() => toggle("eco_labels", p)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${active ? "bg-green-50 border-green-400 text-green-700" : "border-slate-200 text-slate-500 hover:border-green-300"}`}>
-                    {active && <Check className="w-3 h-3" />}{p}
+                    {active && <span className="material-symbols-outlined text-sm">check</span>}{p}
                   </button>
                 );
               })}
@@ -942,8 +1093,8 @@ function AddProjectModal({ onClose, onSuccess, token }: {
           )}
 
           <button type="submit" disabled={loading}
-            className="w-full py-3.5 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60">
-            {loading ? "Création en cours…" : "Créer le projet"}
+            className="w-full py-3.5 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60">
+            {loading ? "Création en cours..." : "Créer le projet"}
           </button>
         </form>
       </div>
@@ -951,7 +1102,696 @@ function AddProjectModal({ onClose, onSuccess, token }: {
   );
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
+function MyReservationsTab() {
+  const router = useRouter();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [newParticipants, setNewParticipants] = useState<{ full_name: string }[]>([]);
+
+  const fetchBookings = () => {
+    apiFetch<Booking[]>("/bookings/mine")
+      .then(setBookings)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchBookings(); }, []);
+
+  const handleCancel = async (id: string) => {
+    if (!confirm("Annuler cette réservation ?")) return;
+    try {
+      await apiFetch(`/bookings/${id}/cancel`, { method: "PATCH" });
+      fetchBookings();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const handleAddParticipants = async (id: string) => {
+    const valid = newParticipants.filter((p) => p.full_name.trim());
+    if (!valid.length) return;
+    try {
+      await apiFetch(`/bookings/${id}/participants`, {
+        method: "PATCH",
+        body: JSON.stringify({ participants: valid }),
+      });
+      setAddingTo(null);
+      setNewParticipants([]);
+      fetchBookings();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  if (loading) return <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />;
+
+  if (bookings.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+        <p className="text-slate-500 mb-4">Aucune réservation</p>
+        <button onClick={() => router.push("/destinations")} className="text-primary underline text-sm">Découvrir des offres</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {bookings.map((b) => (
+        <div key={b.id} className="bg-white rounded-2xl border border-slate-100 p-4">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h4 className="font-semibold text-slate-800">{b.offer?.title}</h4>
+              <p className="text-xs text-slate-400">{b.participants?.length ?? 0} participant(s)</p>
+              <span className={`text-[10px] inline-block mt-1 px-2 py-0.5 rounded-full ${b.confirmation_mode === "automatic" ? "bg-emerald-50 text-primary" : "bg-amber-50 text-amber-600"}`}>
+                {b.confirmation_mode === "automatic" ? "Confirmation instantanée" : "Confirmation manuelle"}
+              </span>
+            </div>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${b.status === "confirmed" ? "bg-emerald-50 text-primary" : b.status === "cancelled" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
+              {b.status === "confirmed" ? "Confirmée" : b.status === "cancelled" ? "Annulée" : "En attente"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm mt-3">
+            <span className="font-bold text-primary">{Number(b.total_price).toLocaleString()} TND</span>
+            <div className="flex gap-2">
+              {addingTo === b.id ? (
+                <div className="flex items-center gap-2">
+                  <input type="text" placeholder="Nom participant"
+                    value={newParticipants.map((p) => p.full_name).join(", ")}
+                    onChange={(e) => setNewParticipants(e.target.value.split(",").map((s) => ({ full_name: s.trim() })).filter((p) => p.full_name))}
+                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-40" />
+                  <button onClick={() => handleAddParticipants(b.id)} className="text-xs text-white bg-primary rounded-lg px-2 py-1">OK</button>
+                  <button onClick={() => { setAddingTo(null); setNewParticipants([]); }} className="text-xs text-slate-400">Annuler</button>
+                </div>
+              ) : (
+                b.status !== "cancelled" && (
+                  <>
+                    <button onClick={() => { setAddingTo(b.id); setNewParticipants([{ full_name: "" }]); }} className="text-xs text-primary border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-50">
+                      + Participants
+                    </button>
+                    <button onClick={() => handleCancel(b.id)} className="text-xs text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50">
+                      Annuler
+                    </button>
+                  </>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function IncomingReservationsTab() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<Booking[]>("/bookings/incoming")
+      .then(setBookings)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />;
+
+  if (bookings.length === 0) {
+    return <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center"><p className="text-slate-500">Aucune réservation reçue</p></div>;
+  }
+
+  const handleConfirm = async (id: string) => {
+    try { await apiFetch(`/bookings/${id}/confirm`, { method: "PATCH" }); setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: "confirmed" } : b)); } catch {}
+  };
+
+  const handleCancel = async (id: string) => {
+    try { await apiFetch(`/bookings/${id}/cancel`, { method: "PATCH" }); setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: "cancelled" } : b)); setConfirmDeleteId(null); } catch {}
+  };
+
+  return (
+    <div className="space-y-3">
+      {bookings.map((b) => (
+        <div key={b.id} className="bg-white rounded-2xl border border-slate-100 p-4">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h4 className="font-semibold text-slate-800">{b.offer?.title}</h4>
+              <p className="text-xs text-slate-400">
+                {b.traveler?.full_name || "Voyageur"} · {b.participants?.length ?? 1} participant(s)
+              </p>
+            </div>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${b.status === "confirmed" ? "bg-emerald-50 text-primary" : b.status === "cancelled" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
+              {b.status === "confirmed" ? "Confirmée" : b.status === "cancelled" ? "Annulée" : "En attente"}
+            </span>
+          </div>
+          {b.special_requests && (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5 mb-2">{b.special_requests}</p>
+          )}
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-bold text-primary">{Number(b.total_price).toLocaleString()} TND</span>
+            <div className="flex gap-2">
+              {b.status === "pending" && (
+                <>
+                  <button onClick={() => handleConfirm(b.id)} className="text-xs text-white bg-primary rounded-lg px-3 py-1.5 hover:bg-emerald-600">Accepter</button>
+                  <button onClick={() => setConfirmDeleteId(b.id)} className="text-xs text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50">Refuser</button>
+                </>
+              )}
+              {b.status === "confirmed" && (
+                <span className="text-xs text-primary font-medium">✔ Réservation confirmée</span>
+              )}
+              {b.status === "cancelled" && (
+                <span className="text-xs text-red-400 font-medium">✖ Réservation annulée</span>
+              )}
+            </div>
+          </div>
+
+          {confirmDeleteId === b.id && (
+            <DeleteConfirmModal
+              title="Refuser la réservation"
+              message="Êtes-vous sûr de vouloir refuser cette réservation ?"
+              onClose={() => setConfirmDeleteId(null)}
+              onConfirm={() => handleCancel(b.id)}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActividadesSection({ offerId, items, token }: { offerId: string; items: OfferItem[]; token: string }) {
+  const [itemList, setItemList] = useState<OfferItem[]>(items);
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [type, setType] = useState("");
+  const [priceLabel, setPriceLabel] = useState("");
+  const [price, setPrice] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const activeItems = itemList.filter((i) => i.status === "active");
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) { setError("Le nom est requis"); return; }
+    if (!price) { setError("Le prix est requis"); return; }
+    setError(null);
+    try {
+      const created = await apiFetch<any>(`/offers/${offerId}/items`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: name.trim(), description: desc.trim() || undefined, item_type: type || undefined }),
+      });
+      if (price) {
+        await apiFetch(`/offers/items/${created.id}/prices`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ label: priceLabel.trim() || "Plein tarif", price: Number(price), is_default: true }),
+        });
+      }
+      const updated = await apiFetch<any>(`/offers/${offerId}`);
+      setItemList(updated.items ?? []);
+      setName(""); setDesc(""); setType(""); setPriceLabel(""); setPrice("");
+      setAdding(false);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  return (
+    <div className="my-2">
+      {activeItems.length > 0 && (
+        <div className="space-y-1 mb-2">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Activités ({activeItems.length})</p>
+          {activeItems.map((item) => (
+            <div key={item.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-1.5">
+              <div>
+                <span className="text-sm font-medium text-slate-700">{item.name}</span>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {item.room_type && <span className="text-[9px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded-full">{item.room_type}</span>}
+                  {item.bed_count != null && <span className="text-[9px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded-full">🛏 {item.bed_count}</span>}
+                  {item.nights != null && <span className="text-[9px] text-purple-600 bg-purple-50 px-1 py-0.5 rounded-full">🌙 {item.nights}n</span>}
+                  {item.tent_capacity != null && <span className="text-[9px] text-green-600 bg-green-50 px-1 py-0.5 rounded-full">⛺ {item.tent_capacity}p</span>}
+                  {item.prices?.[0] && <span className="text-xs text-primary ml-1">{Number(item.prices[0].price).toLocaleString()} TND</span>}
+                </div>
+              </div>
+              <span className="text-[10px] text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">{item.item_type ?? "activité"}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adding ? (
+        <form onSubmit={handleAdd} className="bg-slate-50 rounded-xl p-3 space-y-2">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom de l'activité *" className="text-slate-800 w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description (optionnelle)" className="text-slate-800 w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          <div className="grid grid-cols-2 gap-2">
+            <select value={type} onChange={(e) => setType(e.target.value)} className="text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300">
+              <option value="">Type</option>
+              <option value="activity">Activité</option>
+              <option value="accommodation">Hébergement</option>
+              <option value="meal">Repas</option>
+              <option value="transport">Transport</option>
+              <option value="workshop">Atelier</option>
+            </select>
+            <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Prix *" className="text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          </div>
+          <input value={priceLabel} onChange={(e) => setPriceLabel(e.target.value)} placeholder="Libellé du prix (ex: Plein tarif)" className="text-slate-800 w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => { setAdding(false); setError(null); }} className="flex-1 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-100">Annuler</button>
+            <button type="submit" className="flex-1 py-1.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-emerald-600">Ajouter</button>
+          </div>
+        </form>
+      ) : (
+        <button onClick={() => setAdding(true)} className="flex items-center gap-1 text-xs font-medium text-primary hover:text-emerald-700">
+          <span className="material-symbols-outlined text-sm">add</span> Ajouter une activité
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CreateCircuitModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [region, setRegion] = useState("");
+  const [basePrice, setBasePrice] = useState("");
+  const [durationDays, setDurationDays] = useState("");
+  const [images, setImages] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) { setError("Le titre est requis"); return; }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("access_token");
+      await apiFetch("/circuits", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          region: region.trim() || undefined,
+          base_price: basePrice ? Number(basePrice) : undefined,
+          duration_days: durationDays ? Number(durationDays) : undefined,
+          images: images.length > 0 ? images : undefined,
+        }),
+      });
+      onCreated();
+      onClose();
+    } catch (e: any) {
+      setError(e.message || "Erreur lors de la création");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-lg mx-4 w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Nouveau circuit</h3>
+        {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3 mb-4 text-sm text-red-600">{error}</div>}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre du circuit *" className="text-slate-800 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" rows={3} className="text-slate-800 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 resize-none" />
+          <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Région" className="text-slate-800 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          <div className="grid grid-cols-2 gap-2">
+            <input type="number" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} placeholder="Prix de base" className="text-slate-800 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+            <input type="number" value={durationDays} onChange={(e) => setDurationDays(e.target.value)} placeholder="Jours" className="text-slate-800 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 mb-1 block">Images (URLs)</label>
+            <div className="flex gap-2">
+              <input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://exemple.com/image.jpg" className="flex-1 text-slate-800 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" onKeyDown={(e) => {
+                if (e.key === "Enter" && newImageUrl.trim().startsWith("http")) { e.preventDefault(); setImages([...images, newImageUrl.trim()]); setNewImageUrl(""); }
+              }} />
+              <button type="button" onClick={() => { if (newImageUrl.trim().startsWith("http")) { setImages([...images, newImageUrl.trim()]); setNewImageUrl(""); } }} className="px-3 py-2 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20">Ajouter</button>
+            </div>
+            {images.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {images.map((url, i) => (
+                  <div key={i} className="relative group">
+                    <img src={url} alt="" className="w-14 h-14 rounded-xl object-cover border border-slate-200" />
+                    <button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50">Annuler</button>
+            <button type="submit" disabled={submitting} className="flex-1 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-2">
+              {submitting && <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />}
+              Créer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function BookCircuitModal({ onClose, circuit }: { onClose: () => void; circuit: any }) {
+  const router = useRouter();
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 text-center">
+          <span className="material-symbols-outlined text-5xl text-primary mb-3">route</span>
+          <h3 className="text-lg font-extrabold text-slate-900 mb-2">{circuit.title}</h3>
+          <p className="text-sm text-slate-500 font-medium mb-1">{circuit.description}</p>
+          <p className="text-lg font-extrabold text-primary mb-6">{Number(circuit.base_price ?? circuit.price ?? 0).toLocaleString()} TND</p>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors text-sm">Annuler</button>
+            <button onClick={() => { router.push(`/circuits/${circuit.id}`); }} className="flex-1 py-2.5 bg-primary text-slate-900 font-bold rounded-xl hover:-translate-y-0.5 transition-all text-sm shadow-lg shadow-emerald-500/20">
+              Réserver
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TripPlansList() {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    apiFetch<any[]>("/trip-plans/mine")
+      .then(setPlans)
+      .catch(() => setPlans([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />;
+
+  if (plans.length === 0) {
+    return <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center"><p className="text-slate-500">Aucun trip plan pour le moment</p></div>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {plans.map((p: any) => (
+        <div key={p.id} className="bg-white rounded-2xl border border-slate-100 p-4">
+          <h4 className="font-semibold text-slate-800 mb-1">{p.title}</h4>
+          {p.description && <p className="text-xs text-slate-400 mb-3 line-clamp-2">{p.description}</p>}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400">{p.items?.length ?? 0} élément{(p.items?.length ?? 0) > 1 ? "s" : ""}</span>
+            <button onClick={() => router.push(`/trip-plans/${p.id}`)}
+              className="text-xs text-primary border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-50">
+              Voir
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EcoTravelerOffersSection({ router }: { router: any }) {
+  const [offers, setOffers] = useState<any[]>([]);
+  const [reservedIds, setReservedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "available" | "reserved">("all");
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    Promise.all([
+      apiFetch<any[]>("/offers").catch(() => []),
+      token ? apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []) : Promise.resolve([]),
+    ]).then(([allOffers, bookings]) => {
+      setOffers(allOffers);
+      const ids = new Set(bookings.map((b: any) => b.offer?.id).filter(Boolean));
+      setReservedIds(ids);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const filtered = filter === "available"
+    ? offers.filter((o) => !reservedIds.has(o.id))
+    : filter === "reserved"
+    ? offers.filter((o) => reservedIds.has(o.id))
+    : offers;
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold">Offres</h3>
+        <div className="flex items-center gap-2">
+          <select value={filter} onChange={(e) => setFilter(e.target.value as any)} className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-300">
+            <option value="all">Toutes</option>
+            <option value="available">Disponibles</option>
+            <option value="reserved">Réservées</option>
+          </select>
+          <button onClick={() => router.push("/offers")} className="px-4 py-2 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
+            Voir tout
+          </button>
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+          <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">storefront</span>
+          <p className="font-bold text-slate-500">
+            {filter === "reserved" ? "Aucune offre réservée" : "Aucune offre disponible"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filtered.map((offer) => {
+            const isReserved = reservedIds.has(offer.id);
+            return (
+              <div key={offer.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/offers/${offer.id}`)}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-primary text-lg">storefront</span>
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-slate-900 leading-tight">{offer.title}</p>
+                    {offer.offer_type && <p className="text-xs font-bold text-primary mt-0.5">{offer.offer_type}</p>}
+                  </div>
+                  {isReserved && <span className="ml-auto text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Réservé</span>}
+                </div>
+                {offer.description && <p className="text-sm text-slate-500 font-medium line-clamp-2">{offer.description}</p>}
+                <div className="flex items-center gap-3 mt-auto pt-2 border-t border-slate-100">
+                  {offer.region && <span className="text-xs text-slate-400">{offer.region}</span>}
+                  <div className="ml-auto flex gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); router.push(`/offers/${offer.id}`); }} className="px-3 py-1 bg-primary/10 text-primary font-bold rounded-lg text-xs hover:bg-primary/20">Détails</button>
+                    {isReserved ? (
+                      <button onClick={(e) => { e.stopPropagation(); router.push("/dashboard/reservations"); }} className="px-3 py-1 bg-blue-50 text-blue-600 font-bold rounded-lg text-xs hover:bg-blue-100">Gérer</button>
+                    ) : (
+                      <button onClick={(e) => { e.stopPropagation(); router.push(`/reservations/new?offerId=${offer.id}`); }} className="px-3 py-1 bg-primary text-white font-bold rounded-lg text-xs hover:bg-emerald-600">Réserver</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CircuitsTab({ role, router, token }: { role: string; router: any; token: string }) {
+  const [circuits, setCircuits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [bookCircuit, setBookCircuit] = useState<any | null>(null);
+  const isProvider = role === "guide" || role === "project";
+
+  const loadCircuits = useCallback(() => {
+    setLoading(true);
+    if (isProvider && token) {
+      apiFetch<any[]>("/circuits/mine", { headers: { Authorization: `Bearer ${token}` } })
+        .then(setCircuits)
+        .catch(() => setCircuits([]))
+        .finally(() => setLoading(false));
+    } else {
+      apiFetch<any[]>("/circuits")
+        .then(setCircuits)
+        .catch(() => setCircuits([]))
+        .finally(() => setLoading(false));
+    }
+  }, [isProvider, token]);
+
+  useEffect(() => { loadCircuits(); }, [loadCircuits]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer ce circuit ?")) return;
+    try {
+      await apiFetch(`/circuits/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      setCircuits((prev) => prev.filter((c) => c.id !== id));
+    } catch { alert("Erreur lors de la suppression"); }
+  };
+
+  if (loading) return <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />;
+
+  return (
+    <div>
+      {isProvider && (
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-slate-400">{circuits.length} circuit{circuits.length > 1 ? "s" : ""}</p>
+          <button onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600">
+            <span className="material-symbols-outlined text-base">add</span> Créer un circuit
+          </button>
+        </div>
+      )}
+
+      {!isProvider && (
+        <p className="text-sm text-slate-400 mb-4">Circuits éco-responsables disponibles</p>
+      )}
+
+      {circuits.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+          <p className="text-slate-500">{isProvider ? "Vous n'avez pas encore créé de circuit" : "Aucun circuit disponible"}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {circuits.map((c: any) => (
+            <div key={c.id} className="bg-white rounded-2xl border border-slate-100 p-4">
+              <h4 className="font-semibold text-slate-800 mb-1">{c.title}</h4>
+              <p className="text-xs text-slate-400 mb-3 line-clamp-2">{c.description}</p>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-primary">{Number(c.base_price ?? c.price ?? 0).toLocaleString()} TND</span>
+                <div className="flex gap-2">
+                  <button onClick={() => router.push(`/circuits/${c.id}`)} className="text-xs text-primary border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-50">Détails</button>
+                  {role === "eco_traveler" && (
+                    <button onClick={() => setBookCircuit(c)} className="text-xs text-white bg-primary rounded-lg px-3 py-1.5 hover:bg-emerald-600">Réserver</button>
+                  )}
+                  {isProvider && (
+                    <>
+                      <button onClick={() => router.push(`/circuits/${c.id}`)} className="text-xs text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50">Modifier</button>
+                      <button onClick={() => handleDelete(c.id)} className="text-xs text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50">Supprimer</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showCreate && <CreateCircuitModal onClose={() => setShowCreate(false)} onCreated={loadCircuits} />}
+      {bookCircuit && <BookCircuitModal onClose={() => setBookCircuit(null)} circuit={bookCircuit} />}
+    </div>
+  );
+}
+
+function NotificationsTab() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch<Notification[]>("/notifications")
+      .then(setNotifications)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const markRead = async (id: string) => {
+    try { await apiFetch(`/notifications/${id}/read`, { method: "PATCH" }); setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n)); } catch {}
+  };
+  const markAllRead = async () => {
+    try { await apiFetch("/notifications/read-all", { method: "PATCH" }); setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true }))); } catch {}
+  };
+
+  if (loading) return <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />;
+
+  const unread = notifications.filter((n) => !n.is_read).length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-slate-400">{unread} non lue{unread > 1 ? "s" : ""}</p>
+        {unread > 0 && (
+          <button onClick={markAllRead} className="text-xs text-primary hover:text-emerald-700 font-medium">Tout marquer comme lu</button>
+        )}
+      </div>
+      {notifications.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center"><p className="text-slate-500">Aucune notification</p></div>
+      ) : (
+        <div className="space-y-2">
+          {notifications.map((n) => (
+            <div key={n.id} className={`bg-white rounded-xl border p-4 ${n.is_read ? "border-slate-100" : "border-emerald-200"}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className={`text-sm ${n.is_read ? "text-slate-600" : "text-slate-800 font-semibold"}`}>{n.title}</h4>
+                    {!n.is_read && <span className="w-2 h-2 bg-emerald-400 rounded-full shrink-0" />}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">{n.body}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-[10px] text-slate-400">{new Date(n.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                    {n.link && <button onClick={() => { if (n.link) window.location.href = n.link; }} className="text-[10px] text-primary hover:underline">Voir détails</button>}
+                  </div>
+                </div>
+                {!n.is_read && (
+                  <button onClick={() => markRead(n.id)} className="shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary" title="Marquer comme lu">
+                    <span className="material-symbols-outlined text-base">done</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ParametresTab({ router, handleLogout }: { router: any; handleLogout: () => void }) {
+  const rolePaths: Record<Role, string> = {
+    eco_traveler: "/profile/ecovoyageur",
+    guide: "/profile/guide",
+    project: "/profile/project-owner",
+  };
+
+  const raw = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+  const userRole = raw ? (JSON.parse(raw) as { role: string }).role as Role : "eco_traveler";
+  const profilePath = rolePaths[userRole] || "/profile/ecovoyageur";
+
+  return (
+    <div className="max-w-lg mx-auto space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-100 p-6">
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Paramètres</h3>
+        <div className="space-y-2">
+          <button onClick={() => router.push(profilePath)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-slate-50 transition-colors text-left">
+            <span className="material-symbols-outlined text-primary">person</span>
+            <div>
+              <p className="font-semibold text-slate-800 text-sm">Mon Profil</p>
+              <p className="text-xs text-slate-400">Modifier vos informations personnelles</p>
+            </div>
+          </button>
+          <button onClick={() => router.push("/messagerie")}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-slate-50 transition-colors text-left">
+            <span className="material-symbols-outlined text-primary">chat</span>
+            <div>
+              <p className="font-semibold text-slate-800 text-sm">Messagerie</p>
+              <p className="text-xs text-slate-400">Vos conversations</p>
+            </div>
+          </button>
+          <button onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-red-50 transition-colors text-left">
+            <span className="material-symbols-outlined text-red-500">logout</span>
+            <div>
+              <p className="font-semibold text-red-600 text-sm">Déconnexion</p>
+              <p className="text-xs text-slate-400">Se déconnecter de votre compte</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -964,8 +1804,9 @@ export default function DashboardPage() {
   const [showAddPublication, setShowAddPublication] = useState(false);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [showAddOffer, setShowAddOffer] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<any>(null);
   const [showAddProject, setShowAddProject] = useState(false);
-  type DashConv = { id: string; other_user: { full_name: string | null; photo: string | null }; last_message: { content: string; is_mine: boolean } | null; unread_count: number };
+  const [editingProject, setEditingProject] = useState<any>(null);
   const [dashConvos, setDashConvos] = useState<DashConv[]>([]);
 
   useEffect(() => {
@@ -1054,10 +1895,12 @@ export default function DashboardPage() {
   const navItems = role === "eco_traveler"
     ? [
         { label: "Tableau de bord", icon: "dashboard" },
+        { label: "Offres", icon: "storefront" },
         { label: "Mes Publications", icon: "public" },
-        { label: "Mes Voyages", icon: "map" },
-        { label: "Impact Éco", icon: "energy_savings_leaf" },
-        { label: "Favoris", icon: "favorite" },
+        { label: "Trip Plans", icon: "map" },
+        { label: "Réservations", icon: "event_available" },
+        { label: "Circuits", icon: "route" },
+        { label: "Notifications", icon: "notifications" },
         { label: "Paramètres", icon: "settings" },
       ]
     : role === "guide"
@@ -1065,8 +1908,8 @@ export default function DashboardPage() {
         { label: "Tableau de bord", icon: "dashboard" },
         { label: "Mes Offres", icon: "sell" },
         { label: "Réservations", icon: "event_available" },
-        { label: "Mes Avis", icon: "star" },
-        { label: "Certifications", icon: "verified" },
+        { label: "Circuits", icon: "route" },
+        { label: "Notifications", icon: "notifications" },
         { label: "Paramètres", icon: "settings" },
       ]
     : [
@@ -1074,8 +1917,8 @@ export default function DashboardPage() {
         { label: "Mes Projets", icon: "domain" },
         { label: "Mes Offres", icon: "sell" },
         { label: "Réservations", icon: "event_available" },
-        { label: "Avis reçus", icon: "star" },
-        { label: "Certifications", icon: "verified" },
+        { label: "Circuits", icon: "route" },
+        { label: "Notifications", icon: "notifications" },
         { label: "Paramètres", icon: "settings" },
       ];
 
@@ -1089,15 +1932,14 @@ export default function DashboardPage() {
   const questionnairePath = role === "eco_traveler" ? "/questionnaire/eco-traveler"
     : role === "guide" ? "/questionnaire/guide"
     : "/questionnaire/project-owner";
-  const searchPlaceholder = role === "eco_traveler" ? "Rechercher un guide, un projet éco…"
-    : role === "guide" ? "Rechercher un projet éco-touristique…"
-    : "Rechercher un guide certifié…";
+  const searchPlaceholder = role === "eco_traveler" ? "Rechercher un guide, un projet éco..."
+    : role === "guide" ? "Rechercher un projet éco-touristique..."
+    : "Rechercher un guide certifié...";
 
-  type SearchResult = { user_id: string; full_name: string; photo: string | null; zone?: string | null; organization?: string | null; guide_type?: string | null; sustainability_score?: number | null };
-  const [searchQ, setSearchQ]         = useState("");
-  const [searchRes, setSearchRes]     = useState<SearchResult[]>([]);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchRes, setSearchRes] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchOpen, setSearchOpen]   = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1141,14 +1983,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+    <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
 
-        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-        <aside className="w-72 bg-white dark:bg-slate-900 border-r border-primary/10 flex flex-col fixed h-full">
-          <div className="p-6 flex flex-col h-full">
-            <div className="flex items-center gap-3 mb-10">
-              <Leaf className="text-primary w-8 h-8" />
+        <aside className="w-72 bg-white border-r border-primary/10 flex flex-col fixed h-full z-20">
+          <div className="p-6 flex flex-col h-full overflow-y-auto">
+            <div className="flex items-center gap-3 mb-6 shrink-0">
+              <span className="material-symbols-outlined text-primary text-3xl">eco</span>
               <h1 className="text-xl font-extrabold tracking-tight">Éco-Voyage</h1>
             </div>
 
@@ -1158,14 +1999,14 @@ export default function DashboardPage() {
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     activeItem === item.label
                       ? "bg-primary/10 text-primary font-bold"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      : "text-slate-600 hover:bg-slate-50"
                   }`}>
                   <span className="material-symbols-outlined">{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               ))}
               <button onClick={() => router.push("/messagerie")}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 transition-all">
                 <span className="material-symbols-outlined">chat</span>
                 <span>Messagerie</span>
                 {dashConvos.reduce((s, c) => s + c.unread_count, 0) > 0 && (
@@ -1175,13 +2016,13 @@ export default function DashboardPage() {
                 )}
               </button>
               <button onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 transition-all">
                 <span className="material-symbols-outlined">logout</span>
                 <span>Déconnexion</span>
               </button>
             </nav>
 
-            <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800">
+            <div className="mt-auto pt-6 border-t border-slate-100">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Profil complété</p>
                 <p className="text-xs font-extrabold text-primary">{profile.profile_completion}%</p>
@@ -1191,24 +2032,23 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Role-specific CTAs */}
             {role === "eco_traveler" && (
               <button onClick={() => router.push(questionnairePath)}
-                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined">add_location_alt</span>
                 Réserver un voyage
               </button>
             )}
             {role === "guide" && (
               <button onClick={() => router.push(questionnairePath)}
-                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined">quiz</span>
                 {score === null ? "Passer l'évaluation" : "Voir mon score"}
               </button>
             )}
             {role === "project" && (
               <button onClick={() => router.push(questionnairePath)}
-                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined">quiz</span>
                 {score === null ? "Passer l'évaluation" : "Voir mon score"}
               </button>
@@ -1216,15 +2056,14 @@ export default function DashboardPage() {
           </div>
         </aside>
 
-        {/* ── Main ────────────────────────────────────────────────────────── */}
         <main className="flex-1 ml-72">
 
-          <header className="h-24 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-primary/10 px-10 flex items-center justify-between sticky top-0 z-10">
+          <header className="h-24 bg-white/80 backdrop-blur-md border-b border-primary/10 px-10 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-12 shrink-0">
               <h2 className="text-2xl font-bold whitespace-nowrap">
-                Bonjour, {profile.full_name || (role === "guide" ? "Guide" : role === "project" ? "Propriétaire" : "Voyageur")} 👋
+                Bonjour, {profile.full_name || (role === "guide" ? "Guide" : role === "project" ? "Propriétaire" : "Voyageur")}
               </h2>
-              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-5 py-2 gap-2 whitespace-nowrap">
+              <div className="flex items-center bg-slate-100 rounded-full px-5 py-2 gap-2 whitespace-nowrap">
                 <span className="material-symbols-outlined text-primary text-base">
                   {role === "project" ? "domain_verification" : "verified_user"}
                 </span>
@@ -1236,13 +2075,10 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-6 flex-1 justify-end">
               <div className="relative w-full max-w-md" ref={searchRef}>
-                <input
-                  className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/50"
-                  placeholder={searchPlaceholder}
-                  value={searchQ}
+                <input className="w-full bg-slate-100 border-none rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/50"
+                  placeholder={searchPlaceholder} value={searchQ}
                   onChange={(e) => { setSearchQ(e.target.value); setSearchOpen(true); }}
-                  onFocus={() => setSearchOpen(true)}
-                />
+                  onFocus={() => setSearchOpen(true)} />
                 <span className="material-symbols-outlined absolute left-4 top-3 text-slate-400 text-xl">search</span>
                 {searchQ && (
                   <button onClick={() => { setSearchQ(""); setSearchRes([]); }}
@@ -1251,12 +2087,11 @@ export default function DashboardPage() {
                   </button>
                 )}
 
-                {/* Dropdown */}
                 {searchOpen && searchQ.trim() && (
                   <div className="absolute top-12 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden max-h-80 overflow-y-auto">
                     {searchLoading && (
                       <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400 font-medium">
-                        <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" /> Recherche…
+                        <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" /> Recherche...
                       </div>
                     )}
                     {!searchLoading && searchRes.length === 0 && (
@@ -1279,17 +2114,18 @@ export default function DashboardPage() {
                           </p>
                         </div>
                         {r.sustainability_score !== null && r.sustainability_score !== undefined && (
-                          <span className="shrink-0 text-[10px] font-black text-primary ml-auto">🌿 {r.sustainability_score}</span>
+                          <span className="shrink-0 text-[10px] font-black text-primary ml-auto">{r.sustainability_score}</span>
                         )}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <button className="size-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-primary/10 hover:text-primary transition-colors shrink-0">
+              <button onClick={() => router.push("/notifications")}
+                className="size-11 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors shrink-0">
                 <span className="material-symbols-outlined">notifications</span>
               </button>
-              <div className="h-10 w-[1px] bg-slate-200 dark:bg-slate-700 shrink-0" />
+              <div className="h-10 w-[1px] bg-slate-200 shrink-0" />
               <button onClick={() => router.push(profilePath)}
                 className="size-11 rounded-full bg-slate-200 border-2 border-primary overflow-hidden shrink-0 hover:opacity-80 transition-opacity" title="Voir mon profil">
                 {profile.photo ? (
@@ -1305,10 +2141,8 @@ export default function DashboardPage() {
 
           <div className="p-8">
 
-            {/* ── Tableau de bord ───────────────────────────────────────── */}
             {activeItem === "Tableau de bord" && (
               <>
-                {/* Questionnaire banner */}
                 {score === null && (
                   <div className="mb-6 p-5 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1325,17 +2159,15 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <button onClick={() => router.push(questionnairePath)}
-                      className="px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl text-sm shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all">
+                      className="px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl text-sm shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all">
                       Commencer →
                     </button>
                   </div>
                 )}
 
-                {/* Stats grid */}
                 <div className={`grid grid-cols-1 md:grid-cols-2 ${role === "eco_traveler" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-6 mb-8`}>
 
-                  {/* Score card */}
-                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col justify-between lg:col-span-2">
+                  <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col justify-between lg:col-span-2">
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="text-slate-500 text-sm font-medium">Score de durabilité</p>
@@ -1354,7 +2186,7 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                       <div className={`h-full ${getBarColor(score)} rounded-full transition-all duration-1000`} style={{ width: scoreWidth }} />
                     </div>
                     <p className="text-xs font-bold mt-2" style={{ color: score !== null ? (score >= 60 ? "#22c55e" : "#f97316") : "#94a3b8" }}>
@@ -1363,10 +2195,9 @@ export default function DashboardPage() {
                     {showScoreDetail && <ScoreBreakdown profile={profile} role={role} />}
                   </div>
 
-                  {/* eco_traveler stats */}
                   {role === "eco_traveler" && (
                     <>
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-sm font-medium">Expériences créées</p>
@@ -1375,7 +2206,7 @@ export default function DashboardPage() {
                           <div className="bg-teal-500/10 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined">hiking</span></div>
                         </div>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-sm font-medium">Lieux créés</p>
@@ -1384,7 +2215,7 @@ export default function DashboardPage() {
                           <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined">location_on</span></div>
                         </div>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-sm font-medium">Réservations</p>
@@ -1393,13 +2224,30 @@ export default function DashboardPage() {
                           <div className="bg-green-500/10 p-2 rounded-lg text-green-500"><span className="material-symbols-outlined">task_alt</span></div>
                         </div>
                       </div>
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-slate-500 text-sm font-medium">Plans</p>
+                            <h3 className="text-3xl font-extrabold mt-1">{profile.plans_shared ?? 0}</h3>
+                          </div>
+                          <div className="bg-purple-500/10 p-2 rounded-lg text-purple-500"><span className="material-symbols-outlined">map</span></div>
+                        </div>
+                      </div>
                     </>
                   )}
 
-                  {/* guide stats */}
                   {role === "guide" && (
                     <>
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-slate-500 text-sm font-medium">Offres</p>
+                            <h3 className="text-3xl font-extrabold mt-1">{offers.length}</h3>
+                          </div>
+                          <div className="bg-teal-500/10 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined">sell</span></div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-sm font-medium">Réservations gérées</p>
@@ -1408,7 +2256,7 @@ export default function DashboardPage() {
                           <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined">event_available</span></div>
                         </div>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-sm font-medium">Avis reçus</p>
@@ -1420,10 +2268,9 @@ export default function DashboardPage() {
                     </>
                   )}
 
-                  {/* project stats */}
                   {role === "project" && (
                     <>
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-sm font-medium">Projets actifs</p>
@@ -1432,7 +2279,16 @@ export default function DashboardPage() {
                           <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined">domain</span></div>
                         </div>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-slate-500 text-sm font-medium">Offres</p>
+                            <h3 className="text-3xl font-extrabold mt-1">{offers.length}</h3>
+                          </div>
+                          <div className="bg-teal-500/10 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined">sell</span></div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-sm font-medium">Réservations reçues</p>
@@ -1445,13 +2301,9 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Content + Badges */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                  {/* Left column: role-specific content */}
                   <div className="lg:col-span-2">
-
-                    {/* eco_traveler: Plans de voyage */}
                     {role === "eco_traveler" && (
                       <>
                         <div className="flex items-center justify-between mb-6">
@@ -1464,7 +2316,7 @@ export default function DashboardPage() {
                             { title: "Séjour nature à Aïn Draham", badge: "Plan partagé", badgeColor: "bg-blue-100 text-blue-700", date: "22 - 25 Oct. • 2 participants", status: "En cours", statusColor: "bg-orange-400", eco: "A", icon: "cottage", tag: "Éco-gîte", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBPCrg1ZmXVLbEPD-8lp6H0mdqw8OUDeijVrAZTFq0zto2v3-_cD4n4oGhCFYORXsbpOhhim9BsoK6fLjA3KZ4WXULIFZ4GtIDPiqVEGjsr2jqkm0Eo5SO102iyX57ppBgj1gpfLy_3nCiWbRpyYAzfzsG-z1YeqFFSsfqFDlXhUdy0YrGeHUEP4uCOZxSFvr0V9ZOTlmb9te0xg3vgZkiVH0xWtqyukLVEbUxYn580NOCZ7P712ArePj4isI0atUXHzpvfrtqTrpw" },
                             { title: "Week-end éco en groupe à Tozeur", badge: "Groupe", badgeColor: "bg-orange-100 text-orange-700", date: "02 - 04 Nov. • 8 participants", status: "Confirmé", statusColor: "bg-green-500", eco: "A+", icon: "train", tag: "Transport collectif", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuB5jT6WYwSYRRMZkPCNOBrnz44sPEOf3vt8vGQAXP_9oauhXfRuN3iCW8E7E6gc-OZQ8vsDzOUvVh_5xdOYt_rO_F8qZPcDl9P-dGlbHnCdip5hG5VauEsZxb7L4MFmkIgmuxDjB5jpLJ24b6cbwAGNiHXzgmm7GYixoWH_vRGfaPxQiDRFW6S80aZzKe_X0FtOCQKwgh_TcAdy4tAq9weqRrUYIrpoC7OXPXi8oF6ZKGnTcuPoGSJuouQ9yZ3yhw7ldps2FdgyNBg" },
                           ].map((plan, idx) => (
-                            <div key={idx} className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-primary/5 hover:border-primary/30 transition-all group cursor-pointer">
+                            <div key={idx} className="bg-white rounded-2xl p-4 border border-primary/5 hover:border-primary/30 transition-all group cursor-pointer">
                               <div className="flex flex-col md:flex-row gap-6">
                                 <div className="w-full md:w-48 h-32 rounded-xl bg-slate-200 overflow-hidden shrink-0">
                                   <div className="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-500" style={{ backgroundImage: `url("${plan.img}")` }} />
@@ -1480,18 +2332,18 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="flex flex-col items-end gap-2">
                                       <span className={`px-2 py-1 rounded text-white text-[10px] font-bold uppercase ${plan.statusColor}`}>{plan.status}</span>
-                                      <div className="bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full flex items-center gap-1">
+                                      <div className="bg-green-100 px-3 py-1 rounded-full flex items-center gap-1">
                                         <span className="material-symbols-outlined text-green-600 text-sm">eco</span>
                                         <span className="text-green-600 text-xs font-bold">{plan.eco}</span>
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="mt-4 flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-4">
+                                  <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
                                     <div className="flex items-center gap-1.5">
                                       <span className="material-symbols-outlined text-slate-400 text-lg">{plan.icon}</span>
                                       <span className="text-xs text-slate-500">{plan.tag}</span>
                                     </div>
-                                    <button className="text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                                    <button className="text-slate-400 hover:text-slate-900">
                                       <span className="material-symbols-outlined">more_horiz</span>
                                     </button>
                                   </div>
@@ -1503,7 +2355,6 @@ export default function DashboardPage() {
                       </>
                     )}
 
-                    {/* guide: Spécialités & Circuits */}
                     {role === "guide" && (
                       <>
                         <div className="flex items-center justify-between mb-6">
@@ -1511,7 +2362,7 @@ export default function DashboardPage() {
                           <a className="text-primary font-bold text-sm hover:underline" href="#">Voir tout</a>
                         </div>
                         <div className="space-y-4">
-                          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-primary/5">
+                          <div className="bg-white rounded-2xl p-5 border border-primary/5">
                             <div className="flex items-center gap-4">
                               <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                                 <span className="material-symbols-outlined text-primary text-2xl">location_on</span>
@@ -1531,7 +2382,7 @@ export default function DashboardPage() {
                           </div>
 
                           {(profile.specialties?.length ?? 0) > 0 && (
-                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-primary/5">
+                            <div className="bg-white rounded-2xl p-5 border border-primary/5">
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Spécialités</p>
                               <div className="flex flex-wrap gap-2">
                                 {profile.specialties!.map((s) => (
@@ -1542,13 +2393,13 @@ export default function DashboardPage() {
                           )}
 
                           {(profile.certifications?.length ?? 0) > 0 && (
-                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-primary/5">
+                            <div className="bg-white rounded-2xl p-5 border border-primary/5">
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Certifications</p>
                               <div className="space-y-2">
                                 {profile.certifications!.map((cert) => (
-                                  <div key={cert} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                                  <div key={cert} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                                     <span className="material-symbols-outlined text-primary text-xl">verified</span>
-                                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{cert}</span>
+                                    <span className="text-sm font-bold text-slate-800">{cert}</span>
                                   </div>
                                 ))}
                               </div>
@@ -1556,11 +2407,11 @@ export default function DashboardPage() {
                           )}
 
                           {(profile.languages_spoken?.length ?? 0) > 0 && (
-                            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-primary/5">
+                            <div className="bg-white rounded-2xl p-5 border border-primary/5">
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Langues parlées</p>
                               <div className="flex flex-wrap gap-2">
                                 {profile.languages_spoken!.map((l) => (
-                                  <span key={l} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold rounded-full uppercase">{l}</span>
+                                  <span key={l} className="px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-bold rounded-full uppercase">{l}</span>
                                 ))}
                               </div>
                             </div>
@@ -1569,46 +2420,49 @@ export default function DashboardPage() {
                       </>
                     )}
 
-                    {/* project: Mes Projets */}
                     {role === "project" && (
                       <>
                         <div className="flex items-center justify-between mb-6">
                           <h3 className="text-xl font-bold">Mes Projets</h3>
                           <button onClick={() => setShowAddProject(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-slate-900 rounded-xl font-extrabold text-sm shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all">
-                            <Plus className="w-4 h-4" />Ajouter
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-slate-900 rounded-xl font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all">
+                            <span className="material-symbols-outlined text-base">add</span>Ajouter
                           </button>
                         </div>
 
                         {(profile.projects?.length ?? 0) === 0 ? (
-                          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-12 flex flex-col items-center justify-center text-center">
+                          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
                             <span className="material-symbols-outlined text-slate-300 text-5xl mb-3">domain</span>
-                            <p className="text-slate-800 dark:text-slate-200 font-extrabold text-lg mb-2">Aucun projet pour l'instant</p>
+                            <p className="text-slate-800 font-extrabold text-lg mb-2">Aucun projet pour l'instant</p>
                             <p className="text-slate-400 font-medium text-sm mb-5">Ajoutez votre premier projet éco-touristique.</p>
                             <button onClick={() => setShowAddProject(true)}
-                              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 rounded-xl font-extrabold text-sm shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all">
-                              <Plus className="w-4 h-4" />Créer mon premier projet
+                              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 rounded-xl font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all">
+                              <span className="material-symbols-outlined text-base">add</span>Créer mon premier projet
                             </button>
                           </div>
                         ) : (
                           <div className="space-y-4">
                             {profile.projects!.map((project) => (
-                              <div key={project.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-primary/5 p-5 flex gap-5">
-                                <div className="w-20 h-20 rounded-xl bg-slate-100 dark:bg-slate-800 flex-shrink-0 overflow-hidden">
+                              <div key={project.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex gap-5">
+                                <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden">
                                   {project.photo
                                     ? <img src={project.photo} alt={project.name} className="w-full h-full object-cover" />
                                     : <div className="w-full h-full flex items-center justify-center"><ProjectTypeIcon types={project.project_type} /></div>}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-2 mb-1">
-                                    <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-base leading-tight">{project.name}</h4>
+                                    <h4 className="font-extrabold text-slate-900 text-base leading-tight">{project.name}</h4>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${project.status === "active" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
                                         {project.status === "active" ? "Actif" : "En attente"}
                                       </span>
+                                      <button onClick={() => setEditingProject(project)}
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Modifier">
+                                        <span className="material-symbols-outlined text-base">edit</span>
+                                      </button>
                                       <button onClick={() => handleDeleteProject(project.id)}
-                                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                                        <X className="w-4 h-4" />
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Supprimer">
+                                        <span className="material-symbols-outlined text-base">close</span>
                                       </button>
                                     </div>
                                   </div>
@@ -1655,10 +2509,9 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Right column: Badges */}
                   <div>
                     <h3 className="text-xl font-bold mb-6">Mes Badges</h3>
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-primary/10">
+                    <div className="bg-white rounded-2xl p-6 border border-primary/10">
                       <div className="grid grid-cols-2 gap-4">
                         {badgeConfig.map((config) => {
                           const obtained = obtainedBadgeLabels.has(config.label);
@@ -1666,7 +2519,7 @@ export default function DashboardPage() {
                           return (
                             <div key={config.label}
                               title={obtained && obtainedData ? `Obtenu le ${new Date(obtainedData.obtained_at).toLocaleDateString("fr-FR")}` : config.description}
-                              className={`flex flex-col items-center text-center p-4 rounded-xl border-2 transition-all ${obtained ? "bg-slate-50 dark:bg-slate-800 border-primary/20" : "bg-slate-100/50 dark:bg-slate-800/50 border-dashed border-slate-200 dark:border-slate-700"}`}>
+                              className={`flex flex-col items-center text-center p-4 rounded-xl border-2 transition-all ${obtained ? "bg-slate-50 border-primary/20" : "bg-slate-100/50 border-dashed border-slate-200"}`}>
                               <div className="size-16 flex items-center justify-center mb-2">
                                 <span className={`material-symbols-outlined text-4xl transition-all ${obtained ? "text-primary" : "text-slate-300"}`}
                                   style={obtained ? { fontVariationSettings: '"FILL" 1' } : {}}>
@@ -1683,27 +2536,26 @@ export default function DashboardPage() {
                         })}
                       </div>
 
-                      {/* Engagement footer */}
-                      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center">
+                      <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
                         {role === "eco_traveler" && (
                           <>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.feedback_given ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Feedbacks</p></div>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{publications.filter((p) => p.type === "experience").length}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Expériences</p></div>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.reservations_made ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Réservations</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.feedback_given ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Feedbacks</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{publications.filter((p) => p.type === "experience").length}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Expériences</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.reservations_made ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Réservations</p></div>
                           </>
                         )}
                         {role === "guide" && (
                           <>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.feedback_received ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Avis</p></div>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.years_experience ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Années</p></div>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.reservations_handled ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Circuits</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.feedback_received ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Avis</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.years_experience ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Années</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.reservations_handled ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Circuits</p></div>
                           </>
                         )}
                         {role === "project" && (
                           <>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.feedback_received ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Avis</p></div>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.projects?.length ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Projets</p></div>
-                            <div><p className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{profile.total_reservations ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Réserv.</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.feedback_received ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Avis</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.projects?.length ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Projets</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.total_reservations ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Réserv.</p></div>
                           </>
                         )}
                       </div>
@@ -1713,19 +2565,18 @@ export default function DashboardPage() {
               </>
             )}
 
-            {/* ── Mes Publications (eco_traveler) ──────────────────────── */}
             {role === "eco_traveler" && activeItem === "Mes Publications" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold">Mes Publications</h3>
                   <button onClick={() => setShowAddPublication(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all text-sm">
-                    <Plus className="w-4 h-4" />Partager
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
+                    <span className="material-symbols-outlined text-base">add</span>Partager
                   </button>
                 </div>
 
                 {publications.length === 0 ? (
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
                     <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">public</span>
                     <p className="font-bold text-slate-500">Aucune publication</p>
                     <p className="text-sm text-slate-400 mt-1">Partagez un lieu ou une expérience éco-touristique.</p>
@@ -1736,14 +2587,14 @@ export default function DashboardPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                     {publications.map((pub) => (
-                      <div key={pub.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-primary/5 p-5 flex flex-col gap-3">
+                      <div key={pub.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex flex-col gap-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                              {pub.type === "place" ? <MapPin className="w-5 h-5 text-primary" /> : <span className="material-symbols-outlined text-primary text-lg">hiking</span>}
+                              {pub.type === "place" ? <span className="material-symbols-outlined text-primary text-lg">location_on</span> : <span className="material-symbols-outlined text-primary text-lg">hiking</span>}
                             </div>
                             <div>
-                              <p className="font-extrabold text-slate-900 dark:text-slate-100 leading-tight">{pub.title}</p>
+                              <p className="font-extrabold text-slate-900 leading-tight">{pub.title}</p>
                               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${pub.type === "place" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
                                 {pub.type === "place" ? "Lieu" : "Expérience"}
                               </span>
@@ -1752,14 +2603,14 @@ export default function DashboardPage() {
                           <div className="flex items-start gap-2 flex-shrink-0">
                             <StatusBadge status={pub.status} reason={pub.rejection_reason} />
                             <button onClick={() => handleDeletePublication(pub.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                              <X className="w-4 h-4" />
+                              <span className="material-symbols-outlined text-base">close</span>
                             </button>
                           </div>
                         </div>
                         {pub.description && <p className="text-sm text-slate-500 font-medium line-clamp-2">{pub.description}</p>}
                         {pub.type === "place" && pub.latitude && pub.longitude && (
                           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                            <MapPin className="w-3.5 h-3.5" />
+                            <span className="material-symbols-outlined text-sm">location_on</span>
                             {pub.place_name ?? `${Number(pub.latitude).toFixed(4)}, ${Number(pub.longitude).toFixed(4)}`}
                             {pub.region && <span className="text-slate-300">• {pub.region}</span>}
                           </div>
@@ -1774,19 +2625,18 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ── Mes Offres (guide + project) ─────────────────────────── */}
             {(role === "guide" || role === "project") && activeItem === "Mes Offres" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold">Mes Offres</h3>
                   <button onClick={() => setShowAddOffer(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all text-sm">
-                    <Plus className="w-4 h-4" />Ajouter une offre
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
+                    <span className="material-symbols-outlined text-base">add</span>Ajouter une offre
                   </button>
                 </div>
 
                 {offers.length === 0 ? (
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
                     <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">sell</span>
                     <p className="font-bold text-slate-500">Aucune offre publiée</p>
                     <p className="text-sm text-slate-400 mt-1">Créez votre première offre pour la rendre visible sur votre profil.</p>
@@ -1799,26 +2649,59 @@ export default function DashboardPage() {
                     {offers.map((offer) => {
                       const offerTypes = role === "guide" ? GUIDE_OFFER_TYPES : PROJ_OFFER_TYPES;
                       const typeLabel = offerTypes.find((t) => t.value === offer.offer_type)?.label;
-                      const typeIcon = role === "guide" ? (GUIDE_OFFER_TYPES.find((t) => t.value === offer.offer_type) as any)?.icon ?? "sell" : "sell";
                       return (
-                        <div key={offer.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-primary/5 p-5 flex flex-col gap-3">
+                        <div key={offer.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex flex-col gap-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                <span className="material-symbols-outlined text-primary text-lg">{typeIcon}</span>
+                                <span className="material-symbols-outlined text-primary text-lg">sell</span>
                               </div>
                               <div>
-                                <p className="font-extrabold text-slate-900 dark:text-slate-100 leading-tight">{offer.title}</p>
+                                <p className="font-extrabold text-slate-900 leading-tight">{offer.title}</p>
                                 {typeLabel && <p className="text-xs font-bold text-primary mt-0.5">{typeLabel}</p>}
                               </div>
                             </div>
-                            <button onClick={() => handleDeleteOffer(offer.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
-                              <X className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button onClick={() => setEditingOffer(offer)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Modifier">
+                                <span className="material-symbols-outlined text-base">edit</span>
+                              </button>
+                              <button onClick={() => router.push(`/offers/${offer.id}`)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Voir">
+                                <span className="material-symbols-outlined text-base">visibility</span>
+                              </button>
+                              <button onClick={() => handleDeleteOffer(offer.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Supprimer">
+                                <span className="material-symbols-outlined text-base">close</span>
+                              </button>
+                            </div>
                           </div>
                           {offer.description && <p className="text-sm text-slate-500 font-medium line-clamp-2">{offer.description}</p>}
-                          <div className="flex items-center gap-3 mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
-                            {offer.price !== null && <span className="text-sm font-extrabold text-slate-800 dark:text-slate-200">{offer.price} TND</span>}
+
+                          <div className="my-2">
+                            {offer.items && offer.items.length > 0 ? (
+                              <div className="space-y-1">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Éléments ({offer.items.filter((i: any) => i.status === "active").length})</p>
+                                {offer.items.filter((i: any) => i.status === "active").map((item: any) => (
+                                  <div key={item.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-1.5">
+                                    <div>
+                                      <span className="text-sm font-medium text-slate-700">{item.name}</span>
+                                      <div className="flex flex-wrap gap-1 mt-0.5">
+                                        {item.room_type && <span className="text-[9px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded-full">{item.room_type}</span>}
+                                        {item.bed_count != null && <span className="text-[9px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded-full">🛏 {item.bed_count}</span>}
+                                        {item.nights != null && <span className="text-[9px] text-purple-600 bg-purple-50 px-1 py-0.5 rounded-full">🌙 {item.nights}n</span>}
+                                        {item.tent_capacity != null && <span className="text-[9px] text-green-600 bg-green-50 px-1 py-0.5 rounded-full">⛺ {item.tent_capacity}p</span>}
+                                        {item.prices?.[0] && <span className="text-xs text-primary ml-1">{Number(item.prices[0].price).toLocaleString()} TND</span>}
+                                      </div>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">{item.item_type ?? "activité"}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-400">Aucun élément</p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 mt-auto pt-2 border-t border-slate-100">
+                            {offer.price !== null && <span className="text-sm font-extrabold text-slate-800">{offer.price} TND</span>}
                             {offer.duration && (
                               <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
                                 <span className="material-symbols-outlined text-sm">schedule</span>{offer.duration}
@@ -1836,19 +2719,18 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ── Mes Projets tab (project only) ───────────────────────── */}
             {role === "project" && activeItem === "Mes Projets" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold">Mes Projets</h3>
                   <button onClick={() => setShowAddProject(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all text-sm">
-                    <Plus className="w-4 h-4" />Ajouter un projet
+                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
+                    <span className="material-symbols-outlined text-base">add</span>Ajouter un projet
                   </button>
                 </div>
 
                 {(profile.projects?.length ?? 0) === 0 ? (
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
                     <span className="material-symbols-outlined text-slate-300 text-5xl mb-3">domain</span>
                     <p className="font-bold text-slate-500">Aucun projet</p>
                     <button onClick={() => setShowAddProject(true)} className="mt-4 px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
@@ -1858,20 +2740,20 @@ export default function DashboardPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {profile.projects!.map((project) => (
-                      <div key={project.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-primary/5 p-5 flex gap-5">
-                        <div className="w-20 h-20 rounded-xl bg-slate-100 dark:bg-slate-800 flex-shrink-0 overflow-hidden">
+                      <div key={project.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex gap-5">
+                        <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden">
                           {project.photo
                             ? <img src={project.photo} alt={project.name} className="w-full h-full object-cover" />
                             : <div className="w-full h-full flex items-center justify-center"><ProjectTypeIcon types={project.project_type} /></div>}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-base leading-tight">{project.name}</h4>
+                            <h4 className="font-extrabold text-slate-900 text-base leading-tight">{project.name}</h4>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <StatusBadge status={project.status} reason={project.rejection_reason} />
                               <button onClick={() => handleDeleteProject(project.id)}
                                 className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                                <X className="w-4 h-4" />
+                                <span className="material-symbols-outlined text-base">close</span>
                               </button>
                             </div>
                           </div>
@@ -1889,26 +2771,73 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {role === "eco_traveler" && activeItem === "Offres" && (
+              <EcoTravelerOffersSection router={router} />
+            )}
+
+            {activeItem === "Réservations" && (
+              <div>
+                <h3 className="text-xl font-bold mb-6">Réservations</h3>
+                {role === "eco_traveler" ? (
+                  <MyReservationsTab />
+                ) : (
+                  <IncomingReservationsTab />
+                )}
+              </div>
+            )}
+
+            {activeItem === "Trip Plans" && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold">Trip Plans</h3>
+                  <button onClick={() => router.push("/trip-plans/new")}
+                    className="px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">add</span> Nouveau Trip Plan
+                  </button>
+                </div>
+                <TripPlansList />
+              </div>
+            )}
+
+            {activeItem === "Circuits" && (
+              <CircuitsTab role={role} router={router} token={token} />
+            )}
+
+            {activeItem === "Notifications" && (
+              <NotificationsTab />
+            )}
+
+            {activeItem === "Paramètres" && (
+              <ParametresTab router={router} handleLogout={handleLogout} />
+            )}
+
           </div>
         </main>
       </div>
 
-      {/* ── Modals ──────────────────────────────────────────────────────── */}
       {role === "eco_traveler" && showAddPublication && (
         <AddPublicationModal token={token} onClose={() => setShowAddPublication(false)}
           onSuccess={(p) => { setPublications((prev) => [p, ...prev]); setShowAddPublication(false); }} />
       )}
       {role === "guide" && showAddOffer && (
-        <GuideOfferModal token={token} onClose={() => setShowAddOffer(false)}
+        <GuidedOfferWizard token={token} userRole="guide" onClose={() => setShowAddOffer(false)}
           onSuccess={(o) => { setOffers((prev) => [o, ...prev]); setShowAddOffer(false); }} />
       )}
       {role === "project" && showAddOffer && (
-        <ProjectOfferModal token={token} projects={profile.projects ?? []} onClose={() => setShowAddOffer(false)}
+        <GuidedOfferWizard token={token} userRole="project" userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} onClose={() => setShowAddOffer(false)}
           onSuccess={(o) => { setOffers((prev) => [o, ...prev]); setShowAddOffer(false); }} />
       )}
       {role === "project" && showAddProject && (
         <AddProjectModal token={token} onClose={() => setShowAddProject(false)}
           onSuccess={(p) => { setProfile((prev) => prev ? { ...prev, projects: [...(prev.projects ?? []), p] } : prev); setShowAddProject(false); }} />
+      )}
+      {editingProject && (
+        <EditProjectModal token={token} project={editingProject} onClose={() => setEditingProject(null)}
+          onSuccess={(p) => { setProfile((prev) => prev ? { ...prev, projects: prev.projects?.map((pr) => pr.id === p.id ? p : pr) } : prev); setEditingProject(null); }} />
+      )}
+      {editingOffer && (
+        <GuidedOfferWizard token={token} userRole={role} userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} onClose={() => setEditingOffer(null)}
+          onSuccess={(o) => { setOffers((prev) => prev.map((of) => of.id === o.id ? o : of)); setEditingOffer(null); }} editOffer={editingOffer} />
       )}
     </div>
   );

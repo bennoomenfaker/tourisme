@@ -23,7 +23,7 @@ export default function Navbar({
           {isAuth && (
             <Link
               href={backHref}
-              className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
               Retour
@@ -48,6 +48,12 @@ export default function Navbar({
               Destinations
             </Link>
             <Link
+              href="/circuits"
+              className="text-sm font-semibold hover:text-primary transition-colors"
+            >
+              Circuits
+            </Link>
+            <Link
               href="#"
               className="text-sm font-semibold hover:text-primary transition-colors"
             >
@@ -58,12 +64,6 @@ export default function Navbar({
               className="text-sm font-semibold hover:text-primary transition-colors"
             >
               Projets Éco
-            </Link>
-            <Link
-              href="#"
-              className="text-sm font-semibold hover:text-primary transition-colors"
-            >
-              À propos
             </Link>
           </nav>
         )}
@@ -84,8 +84,8 @@ export default function Navbar({
             href="/auth/register"
             className={`flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold transition-all ${
               currentPage === "register"
-                ? "bg-primary text-slate-900 shadow-lg shadow-primary/20"
-                : "bg-primary text-slate-900 shadow-lg shadow-primary/20 hover:scale-105"
+                ? "bg-primary text-slate-900 shadow-lg shadow-emerald-500/20"
+                : "bg-primary text-slate-900 shadow-lg shadow-emerald-500/20 hover:scale-105"
             }`}
           >
             S&apos;inscrire

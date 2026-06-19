@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -12,6 +13,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { AddParticipantsDto } from './dto/add-participants.dto';
 import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Réservations')
@@ -40,12 +42,29 @@ export class BookingController {
   }
 
   /**
-   * Détail d'une réservation
+   * Réservations reçues par le provider connecté
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Get('incoming')
+  incoming(@Req() req: any) {
+    return this.service.findByOfferAuthor(req.user.sub);
+  }
+
+  /**
+   * Détail d'une réservation (propriétaire ou provider uniquement)
    */
   @ApiBearerAuth('bearer')
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.service.findById(id);
+  async findById(@Req() req: any, @Param('id') id: string) {
+    const booking = await this.service.findById(id);
+    const userId = req.user.sub;
+    const isTraveler = booking.traveler.id === userId;
+    const isProvider = booking.offer?.author_id === userId;
+    if (!isTraveler && !isProvider && req.user.role !== 'admin') {
+      throw new ForbiddenException('Vous ne pouvez consulter que vos propres réservations');
+    }
+    return booking;
   }
 
   /**
@@ -64,17 +83,17 @@ export class BookingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Patch(':id/confirm')
-  confirm(@Param('id') id: string) {
-    return this.service.confirm(id);
+  confirm(@Req() req: any, @Param('id') id: string) {
+    return this.service.confirm(id, req.user.sub);
   }
 
   /**
-   * Réservations reçues par le provider connecté
+   * Ajouter des participants à une réservation existante
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
-  @Get('incoming')
-  incoming(@Req() req: any) {
-    return this.service.findByOfferAuthor(req.user.sub);
+  @Roles(Role.ECO_TRAVELER)
+  @Patch(':id/participants')
+  addParticipants(@Req() req: any, @Param('id') id: string, @Body() dto: AddParticipantsDto) {
+    return this.service.addParticipants(id, req.user.sub, dto.participants);
   }
 }

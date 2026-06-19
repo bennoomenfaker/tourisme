@@ -169,7 +169,7 @@ const PARTNER_PLACEHOLDERS = [
 ];
 
 const AVATAR_COLORS = [
-  "bg-emerald-500",
+  "bg-primary",
   "bg-teal-500",
   "bg-cyan-500",
   "bg-green-500",
@@ -343,7 +343,7 @@ function OfferModal({ offer, onClose }: { offer: Offer; onClose: () => void }) {
           {/* Cancellation */}
           {offer.cancellation_policy && (
             <div className="flex items-start gap-3 bg-slate-50 rounded-xl px-4 py-3 mb-6">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">Politique d'annulation</p>
                 <p className="text-sm font-semibold text-slate-700">{offer.cancellation_policy}</p>
@@ -630,7 +630,7 @@ function ExperienceModal({ exp, onClose }: { exp: Experience; onClose: () => voi
 
 function sustainabilityLevel(score: number) {
   if (score >= 86) return { label: "Ambassadeur Éco Voyage", color: "text-primary",      bar: "bg-primary" };
-  if (score >= 71) return { label: "Éco-Responsable",        color: "text-emerald-600", bar: "bg-emerald-500" };
+  if (score >= 71) return { label: "Éco-Responsable",        color: "text-primary", bar: "bg-primary" };
   if (score >= 51) return { label: "Engagé",                 color: "text-teal-600",    bar: "bg-teal-500" };
   if (score >= 31) return { label: "Sensibilisé",            color: "text-blue-600",    bar: "bg-blue-500" };
   return              { label: "Conventionnel",               color: "text-slate-500",   bar: "bg-slate-400" };
@@ -676,7 +676,7 @@ function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
           <span className="bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] font-extrabold text-slate-700 uppercase tracking-widest shadow-sm">
             {getTypeLabel(offer.offer_type)}
           </span>
-          <span className={`px-3 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm shadow-sm ${isGuide ? "bg-emerald-500/90 text-white" : "bg-blue-500/90 text-white"}`}>
+          <span className={`px-3 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm shadow-sm ${isGuide ? "bg-primary/90 text-white" : "bg-blue-500/90 text-white"}`}>
             {isGuide ? "Guide certifié" : "Projet éco"}
           </span>
         </div>
@@ -978,7 +978,7 @@ export default function DestinationsPage() {
             { value: null,  label: "Tous",              sub: "Sans filtre" },
             { value: 31,    label: "Sensibilisé",       sub: "31+",  color: "text-blue-600" },
             { value: 51,    label: "Engagé",            sub: "51+",  color: "text-teal-600" },
-            { value: 71,    label: "Éco-Responsable",   sub: "71+",  color: "text-emerald-600" },
+            { value: 71,    label: "Éco-Responsable",   sub: "71+",  color: "text-primary" },
             { value: 86,    label: "Ambassadeur",       sub: "86+",  color: "text-primary" },
           ].map((opt) => (
             <button

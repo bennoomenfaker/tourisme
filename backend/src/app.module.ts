@@ -26,6 +26,7 @@ import { PlaceContributionModule } from './place-contribution/place-contribution
 import { BookingModule } from './booking/booking.module';
 import { CircuitModule } from './circuit/circuit.module';
 import { NotificationModule } from './notification/notification.module';
+import { TripPlanModule } from './trip-plan/trip-plan.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { NotificationModule } from './notification/notification.module';
     BookingModule,
     CircuitModule,
     NotificationModule,
+    TripPlanModule,
   ],
   providers: [GoogleStrategy, {
     provide: APP_GUARD,

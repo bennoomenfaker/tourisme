@@ -19,8 +19,10 @@ import {
   CreateOfferItemDto,
   UpdateOfferItemDto,
   CreateOfferItemPriceDto,
+  UpdateOfferItemPriceDto,
   CreateAvailabilityRuleDto,
   CreateOfferItemSessionDto,
+  UpdateOfferItemSessionDto,
 } from './dto/offer.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { GuideMongoService } from '../guide/guide-mongo.service';
@@ -164,6 +166,22 @@ export class OfferController {
     return this.service.addPrice(itemId, dto);
   }
 
+  /** Modifier un prix */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Patch('items/prices/:priceId')
+  updatePrice(@Param('priceId') priceId: string, @Body() dto: UpdateOfferItemPriceDto) {
+    return this.service.updatePrice(priceId, dto);
+  }
+
+  /** Supprimer un prix */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete('items/prices/:priceId')
+  removePrice(@Param('priceId') priceId: string) {
+    return this.service.removePrice(priceId);
+  }
+
   // ─── Availability Rules ────────────────────────────
 
   /** Ajoute une règle de disponibilité */
@@ -182,6 +200,22 @@ export class OfferController {
   @Post('items/:itemId/sessions')
   createSession(@Param('itemId') itemId: string, @Body() dto: CreateOfferItemSessionDto) {
     return this.service.createSession(itemId, dto);
+  }
+
+  /** Modifier une session */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Patch('items/sessions/:sessionId')
+  updateSession(@Param('sessionId') sessionId: string, @Body() dto: UpdateOfferItemSessionDto) {
+    return this.service.updateSession(sessionId, dto);
+  }
+
+  /** Supprimer une session */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete('items/sessions/:sessionId')
+  removeSession(@Param('sessionId') sessionId: string) {
+    return this.service.removeSession(sessionId);
   }
 
   /** Sessions disponibles pour un item */

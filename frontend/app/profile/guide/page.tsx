@@ -130,7 +130,7 @@ const OFFER_SUSTAINABILITY_STEPS = [
 
 function getOfferSustainabilityLevel(score: number) {
   if (score >= 86) return { label: "Offre Ambassadrice Éco Voyage", color: "text-primary",      bg: "bg-primary/10",   emoji: "⭐" };
-  if (score >= 71) return { label: "Offre Éco-Responsable",         color: "text-emerald-600", bg: "bg-emerald-50",   emoji: "🌿" };
+  if (score >= 71) return { label: "Offre Éco-Responsable",         color: "text-primary", bg: "bg-emerald-50",   emoji: "🌿" };
   if (score >= 51) return { label: "Offre Engagée",                 color: "text-teal-600",    bg: "bg-teal-50",      emoji: "🤝" };
   if (score >= 31) return { label: "Offre Sensibilisée",            color: "text-blue-600",    bg: "bg-blue-50",      emoji: "💡" };
   return              { label: "Offre Conventionnelle",              color: "text-slate-500",   bg: "bg-slate-100",    emoji: "📋" };
@@ -697,8 +697,8 @@ export default function GuideProfilePage() {
               </div>
               {offer.description && <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-3">{offer.description}</p>}
               <div className="flex flex-wrap gap-2.5 mb-4">
-                <span className="bg-emerald-50 text-emerald-600 border border-emerald-100/60 rounded-xl px-3 py-1 text-[11px] font-extrabold tracking-wider flex items-center gap-1 uppercase">
-                  <Sparkles size={11} className="text-emerald-500 shrink-0" />{typeData.label}
+                <span className="bg-emerald-50 text-primary border border-emerald-100/60 rounded-xl px-3 py-1 text-[11px] font-extrabold tracking-wider flex items-center gap-1 uppercase">
+                  <Sparkles size={11} className="text-primary shrink-0" />{typeData.label}
                 </span>
               </div>
               {offer.sustainability_score !== null ? (
@@ -1393,7 +1393,7 @@ export default function GuideProfilePage() {
                     {viewOffer.inclusions && (
                       <div className="bg-emerald-50/60 border border-emerald-100/70 rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="material-symbols-outlined text-emerald-600 text-base">check_circle</span>
+                          <span className="material-symbols-outlined text-primary text-base">check_circle</span>
                           <p className="text-[10px] font-black tracking-widest text-emerald-700 uppercase">Inclusions</p>
                         </div>
                         <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">{viewOffer.inclusions}</p>
@@ -1637,7 +1637,7 @@ export default function GuideProfilePage() {
                 <div className="text-center sm:text-left pt-3 sm:pt-0 pb-1">
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800">{profile.full_name || "Guide"}</h1>
-                    <ShieldCheck size={20} className="text-emerald-500 fill-emerald-100 hidden sm:block" />
+                    <ShieldCheck size={20} className="text-primary fill-emerald-100 hidden sm:block" />
                   </div>
                   <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-1 text-primary font-semibold text-sm">
                     <span>{roleLabel}</span>
@@ -1979,7 +1979,7 @@ export default function GuideProfilePage() {
                     {profile.zone && (
                       <div className="flex items-center gap-4 px-6 py-4">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                          <Globe size={16} className="text-emerald-500" />
+                          <Globe size={16} className="text-primary" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-0.5">Zone d'activité</p>
@@ -2011,14 +2011,14 @@ export default function GuideProfilePage() {
                     )}
                     {profile.languages_spoken && profile.languages_spoken.length > 0 && (
                       <div className="flex items-start gap-4 px-6 py-4">
-                        <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-sky-500" style={{ fontSize: 18 }}>translate</span>
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>translate</span>
                         </div>
                         <div className="min-w-0">
                           <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-1.5">Langues parlées</p>
                           <div className="flex flex-wrap gap-1.5">
                             {profile.languages_spoken.map((l) => (
-                              <span key={l} className="bg-sky-50 text-sky-700 border border-sky-100 rounded-lg px-2.5 py-1 text-xs font-bold">
+                              <span key={l} className="bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg px-2.5 py-1 text-xs font-bold">
                                 {LANG_LABELS[l] ?? l}
                               </span>
                             ))}

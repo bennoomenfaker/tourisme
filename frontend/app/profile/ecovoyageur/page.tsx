@@ -1156,7 +1156,7 @@ export default function EcoTravelerProfilePage() {
                         <button key={value} type="button"
                           onClick={() => setEditGoals((prev) => active ? prev.filter((x) => x !== value) : [...prev, value])}
                           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-bold text-left transition-all ${active ? "bg-emerald-50 border-emerald-400 text-slate-900" : "border-slate-100 text-slate-600 hover:border-emerald-200 bg-white"}`}>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? "border-emerald-500 bg-emerald-500" : "border-slate-300"}`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${active ? "border-primary bg-primary" : "border-slate-300"}`}>
                             {active && <Check size={10} className="text-white" />}
                           </div>
                           {label}
@@ -1408,7 +1408,7 @@ export default function EcoTravelerProfilePage() {
                           </span>
                         ) : (
                           <>
-                            <span className="absolute bottom-3 left-3 text-[10px] font-black uppercase tracking-wide bg-emerald-500/90 text-white px-2.5 py-1 rounded-full shadow">
+                            <span className="absolute bottom-3 left-3 text-[10px] font-black uppercase tracking-wide bg-primary/90 text-white px-2.5 py-1 rounded-full shadow">
                               Communauté
                             </span>
                             {slide.authorPhoto !== undefined && (
@@ -1508,7 +1508,7 @@ export default function EcoTravelerProfilePage() {
                         </div>
                         <span className="text-[11px] font-bold text-emerald-700">{topDesc.author.full_name}</span>
                       </button>
-                      <span className="ml-auto text-[9px] font-black uppercase tracking-wide bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                      <span className="ml-auto text-[9px] font-black uppercase tracking-wide bg-primary text-white px-2 py-0.5 rounded-full">
                         Communauté
                       </span>
                     </div>
@@ -1691,7 +1691,7 @@ export default function EcoTravelerProfilePage() {
                 <div className="text-center sm:text-left pb-1 min-w-0">
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-800 break-words">{profile.full_name}</h1>
-                    <ShieldCheck size={20} className="text-emerald-500 fill-emerald-100 hidden sm:block shrink-0" />
+                    <ShieldCheck size={20} className="text-primary fill-emerald-100 hidden sm:block shrink-0" />
                   </div>
                   <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-1 text-primary font-semibold text-sm">
                     <span>{roleLabel}</span>
@@ -2095,7 +2095,7 @@ export default function EcoTravelerProfilePage() {
                 {/* Suivi(e)s list */}
                 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
                   <h3 className="font-extrabold text-slate-800 text-base mb-4 flex items-center gap-2">
-                    <ArrowRight size={16} className="text-emerald-600" /> Mes suivi(e)s
+                    <ArrowRight size={16} className="text-primary" /> Mes suivi(e)s
                     {followings.length > 0 && <span className="bg-emerald-50 text-emerald-700 text-xs font-black px-2 py-0.5 rounded-full">{followings.length}</span>}
                   </h3>
                   {followings.length === 0 ? (
@@ -2263,7 +2263,7 @@ export default function EcoTravelerProfilePage() {
                   <div className="bg-white p-6 rounded-3xl border border-slate-100/80 shadow-sm">
                     <div className="flex items-center gap-2.5 mb-4">
                       <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
-                        <Mountain size={16} className="text-emerald-600" />
+                        <Mountain size={16} className="text-primary" />
                       </div>
                       <h3 className="text-base font-extrabold text-slate-800">Préférences & Objectifs</h3>
                     </div>
@@ -2298,7 +2298,7 @@ export default function EcoTravelerProfilePage() {
                               const g = GOALS.find((x) => x.value === v);
                               return (
                                 <li key={v} className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                  <Check size={13} className="text-emerald-500 shrink-0" />{g?.label ?? v}
+                                  <Check size={13} className="text-primary shrink-0" />{g?.label ?? v}
                                 </li>
                               );
                             })}

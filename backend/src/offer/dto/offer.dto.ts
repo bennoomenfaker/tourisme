@@ -226,6 +226,28 @@ export class CreateOfferItemDto {
   details_json?: Record<string, any>;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  bed_count?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  nights?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  tent_capacity?: number;
+
+  @IsOptional()
+  @IsString()
+  room_type?: string;
+
+  @IsOptional()
   @IsBoolean()
   requires_confirmation?: boolean;
 
@@ -264,6 +286,28 @@ export class UpdateOfferItemDto {
 
   @IsOptional()
   details_json?: Record<string, any>;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  bed_count?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  nights?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  tent_capacity?: number;
+
+  @IsOptional()
+  @IsString()
+  room_type?: string;
 
   @IsOptional()
   @IsBoolean()
@@ -357,9 +401,64 @@ export class CreateAvailabilityRuleDto {
   recurrence_rule?: string;
 }
 
+export class UpdateOfferItemPriceDto {
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_default?: boolean;
+}
+
+export class UpdateOfferItemSessionDto {
+  @IsOptional()
+  @IsString()
+  date?: string;
+
+  @IsOptional()
+  @IsString()
+  start_time?: string;
+
+  @IsOptional()
+  @IsString()
+  end_time?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  total_capacity?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  remaining_capacity?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price_override?: number;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+}
+
 export class CreateOfferItemSessionDto {
-  @Type(() => Date)
-  date!: Date;
+  @IsString()
+  @IsNotEmpty()
+  date!: string;
 
   @IsString()
   @IsNotEmpty()

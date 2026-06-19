@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Send, MessageSquare, Search, X, MoreVertical, Trash2, ShieldBan } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
@@ -60,7 +60,17 @@ type PendingConv = { recipientId: string; name: string; photo: string; role: str
 type Contact = { user_id: string; full_name: string | null; photo: string | null; role: string; source: "friend" | "following" | "suggestion" };
 
 export default function MessageriePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
+      <MessagerieContent />
+    </Suspense>
+  );
+}
+
+function MessagerieContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const shareText = searchParams.get("share") || "";
   const [token, setToken] = useState("");
   const [myId, setMyId] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -80,6 +90,12 @@ export default function MessageriePage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (shareText) {
+      setDraft(shareText);
+    }
+  }, [shareText]);
 
   useEffect(() => {
     const tkn = localStorage.getItem("access_token") || localStorage.getItem("token") || "";
