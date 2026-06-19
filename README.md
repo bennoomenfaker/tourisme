@@ -320,3 +320,26 @@ cd frontend && npm install && npm run dev
 - La table `trip_plans` utilise `eco_traveler_id` (pas `user_id`)
 - Le badge de notifications affiche le vrai compteur non-lues
 - La page destinations affiche les circuits reellement proposes
+
+---
+
+## 11. Galerie de Screenshots
+
+L'application EcoVoyage a été entièrement développée et intégrée. Voici quelques aperçus de l'interface :
+
+<details>
+<summary>Cliquez pour voir la galerie (plus de 50 screenshots disponibles dans le dossier `images/`)</summary>
+
+![Dashboard](images/Screenshot_2026-06-18_12-54-04.png)
+![Offres](images/Screenshot_2026-06-18_12-54-10.png)
+![Détail Offre](images/Screenshot_2026-06-18_12-54-18.png)
+![Assistant Création](images/Screenshot_2026-06-18_12-54-30.png)
+![Prix et Sessions](images/Screenshot_2026-06-18_12-54-43.png)
+![Réservation](images/Screenshot_2026-06-18_12-54-50.png)
+![Circuits](images/Screenshot_2026-06-18_12-54-57.png)
+![Détail Circuit](images/Screenshot_2026-06-18_12-55-03.png)
+![Plan de voyage](images/Screenshot_2026-06-18_12-55-13.png)
+![Notifications](images/Screenshot_2026-06-18_12-55-18.png)
+
+*Tous les screenshots complets sont disponibles dans le dossier `images/` du dépôt.*
+</details>
