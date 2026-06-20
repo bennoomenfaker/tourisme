@@ -58,6 +58,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [minAge, setMinAge] = useState("");
   const [duration, setDuration] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [price, setPrice] = useState("");
+  const [inclusions, setInclusions] = useState("");
+  const [cancellationPolicy, setCancellationPolicy] = useState("");
 
   const [items, setItems] = useState<OfferItemForm[]>([]);
   const [sessions, setSessions] = useState<{ id?: string; date: string; start_time: string; end_time: string; capacity: string }[]>([]);
@@ -78,6 +81,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     setMinAge(editOffer.min_age?.toString() || "");
     setDuration(editOffer.duration || "");
     setImages(editOffer.images || []);
+    setPrice(editOffer.price?.toString() || "");
+    setInclusions(editOffer.inclusions || "");
+    setCancellationPolicy(editOffer.cancellation_policy || "");
 
     if (editOffer.items?.length) {
       setItems(editOffer.items.map((it: any) => ({
@@ -218,6 +224,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         title: title.trim(),
         offer_type: category,
         description: description.trim() || undefined,
+        price: price ? Number(price) : undefined,
         region: region.trim() || undefined,
         address: address.trim() || undefined,
         latitude: lat ?? undefined,
@@ -229,6 +236,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         max_group_size: maxGroupSize ? Number(maxGroupSize) : undefined,
         min_age: minAge ? Number(minAge) : undefined,
         images: images.length > 0 ? images : undefined,
+        inclusions: inclusions.trim() || undefined,
+        cancellation_policy: cancellationPolicy.trim() || undefined,
       };
 
       let resultOffer;
@@ -436,6 +445,21 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
               <ImageUploader images={images} onChange={setImages} maxImages={5} label="Images de l'offre" />
 
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500">Prix (TND)</label>
+                  <input type="number" min="0" step="0.5" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex: 50" />
+                  <p className="text-[10px] text-slate-400">Prix de base de l'offre</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500">Confirmation</label>
+                  <select className={inputClass} value={confirmationMode} onChange={(e) => setConfirmationMode(e.target.value)}>
+                    <option value="automatic">Automatique</option>
+                    <option value="manual">Manuelle</option>
+                  </select>
+                </div>
+              </div>
+
               {formFields.includes('gps') && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500">Localisation GPS</label>
@@ -450,14 +474,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Confirmation</label>
-                  <select className={inputClass} value={confirmationMode} onChange={(e) => setConfirmationMode(e.target.value)}>
-                    <option value="automatic">Automatique</option>
-                    <option value="manual">Manuelle</option>
-                  </select>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
                 {formFields.includes('min_group_size') && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500">Min pers.</label>
@@ -479,8 +496,21 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 </div>
               )}
 
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500">Inclus dans l'offre</label>
+                <textarea className={`${inputClass} resize-none`} value={inclusions} onChange={(e) => setInclusions(e.target.value)} rows={2} placeholder="Ex: Matériel, guide, repas, transport..." />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500">Politique d'annulation</label>
+                <textarea className={`${inputClass} resize-none`} value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={2} placeholder="Ex: Remboursable 48h avant, non remboursable..." />
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setStep(isEdit ? 2 : 1)} className="flex-1 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50">Retour</button>
+                <button onClick={() => { if (!title.trim()) { setError("Le titre est obligatoire."); return; } setError(""); setStep(4); }} className="py-3 px-4 border-2 border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-50 text-sm">
+                  Passer
+                </button>
                 <button onClick={() => { if (!title.trim()) { setError("Le titre est obligatoire."); return; } setError(""); setStep(3); }} className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-emerald-600 flex items-center justify-center gap-2">
                   Suivant <ArrowRight size={16} />
                 </button>
