@@ -170,12 +170,12 @@ const GUIDE_OFFER_TYPES = [
 ];
 
 const PROJ_OFFER_TYPES = [
-  { value: "sejour", label: "Séjour" },
-  { value: "circuit", label: "Circuit" },
-  { value: "activite", label: "Activité" },
-  { value: "restauration", label: "Restauration" },
-  { value: "hebergement", label: "Hébergement" },
-  { value: "autre", label: "Autre" },
+  { value: "accommodation", label: "Hébergement" },
+  { value: "activity", label: "Activité" },
+  { value: "restaurant", label: "Restaurant" },
+  { value: "transport", label: "Transport" },
+  { value: "workshop", label: "Atelier" },
+  { value: "package", label: "Séjour complet" },
 ];
 
 const PROJECT_TYPES = [
@@ -1794,6 +1794,7 @@ export default function DashboardPage() {
   const [editingProject, setEditingProject] = useState<any>(null);
   const [dashConvos, setDashConvos] = useState<DashConv[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [offerTypeFilter, setOfferTypeFilter] = useState("");
 
   useEffect(() => {
     async function init() {
@@ -2627,10 +2628,22 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold">Mes Offres</h3>
-                  <button onClick={() => setShowAddOffer(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
-                    <span className="material-symbols-outlined text-base">add</span>Ajouter une offre
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={offerTypeFilter}
+                      onChange={(e) => setOfferTypeFilter(e.target.value)}
+                      className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    >
+                      <option value="">Tous les types</option>
+                      {(role === "guide" ? GUIDE_OFFER_TYPES : PROJ_OFFER_TYPES).map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                    <button onClick={() => setShowAddOffer(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
+                      <span className="material-symbols-outlined text-base">add</span>Ajouter une offre
+                    </button>
+                  </div>
                 </div>
 
                 {offers.length === 0 ? (
@@ -2644,7 +2657,9 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {offers.map((offer) => {
+                    {offers
+                      .filter((offer) => !offerTypeFilter || offer.offer_type === offerTypeFilter)
+                      .map((offer) => {
                       const offerTypes = role === "guide" ? GUIDE_OFFER_TYPES : PROJ_OFFER_TYPES;
                       const typeLabel = offerTypes.find((t) => t.value === offer.offer_type)?.label;
                       return (
@@ -2699,7 +2714,19 @@ export default function DashboardPage() {
                           </div>
 
                           <div className="flex items-center gap-3 mt-auto pt-2 border-t border-slate-100">
-                            {offer.price !== null && <span className="text-sm font-extrabold text-slate-800">{offer.price} TND</span>}
+                            {offer.price !== null ? (
+                              <span className="text-sm font-extrabold text-slate-800">{offer.price} TND</span>
+                            ) : offer.items && offer.items.length > 0 ? (
+                              <span className="text-sm font-extrabold text-slate-800">
+                                {offer.items
+                                  .filter((i: any) => i.status === "active")
+                                  .reduce((sum: number, i: any) => {
+                                    const p = i.prices?.find((pp: any) => pp.is_default) ?? i.prices?.[0];
+                                    return sum + (p ? Number(p.price) : 0);
+                                  }, 0)
+                                  .toLocaleString()} TND
+                              </span>
+                            ) : null}
                             {offer.duration && (
                               <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
                                 <span className="material-symbols-outlined text-sm">schedule</span>{offer.duration}
