@@ -146,8 +146,20 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
       : OFFER_CATEGORIES.map(c => c.value);
 
   const availableCategories = OFFER_CATEGORIES.filter(c => allowedCategories.includes(c.value));
-  const currentItemTypes = category ? (ITEM_TYPES_BY_CATEGORY[category] ?? []) : [];
-  const formFields = category ? (CATEGORY_FORM_FIELDS[category] ?? []) : [];
+  const OFFER_TYPE_MAP: Record<string, string> = {
+    hebergement: 'accommodation',
+    activite: 'activity',
+    restauration: 'restaurant',
+    artisanat: 'workshop',
+    eco_tourisme: 'activity',
+    sejour: 'package',
+    circuit: 'activity',
+    autre: 'activity',
+  };
+
+  const normalizedCategory = category ? (OFFER_TYPE_MAP[category] ?? category) : '';
+  const currentItemTypes = normalizedCategory ? (ITEM_TYPES_BY_CATEGORY[normalizedCategory] ?? []) : [];
+  const formFields = normalizedCategory ? (CATEGORY_FORM_FIELDS[normalizedCategory] ?? []) : [];
 
   const inputClass = "w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
 
@@ -545,7 +557,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                       {currentItemTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
 
-                    {category === 'accommodation' && (
+                    {normalizedCategory === 'accommodation' && (
                       <select className={inputClass} value={item.room_type} onChange={(e) => updateItem(idx, "room_type", e.target.value)}>
                         <option value="">Type chambre</option>
                         {ACCOMMODATION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
@@ -553,7 +565,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                     )}
                   </div>
 
-                  {category === 'accommodation' && (
+                  {normalizedCategory === 'accommodation' && (
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400">Nombre de lits</label>
