@@ -553,7 +553,7 @@ git push origin feature/nouvelle-fonctionnalite
 
 ### Équipe de Développement
 - **Maram Mejri** https://github.com/Maram172003
-- **Bennoomen Faker** https://github.com/bennoomenfaker/tourisme
+- **BEN NOOMEN Faker** https://github.com/bennoomenfaker/tourisme
 
 ### Documentation Complète
 - [Documentation technique](./docs/)
