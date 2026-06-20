@@ -27,11 +27,15 @@ export class OfferItemCapacity {
 
   @Column()
   capacity_type!: string;
-  // 'rooms' | 'beds' | 'items' | 'persons' | 'seats'
+  // 'rooms' | 'beds' | 'items' | 'persons' | 'seats' | 'spaces' | 'tents'
 
   @Column({ type: 'int', nullable: true })
   total_quantity!: number | null;
   // Stock total disponible
+
+  @Column({ type: 'int', nullable: true })
+  remaining_quantity!: number | null;
+  // Stock restant (decremente lors des reservations)
 
   @Column({ type: 'int', nullable: true })
   max_persons!: number | null;

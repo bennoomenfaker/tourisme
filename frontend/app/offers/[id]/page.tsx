@@ -6,13 +6,14 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Star, Calendar,
   DollarSign, ShieldCheck, Info, ChevronDown, ChevronUp,
-  ChevronRight, Check,
+  ChevronRight, Check, Heart,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
 import dynamic from "next/dynamic";
 
 const GuidedOfferWizard = dynamic(() => import("@/components/GuidedOfferWizard"), { ssr: false });
+const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false });
 
 interface OfferItemPrice {
   id: string;
@@ -60,7 +61,11 @@ interface Offer {
   region: string | null;
   images: string[] | null;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   meeting_point: string | null;
+  meeting_lat: number | null;
+  meeting_lng: number | null;
   min_group_size: number | null;
   max_group_size: number | null;
   min_age: number | null;
@@ -94,6 +99,8 @@ export default function OfferDetailPage() {
   const [existingBooking, setExistingBooking] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [showEditWizard, setShowEditWizard] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [togglingFav, setTogglingFav] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -108,12 +115,30 @@ export default function OfferDetailPage() {
     if (!stored) return;
     const u = JSON.parse(stored);
     if (u.role !== "eco_traveler") return;
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     if (!token) return;
     apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } })
       .then((bookings) => setExistingBooking(bookings.some((b) => b.offer?.id === id)))
       .catch(() => {});
+    apiFetch<any>(`/favorites/check/offer/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setIsFavorite(res?.isFavorite ?? false))
+      .catch(() => {});
   }, [id]);
+
+  const toggleFavorite = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    setTogglingFav(true);
+    try {
+      await apiFetch("/favorites", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ target_type: "offer", target_id: id }),
+      });
+      setIsFavorite((prev) => !prev);
+    } catch {}
+    setTogglingFav(false);
+  };
 
   if (loading) {
     return (
@@ -201,6 +226,19 @@ export default function OfferDetailPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                {user?.role === "eco_traveler" && (
+                  <button
+                    onClick={toggleFavorite}
+                    disabled={togglingFav}
+                    className={`p-2 rounded-xl transition-colors ${
+                      isFavorite
+                        ? "bg-red-50 text-red-500 hover:bg-red-100"
+                        : "bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                    }`}
+                  >
+                    <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
+                  </button>
+                )}
                 {(user?.role === "guide" || user?.role === "project") && (
                   <button onClick={() => setShowEditWizard(true)} className="px-4 py-2 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors flex items-center gap-1.5">
                     ✏️ Modifier
@@ -260,6 +298,18 @@ export default function OfferDetailPage() {
                   <span className="font-medium text-slate-700">Adresse :</span>
                   <span className="text-slate-500 ml-1">{offer.address}</span>
                 </div>
+              </div>
+            )}
+
+            {(offer.latitude && offer.longitude) && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-slate-600 mb-2">Localisation</h3>
+                <MapView lat={Number(offer.latitude)} lng={Number(offer.longitude)} />
+                {offer.meeting_lat && offer.meeting_lng && (
+                  <p className="text-xs text-slate-400 mt-1.5">
+                    Point de rendez-vous affiché séparément sur la carte
+                  </p>
+                )}
               </div>
             )}
 

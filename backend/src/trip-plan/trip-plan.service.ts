@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, In } from 'typeorm';
 import { TripPlan } from './entities/trip-plan.entity';
@@ -16,6 +11,8 @@ import { User } from '../users/entities/user.entity';
 import { OfferItem } from '../offer/entities/offer-item.entity';
 import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
 import { Offer } from '../offer/entities/offer.entity';
+import { Circuit } from '../circuit/entities/circuit.entity';
+import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 import { Booking } from '../booking/entities/booking.entity';
 import { BookingParticipant } from '../booking/entities/booking-participant.entity';
 import { NotificationService } from '../notification/notification.service';
@@ -36,6 +33,10 @@ export class TripPlanService {
     private readonly sessionRepo: Repository<OfferItemSession>,
     @InjectRepository(Offer)
     private readonly offerRepo: Repository<Offer>,
+    @InjectRepository(Circuit)
+    private readonly circuitRepo: Repository<Circuit>,
+    @InjectRepository(CircuitReservation)
+    private readonly circuitReservationRepo: Repository<CircuitReservation>,
     private readonly notificationService: NotificationService,
     private readonly dataSource: DataSource,
     private readonly mongoService: EcoTravelerMongoService,
@@ -69,7 +70,7 @@ export class TripPlanService {
   async findById(id: string): Promise<TripPlan> {
     const plan = await this.tripPlanRepo.findOne({
       where: { id },
-      relations: ['items', 'items.offerItem', 'items.offerItem.offer', 'items.offerItem.prices', 'ecoTraveler'],
+      relations: ['items', 'items.offerItem', 'items.offerItem.offer', 'items.offerItem.prices', 'items.circuit', 'ecoTraveler'],
     });
     if (!plan) throw new NotFoundException('Plan de voyage introuvable');
     return plan;
@@ -103,9 +104,17 @@ export class TripPlanService {
   async addItem(tripPlanId: string, ecoTravelerId: string, dto: AddTripPlanItemDto): Promise<TripPlanItem> {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
 
+    if (!dto.offer_item_id && !dto.circuit_id) {
+      throw new BadRequestException('Vous devez fournir offer_item_id ou circuit_id');
+    }
+    if (dto.offer_item_id && dto.circuit_id) {
+      throw new BadRequestException('Vous ne pouvez fournir qu\'un seul type d\'élément (offer_item_id ou circuit_id)');
+    }
+
     const item = this.itemRepo.create({
       tripPlan: { id: tripPlanId } as TripPlan,
-      offerItem: { id: dto.offer_item_id } as OfferItem,
+      offerItem: dto.offer_item_id ? ({ id: dto.offer_item_id } as OfferItem) : null,
+      circuit: dto.circuit_id ? ({ id: dto.circuit_id } as Circuit) : null,
       day_number: dto.day_number ?? null,
       sort_order: dto.sort_order ?? 0,
       notes: dto.notes ?? null,
@@ -147,7 +156,7 @@ export class TripPlanService {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
     const fullPlan = await this.tripPlanRepo.findOne({
       where: { id: tripPlanId },
-      relations: ['items', 'items.offerItem', 'items.offerItem.offer', 'items.offerItem.prices'],
+      relations: ['items', 'items.offerItem', 'items.offerItem.offer', 'items.offerItem.prices', 'items.circuit'],
     });
     if (!fullPlan?.items?.length) {
       throw new BadRequestException('Ce plan ne contient aucun élément à réserver');
@@ -161,8 +170,43 @@ export class TripPlanService {
 
     try {
       const bookings: Booking[] = [];
+      let circuitReservationsCount = 0;
 
       for (const item of fullPlan.items) {
+        // ── Reserver un circuit ──
+        if (item.circuit) {
+          const circuit = item.circuit;
+          if (circuit.max_participants && participantCount > circuit.max_participants) {
+            throw new BadRequestException(
+              `Le nombre de participants (${participantCount}) dépasse la limite pour le circuit "${circuit.title}" (${circuit.max_participants} max)`
+            );
+          }
+
+          const reservationStatus = circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
+          const reservation = queryRunner.manager.create(CircuitReservation, {
+            circuit: { id: circuit.id } as Circuit,
+            user: { id: ecoTravelerId } as User,
+            participants_count: participantCount,
+            base_total: Number(circuit.base_price) ?? 0,
+            options_total: 0,
+            final_total: Number(circuit.base_price) ?? 0,
+            status: reservationStatus,
+          });
+          await queryRunner.manager.save(CircuitReservation, reservation);
+          circuitReservationsCount++;
+
+          if (circuit.author_id) {
+            const notifType = reservationStatus === 'confirmed' ? 'booking_confirmed' : 'booking_request';
+            const notifTitle = reservationStatus === 'confirmed' ? 'Réservation circuit confirmée' : 'Demande de réservation circuit';
+            const notifBody = reservationStatus === 'confirmed'
+              ? `Un voyageur a réservé le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan.`
+              : `Un voyageur souhaite réserver le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan. En attente de confirmation.`;
+            this.notificationService.create(circuit.author_id, notifType, notifTitle, notifBody, `/dashboard/incoming`).catch(() => {});
+          }
+          continue;
+        }
+
+        // ── Reserver une offre ──
         const offerItem = item.offerItem;
         if (!offerItem) continue;
 
@@ -182,7 +226,29 @@ export class TripPlanService {
         }
 
         const defaultPrice = offerItem.prices?.find((p) => p.is_default) ?? offerItem.prices?.[0];
-        const totalPrice = defaultPrice ? Number(defaultPrice.price) * participantCount : 0;
+        let totalPrice = 0;
+        if (defaultPrice) {
+          const unitPrice = Number(defaultPrice.price);
+          const pricingUnit = defaultPrice.pricing_unit ?? 'per_person';
+          const nights = offerItem.nights ?? 1;
+
+          switch (pricingUnit) {
+            case 'per_person_per_night':
+            case 'per_night':
+              totalPrice = unitPrice * participantCount * nights;
+              break;
+            case 'per_room_per_night':
+              totalPrice = unitPrice * nights;
+              break;
+            case 'per_bed':
+              totalPrice = unitPrice * (offerItem.bed_count ?? participantCount) * nights;
+              break;
+            case 'per_person':
+            default:
+              totalPrice = unitPrice * participantCount;
+              break;
+          }
+        }
 
         const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
         const booking = queryRunner.manager.create(Booking, {
@@ -214,10 +280,12 @@ export class TripPlanService {
 
         bookings.push(saved);
 
-        if (offer.confirmation_mode === 'manual' && offer.author_id) {
-          const notifType = 'booking_request';
-          const notifTitle = 'Demande de réservation Trip Plan';
-          const notifBody = `Un voyageur réserve "${offer.title}" via un Trip Plan. ${participantCount} participant(s). En attente de votre confirmation.`;
+        if (offer.author_id) {
+          const notifType = offer.confirmation_mode === 'manual' ? 'booking_request' : 'booking_confirmed';
+          const notifTitle = offer.confirmation_mode === 'manual' ? 'Demande de réservation Trip Plan' : 'Réservation Trip Plan confirmée';
+          const notifBody = offer.confirmation_mode === 'manual'
+            ? `Un voyageur réserve "${offer.title}" via un Trip Plan. ${participantCount} participant(s). En attente de votre confirmation.`
+            : `Un voyageur a réservé "${offer.title}" via un Trip Plan. ${participantCount} participant(s). Réservation confirmée automatiquement.`;
           const notifLink = `/dashboard/incoming`;
           this.notificationService.create(offer.author_id, notifType, notifTitle, notifBody, notifLink).catch(() => {});
         }
@@ -227,12 +295,13 @@ export class TripPlanService {
 
       this.mongoService.incrementStat(ecoTravelerId, 'reservations_made').catch(() => {});
 
-      const count = bookings.length;
+      const offerCount = bookings.length;
+      const totalCount = offerCount + circuitReservationsCount;
       this.notificationService.create(
         ecoTravelerId,
         'booking_request',
         'Réservation Trip Plan',
-        `${count} élément${count > 1 ? 's' : ''} réservé${count > 1 ? 's' : ''} depuis votre Trip Plan.`,
+        `${totalCount} élément${totalCount > 1 ? 's' : ''} réservé${totalCount > 1 ? 's' : ''} depuis votre Trip Plan.`,
         `/trip-plans/${tripPlanId}`,
       ).catch(() => {});
 

@@ -9,10 +9,15 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AddTripPlanItemDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsUUID()
-  @IsNotEmpty()
-  offer_item_id!: string;
+  offer_item_id?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  circuit_id?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

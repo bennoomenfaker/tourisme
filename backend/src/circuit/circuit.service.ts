@@ -58,7 +58,7 @@ export class CircuitService {
       address: dto.address ?? null,
       project_id: dto.project_id ?? null,
       images: dto.images?.length ? dto.images : null,
-      status: 'approved',
+      status: 'pending',
     });
     return this.circuitRepo.save(circuit);
   }
@@ -113,9 +113,12 @@ export class CircuitService {
 
   // ─── Jours du circuit ──────────────────────────────────
 
-  async addDay(circuitId: string, dto: CreateCircuitDayDto): Promise<CircuitDay> {
+  async addDay(circuitId: string, dto: CreateCircuitDayDto, authorId?: string): Promise<CircuitDay> {
     const circuit = await this.circuitRepo.findOne({ where: { id: circuitId } });
     if (!circuit) throw new NotFoundException('Circuit introuvable');
+    if (authorId && circuit.author_id !== authorId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
+    }
     const day = this.dayRepo.create({
       circuit: { id: circuitId } as Circuit,
       day_number: dto.day_number,
@@ -131,9 +134,12 @@ export class CircuitService {
 
   // ─── Options du circuit ────────────────────────────────
 
-  async addOption(circuitId: string, dto: CreateCircuitOptionDto): Promise<CircuitOption> {
+  async addOption(circuitId: string, dto: CreateCircuitOptionDto, authorId?: string): Promise<CircuitOption> {
     const circuit = await this.circuitRepo.findOne({ where: { id: circuitId } });
     if (!circuit) throw new NotFoundException('Circuit introuvable');
+    if (authorId && circuit.author_id !== authorId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
+    }
     const option = this.optionRepo.create({
       circuit: { id: circuitId } as Circuit,
       offer_item_id: dto.offer_item_id ?? null,
@@ -173,9 +179,12 @@ export class CircuitService {
     return trimmed;
   }
 
-  async addProgramItem(dayId: string, dto: CreateCircuitProgramItemDto): Promise<CircuitProgramItem> {
-    const day = await this.dayRepo.findOne({ where: { id: dayId } });
+  async addProgramItem(dayId: string, dto: CreateCircuitProgramItemDto, authorId?: string): Promise<CircuitProgramItem> {
+    const day = await this.dayRepo.findOne({ where: { id: dayId }, relations: ['circuit'] });
     if (!day) throw new NotFoundException('Jour introuvable');
+    if (authorId && day.circuit?.author_id !== authorId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
+    }
     const item = this.programItemRepo.create({
       circuitDay: { id: dayId } as CircuitDay,
       title: dto.title,
@@ -331,7 +340,29 @@ export class CircuitService {
     if (reservation.status === 'cancelled') throw new BadRequestException('Déjà annulée');
 
     reservation.status = 'cancelled';
-    return this.reservationRepo.save(reservation);
+    const saved = await this.reservationRepo.save(reservation);
+
+    // Notifier le voyageur
+    this.notificationService.create(
+      userId,
+      'booking_cancelled',
+      'Réservation circuit annulée',
+      `Votre réservation pour "${reservation.circuit.title}" a été annulée.`,
+      `/circuits/${reservation.circuit.id}`,
+    ).catch(() => {});
+
+    // Notifier le provider
+    if (reservation.circuit.author_id && reservation.circuit.author_id !== userId) {
+      this.notificationService.create(
+        reservation.circuit.author_id,
+        'booking_cancelled',
+        'Réservation circuit annulée',
+        `La réservation de ${reservation.user.id} pour "${reservation.circuit.title}" a été annulée.`,
+        `/dashboard/incoming`,
+      ).catch(() => {});
+    }
+
+    return saved;
   }
 
 }

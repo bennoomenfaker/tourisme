@@ -70,7 +70,10 @@ export default function CircuitMapInner({ circuitLat, circuitLng, days }: Circui
       style={{ height: "300px", width: "100%" }}
       scrollWheelZoom={false}
     >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
 
       {hasCircuitLocation && (
         <Marker position={[circuitLat!, circuitLng!]} icon={markerIcon}>

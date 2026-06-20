@@ -11,6 +11,7 @@ import {
 import { Offer } from './offer.entity';
 import { OfferItemPrice } from './offer-item-price.entity';
 import { OfferItemSession } from './offer-item-session.entity';
+import { OfferItemCapacity } from './offer-item-capacity.entity';
 
 /**
  * Élément réellement vendable dans une offre
@@ -87,6 +88,9 @@ export class OfferItem {
 
   @OneToMany(() => OfferItemSession, (s) => s.offerItem)
   sessions!: OfferItemSession[];
+
+  @OneToMany(() => OfferItemCapacity, (c) => c.offerItem)
+  capacity!: OfferItemCapacity[];
 
   @CreateDateColumn()
   created_at!: Date;

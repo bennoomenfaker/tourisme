@@ -7,6 +7,7 @@ import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 import { User } from '../users/entities/user.entity';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class MessagesService {
@@ -23,6 +24,7 @@ export class MessagesService {
     private readonly ownerRepo: Repository<ProjectOwner>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private async getUserInfo(userId: string, role: string) {
@@ -209,6 +211,19 @@ export class MessagesService {
       content,
     });
     const saved = await this.msgRepo.save(msg);
+
+    // Notifier le destinataire
+    const recipientId = c.participant_a_id === senderId ? c.participant_b_id : c.participant_a_id;
+    if (recipientId !== senderId) {
+      this.notificationService.create(
+        recipientId,
+        'new_message',
+        'Nouveau message',
+        `Vous avez reçu un nouveau message.`,
+        `/messagerie?conv=${convId}`,
+      ).catch(() => {});
+    }
+
     return {
       id: saved.id,
       content: saved.content,

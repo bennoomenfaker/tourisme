@@ -9,6 +9,7 @@ import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class AdminService {
@@ -35,6 +36,7 @@ export class AdminService {
     private readonly ownerRepo: Repository<ProjectOwner>,
 
     private readonly mailService: MailService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // ─── Publications ─────────────────────────────────────────────────────────
@@ -47,14 +49,34 @@ export class AdminService {
     const pub = await this.findPubOrFail(id);
     pub.status = 'approved';
     pub.rejection_reason = null;
-    return this.pubRepo.save(pub);
+    const saved = await this.pubRepo.save(pub);
+    if (pub.author_id) {
+      this.notificationService.create(
+        pub.author_id,
+        'admin_approved',
+        'Publication approuvée',
+        `Votre publication "${pub.title}" a été approuvée par l'administration.`,
+        `/publications/${pub.id}`,
+      ).catch(() => {});
+    }
+    return saved;
   }
 
   async rejectPublication(id: string, reason: string) {
     const pub = await this.findPubOrFail(id);
     pub.status = 'rejected';
     pub.rejection_reason = reason;
-    return this.pubRepo.save(pub);
+    const saved = await this.pubRepo.save(pub);
+    if (pub.author_id) {
+      this.notificationService.create(
+        pub.author_id,
+        'admin_rejected',
+        'Publication rejetée',
+        `Votre publication "${pub.title}" a été rejetée. Motif : ${reason}`,
+        `/publications/${pub.id}`,
+      ).catch(() => {});
+    }
+    return saved;
   }
 
   // ─── Offers ───────────────────────────────────────────────────────────────
@@ -67,14 +89,34 @@ export class AdminService {
     const offer = await this.findOfferOrFail(id);
     offer.status = 'approved';
     offer.rejection_reason = null;
-    return this.offerRepo.save(offer);
+    const saved = await this.offerRepo.save(offer);
+    if (offer.author_id) {
+      this.notificationService.create(
+        offer.author_id,
+        'admin_approved',
+        'Offre approuvée',
+        `Votre offre "${offer.title}" a été approuvée par l'administration.`,
+        `/offers/${offer.id}`,
+      ).catch(() => {});
+    }
+    return saved;
   }
 
   async rejectOffer(id: string, reason: string) {
     const offer = await this.findOfferOrFail(id);
     offer.status = 'rejected';
     offer.rejection_reason = reason;
-    return this.offerRepo.save(offer);
+    const saved = await this.offerRepo.save(offer);
+    if (offer.author_id) {
+      this.notificationService.create(
+        offer.author_id,
+        'admin_rejected',
+        'Offre rejetée',
+        `Votre offre "${offer.title}" a été rejetée. Motif : ${reason}`,
+        `/offers/${offer.id}`,
+      ).catch(() => {});
+    }
+    return saved;
   }
 
   // ─── Projects ─────────────────────────────────────────────────────────────
@@ -87,14 +129,34 @@ export class AdminService {
     const project = await this.findProjectOrFail(id);
     project.status = 'active';
     project.rejection_reason = null;
-    return this.projectRepo.save(project);
+    const saved = await this.projectRepo.save(project);
+    if (project.owner_id) {
+      this.notificationService.create(
+        project.owner_id,
+        'admin_approved',
+        'Projet approuvé',
+        `Votre projet "${project.name}" a été approuvé par l'administration.`,
+        `/projects/${project.id}`,
+      ).catch(() => {});
+    }
+    return saved;
   }
 
   async rejectProject(id: string, reason: string) {
     const project = await this.findProjectOrFail(id);
     project.status = 'rejected';
     project.rejection_reason = reason;
-    return this.projectRepo.save(project);
+    const saved = await this.projectRepo.save(project);
+    if (project.owner_id) {
+      this.notificationService.create(
+        project.owner_id,
+        'admin_rejected',
+        'Projet rejeté',
+        `Votre projet "${project.name}" a été rejeté. Motif : ${reason}`,
+        `/projects/${project.id}`,
+      ).catch(() => {});
+    }
+    return saved;
   }
 
   // ─── Ban management ───────────────────────────────────────────────────────

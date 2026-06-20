@@ -27,6 +27,8 @@ import { BookingModule } from './booking/booking.module';
 import { CircuitModule } from './circuit/circuit.module';
 import { NotificationModule } from './notification/notification.module';
 import { TripPlanModule } from './trip-plan/trip-plan.module';
+import { FavoriteModule } from './favorite/favorite.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { TripPlanModule } from './trip-plan/trip-plan.module';
     CircuitModule,
     NotificationModule,
     TripPlanModule,
+    FavoriteModule,
+    ReviewModule,
   ],
   providers: [GoogleStrategy, {
     provide: APP_GUARD,

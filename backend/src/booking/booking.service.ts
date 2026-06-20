@@ -26,6 +26,8 @@ export class BookingService {
     private readonly sessionRepo: Repository<OfferItemSession>,
     @InjectRepository(Offer)
     private readonly offerRepo: Repository<Offer>,
+    @InjectRepository(OfferItem)
+    private readonly offerItemRepo: Repository<OfferItem>,
     private readonly notificationService: NotificationService,
   ) {}
 
@@ -34,8 +36,9 @@ export class BookingService {
    * Génère une référence unique pour le suivi
    */
   async create(travelerId: string, dto: CreateBookingDto): Promise<Booking> {
+    let session: OfferItemSession | null = null;
     if (dto.session_id) {
-      const session = await this.sessionRepo.findOne({ where: { id: dto.session_id } });
+      session = await this.sessionRepo.findOne({ where: { id: dto.session_id } });
       if (!session) throw new NotFoundException('Session introuvable');
       if (session.status === 'full') throw new BadRequestException('Cette session est complète');
       if (session.remaining_capacity !== null && session.remaining_capacity <= 0) {
@@ -53,6 +56,40 @@ export class BookingService {
       throw new BadRequestException('Vous avez déjà réservé cette offre');
     }
 
+    // ── Calcul du prix côté serveur ──
+    let totalPrice = 0;
+    const participantCount = dto.participants?.length ?? 1;
+    const nights = dto.nights ?? 1;
+
+    if (dto.offer_item_id) {
+      const offerItem = await this.offerItemRepo.findOne({
+        where: { id: dto.offer_item_id },
+        relations: ['prices'],
+      });
+      if (offerItem && offerItem.prices?.length) {
+        const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
+        const unitPrice = Number(priceRow.price);
+        const pricingUnit = priceRow.pricing_unit ?? 'per_person';
+
+        switch (pricingUnit) {
+          case 'per_person_per_night':
+          case 'per_night':
+            totalPrice = unitPrice * participantCount * nights;
+            break;
+          case 'per_room_per_night':
+            totalPrice = unitPrice * nights;
+            break;
+          case 'per_bed':
+            totalPrice = unitPrice * (offerItem.bed_count ?? participantCount) * nights;
+            break;
+          case 'per_person':
+          default:
+            totalPrice = unitPrice * participantCount;
+            break;
+        }
+      }
+    }
+
     const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
     const booking = this.bookingRepo.create({
       booking_ref: `BK-${refSuffix}`,
@@ -60,13 +97,22 @@ export class BookingService {
       offer: { id: dto.offer_id } as Offer,
       offerItem: dto.offer_item_id ? ({ id: dto.offer_item_id } as OfferItem) : null,
       session: dto.session_id ? ({ id: dto.session_id } as OfferItemSession) : null,
-      total_price: dto.total_price,
+      total_price: totalPrice,
       currency: dto.currency ?? 'XAF',
       special_requests: dto.special_requests ?? null,
       confirmation_mode: dto.confirmation_mode ?? 'automatic',
       status: dto.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
     });
     const saved = await this.bookingRepo.save(booking);
+
+    // ── Décrémentation de la capacité ──
+    if (session && session.remaining_capacity !== null) {
+      session.remaining_capacity = Math.max(0, session.remaining_capacity - participantCount);
+      if (session.remaining_capacity <= 0) {
+        session.status = 'full';
+      }
+      await this.sessionRepo.save(session);
+    }
 
     if (dto.participants?.length) {
       const participants = dto.participants.map((p) =>
@@ -131,6 +177,21 @@ export class BookingService {
     booking.cancelled_at = new Date();
     booking.cancel_reason = reason ?? null;
     const saved = await this.bookingRepo.save(booking);
+
+    // Restaurer la capacité de la session
+    if (booking.session?.id) {
+      const session = await this.sessionRepo.findOne({ where: { id: booking.session.id } });
+      if (session && session.remaining_capacity !== null) {
+        const participantCount = booking.participants?.length ?? 1;
+        session.remaining_capacity = session.remaining_capacity + participantCount;
+        if (session.status === 'full') {
+          session.status = 'available';
+        }
+        await this.sessionRepo.save(session);
+      }
+    }
+
+    // Notifier le voyageur
     this.notificationService.create(
       travelerId,
       'booking_cancelled',
@@ -138,6 +199,19 @@ export class BookingService {
       `Votre réservation ${saved.booking_ref} a été annulée.${reason ? ` Motif : ${reason}` : ''}`,
       `/bookings/${saved.id}`,
     ).catch(() => {});
+
+    // Notifier le provider
+    const offer = await this.offerRepo.findOne({ where: { id: booking.offer.id } });
+    if (offer?.author_id && offer.author_id !== travelerId) {
+      this.notificationService.create(
+        offer.author_id,
+        'booking_cancelled',
+        'Réservation annulée',
+        `La réservation ${saved.booking_ref} pour "${offer.title}" a été annulée par le voyageur.${reason ? ` Motif : ${reason}` : ''}`,
+        `/dashboard/incoming`,
+      ).catch(() => {});
+    }
+
     return saved;
   }
 

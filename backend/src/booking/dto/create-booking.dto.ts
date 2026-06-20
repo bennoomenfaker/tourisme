@@ -54,9 +54,15 @@ export class CreateBookingDto {
   @IsUUID()
   session_id?: string;
 
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  total_price!: number;
+  total_price?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  nights?: number;
 
   @IsOptional()
   @IsString()

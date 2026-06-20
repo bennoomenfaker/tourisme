@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { TripPlan } from './trip-plan.entity';
 import { OfferItem } from '../../offer/entities/offer-item.entity';
+import { Circuit } from '../../circuit/entities/circuit.entity';
 
 @Entity('trip_plan_items')
 export class TripPlanItem {
@@ -21,6 +22,10 @@ export class TripPlanItem {
   @ManyToOne(() => OfferItem, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'offer_item_id' })
   offerItem!: OfferItem | null;
+
+  @ManyToOne(() => Circuit, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'circuit_id' })
+  circuit!: Circuit | null;
 
   @Column({ type: 'int', nullable: true })
   day_number!: number | null;

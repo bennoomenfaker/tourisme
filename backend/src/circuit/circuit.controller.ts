@@ -104,8 +104,8 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Post(':circuitId/days')
-  addDay(@Param('circuitId') circuitId: string, @Body() dto: CreateCircuitDayDto) {
-    return this.service.addDay(circuitId, dto);
+  addDay(@Req() req: any, @Param('circuitId') circuitId: string, @Body() dto: CreateCircuitDayDto) {
+    return this.service.addDay(circuitId, dto, req.user.sub);
   }
 
   /**
@@ -114,8 +114,8 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Post(':circuitId/options')
-  addOption(@Param('circuitId') circuitId: string, @Body() dto: CreateCircuitOptionDto) {
-    return this.service.addOption(circuitId, dto);
+  addOption(@Req() req: any, @Param('circuitId') circuitId: string, @Body() dto: CreateCircuitOptionDto) {
+    return this.service.addOption(circuitId, dto, req.user.sub);
   }
 
   /**
@@ -133,8 +133,8 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Post(':circuitId/days/:dayId/program')
-  addProgramItem(@Param('dayId') dayId: string, @Body() dto: CreateCircuitProgramItemDto) {
-    return this.service.addProgramItem(dayId, dto);
+  addProgramItem(@Req() req: any, @Param('dayId') dayId: string, @Body() dto: CreateCircuitProgramItemDto) {
+    return this.service.addProgramItem(dayId, dto, req.user.sub);
   }
 
   /**

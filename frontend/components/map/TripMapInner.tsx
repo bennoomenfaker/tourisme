@@ -60,7 +60,10 @@ export default function TripMapInner({ items }: TripMapInnerProps) {
       style={{ height: "280px", width: "100%" }}
       scrollWheelZoom={false}
     >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
       {located.map((item, idx) => (
         <Marker
           key={idx}

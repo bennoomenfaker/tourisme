@@ -11,12 +11,14 @@ import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { ReportsModule } from '../reports/reports.module';
 import { MailModule } from '../mail/mail.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Publication, Offer, Project, User, EcoTraveler, Guide, ProjectOwner]),
     ReportsModule,
     MailModule,
+    NotificationModule,
   ],
   providers: [AdminService],
   controllers: [AdminController],

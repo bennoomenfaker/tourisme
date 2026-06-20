@@ -8,9 +8,10 @@ import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 import { User } from '../users/entities/user.entity';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message, EcoTraveler, Guide, ProjectOwner, User])],
+  imports: [TypeOrmModule.forFeature([Conversation, Message, EcoTraveler, Guide, ProjectOwner, User]), NotificationModule],
   providers: [MessagesService],
   controllers: [MessagesController],
 })

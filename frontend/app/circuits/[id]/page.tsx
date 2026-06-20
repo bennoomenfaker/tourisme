@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Calendar,
-  Check, DollarSign, Info, Plus, Trash2, Edit, X, Share2, Copy,
+  Check, DollarSign, Info, Plus, Trash2, Edit, X, Share2, Copy, Heart,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -138,6 +138,9 @@ export default function CircuitDetailPage() {
   const [modifyParticipants, setModifyParticipants] = useState(1);
   const [modifySubmitting, setModifySubmitting] = useState(false);
 
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [togglingFav, setTogglingFav] = useState(false);
+
   const loadCircuit = () => {
     apiFetch<CircuitDetails>(`/circuits/${id}`)
       .then(setCircuit)
@@ -151,7 +154,26 @@ export default function CircuitDetailPage() {
     if (stored) setUser(JSON.parse(stored));
     if (t) setToken(t);
     loadCircuit();
+    if (t && id) {
+      apiFetch<any>(`/favorites/check/circuit/${id}`, { headers: { Authorization: `Bearer ${t}` } })
+        .then((res) => setIsFavorite(res?.isFavorite ?? false))
+        .catch(() => {});
+    }
   }, [id]);
+
+  const toggleFavorite = async () => {
+    if (!token) return;
+    setTogglingFav(true);
+    try {
+      await apiFetch("/favorites", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ target_type: "circuit", target_id: id }),
+      });
+      setIsFavorite((prev) => !prev);
+    } catch {}
+    setTogglingFav(false);
+  };
 
   useEffect(() => {
     if (!token || !id) return;
@@ -444,6 +466,19 @@ export default function CircuitDetailPage() {
               <button onClick={handleShare} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100">
                 <Share2 size={14} /> Partager
               </button>
+              {user?.role === "eco_traveler" && (
+                <button
+                  onClick={toggleFavorite}
+                  disabled={togglingFav}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                    isFavorite
+                      ? "bg-red-50 text-red-500 border-red-200 hover:bg-red-100"
+                      : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600"
+                  }`}
+                >
+                  <Heart size={14} fill={isFavorite ? "currentColor" : "none"} /> {isFavorite ? "Favori" : "Favori"}
+                </button>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-3 text-sm text-slate-500 mb-4">

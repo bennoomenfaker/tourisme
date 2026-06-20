@@ -18,12 +18,12 @@ export default function AppNavbar({ title }: AppNavbarProps) {
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (stored) setUser(JSON.parse(stored));
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
     if (token) {
-      apiFetch<{ count: number }>("/notifications/unread-count", {
+      apiFetch<number>("/notifications/unread", {
         headers: { Authorization: `Bearer ${token}` },
       })
-        .then((d) => setUnread(d.count))
+        .then((count) => setUnread(count ?? 0))
         .catch(() => {});
     }
   }, []);
