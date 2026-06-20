@@ -248,6 +248,8 @@ export class TripPlanService {
               totalPrice = unitPrice * participantCount;
               break;
           }
+        } else if (offer.price) {
+          totalPrice = Number(offer.price) * participantCount;
         }
 
         const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();

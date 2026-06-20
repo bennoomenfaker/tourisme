@@ -91,6 +91,19 @@ export class BookingService {
     } else if (offer.price) {
       // Offre simple sans item : utiliser le prix de l'offre directement
       totalPrice = Number(offer.price) * participantCount;
+    } else {
+      // Offre avec items mais pas d'item selectionne : somme des prix par defaut
+      const allItems = await this.offerItemRepo.find({
+        where: { offer: { id: dto.offer_id } },
+        relations: ['prices'],
+      });
+      if (allItems.length) {
+        const sumDefaultPrices = allItems.reduce((sum, item) => {
+          const priceRow = item.prices?.find((p) => p.is_default) ?? item.prices?.[0];
+          return sum + (priceRow ? Number(priceRow.price) : 0);
+        }, 0);
+        totalPrice = sumDefaultPrices * participantCount;
+      }
     }
 
     const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -312,6 +325,19 @@ export class BookingService {
       }
     } else if (updatedBooking.offer?.price) {
       totalPrice = Number(updatedBooking.offer.price) * totalCount;
+    } else {
+      // Offre avec items : somme des prix par defaut
+      const allItems = await this.offerItemRepo.find({
+        where: { offer: { id: updatedBooking.offer.id } },
+        relations: ['prices'],
+      });
+      if (allItems.length) {
+        const sumDefaultPrices = allItems.reduce((sum, item) => {
+          const priceRow = item.prices?.find((p) => p.is_default) ?? item.prices?.[0];
+          return sum + (priceRow ? Number(priceRow.price) : 0);
+        }, 0);
+        totalPrice = sumDefaultPrices * totalCount;
+      }
     }
 
     updatedBooking.total_price = totalPrice;
