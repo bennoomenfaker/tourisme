@@ -1,6 +1,6 @@
 Salut Maram !
 
-J'ai complètement mis àjour les descriptions des PRs pour que tu comprennes parfaitement ce que je fais.
+
 
 ## 🎯 **Ce que j'ai fait :**
 
@@ -27,11 +27,7 @@ J'ai complètement mis àjour les descriptions des PRs pour que tu comprennes pa
 ## 🎯 **Prochaines étapes :**
 
 1. Ouvre les PRs et lis les descriptions complètes
-2. Regarde les captures d'écran pour voir le résultat
-3. Décide quelle option d'intégration tu préfères
-4. Je suis là pour t'aider techniquement
-
-Les PRs sont maintenant beaucoup plus clairs et complets ! Tu comprendras exactement ce que j'ajoute et pourquoi.
-
+2. Regarde les captures d'écran pour voir le résultat.
+3. 
 Bonne journée,
-Bennoomen
+BEN NOOMEN Faker 
