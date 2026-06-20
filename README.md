@@ -42,6 +42,21 @@ L'objectif est de promouvoir un tourisme respectueux de l'environnement via un s
 │                    réseau interne tourisme_net                 │
 └──────────────────────────────────────────────────────────────┘
 ```
+# Rapport d'Analyse — Éco-Voyage
+
+## 1. Qu'est-ce que ce projet ?
+
+**Éco-Voyage** est une plateforme web de **tourisme durable / éco-tourisme** qui connecte trois types d'acteurs : les **voyageurs éco-responsables**, les **guides locaux**, et les **propriétaires de projets éco-touristiques** (hébergements, restaurants, agences, etc.). L'objectif est de promouvoir un tourisme respectueux de l'environnement avec un système de **score de durabilité** et de **badges** pour gamifier l'engagement écologique.
+
+---
+
+## 2. Fonctionnalités (Use Cases)
+
+| Fonctionnalité | Description |
+|---|---|
+| **Inscription & Connexion** | Register/Login avec email + Google OAuth, avec 3 rôles |
+| **Vérification email** | Email de confirmation avec lien (via Nodemailer) |
+| **Mot de passe oublié** | Forgot/reset password avec token + email |
 
 ---
 
