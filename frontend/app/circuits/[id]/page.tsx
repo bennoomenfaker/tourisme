@@ -181,7 +181,7 @@ export default function CircuitDetailPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((reservations) => {
-        const mine = reservations.find((r: any) => r.circuit_id === id && r.user_id === (user?.sub ?? user?.id) && r.status !== "cancelled");
+        const mine = reservations.find((r: any) => r.circuit_id === id && r.user_id === (user?.sub ?? user?.id) && r.status !== "cancelled" && r.status !== "rejected");
         if (mine) {
           setMyReservation(mine);
           setModifyParticipants(mine.participants_count || 1);

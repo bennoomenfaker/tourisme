@@ -118,7 +118,7 @@ export default function OfferDetailPage() {
     const token = localStorage.getItem("access_token");
     if (!token) return;
     apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } })
-      .then((bookings) => setExistingBooking(bookings.some((b) => b.offer?.id === id)))
+      .then((bookings) => setExistingBooking(bookings.some((b) => b.offer?.id === id && b.status !== "cancelled" && b.status !== "rejected")))
       .catch(() => {});
     apiFetch<any>(`/favorites/check/offer/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => setIsFavorite(res?.isFavorite ?? false))

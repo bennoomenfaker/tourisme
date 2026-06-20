@@ -1509,7 +1509,8 @@ function EcoTravelerOffersSection({ router }: { router: any }) {
       token ? apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []) : Promise.resolve([]),
     ]).then(([allOffers, bookings]) => {
       setOffers(allOffers);
-      const ids = new Set(bookings.map((b: any) => b.offer?.id).filter(Boolean));
+      const activeBookings = bookings.filter((b: any) => b.status !== "cancelled" && b.status !== "rejected");
+      const ids = new Set(activeBookings.map((b: any) => b.offer?.id).filter(Boolean));
       setReservedIds(ids);
     }).finally(() => setLoading(false));
   }, []);

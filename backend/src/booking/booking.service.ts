@@ -252,7 +252,7 @@ export class BookingService {
       .getMany();
   }
 
-  /** Ajoute des participants à une réservation existante */
+  /** Ajoute des participants à une réservation existante et recalcule le prix */
   async addParticipants(
     bookingId: string,
     travelerId: string,
@@ -276,6 +276,47 @@ export class BookingService {
       }),
     );
     await this.participantRepo.save(entities);
+
+    // Recalculer le prix avec le nouveau nombre total de participants
+    const updatedBooking = await this.findById(bookingId);
+    const totalCount = updatedBooking.participants?.length ?? 1;
+    let totalPrice = 0;
+
+    if (updatedBooking.offerItem) {
+      const offerItem = await this.offerItemRepo.findOne({
+        where: { id: updatedBooking.offerItem.id },
+        relations: ['prices'],
+      });
+      if (offerItem && offerItem.prices?.length) {
+        const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
+        const unitPrice = Number(priceRow.price);
+        const pricingUnit = priceRow.pricing_unit ?? 'per_person';
+        const nights = offerItem.nights ?? 1;
+
+        switch (pricingUnit) {
+          case 'per_person_per_night':
+          case 'per_night':
+            totalPrice = unitPrice * totalCount * nights;
+            break;
+          case 'per_room_per_night':
+            totalPrice = unitPrice * nights;
+            break;
+          case 'per_bed':
+            totalPrice = unitPrice * (offerItem.bed_count ?? totalCount) * nights;
+            break;
+          case 'per_person':
+          default:
+            totalPrice = unitPrice * totalCount;
+            break;
+        }
+      }
+    } else if (updatedBooking.offer?.price) {
+      totalPrice = Number(updatedBooking.offer.price) * totalCount;
+    }
+
+    updatedBooking.total_price = totalPrice;
+    await this.bookingRepo.save(updatedBooking);
+
     return this.findById(bookingId);
   }
 }

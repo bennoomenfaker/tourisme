@@ -114,11 +114,21 @@ function NewReservationPage() {
 
   const selectedItem = offer?.items.find((i) => i.id === selectedItemId);
   const selectedPrice = selectedItem?.prices.find((p) => p.is_default) ?? selectedItem?.prices[0];
-  const totalPrice = selectedPrice
-    ? Number(selectedPrice.price) * participants.length
+
+  const baseUnitPrice = selectedPrice
+    ? Number(selectedPrice.price)
     : offer?.price
-    ? Number(offer.price) * participants.length
+    ? Number(offer.price)
+    : offer?.items?.length
+    ? offer.items
+        .filter((i) => i.status !== "inactive")
+        .reduce((sum, i) => {
+          const p = i.prices?.find((pp) => pp.is_default) ?? i.prices?.[0];
+          return sum + (p ? Number(p.price) : 0);
+        }, 0)
     : 0;
+
+  const totalPrice = baseUnitPrice * participants.length;
 
   const handleSubmit = async () => {
     if (!offerId || !participants[0].full_name.trim()) {
