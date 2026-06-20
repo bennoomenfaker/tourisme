@@ -28,9 +28,16 @@
 | **Modération Admin** | Workflow de validation : offres, projets, publications en attente d'approbation |
 | **Publications** | Réseau social interne : publications places/expériences, likes, commentaires |
 | **Catalogue avancé** | Items, prix par catégorie, disponibilités, sessions — catalogue simple & complexe + page détail offre |
+| **Calcul prix serveur** | Prix calcule selon `pricing_unit` (per_person, per_night, etc.) — client n'envoie jamais total_price |
+| **Gestion capacite** | `remaining_capacity` decremente/ restaure; statut `full` quand 0 |
 | **Réservations** | Réservation d'offres/items/sessions avec participants, confirmation auto/manuelle, annulation + pages dashboard |
 | **Circuits multi-jours** | Packages avec programme jour par jour, options additionnelles, réservation + pages publiques |
-| **Notifications** | Système de notifications utilisateur (création, lecture, compteur) + page notifications |
+| **Circuits dans TripPlan** | TripPlan supporte les items circuit (XOR avec offer_item) |
+| **Notifications** | Système de notifications utilisateur (création, lecture, compteur) + page notifications + notif sur tous les evenements |
+| **Favoris** | Toggle favori sur offres et circuits (POST toggle, check, count) |
+| **Avis (Reviews)** | Notes 1-5 + commentaire + photos, un par user par cible, note moyenne publique |
+| **Upload Cloudinary** | Composant ImageUploader drag-and-drop via POST /upload |
+| **Cartes OpenStreetMap** | Cartes Leaflet avec attribution OSM sur offres, circuits, trip plans |
 | **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
 | **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
 | **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
@@ -103,7 +110,7 @@
 
 ## 5. Structure de la Base de Données
 
-### PostgreSQL (Données relationnelles — 10 entités)
+### PostgreSQL (Données relationnelles — 43+ entités)
 
 ```
 users                    (auth, rôles, status, tokens)
@@ -122,9 +129,32 @@ question_categories       (environmental, social, economic)
 
 questionnaire_attempts     (tentatives de l'utilisateur)
   └── user_answers         (réponses données)
+
+offers                    (offres éco-touristiques, status pending/approved)
+  ├── offer_items          (éléments vendables)
+  │   ├── offer_item_prices     (prix par catégorie)
+  │   ├── offer_item_sessions   (créneaux datés)
+  │   └── offer_item_capacities (capacité restante)
+  └── offer_categories     (lookup 10 catégories)
+
+bookings                  (réservations, prix calcule server-side)
+  └── booking_participants (individus dans une réservation)
+
+circuits                  (circuits multi-jours, GPS, images)
+  ├── circuit_days         (jours du circuit)
+  │   └── circuit_program_items (activités)
+  ├── circuit_options      (options additionnelles)
+  └── circuit_reservations (réservations de circuits)
+
+trip_plans                (plans de voyage)
+  └── trip_plan_items      (items: offer_item_id XOR circuit_id)
+
+favorites                 (favoris, unique user+type+target)
+reviews                   (avis, rating 1-5, photos)
+notifications             (notifications utilisateur)
 ```
 
-### MongoDB (Données NoSQL — 5 collections)
+### MongoDB (Données NoSQL — 6 collections)
 
 | Collection | Usage |
 |---|---|
@@ -133,6 +163,7 @@ questionnaire_attempts     (tentatives de l'utilisateur)
 | `guide_skills` | Compétences guide (activités, paysages, certifications) |
 | `guide_engagement` | Engagement guide (score, badges, stats) |
 | `project_services` | Services des projets éco (offerts, pratiques) |
+| `user_stats` | Statistiques utilisateur (reservations, partages, etc.) |
 
 ---
 
@@ -157,9 +188,12 @@ src/
 ├── guide/            Profil & scoring des guides
 ├── project-owner/    Profil & CRUD projets des propriétaires
 ├── offer/            Offres éco-touristiques (CRUD, scoring, workflow modération, catalogue items, prix, disponibilités, sessions)
-├── booking/          Réservations (bookings, participants, confirmation, annulation)
-├── circuit/          Circuits multi-jours (jours, programme, options, réservations)
-├── notification/     Notifications utilisateur (création, lecture, compteur non-lues)
+├── booking/          Réservations (bookings, participants, confirmation, annulation, prix calcule server-side, capacite)
+├── circuit/          Circuits multi-jours (jours, programme, options, réservations, ownership checks)
+├── notification/     Notifications utilisateur (tous les evenements: booking, message, admin, etc.)
+├── trip-plan/        Plans de voyage (CRUD + réservation groupée + support circuits)
+├── favorite/         Favoris (toggle, check, count — offer/circuit/project/guide)
+├── review/           Avis (notes 1-5, commentaire, photos, note moyenne)
 ├── questionnaire/    QCM durabilité (soumission, scoring)
 ├── publication/      Publications sociales (places, expériences, likes, commentaires)
 ├── messages/         Messagerie privée (conversations, blocage)
@@ -228,6 +262,14 @@ src/
 | `GET /admin/offers/pending` | Admin | Offres en attente |
 | `PATCH /admin/offers/:id/approve` | Admin | Approuver une offre |
 | `PATCH /admin/offers/:id/reject` | Admin | Refuser une offre |
+| `POST /favorites` | Éco-voyageur | Toggle favori |
+| `GET /favorites?type=` | Éco-voyageur | Liste favoris |
+| `GET /favorites/check/:targetType/:targetId` | Éco-voyageur | Vérifier favori |
+| `GET /favorites/count/:targetType` | Public | Compteur favoris |
+| `POST /reviews` | Éco-voyageur | Créer un avis |
+| `GET /reviews/target/:type/:id` | Public | Avis d'une cible |
+| `GET /reviews/average/:type/:id` | Public | Note moyenne |
+| `POST /upload` | Auth | Upload image Cloudinary |
 
 ---
 
@@ -474,13 +516,16 @@ Niveaux :
 | `/profile/guide` | Profil public guide |
 | `/profile/project-owner` | Profil public propriétaire |
 | `/profile/project-owner/[userId]` | Profil public propriétaire (dynamique) |
-| `/offers/[id]` | Détail offre (items, prix, sessions, réserver) |
+| `/offers/[id]` | Détail offre (items, prix, sessions, carte, réserver, favori) |
 | `/reservations/new` | Formulaire réservation |
 | `/dashboard/reservations` | Mes réservations voyageur |
 | `/dashboard/incoming` | Réservations reçues (provider) |
 | `/circuits` | Liste publique circuits |
-| `/circuits/[id]` | Détail circuit (itinéraire, options) |
+| `/circuits/[id]` | Détail circuit (itinéraire, options, carte, favori) |
 | `/notifications` | Notifications utilisateur |
+| `/trip-plans` | Plans de voyage (liste) |
+| `/trip-plans/new` | Création plan |
+| `/trip-plans/[id]` | Détail plan (items, réservation groupée) |
 
 ---
 
@@ -492,7 +537,11 @@ Niveaux :
 - Passe le questionnaire de durabilité (score initial)
 - Parcourt les offres éco-touristiques sur la page Destinations (filtres, carte, recherche)
 - Consulte le détail d'une offre (photos, description, inclus, carte, politique d'annulation)
+- **Ajoute des offres en favoris** (coeur toggle)
+- **Note et commente les offres** (avis 1-5 + commentaire + photos)
 - Réserve via la page détail offre ou circuit avec formulaire participants
+- **Crée des plans de voyage** combinant offres et circuits
+- **Réserve ses plans de voyage** en une seule action
 - Voit ses réservations dans le dashboard (statut, annulation)
 - Contacte le créateur d'une offre via messagerie
 - **Follow des guides et propriétaires** pour suivre leurs actualités

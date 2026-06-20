@@ -1,6 +1,6 @@
 # EcoVoyage — Plateforme d'Éco-Tourisme Tunisie
 
-> **PR pour Maram** — Catalogue, réservation, circuits, notifications, plans de voyage, onboarding, maps, partage, et correctifs de bugs
+> **PR pour Maram** — Catalogue, réservation, circuits, notifications, plans de voyage, onboarding, maps, favoris, avis, et correctifs de bugs
 
 ---
 
@@ -12,33 +12,46 @@
 |--------|-------------|
 | **Catalogue avancé** | Items vendables (hebergement, activite, restauration...), prix par categorie, sessions datées, capacite, disponibilites |
 | **Réservations** | Réservation d'offres/items/sessions avec participants, confirmation auto/manuelle, annulation, double reservation prevention |
+| **Calcul prix côté serveur** | Prix calcule automatiquement selon `pricing_unit` (per_person, per_person_per_night, per_room_per_night, per_bed, per_night) — le client n'envoie jamais `total_price` |
+| **Gestion capacite** | `remaining_capacity` decremente a la reservation, restaure a l'annulation; statut `full` quand 0 |
 | **Circuits multi-jours** | Packages avec programme jour par jour, GPS, images, options, réservation avec verification des participants |
-| **Notifications** | Système de notifications (booking confirmé, annulation, demande, offre approuvée, nouveau message, circuit dispo) |
-| **Plans de voyage (TripPlan)** | Créer des plans multi-activités, réserver en groupe avec verification des limites de participants |
+| **Circuits dans TripPlan** | TripPlan supporte les items circuit (XOR avec offer_item) — reservation groupée mixte |
+| **Notifications** | Système complet : booking, annulation, offre approuvée, nouveau message, circuit dispo, admin approve/reject |
+| **Plans de voyage (TripPlan)** | Créer des plans multi-activités (offres + circuits), réserver en groupe avec verification des limites |
+| **Favoris** | Toggle favori sur offres et circuits (POST toggle, check, count) — eco-voyageurs uniquement |
+| **Avis (Reviews)** | Notes 1-5 + commentaire + photos, un par user par cible, note moyenne publique |
+| **Upload images Cloudinary** | Composant `ImageUploader` drag-and-drop, upload via `POST /upload` → URL stockee en DB |
+| **Cartes Leaflet/OpenStreetMap** | Cartes interactives sur circuits, plans de voyage, détail offre (avec attribution OSM) |
 | **Onboarding guidé** | Questionnaire onboarding multi-étapes pour chaque rôle (5 étapes pour eco-voyageur) |
-| **Cartes Leaflet/OpenStreetMap** | Cartes interactives sur circuits, plans de voyage, détail offre |
 | **Partage via messagerie** | Boutons de partage qui redirigent vers la messagerie interne |
 | **Login/Register validation** | Validation inline (email regex, password strength) |
-| **Badge notifications** | Compteur de notifications non-lues sur l'icone |
-| **Dashboard eco-voyageur** | Section "Offres" avec filtres (Toutes/Disponibles/Réservées), stats reelles PostgreSQL |
-| **Guided Offer Wizard** | Wizard 4 étapes adapte selon le type de projet, avec gestion d'images URL |
+| **Badge notifications** | Compteur de notifications non-lues sur l'icone (navbar + dashboard header) |
+| **Dashboard eco-voyageur** | Section "Offres" avec filtres, stats reelles PostgreSQL, trip plans depuis la DB |
+| **Guided Offer Wizard** | Wizard 4 étapes adapte selon le type de projet, avec gestion d'images upload |
 | **Gestion d'offres (edit/view/delete)** | Boutons Editer/Supprimer sur les offres, editeur de prix/sessions |
-| **Circuit edit avec images** | Modal d'edition avec gestionnaire d'images URL et carte repositionnee |
+| **Circuit edit avec images** | Modal d'edition avec ImageUploader et carte repositionnee |
 | **Reservation modification** | PATCH/DELETE sur les reservations pending pour les voyageurs |
+| **Moderation circuits** | Circuits en status `pending` a la creation (pas `approved` directement) |
+| **Ownership checks** | addDay, addOption, addProgramItem verifient l'auteur du circuit |
 
 ### Correctifs de bugs
 
 | Bug | Correction |
 |-----|------------|
-| **Onboarding redirect loop** | `traveler_id` corrigé en `traveler: { id }` dans eco-traveler.service.ts (erreur TypeORM) |
-| **Reservation page loading** | `setLoading(false)` maintenant appele sur le chemin de succes (pas seulement en .catch) |
-| **Offer detail "Reserver" button** | Bouton toujours affiche pour les eco-voyageurs, meme si l'offre a des items |
+| **Onboarding redirect loop** | `traveler_id` corrigé en `traveler: { id }` dans eco-traveler.service.ts |
+| **Reservation page loading** | `setLoading(false)` maintenant appele sur le chemin de succes |
+| **Offer detail "Reserver" button** | Bouton toujours affiche pour les eco-voyageurs |
 | **Circuit modal scroll** | Tous les modals ont `max-h-[90vh] overflow-y-auto` |
 | **Circuit edit map position** | MapPicker deplace avant le bouton sauvegarder |
 | **Messagerie useSearchParams** | Wrappe dans un `<Suspense>` boundary |
 | **apiFetch 204 handling** | Retourne null pour les reponses 204/vide |
 | **Double reservation prevention** | Offres et circuits verifient les reservations non-annulees existantes |
 | **Provider notifications** | Notifie l'auteur de l'offre/circuit lors d'une reservation |
+| **Dashboard notification badge** | Compteur non-lues affiche sur l'icone dans le header dashboard |
+| **Trip plans dashboard** | Trip plans recuperees depuis la DB (pas de valeurs hardcodees) |
+| **AppNavbar token** | Cle `localStorage` corrigee: `"token"` → `"access_token"` |
+| **Notifications endpoint** | Frontend appelle `/notifications/unread` (pas `/unread-count`) |
+| **TripPlanModule** | Circuit + CircuitReservation imports ajoutes (manquants) |
 
 ---
 
@@ -80,30 +93,35 @@
 
 ```
 backend/src/
-├── booking/           Réservations (bookings, participants, confirmation)
-├── circuit/           Circuits multi-jours (jours, programme, options, réservations)
-├── notification/      Notifications utilisateur
-├── trip-plan/         Plans de voyage (CRUD + réservation groupée)
+├── booking/           Réservations (bookings, participants, confirmation, prix calcule server-side)
+├── circuit/           Circuits multi-jours (jours, programme, options, réservations, ownership checks)
+├── notification/      Notifications utilisateur (tous les types d'evenements)
+├── trip-plan/         Plans de voyage (CRUD + réservation groupée + support circuits)
+├── favorite/          Favoris (toggle, check, count — offer/circuit/project/guide)
+├── review/            Avis (notes 1-5, commentaire, photos, note moyenne)
 ```
 
 ### Nouvelles entites PostgreSQL
 
 | Table | Description |
 |-------|-------------|
-| `offers` (+5 colonnes) | category_id, address, latitude, longitude, confirmation_mode |
-| `offer_items` | Elements vendables avec type, details |
+| `offers` (+7 colonnes) | category_id, address, latitude, longitude, confirmation_mode, meeting_lat/lng |
+| `offer_items` | Elements vendables avec type, details, capacite |
 | `offer_item_prices` | Prix par categorie (Adulte, Enfant, Etudiant...) |
 | `offer_item_sessions` | Creneaux datés avec capacite |
-| `bookings` | Reservations avec ref, status, participants |
+| `offer_item_capacities` | Capacite restante par type (beds, seats, tents, spaces) |
+| `bookings` | Reservations avec ref, status, participants, prix calcule server-side |
 | `booking_participants` | Individus dans une reservation |
-| `circuits` (+images) | Circuits multi-jours avec GPS |
+| `circuits` (+images) | Circuits multi-jours avec GPS, status pending/approved |
 | `circuit_days` | Jours du circuit |
 | `circuit_program_items` | Activites du programme |
 | `circuit_options` | Options additionnelles |
 | `circuit_reservations` | Reservations de circuits |
 | `notifications` | Notifications utilisateur |
 | `trip_plans` | Plans de voyage |
-| `trip_plan_items` | Items des plans |
+| `trip_plan_items` | Items des plans (offre OU circuit) |
+| `favorites` | Favoris (user + type + target, unique constraint) |
+| `reviews` | Avis (rating 1-5, comment, photos, target) |
 | `offer_categories` | Lookup (10 categories seedees) |
 
 ---
@@ -148,26 +166,27 @@ backend/src/
 
 | Methode | Endpoint | Role |
 |---------|----------|------|
-| POST | `/bookings` | Eco-voyageur |
+| POST | `/bookings` | Eco-voyageur (prix calcule server-side) |
 | GET | `/bookings/mine` | Eco-voyageur |
 | GET | `/bookings/incoming` | Provider |
 | GET | `/bookings/:id` | Tous (si concerne) |
-| PATCH | `/bookings/:id/cancel` | Eco-voyageur |
+| PATCH | `/bookings/:id/cancel` | Eco-voyageur (capacite restauree) |
 
 ### Circuits
 
 | Methode | Endpoint | Role |
 |---------|----------|------|
-| POST | `/circuits` | Guide/Project |
+| POST | `/circuits` | Guide/Project (status: pending) |
 | GET | `/circuits` | Public (filtre status=approved) |
 | GET | `/circuits/:id` | Detail |
 | PATCH | `/circuits/:id` | Owner |
-| POST | `/circuits/:circuitId/days` | Owner |
+| POST | `/circuits/:circuitId/days` | Owner (ownership check) |
 | PATCH | `/circuits/days/:dayId` | Owner |
 | DELETE | `/circuits/days/:dayId` | Owner |
-| POST | `/circuits/:circuitId/program` | Owner |
+| POST | `/circuits/:circuitId/program` | Owner (ownership check) |
 | PATCH | `/circuits/program/:programId` | Owner |
 | DELETE | `/circuits/program/:programId` | Owner |
+| POST | `/circuits/:circuitId/options` | Owner (ownership check) |
 | POST | `/circuits/:circuitId/reserve` | Eco-voyageur |
 | GET | `/circuits/reservations/mine` | Eco-voyageur |
 | GET | `/circuits/reservations/incoming` | Provider |
@@ -193,10 +212,37 @@ backend/src/
 | GET | `/trip-plans/:id` | Proprietaire |
 | PATCH | `/trip-plans/:id` | Proprietaire |
 | DELETE | `/trip-plans/:id` | Proprietaire |
-| POST | `/trip-plans/:id/items` | Proprietaire |
+| POST | `/trip-plans/:id/items` | Proprietaire (offer_item_id XOR circuit_id) |
 | PATCH | `/trip-plans/:id/items/:itemId` | Proprietaire |
 | DELETE | `/trip-plans/:id/items/:itemId` | Proprietaire |
-| POST | `/trip-plans/:id/book` | Proprietaire |
+| POST | `/trip-plans/:id/book` | Proprietaire (bookings + circuit_reservations) |
+
+### Favoris
+
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/favorites` | Eco-voyageur — toggle (add/remove) |
+| GET | `/favorites?type=` | Eco-voyageur — liste par type |
+| GET | `/favorites/check/:targetType/:targetId` | Eco-voyageur — verifier si favori |
+| GET | `/favorites/count/:targetType` | Public — compteur par type |
+| DELETE | `/favorites/:targetType/:targetId` | Eco-voyageur — supprimer |
+
+### Avis (Reviews)
+
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/reviews` | Eco-voyageur — creer (1 par user par cible) |
+| GET | `/reviews/target/:type/:id` | Public — avis d'une cible |
+| GET | `/reviews/mine` | Eco-voyageur — mes avis |
+| GET | `/reviews/average/:type/:id` | Public — note moyenne |
+| PATCH | `/reviews/:id` | Auteur — modifier |
+| DELETE | `/reviews/:id` | Auteur — supprimer |
+
+### Upload
+
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/upload` | Auth — upload image vers Cloudinary |
 
 ---
 
@@ -315,11 +361,23 @@ cd frontend && npm install && npm run dev
 - `synchronize: true` sur TypeORM (auto-sync entities en dev)
 - Les types de projet en DB sont en francais (`hebergement`, `artisanat`...)
 - Le wizard normalise les types en anglais pour la config
-- Les images des circuits/offres sont stockees comme URL (pas de file upload)
+- **Upload images**: `ImageUploader` → Cloudinary via `POST /upload` → URL stockee en DB
+- **Prix toujours calcule server-side**: le client n'envoie jamais `total_price`
+- `pricing_unit` values: `per_person`, `per_person_per_night`, `per_room_per_night`, `per_bed`, `per_night`
+- `images/` contient des **screenshots** (documentation), PAS des uploads Cloudinary
 - Les offres ont un champ `offer_type` varchar (pas `category_id` pour le wizard)
 - La table `trip_plans` utilise `eco_traveler_id` (pas `user_id`)
-- Le badge de notifications affiche le vrai compteur non-lues
-- La page destinations affiche les circuits reellement proposes
+- La table `notifications` utilise `body` (pas `message`)
+- La table `circuit_days` utilise `day_number` (pas `number`)
+- `whitelist: true, forbidNonWhitelisted: true` sur le global ValidationPipe
+- `GuidedOfferWizard` edit mode: skip step 1, utilise PATCH, refetch apres update
+- `apiFetch` retourne `null as T` pour les reponses 204/vide
+- `AppNavbar` utilise `localStorage.getItem("access_token")` (pas `"token"`)
+- Les circuits sont en `pending` a la creation (moderation admin)
+- `addDay`/`addOption`/`addProgramItem` necessitent `authorId?` pour ownership check
+- `TripPlanItem` supporte `circuit_id` (nullable) + `offer_item_id` (nullable) — XOR
+- Les favoris: pattern toggle (POST = add/remove), unique constraint par user+type+target
+- Les reviews: 1 review par user par cible, rating 1-5, photos optionnelles
 
 ---
 
