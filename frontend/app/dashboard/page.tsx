@@ -1463,7 +1463,9 @@ function TripPlansList() {
   const router = useRouter();
 
   useEffect(() => {
-    apiFetch<any[]>("/trip-plans/mine")
+    const token = localStorage.getItem("access_token");
+    if (!token) { setLoading(false); return; }
+    apiFetch<any[]>("/trip-plans/mine", { headers: { Authorization: `Bearer ${token}` } })
       .then(setPlans)
       .catch(() => setPlans([]))
       .finally(() => setLoading(false));
@@ -1790,6 +1792,7 @@ export default function DashboardPage() {
   const [showAddProject, setShowAddProject] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [dashConvos, setDashConvos] = useState<DashConv[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function init() {
@@ -1841,6 +1844,13 @@ export default function DashboardPage() {
     }
     init();
   }, [router]);
+
+  useEffect(() => {
+    if (!token) return;
+    apiFetch<number>("/notifications/unread", { headers: { Authorization: `Bearer ${token}` } })
+      .then((count) => setUnreadCount(count ?? 0))
+      .catch(() => {});
+  }, [token]);
 
   async function handleLogout() {
     try { if (token) await logoutUser(token); } catch {}
@@ -2104,8 +2114,13 @@ export default function DashboardPage() {
                 )}
               </div>
               <button onClick={() => router.push("/notifications")}
-                className="size-11 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors shrink-0">
+                className="relative size-11 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors shrink-0">
                 <span className="material-symbols-outlined">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </button>
               <div className="h-10 w-[1px] bg-slate-200 shrink-0" />
               <button onClick={() => router.push(profilePath)}
