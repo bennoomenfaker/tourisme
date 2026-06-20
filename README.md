@@ -552,8 +552,8 @@ git push origin feature/nouvelle-fonctionnalite
 ## 📞 Support
 
 ### Équipe de Développement
-- **Maram Mejri** - Architecture backend/frontend
-- **Bennoomen Faker** - Développement fullstack
+- **Maram Mejri** https://github.com/Maram172003
+- **Bennoomen Faker** https://github.com/bennoomenfaker/tourisme
 
 ### Documentation Complète
 - [Documentation technique](./docs/)
