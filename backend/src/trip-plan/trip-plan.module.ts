@@ -10,10 +10,12 @@ import { TripPlanController } from './trip-plan.controller';
 import { NotificationModule } from '../notification/notification.module';
 import { EcoTravelerModule } from '../eco-traveler/eco-traveler.module';
 import { Offer } from '../offer/entities/offer.entity';
+import { Circuit } from '../circuit/entities/circuit.entity';
+import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TripPlan, TripPlanItem, Booking, BookingParticipant, OfferItemSession, Offer]),
+    TypeOrmModule.forFeature([TripPlan, TripPlanItem, Booking, BookingParticipant, OfferItemSession, Offer, Circuit, CircuitReservation]),
     NotificationModule,
     EcoTravelerModule,
   ],
