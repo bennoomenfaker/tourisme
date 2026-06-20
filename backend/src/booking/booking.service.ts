@@ -88,6 +88,9 @@ export class BookingService {
             break;
         }
       }
+    } else if (offer.price) {
+      // Offre simple sans item : utiliser le prix de l'offre directement
+      totalPrice = Number(offer.price) * participantCount;
     }
 
     const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
