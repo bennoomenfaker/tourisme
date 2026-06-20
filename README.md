@@ -383,21 +383,51 @@ cd frontend && npm install && npm run dev
 
 ## 11. Galerie de Screenshots
 
-L'application EcoVoyage a été entièrement développée et intégrée. Voici quelques aperçus de l'interface :
+L'application EcoVoyage a ete entierement developpee et integree. Voici quelques apercus de l'interface :
 
 <details>
-<summary>Cliquez pour voir la galerie (plus de 50 screenshots disponibles dans le dossier `images/`)</summary>
+<summary>Cliquez pour voir la galerie (75+ screenshots dans le dossier `images/`)</summary>
 
-![Dashboard](images/Screenshot_2026-06-18_12-54-04.png)
-![Offres](images/Screenshot_2026-06-18_12-54-10.png)
-![Détail Offre](images/Screenshot_2026-06-18_12-54-18.png)
-![Assistant Création](images/Screenshot_2026-06-18_12-54-30.png)
+### Dashboard & Navigation
+![Dashboard Eco-voyageur](images/Screenshot_2026-06-18_12-54-04.png)
+![Dashboard Guide](images/Screenshot_2026-06-18_12-54-10.png)
+![Dashboard Notification Badge](images/Screenshot_2026-06-18_13-25-54.png)
+
+### Offres & Catalogue
+![Detail Offre avec Carte](images/Screenshot_2026-06-18_12-54-18.png)
+![Assistant Creation Offre](images/Screenshot_2026-06-18_12-54-30.png)
 ![Prix et Sessions](images/Screenshot_2026-06-18_12-54-43.png)
-![Réservation](images/Screenshot_2026-06-18_12-54-50.png)
-![Circuits](images/Screenshot_2026-06-18_12-54-57.png)
-![Détail Circuit](images/Screenshot_2026-06-18_12-55-03.png)
-![Plan de voyage](images/Screenshot_2026-06-18_12-55-13.png)
-![Notifications](images/Screenshot_2026-06-18_12-55-18.png)
+![Creation Offre Activite](images/cree%20offre%20actvite.png)
 
-*Tous les screenshots complets sont disponibles dans le dossier `images/` du dépôt.*
+### Reservations
+![Formulaire Reservation](images/Screenshot_2026-06-18_12-54-50.png)
+![Mes Reservations](images/Screenshot_2026-06-18_12-59-20.png)
+![Reservations Recues Provider](images/Screenshot_2026-06-18_12-59-26.png)
+
+### Circuits
+![Liste Circuits](images/Screenshot_2026-06-18_12-54-57.png)
+![Detail Circuit avec Carte](images/Screenshot_2026-06-18_12-55-03.png)
+![Circuit avec Images](images/Screenshot_2026-06-18_13-56-15.png)
+
+### Plans de Voyage
+![Liste Trip Plans](images/Screenshot_2026-06-18_12-55-13.png)
+![Detail Trip Plan](images/Screenshot_2026-06-18_12-55-18.png)
+
+### Notifications & Messagerie
+![Notifications](images/Screenshot_2026-06-18_13-05-29.png)
+![Messagerie Privee](images/Screenshot_2026-06-18_13-28-28.png)
+
+### Cartes & Localisation
+![Carte Leaflet Offre](images/Screenshot_2026-06-18_12-55-31.png)
+![Carte Circuit](images/Screenshot_2026-06-18_12-55-48.png)
+
+### Auth & Onboarding
+![Connexion](images/Screenshot_2026-06-18_13-57-21.png)
+![Inscription](images/Screenshot_2026-06-18_13-57-41.png)
+![Onboarding Eco-voyageur](images/Screenshot_2026-06-18_13-57-53.png)
+
+### Homepage
+![Landing Page EcoVoyage](images/Screenshot_2026-06-18_13-58-39.png)
+
+*Tous les screenshots complets sont disponibles dans le dossier `images/` du depot.*
 </details>

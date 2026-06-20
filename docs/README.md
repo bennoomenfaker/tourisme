@@ -621,3 +621,25 @@ CLOUDINARY_API_SECRET=votre_api_secret
 - **Authentification avec refresh token rotation** (sécurité renforcée)
 - **Modules sociaux complets :** Publications (places/expériences), Messagerie privée, Follow, Signalements
 - **Panneau Admin :** validation offres/projets/publications, gestion des signalements, bannissement
+- **Calcul prix server-side** avec 3 fallbacks (item selectionne, offre simple, somme items)
+- **Favoris et Avis** completes (backend + frontend)
+- **75+ screenshots** dans le dossier `images/`
+
+---
+
+## 18. Screenshots
+
+| Categorie | Screenshots |
+|-----------|-------------|
+| Dashboard | Eco-voyageur, Guide, Proprietaire, Notification Badge |
+| Offres | Creation (GuidedOfferWizard), Detail avec carte, Prix/Sessions |
+| Reservations | Formulaire, Mes reservations, Reservations recues |
+| Circuits | Liste, Detail avec carte, Images/Programme |
+| Trip Plans | Liste, Detail |
+| Notifications | Page notifications, Badge |
+| Messagerie | Conversations privees |
+| Cartes | Leaflet/OpenStreetMap sur offres et circuits |
+| Auth | Login, Register, Onboarding |
+| Homepage | Landing page EcoVoyage |
+
+Les screenshots sont dans `../images/` (75+ fichiers PNG).
