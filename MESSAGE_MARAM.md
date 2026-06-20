@@ -70,23 +70,10 @@ Transformer ta plateforme de base en une **solution professionnelle complète** 
 - Créer une nouvelle branche pour tester
 - Avantage : Aucun risque sur la version principale
 
-### 📞 **Support Disponible**
 
-Je suis disponible pour :
-- T'expliquer chaque module en détail
-- T'aider point par point à l'intégration
-- Fournir des démos des fonctionnalités
-- Résoudre tout problème technique
-
-### ❓ **Questions**
-
-1. **Quelle option d'intégration préféres-tu ?**
-2. **Y a-t-il des fonctionnalités spécifiques qui t'intéressent plus que d'autres ?**
-3. **As-tu besoin de plus d'explications sur un module particulier ?**
 
 Ces PRs représentent un saut qualitatif important pour Éco-Voyage. La plateforme passerait d'une base fonctionnelle à une solution enterprise-ready avec des fonctionnalités innovantes comme les plans de voyage.
 
-Dis-moi ce que tu en penses !
 
 Bonne journée,
 Ben Noomen FAKER
