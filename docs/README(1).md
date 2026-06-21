@@ -27,6 +27,17 @@
 | **Page Destinations** | Vitrine publique des offres approuvées avec filtres, recherche et carte interactive |
 | **Modération Admin** | Workflow de validation : offres, projets, publications en attente d'approbation |
 | **Publications** | Réseau social interne : publications places/expériences, likes, commentaires |
+| **Catalogue avancé** | Items, prix par catégorie, disponibilités, sessions — catalogue simple & complexe + page détail offre |
+| **Calcul prix serveur** | Prix calcule selon `pricing_unit` (per_person, per_night, etc.) — client n'envoie jamais total_price |
+| **Gestion capacite** | `remaining_capacity` decremente/ restaure; statut `full` quand 0 |
+| **Réservations** | Réservation d'offres/items/sessions avec participants, confirmation auto/manuelle, annulation + pages dashboard |
+| **Circuits multi-jours** | Packages avec programme jour par jour, options additionnelles, réservation + pages publiques |
+| **Circuits dans TripPlan** | TripPlan supporte les items circuit (XOR avec offer_item) |
+| **Notifications** | Système de notifications utilisateur (création, lecture, compteur) + page notifications + notif sur tous les evenements |
+| **Favoris** | Toggle favori sur offres et circuits (POST toggle, check, count) |
+| **Avis (Reviews)** | Notes 1-5 + commentaire + photos, un par user par cible, note moyenne publique |
+| **Upload Cloudinary** | Composant ImageUploader drag-and-drop via POST /upload |
+| **Cartes OpenStreetMap** | Cartes Leaflet avec attribution OSM sur offres, circuits, trip plans |
 | **Messagerie** | Messagerie privée entre utilisateurs avec conversations et blocage |
 | **Système de Follow** | Abonnement entre utilisateurs (voyageurs → guides/propriétaires) |
 | **Signalements** | Signalement de contenu inapproprié avec résolution + bannissement |
@@ -41,14 +52,14 @@
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  Docker Compose                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌──────┐ │
-│  │ PostgreSQL 15 │  │  MongoDB 7   │  │ NestJS   │  │Next.js│ │
-│  │  (relationnel)│  │  (NoSQL)     │  │ API:3003 │  │:3004  │ │
-│  └──────────────┘  └──────────────┘  └────┬─────┘  └──┬───┘ │
-│         ▲                  ▲              │            │      │
-│         │                  │              │  HTTP API  │      │
-│         └──────────────────┴──────────────┘────────────┘      │
-│                    réseau interne tourisme_net                │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐  ┌──────┐ │
+│  │ PostgreSQL 15 │  │  MongoDB 7   │  │ NestJS    │  │Next.js│ │
+│  │  (relationnel)│  │  (NoSQL)     │  │ API:3003  │  │:3004  │ │
+│  └──────────────┘  └──────────────┘  └─────┬─────┘  └──┬───┘ │
+│         ▲                  ▲               │            │      │
+│         │                  │               │  HTTP API  │      │
+│         └──────────────────┴───────────────┘────────────┘      │
+│                    réseau interne tourisme_net                 │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -91,7 +102,7 @@
 | Technologie | Usage |
 |---|---|
 | **Docker** + **Docker Compose** | Conteneurisation (4 services : db, mongo, api, web + minio unused) |
-| **Cloudinary** | Stockage d'images en cloud |
+| **Cloudinary** | Stockage d'images en cloud (upload via SDK cloudinary) |
 | **Réseau** | `tourisme_net` (external) |
 | **Ports exposés** | API sur `3003`, Frontend sur `3004` |
 
@@ -99,16 +110,16 @@
 
 ## 5. Structure de la Base de Données
 
-### PostgreSQL (Données relationnelles — 12 entités)
+### PostgreSQL (Données relationnelles — 43+ entités)
 
 ```
 users                    (auth, rôles, status, tokens)
   ├── eco_travelers      (profils voyageurs, scores, préférences)
   ├── guides             (profils guides, spécialités, expérience)
-  │     └── offers       (offres éco-touristiques des guides)
   └── project_owners     (profils propriétaires, organisation)
-        ├── projects     (projets éco-touristiques CRUD)
-        └── offers       (offres éco-touristiques des propriétaires)
+
+project_owners
+  └── projects           (projets éco-touristiques CRUD)
 
 questionnaires            (questionnaires par type)
   └── questions            (questions avec poids)
@@ -118,6 +129,29 @@ question_categories       (environmental, social, economic)
 
 questionnaire_attempts     (tentatives de l'utilisateur)
   └── user_answers         (réponses données)
+
+offers                    (offres éco-touristiques, status pending/approved)
+  ├── offer_items          (éléments vendables)
+  │   ├── offer_item_prices     (prix par catégorie)
+  │   ├── offer_item_sessions   (créneaux datés)
+  │   └── offer_item_capacities (capacité restante)
+  └── offer_categories     (lookup 10 catégories)
+
+bookings                  (réservations, prix calcule server-side)
+  └── booking_participants (individus dans une réservation)
+
+circuits                  (circuits multi-jours, GPS, images)
+  ├── circuit_days         (jours du circuit)
+  │   └── circuit_program_items (activités)
+  ├── circuit_options      (options additionnelles)
+  └── circuit_reservations (réservations de circuits)
+
+trip_plans                (plans de voyage)
+  └── trip_plan_items      (items: offer_item_id XOR circuit_id)
+
+favorites                 (favoris, unique user+type+target)
+reviews                   (avis, rating 1-5, photos)
+notifications             (notifications utilisateur)
 ```
 
 ### MongoDB (Données NoSQL — 6 collections)
@@ -128,8 +162,8 @@ questionnaire_attempts     (tentatives de l'utilisateur)
 | `traveler_engagement` | Engagement voyageur (score, badges, stats) |
 | `guide_skills` | Compétences guide (activités, paysages, certifications) |
 | `guide_engagement` | Engagement guide (score, badges, stats) |
-| `project_engagement` | Engagement propriétaire (score, badges, réservations) |
 | `project_services` | Services des projets éco (offerts, pratiques) |
+| `user_stats` | Statistiques utilisateur (reservations, partages, etc.) |
 
 ---
 
@@ -153,15 +187,21 @@ src/
 ├── eco-traveler/     Profil & scoring des voyageurs
 ├── guide/            Profil & scoring des guides
 ├── project-owner/    Profil & CRUD projets des propriétaires
-├── offer/            Offres éco-touristiques (CRUD, scoring, workflow modération)
+├── offer/            Offres éco-touristiques (CRUD, scoring, workflow modération, catalogue items, prix, disponibilités, sessions)
+├── booking/          Réservations (bookings, participants, confirmation, annulation, prix calcule server-side, capacite)
+├── circuit/          Circuits multi-jours (jours, programme, options, réservations, ownership checks)
+├── notification/     Notifications utilisateur (tous les evenements: booking, message, admin, etc.)
+├── trip-plan/        Plans de voyage (CRUD + réservation groupée + support circuits)
+├── favorite/         Favoris (toggle, check, count — offer/circuit/project/guide)
+├── review/           Avis (notes 1-5, commentaire, photos, note moyenne)
 ├── questionnaire/    QCM durabilité (soumission, scoring)
 ├── publication/      Publications sociales (places, expériences, likes, commentaires)
 ├── messages/         Messagerie privée (conversations, blocage)
 ├── follow/           Système d'abonnement entre utilisateurs
 ├── reports/          Signalements et modération
 ├── admin/            Panneau d'administration (validation, bannissement)
-├── upload/           Upload d'images (Cloudinary)
 ├── interactions/     Likes et commentaires génériques (multi-entités)
+├── upload/           Upload d'images (Cloudinary)
 ├── mail/             Service d'envoi d'emails (Nodemailer)
 ├── config/           Configuration (env vars, validation Joi)
 ├── database/         Connexions DB (TypeORM + Mongoose)
@@ -196,9 +236,40 @@ src/
 | `PATCH /offers/:id` | Auth (Guide/Projet) | Modifier une offre |
 | `PATCH /offers/:id/sustainability` | Auth (Guide/Projet) | Màj score durabilité |
 | `DELETE /offers/:id` | Auth (Guide/Projet) | Supprimer une offre |
+| `POST /offers/:offerId/items` | Auth (Guide/Projet) | Créer un item vendable |
+| `GET /offers/:offerId/items` | Public | Items d'une offre |
+| `PATCH /offers/items/:itemId` | Auth (Guide/Projet) | Modifier un item |
+| `DELETE /offers/items/:itemId` | Auth (Guide/Projet) | Supprimer un item |
+| `POST /offers/items/:itemId/prices` | Auth (Guide/Projet) | Ajouter un prix à un item |
+| `POST /offers/items/:itemId/availability` | Auth (Guide/Projet) | Règle de disponibilité |
+| `POST /offers/items/:itemId/sessions` | Auth (Guide/Projet) | Créer une session |
+| `GET /offers/items/:itemId/sessions` | Public | Sessions disponibles |
+| `POST /bookings` | Auth (Éco-voyageur) | Créer une réservation |
+| `GET /bookings/mine` | Auth (Éco-voyageur) | Mes réservations |
+| `GET /bookings/incoming` | Auth (Guide/Projet) | Réservations reçues |
+| `PATCH /bookings/:id/cancel` | Auth (Éco-voyageur) | Annuler une réservation |
+| `PATCH /bookings/:id/confirm` | Auth (Guide/Projet) | Confirmer (mode manuel) |
+| `POST /circuits` | Auth (Guide/Projet) | Créer un circuit |
+| `GET /circuits` | Public | Circuits approuvés |
+| `GET /circuits/:id` | Public | Détail circuit |
+| `POST /circuits/:id/days` | Auth (Guide/Projet) | Ajouter un jour |
+| `POST /circuits/:id/options` | Auth (Guide/Projet) | Ajouter une option |
+| `POST /circuits/:id/reserve` | Auth (Éco-voyageur) | Réserver un circuit |
+| `GET /notifications` | Auth (Tous) | Mes notifications |
+| `PATCH /notifications/:id/read` | Auth (Tous) | Marquer lue |
+| `PATCH /notifications/read-all` | Auth (Tous) | Tout marquer lu |
+| `GET /notifications/unread` | Auth (Tous) | Compteur non lues |
 | `GET /admin/offers/pending` | Admin | Offres en attente |
 | `PATCH /admin/offers/:id/approve` | Admin | Approuver une offre |
 | `PATCH /admin/offers/:id/reject` | Admin | Refuser une offre |
+| `POST /favorites` | Éco-voyageur | Toggle favori |
+| `GET /favorites?type=` | Éco-voyageur | Liste favoris |
+| `GET /favorites/check/:targetType/:targetId` | Éco-voyageur | Vérifier favori |
+| `GET /favorites/count/:targetType` | Public | Compteur favoris |
+| `POST /reviews` | Éco-voyageur | Créer un avis |
+| `GET /reviews/target/:type/:id` | Public | Avis d'une cible |
+| `GET /reviews/average/:type/:id` | Public | Note moyenne |
+| `POST /upload` | Auth | Upload image Cloudinary |
 
 ---
 
@@ -346,7 +417,7 @@ Messagerie interne entre utilisateurs avec système de **conversations**.
 | `POST` | `/api/messages` | Envoyer un message |
 
 ### 10.4 Use cases
-- 🧳 **Voyageur** : Contacte un guide ou propriétaire
+- 🧳 **Voyageur** : Contacte un guide ou propriétaire pour réserver
 - 🗺️ **Guide** : Répond aux voyageurs, contacte propriétaires
 - 🏗️ **Propriétaire** : Répond aux voyageurs et guides
 
@@ -355,7 +426,7 @@ Messagerie interne entre utilisateurs avec système de **conversations**.
 ## 11. Système de Follow (Abonnements)
 
 ### 11.1 Concept
-Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaires).
+Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaires) pour rester informés.
 
 ### 11.2 Règles de follow
 | Followeur | Followé |
@@ -391,7 +462,10 @@ Le panneau d'administration permet de gérer l'ensemble du contenu soumis.
 | **Projets** | Approuver / Refuser les projets |
 | **Publications** | Approuver / Refuser les places partagées |
 | **Signalements** | Résoudre les signalements (bannissement) |
-| **Utilisateurs** | Bannir / Débannir (temporaire ou permanent, email automatique) |
+| **Utilisateurs** | Bannir / Débannir |
+
+### 12.3 Systeme de signalement
+Tout utilisateur peut signaler un contenu inapproprié. L'admin examine et peut bannir l'utilisateur (temporairement ou définitivement). Un email est envoyé automatiquement lors du bannissement/débannissement.
 
 ---
 
@@ -442,14 +516,16 @@ Niveaux :
 | `/profile/guide` | Profil public guide |
 | `/profile/project-owner` | Profil public propriétaire |
 | `/profile/project-owner/[userId]` | Profil public propriétaire (dynamique) |
-| `/destinations` | Vitrine publique des offres avec filtres et carte |
-| `/admin` | Panneau d'administration (offres, projets, pubs, signalements) |
-| `/messagerie` | Messagerie privée |
-| `/profile/ecovoyageur` | Profil public voyageur |
-| `/profile/ecovoyageur/[userId]` | Profil public voyageur (dynamique) |
-| `/profile/guide` | Profil public guide |
-| `/profile/project-owner` | Profil public propriétaire |
-| `/profile/project-owner/[userId]` | Profil public propriétaire (dynamique) |
+| `/offers/[id]` | Détail offre (items, prix, sessions, carte, réserver, favori) |
+| `/reservations/new` | Formulaire réservation |
+| `/dashboard/reservations` | Mes réservations voyageur |
+| `/dashboard/incoming` | Réservations reçues (provider) |
+| `/circuits` | Liste publique circuits |
+| `/circuits/[id]` | Détail circuit (itinéraire, options, carte, favori) |
+| `/notifications` | Notifications utilisateur |
+| `/trip-plans` | Plans de voyage (liste) |
+| `/trip-plans/new` | Création plan |
+| `/trip-plans/[id]` | Détail plan (items, réservation groupée) |
 
 ---
 
@@ -461,6 +537,12 @@ Niveaux :
 - Passe le questionnaire de durabilité (score initial)
 - Parcourt les offres éco-touristiques sur la page Destinations (filtres, carte, recherche)
 - Consulte le détail d'une offre (photos, description, inclus, carte, politique d'annulation)
+- **Ajoute des offres en favoris** (coeur toggle)
+- **Note et commente les offres** (avis 1-5 + commentaire + photos)
+- Réserve via la page détail offre ou circuit avec formulaire participants
+- **Crée des plans de voyage** combinant offres et circuits
+- **Réserve ses plans de voyage** en une seule action
+- Voit ses réservations dans le dashboard (statut, annulation)
 - Contacte le créateur d'une offre via messagerie
 - **Follow des guides et propriétaires** pour suivre leurs actualités
 - **Partage des lieux (places)** et des **expériences de voyage (experiences)**
@@ -480,6 +562,7 @@ Niveaux :
 - **Follow des propriétaires de projet**
 - **Voit ses followers** (voyageurs et propriétaires)
 - Gère ses circuits et réservations
+- Confirme/refuse les réservations reçues via le dashboard
 - Reçoit des avis et accumule des badges
 
 ### 🏗️ Propriétaire de Projet
@@ -492,7 +575,7 @@ Niveaux :
 - **Voit ses followers** (voyageurs et guides)
 - Définit des labels éco (panneaux solaires, zéro plastique, etc.)
 - Passe l'évaluation de durabilité
-- Gère les réservations reçues
+- Gère les réservations reçues via le dashboard (confirmation/refus)
 
 ---
 
@@ -504,6 +587,24 @@ L'infrastructure est **100% Docker** :
 - Variables d'environnement dans `.env` / `.env.production`
 - Adresse de prod frontend : `http://91.134.139.163:3004`
 - Adresse de prod API : `http://91.134.139.163:3003/api`
+
+### Cloudinary (Stockage d'images)
+
+Le projet utilise **Cloudinary** comme service de stockage d'images.
+
+**Fonctionnement :**
+1. L'utilisateur upload une image via `POST /api/upload` (auth requis, multer, limite 10MB)
+2. L'API téléverse le fichier vers Cloudinary via `cloudinary.uploader.upload_stream()` dans le dossier `eco-tourism`
+3. L'API retourne l'URL sécurisée Cloudinary
+4. Pour supprimer : `UploadService.deleteByUrl(url)` — extrait le public_id et appelle `cloudinary.uploader.destroy()`
+
+**Variables d'environnement :**
+
+```
+CLOUDINARY_CLOUD_NAME=votre_cloud
+CLOUDINARY_API_KEY=votre_api_key
+CLOUDINARY_API_SECRET=votre_api_secret
+```
 
 ---
 
@@ -520,3 +621,25 @@ L'infrastructure est **100% Docker** :
 - **Authentification avec refresh token rotation** (sécurité renforcée)
 - **Modules sociaux complets :** Publications (places/expériences), Messagerie privée, Follow, Signalements
 - **Panneau Admin :** validation offres/projets/publications, gestion des signalements, bannissement
+- **Calcul prix server-side** avec 3 fallbacks (item selectionne, offre simple, somme items)
+- **Favoris et Avis** completes (backend + frontend)
+- **75+ screenshots** dans le dossier `images/`
+
+---
+
+## 18. Screenshots
+
+| Categorie | Screenshots |
+|-----------|-------------|
+| Dashboard | Eco-voyageur, Guide, Proprietaire, Notification Badge |
+| Offres | Creation (GuidedOfferWizard), Detail avec carte, Prix/Sessions |
+| Reservations | Formulaire, Mes reservations, Reservations recues |
+| Circuits | Liste, Detail avec carte, Images/Programme |
+| Trip Plans | Liste, Detail |
+| Notifications | Page notifications, Badge |
+| Messagerie | Conversations privees |
+| Cartes | Leaflet/OpenStreetMap sur offres et circuits |
+| Auth | Login, Register, Onboarding |
+| Homepage | Landing page EcoVoyage |
+
+Les screenshots sont dans `../images/` (75+ fichiers PNG).

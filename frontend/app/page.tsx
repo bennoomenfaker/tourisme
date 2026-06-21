@@ -1,10 +1,12 @@
 import DestinationsSection from "@/components/home/DestinationsSection";
 import FeaturedExperiences from "@/components/home/FeaturedExperiences";
+import CircuitsSection from "@/components/home/CircuitsSection";
 import Footer from "@/components/home/Footer";
 import Hero from "@/components/home/Hero";
 import HowItWorks from "@/components/home/HowItWorks";
 import Navbar from "@/components/home/Navbar";
 import Newsletter from "@/components/home/Newsletter";
+import TestimonialsSection from "@/components/home/TestimonialsSection";
 
 export default function HomePage() {
   return (
@@ -15,6 +17,8 @@ export default function HomePage() {
         <HowItWorks />
         <DestinationsSection />
         <FeaturedExperiences />
+        <CircuitsSection />
+        <TestimonialsSection />
         <Newsletter />
       </main>
       <Footer />

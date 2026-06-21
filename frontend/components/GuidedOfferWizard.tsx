@@ -13,7 +13,10 @@ import {
   CATEGORY_FORM_FIELDS, ACCOMMODATION_TYPES, ITEM_TYPES_BY_CATEGORY,
 } from "@/lib/offer-config";
 
-const MapPicker = dynamic(() => import("@/components/map/MapPicker"), { ssr: false });
+const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
+  ssr: false,
+  loading: () => <div className="h-[268px] rounded-2xl bg-slate-100 animate-pulse" />,
+});
 
 interface Props {
   token: string;
@@ -43,6 +46,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [step, setStep] = useState<1 | 2 | 3 | 4>(isEdit ? 2 : 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showMap, setShowMap] = useState(false);
 
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
@@ -64,6 +68,12 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
   const [items, setItems] = useState<OfferItemForm[]>([]);
   const [sessions, setSessions] = useState<{ id?: string; date: string; start_time: string; end_time: string; capacity: string }[]>([]);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    document.body.style.paddingRight = "0px";
+    return () => { document.body.style.overflow = ""; document.body.style.paddingRight = ""; };
+  }, []);
 
   useEffect(() => {
     if (!editOffer) return;
@@ -372,8 +382,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-[5vh] sm:pt-[8vh] px-4" onClick={onClose}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
@@ -474,8 +484,17 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
               {formFields.includes('gps') && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Localisation GPS</label>
-                  <MapPicker lat={lat ?? 36.8065} lng={lng ?? 10.1815} onPick={(la: number, ln: number) => { setLat(la); setLng(ln); }} />
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-500">Localisation GPS</label>
+                    <button type="button" onClick={() => setShowMap((v) => !v)} className="text-xs font-bold text-primary hover:underline">
+                      {showMap ? "Masquer la carte" : "Choisir sur la carte"}
+                    </button>
+                  </div>
+                  {showMap && (
+                    <div className="overflow-hidden rounded-xl">
+                      <MapPicker lat={lat ?? 36.8065} lng={lng ?? 10.1815} onPick={(la: number, ln: number) => { setLat(la); setLng(ln); }} />
+                    </div>
+                  )}
                 </div>
               )}
 

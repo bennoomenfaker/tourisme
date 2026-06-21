@@ -12,8 +12,13 @@ import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
 import CircuitMap from "@/components/map/CircuitMap";
 import ImageUploader from "@/components/ImageUploader";
+import Modal from "@/components/ui/Modal";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
-const MapPicker = dynamic(() => import("@/components/map/MapPicker"), { ssr: false });
+const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
+  ssr: false,
+  loading: () => <div className="h-[268px] rounded-2xl bg-slate-100 animate-pulse" />,
+});
 
 interface CircuitProgramItem {
   id: string;
@@ -126,6 +131,9 @@ export default function CircuitDetailPage() {
   const [progStart, setProgStart] = useState("");
   const [progEnd, setProgEnd] = useState("");
 
+  const [showEditMap, setShowEditMap] = useState(false);
+  const [showDayMap, setShowDayMap] = useState(false);
+
   const [showReserve, setShowReserve] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [reserveParticipants, setReserveParticipants] = useState(1);
@@ -140,6 +148,9 @@ export default function CircuitDetailPage() {
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmCancelReservation, setConfirmCancelReservation] = useState(false);
 
   const loadCircuit = () => {
     apiFetch<CircuitDetails>(`/circuits/${id}`)
@@ -257,7 +268,7 @@ export default function CircuitDetailPage() {
       setMyReservation((prev: any) => ({ ...prev, participants_count: modifyParticipants, final_total: effectivePrice * modifyParticipants }));
       setShowModifyReservation(false);
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la modification");
+      setReserveError(err.message || "Erreur lors de la modification");
     } finally {
       setModifySubmitting(false);
     }
@@ -265,7 +276,6 @@ export default function CircuitDetailPage() {
 
   async function handleCancelReservation() {
     if (!token || !myReservation) return;
-    if (!confirm("Annuler cette réservation ?")) return;
     try {
       await apiFetch(`/circuits/reservations/${myReservation.id}`, {
         method: "DELETE",
@@ -273,7 +283,7 @@ export default function CircuitDetailPage() {
       });
       setMyReservation(null);
     } catch (err: any) {
-      alert(err.message || "Erreur lors de l'annulation");
+      setReserveError(err.message || "Erreur lors de l'annulation");
     }
   }
 
@@ -307,14 +317,16 @@ export default function CircuitDetailPage() {
   }
 
   async function handleDelete() {
-    if (!token || !confirm("Supprimer ce circuit définitivement ?")) return;
+    if (!token) return;
     try {
       await apiFetch(`/circuits/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       router.push("/dashboard");
-    } catch { alert("Erreur lors de la suppression"); }
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de la suppression");
+    }
   }
 
   async function handleAddDay() {
@@ -335,8 +347,11 @@ export default function CircuitDetailPage() {
       });
       setShowAddDay(false);
       setDayTitle(""); setDayDesc(""); setDayNum(""); setDayDate(""); setDayLat(null); setDayLng(null); setDayLocationName("");
+      setShowDayMap(false);
       loadCircuit();
-    } catch { alert("Erreur lors de l'ajout du jour"); }
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de l'ajout du jour");
+    }
   }
 
   async function handleAddOption() {
@@ -356,7 +371,9 @@ export default function CircuitDetailPage() {
       setShowAddOption(false);
       setOptType("single_choice"); setOptGroup(""); setOptPrice(""); setOptIncluded(false); setOptRequired(false);
       loadCircuit();
-    } catch { alert("Erreur lors de l'ajout de l'option"); }
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de l'ajout de l'option");
+    }
   }
 
   async function handleAddProgram(dayId: string) {
@@ -375,7 +392,9 @@ export default function CircuitDetailPage() {
       setShowAddProgram(null);
       setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd("");
       loadCircuit();
-    } catch { alert("Erreur lors de l'ajout du programme"); }
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de l'ajout du programme");
+    }
   }
 
   function handleShare() {
@@ -680,205 +699,183 @@ export default function CircuitDetailPage() {
       </div>
 
       {/* ─── Modal Édition ─────────────────────────────── */}
-      {showEdit && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowEdit(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Modifier le circuit</h2>
-              <button onClick={() => setShowEdit(false)}><X size={20} className="text-slate-400" /></button>
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Modifier le circuit">
+        <div className="p-6 space-y-3">
+          <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Titre" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={3} />
+          <div className="grid grid-cols-2 gap-3">
+            <input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} placeholder="Prix" type="number" min={0} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <input value={editRegion} onChange={(e) => setEditRegion(e.target.value)} placeholder="Région" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <input value={editDays} onChange={(e) => setEditDays(e.target.value)} placeholder="Jours" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <input value={editNights} onChange={(e) => setEditNights(e.target.value)} placeholder="Nuits" type="number" min={0} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <input value={editMax} onChange={(e) => setEditMax(e.target.value)} placeholder="Max participants" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Date de début</label>
+              <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
-            <div className="space-y-3">
-              <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Titre" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-              <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={3} />
-              <div className="grid grid-cols-2 gap-3">
-                <input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} placeholder="Prix" type="number" min={0} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                <input value={editRegion} onChange={(e) => setEditRegion(e.target.value)} placeholder="Région" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                <input value={editDays} onChange={(e) => setEditDays(e.target.value)} placeholder="Jours" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                <input value={editNights} onChange={(e) => setEditNights(e.target.value)} placeholder="Nuits" type="number" min={0} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                <input value={editMax} onChange={(e) => setEditMax(e.target.value)} placeholder="Max participants" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Date de début</label>
-                  <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Date de fin</label>
-                  <input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                </div>
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Date de fin</label>
+              <input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
 
-              <ImageUploader images={editImages} onChange={setEditImages} maxImages={5} label="Images du circuit" />
+          <ImageUploader images={editImages} onChange={setEditImages} maxImages={5} label="Images du circuit" />
 
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Localisation du circuit</label>
-                {editAddress && <p className="text-xs text-slate-400 mb-1 truncate">{editAddress}</p>}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-slate-500">Localisation du circuit</label>
+              <button type="button" onClick={() => setShowEditMap((v) => !v)} className="text-xs font-bold text-primary hover:underline">
+                {showEditMap ? "Masquer la carte" : "Choisir sur la carte"}
+              </button>
+            </div>
+            {editAddress && <p className="text-xs text-slate-400 mb-1 truncate">{editAddress}</p>}
+            {showEditMap && (
+              <div className="overflow-hidden rounded-xl">
                 <MapPicker
                   lat={editLat}
                   lng={editLng}
                   onPick={(lat, lng, address) => { setEditLat(lat); setEditLng(lng); setEditAddress(address); }}
                 />
               </div>
-
-              <button onClick={handleEdit} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600">
-                Enregistrer
-              </button>
-            </div>
+            )}
           </div>
+
+          <button onClick={handleEdit} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600">
+            Enregistrer
+          </button>
         </div>
-      )}
+      </Modal>
 
       {/* ─── Modal Ajouter Jour ────────────────────────── */}
-      {showAddDay && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowAddDay(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Ajouter un jour</h2>
-              <button onClick={() => setShowAddDay(false)}><X size={20} className="text-slate-400" /></button>
+      <Modal open={showAddDay} onClose={() => setShowAddDay(false)} title="Ajouter un jour">
+        <div className="p-6 space-y-3">
+          <input value={dayNum} onChange={(e) => setDayNum(e.target.value)} placeholder="Numéro du jour (ex: 1)" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <input value={dayTitle} onChange={(e) => setDayTitle(e.target.value)} placeholder="Titre (ex: Arrivée)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Date (optionnel)</label>
+            <input type="date" value={dayDate} onChange={(e) => setDayDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <textarea value={dayDesc} onChange={(e) => setDayDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-slate-500">Lieu de la journée (optionnel)</label>
+              <button type="button" onClick={() => setShowDayMap((v) => !v)} className="text-xs font-bold text-primary hover:underline">
+                {showDayMap ? "Masquer la carte" : "Choisir sur la carte"}
+              </button>
             </div>
-            <div className="space-y-3">
-              <input value={dayNum} onChange={(e) => setDayNum(e.target.value)} placeholder="Numéro du jour (ex: 1)" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-              <input value={dayTitle} onChange={(e) => setDayTitle(e.target.value)} placeholder="Titre (ex: Arrivée)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Date (optionnel)</label>
-                <input type="date" value={dayDate} onChange={(e) => setDayDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-              </div>
-              <textarea value={dayDesc} onChange={(e) => setDayDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Lieu de la journée (optionnel)</label>
+            {showDayMap && (
+              <div className="overflow-hidden rounded-xl">
                 <MapPicker
                   lat={dayLat}
                   lng={dayLng}
                   onPick={(lat, lng, name) => { setDayLat(lat); setDayLng(lng); setDayLocationName(name); }}
                 />
               </div>
-              <button onClick={handleAddDay} disabled={!dayTitle || !dayNum} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
-                Ajouter
-              </button>
-            </div>
+            )}
           </div>
+          <button onClick={handleAddDay} disabled={!dayTitle || !dayNum} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
+            Ajouter
+          </button>
         </div>
-      )}
+      </Modal>
 
       {/* ─── Modal Ajouter Activité ────────────────────── */}
-      {showAddProgram && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowAddProgram(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Ajouter une activité</h2>
-              <button onClick={() => setShowAddProgram(null)}><X size={20} className="text-slate-400" /></button>
+      <Modal open={!!showAddProgram} onClose={() => setShowAddProgram(null)} title="Ajouter une activité">
+        <div className="p-6 space-y-3">
+          <input value={progTitle} onChange={(e) => setProgTitle(e.target.value)} placeholder="Titre (ex: Randonnée)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <textarea value={progDesc} onChange={(e) => setProgDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Heure de début</label>
+              <input type="time" value={progStart} onChange={(e) => setProgStart(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
-            <div className="space-y-3">
-              <input value={progTitle} onChange={(e) => setProgTitle(e.target.value)} placeholder="Titre (ex: Randonnée)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-              <textarea value={progDesc} onChange={(e) => setProgDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Heure de début</label>
-                  <input type="time" value={progStart} onChange={(e) => setProgStart(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Heure de fin</label>
-                  <input type="time" value={progEnd} onChange={(e) => setProgEnd(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                </div>
-              </div>
-              <button onClick={() => handleAddProgram(showAddProgram)} disabled={!progTitle} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
-                Ajouter
-              </button>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Heure de fin</label>
+              <input type="time" value={progEnd} onChange={(e) => setProgEnd(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
           </div>
+          <button onClick={() => handleAddProgram(showAddProgram!)} disabled={!progTitle} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
+            Ajouter
+          </button>
         </div>
-      )}
+      </Modal>
 
       {/* ─── Modal Modifier Réservation ──────────────────── */}
-      {showModifyReservation && myReservation && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowModifyReservation(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Modifier la réservation</h2>
-              <button onClick={() => setShowModifyReservation(false)}><X size={20} className="text-slate-400" /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Nombre de participants</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={circuit?.max_participants || 99}
-                  value={modifyParticipants}
-                  onChange={(e) => setModifyParticipants(Math.max(1, Number(e.target.value)))}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-              <p className="text-sm text-slate-600">
-                Total : <span className="font-bold text-primary">{Number(effectivePrice * modifyParticipants).toLocaleString()} {circuit?.currency || "TND"}</span>
-              </p>
-              <button
-                onClick={handleModifyReservation}
-                disabled={modifySubmitting}
-                className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50"
-              >
-                {modifySubmitting ? "Enregistrement..." : "Enregistrer"}
-              </button>
-            </div>
+      <Modal open={showModifyReservation} onClose={() => setShowModifyReservation(false)} title="Modifier la réservation">
+        <div className="p-6 space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Nombre de participants</label>
+            <input
+              type="number"
+              min={1}
+              max={circuit?.max_participants || 99}
+              value={modifyParticipants}
+              onChange={(e) => setModifyParticipants(Math.max(1, Number(e.target.value)))}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+            />
           </div>
+          <p className="text-sm text-slate-600">
+            Total : <span className="font-bold text-primary">{Number(effectivePrice * modifyParticipants).toLocaleString()} {circuit?.currency || "TND"}</span>
+          </p>
+          <button
+            onClick={handleModifyReservation}
+            disabled={modifySubmitting}
+            className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {modifySubmitting ? "Enregistrement..." : "Enregistrer"}
+          </button>
         </div>
-      )}
+      </Modal>
 
       {/* ─── Modal Réservation Circuit ──────────────────── */}
-      {showReserve && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowReserve(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Réserver ce circuit</h2>
-              <button onClick={() => setShowReserve(false)}><X size={20} className="text-slate-400" /></button>
-            </div>
-            {reserveError && (
-              <div className="bg-red-50 border border-red-100 rounded-xl p-3 mb-3 text-sm text-red-600">{reserveError}</div>
+      <Modal open={showReserve} onClose={() => setShowReserve(false)} title="Réserver ce circuit">
+        <div className="p-6 space-y-3">
+          {reserveError && (
+            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-600">{reserveError}</div>
+          )}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Nombre de participants</label>
+            <input
+              type="number"
+              min={1}
+              max={circuit?.max_participants ?? 50}
+              value={reserveParticipants}
+              onChange={(e) => setReserveParticipants(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+            />
+            {circuit?.max_participants && (
+              <p className="text-xs text-slate-400 mt-1">Max {circuit.max_participants} participants</p>
             )}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Nombre de participants</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={circuit?.max_participants ?? 50}
-                  value={reserveParticipants}
-                  onChange={(e) => setReserveParticipants(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-                {circuit?.max_participants && (
-                  <p className="text-xs text-slate-400 mt-1">Max {circuit.max_participants} participants</p>
-                )}
-              </div>
-              <div className="bg-slate-50 rounded-xl p-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Prix de base × {reserveParticipants}</span>
-                  <span className="font-semibold text-primary">{(effectivePrice * reserveParticipants).toLocaleString()} {circuit?.currency}</span>
-                </div>
-                {selectedOptionIds.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-slate-200">
-                    {circuit?.options
-                      ?.filter((o) => selectedOptionIds.includes(o.id) && o.status === "active")
-                      .map((o) => (
-                        <div key={o.id} className="flex justify-between text-xs text-slate-500">
-                          <span>{o.option_group ?? "Option"}</span>
-                          <span>+{Number(o.extra_price ?? 0).toLocaleString()} {circuit?.currency}</span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={handleReserve}
-                disabled={reserveSubmitting}
-                className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50"
-              >
-                {reserveSubmitting ? "Réservation en cours..." : "Confirmer la réservation"}
-              </button>
-            </div>
           </div>
+          <div className="bg-slate-50 rounded-xl p-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Prix de base × {reserveParticipants}</span>
+              <span className="font-semibold text-primary">{(effectivePrice * reserveParticipants).toLocaleString()} {circuit?.currency}</span>
+            </div>
+            {selectedOptionIds.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-slate-200">
+                {circuit?.options
+                  ?.filter((o) => selectedOptionIds.includes(o.id) && o.status === "active")
+                  .map((o) => (
+                    <div key={o.id} className="flex justify-between text-xs text-slate-500">
+                      <span>{o.option_group ?? "Option"}</span>
+                      <span>+{Number(o.extra_price ?? 0).toLocaleString()} {circuit?.currency}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleReserve}
+            disabled={reserveSubmitting}
+            className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {reserveSubmitting ? "Réservation en cours..." : "Confirmer la réservation"}
+          </button>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

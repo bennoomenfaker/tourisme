@@ -22,6 +22,15 @@ function FlyTo({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+function InvalidateSizeFix() {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => map.invalidateSize(), 150);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(
@@ -113,15 +122,17 @@ export default function MapPicker({
       </div>
       {searchErr && <p className="text-xs text-red-500 font-semibold">{searchErr}</p>}
 
-      {/* Map */}
-      <div className="rounded-2xl overflow-hidden border border-slate-200">
+      {/* Map — contained with overflow-hidden and fixed height */}
+      <div className="map-contained border border-slate-200" style={{ height: 250 }}>
         <MapContainer
           center={lat && lng ? [lat, lng] : [33.8869, 9.5375]}
           zoom={lat && lng ? 13 : 6}
-          style={{ height: "220px", width: "100%" }}
+          style={{ height: "100%", width: "100%" }}
+          zoomControl={true}
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <ClickHandler onPick={handleClick} />
+          <InvalidateSizeFix />
           {flyTarget && <FlyTo lat={flyTarget.lat} lng={flyTarget.lng} />}
           {lat !== null && lng !== null && (
             <Marker position={[lat, lng]} icon={markerIcon} />

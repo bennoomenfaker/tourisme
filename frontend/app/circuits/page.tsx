@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import {
-  MapPin, Clock, Calendar, Leaf, Filter, ChevronRight, DollarSign,
+  MapPin, Clock, Calendar, Leaf, Filter, Search, ChevronRight, DollarSign, ImageOff,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -18,6 +18,7 @@ interface Circuit {
   region: string | null;
   max_participants: number | null;
   status: string;
+  images?: string[] | null;
   days?: CircuitDay[];
   options?: CircuitOption[];
 }
@@ -44,6 +45,7 @@ export default function CircuitsPage() {
   const router = useRouter();
   const [circuits, setCircuits] = useState<Circuit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
   const [regions, setRegions] = useState<string[]>([]);
 
@@ -57,9 +59,15 @@ export default function CircuitsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = regionFilter
-    ? circuits.filter((c) => c.region === regionFilter)
-    : circuits;
+  const filtered = circuits.filter((c) => {
+    const matchesRegion = !regionFilter || c.region === regionFilter;
+    const q = search.toLowerCase();
+    const matchesSearch = !q ||
+      c.title.toLowerCase().includes(q) ||
+      (c.description && c.description.toLowerCase().includes(q)) ||
+      (c.region && c.region.toLowerCase().includes(q));
+    return matchesRegion && matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -80,15 +88,28 @@ export default function CircuitsPage() {
               <Leaf size={24} className="text-primary" />
               Circuits
             </h1>
-            <p className="text-slate-400 text-sm">Découvrez nos circuits éco-responsables</p>
+            <p className="text-slate-400 text-sm">{filtered.length} circuit{filtered.length !== 1 ? "s" : ""} trouvé{filtered.length !== 1 ? "s" : ""}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Rechercher un circuit, région..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            />
           </div>
           {regions.length > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <Filter size={16} className="text-slate-400" />
+            <div className="flex items-center gap-2">
+              <Filter size={15} className="text-slate-400" />
               <select
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
-                className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
               >
                 <option value="">Toutes les régions</option>
                 {regions.map((r) => (
@@ -106,55 +127,69 @@ export default function CircuitsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((circuit) => (
-              <button
-                key={circuit.id}
-                onClick={() => router.push(`/circuits/${circuit.id}`)}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden text-left hover:shadow-md transition-shadow group"
-              >
-                <div className="h-32 bg-gradient-to-br from-emerald-100 to-teal-200 flex items-center justify-center">
-                  <Leaf size={36} className="text-emerald-400 opacity-50" />
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-slate-800 group-hover:text-primary transition-colors">
-                    {circuit.title}
-                  </h3>
-                  <div className="flex flex-wrap gap-2 text-xs text-slate-500 mt-2">
-                    {circuit.duration_days && (
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} /> {circuit.duration_days} jour{circuit.duration_days > 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {circuit.region && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} /> {circuit.region}
-                      </span>
-                    )}
-                    {circuit.days && circuit.days.length > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Calendar size={12} /> {circuit.days.length} étape{circuit.days.length > 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-                  {circuit.description && (
-                    <p className="text-xs text-slate-500 mt-2 line-clamp-2">{circuit.description}</p>
-                  )}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
-                    {circuit.base_price !== null ? (
-                      <span className="font-bold text-emerald-600 text-sm flex items-center gap-1">
-                        <DollarSign size={14} />
-                        {Number(circuit.base_price).toLocaleString()} TND
-                      </span>
+            {filtered.map((circuit) => {
+              const hasImages = circuit.images && circuit.images.length > 0;
+              return (
+                <button
+                  key={circuit.id}
+                  onClick={() => router.push(`/circuits/${circuit.id}`)}
+                  className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden text-left hover:shadow-md transition-shadow group"
+                >
+                  <div className="h-40 bg-gradient-to-br from-emerald-100 to-teal-200 relative overflow-hidden">
+                    {hasImages ? (
+                      <img
+                        src={circuit.images![0]}
+                        alt={circuit.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
-                      <span className="text-xs text-slate-400">Prix non défini</span>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Leaf size={40} className="text-emerald-400 opacity-50" />
+                      </div>
                     )}
-                    <span className="text-xs text-emerald-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                      Voir détails <ChevronRight size={14} />
-                    </span>
                   </div>
-                </div>
-              </button>
-            ))}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-slate-800 group-hover:text-primary transition-colors">
+                      {circuit.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-2 text-xs text-slate-500 mt-2">
+                      {circuit.duration_days && (
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} /> {circuit.duration_days} jour{circuit.duration_days > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {circuit.region && (
+                        <span className="flex items-center gap-1">
+                          <MapPin size={12} /> {circuit.region}
+                        </span>
+                      )}
+                      {circuit.days && circuit.days.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Calendar size={12} /> {circuit.days.length} étape{circuit.days.length > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                    {circuit.description && (
+                      <p className="text-xs text-slate-500 mt-2 line-clamp-2">{circuit.description}</p>
+                    )}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
+                      {circuit.base_price !== null ? (
+                        <span className="font-bold text-emerald-600 text-sm flex items-center gap-1">
+                          <DollarSign size={14} />
+                          {Number(circuit.base_price).toLocaleString()} TND
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">Prix non défini</span>
+                      )}
+                      <span className="text-xs text-emerald-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                        Voir détails <ChevronRight size={14} />
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

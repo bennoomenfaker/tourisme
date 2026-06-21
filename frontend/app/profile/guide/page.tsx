@@ -755,7 +755,7 @@ export default function GuideProfilePage() {
     {/* ══ MODAL SIGNALEMENT RÉSEAU ═══════════════════════════════════════════ */}
     {netReport && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6">
+        <div className="modal-content bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
               <Flag size={16} className="text-red-500" />
@@ -803,7 +803,7 @@ export default function GuideProfilePage() {
       {/* ══ EDIT PROFILE MODAL ═══════════════════════════════════════════════ */}
       {editProfileOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[92vh]">
+          <div className="modal-content bg-white rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[92vh]">
             <button onClick={closeEditProfile}
               className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
               <X size={16} />
@@ -1094,7 +1094,7 @@ export default function GuideProfilePage() {
       {/* ══ PUBLISH OFFER MODAL ══════════════════════════════════════════════ */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="modal-content bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
             <button onClick={closeModal}
               className="absolute top-5 right-5 z-10 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
               <X size={16} />
@@ -1187,9 +1187,11 @@ export default function GuideProfilePage() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white placeholder:text-slate-400 mb-2"
                   />
                   {showPublishMap && (
-                    <MapPicker lat={publishMapLat} lng={publishMapLng}
-                      onPick={(lat, lng, address) => { setPublishMapLat(lat); setPublishMapLng(lng); setForm((f) => ({ ...f, meeting_point: address })); }}
-                    />
+                    <div className="overflow-hidden rounded-xl">
+                      <MapPicker lat={publishMapLat} lng={publishMapLng}
+                        onPick={(lat, lng, address) => { setPublishMapLat(lat); setPublishMapLng(lng); setForm((f) => ({ ...f, meeting_point: address })); }}
+                      />
+                    </div>
                   )}
                 </div>
 
@@ -1315,7 +1317,7 @@ export default function GuideProfilePage() {
         const safeIdx = Math.min(sliderIdx, Math.max(sliderImgs.length - 1, 0));
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="modal-content bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
               <button onClick={closeEditModal}
                 className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors">
                 <X size={16} />
@@ -1504,9 +1506,11 @@ export default function GuideProfilePage() {
                         <input type="text" value={editForm.meeting_point} onChange={(e) => setEditForm((f) => ({ ...f, meeting_point: e.target.value }))}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white mb-2" />
                         {showEditMap && (
-                          <MapPicker lat={editMapLat} lng={editMapLng}
-                            onPick={(lat, lng, address) => { setEditMapLat(lat); setEditMapLng(lng); setEditForm((f) => ({ ...f, meeting_point: address })); }}
-                          />
+                          <div className="overflow-hidden rounded-xl">
+                            <MapPicker lat={editMapLat} lng={editMapLng}
+                              onPick={(lat, lng, address) => { setEditMapLat(lat); setEditMapLng(lng); setEditForm((f) => ({ ...f, meeting_point: address })); }}
+                            />
+                          </div>
                         )}
                       </div>
 

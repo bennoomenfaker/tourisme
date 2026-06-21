@@ -206,7 +206,8 @@ function OfferCard({
           <img
             src={offer.images[0]}
             alt={offer.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            referrerPolicy="no-referrer"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

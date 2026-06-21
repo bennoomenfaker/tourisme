@@ -54,16 +54,22 @@ export default function Navbar({
               Circuits
             </Link>
             <Link
-              href="#"
+              href="/how-it-works"
               className="text-sm font-semibold hover:text-primary transition-colors"
             >
               Comment ça marche
             </Link>
             <Link
-              href="#"
+              href="/eco-projects"
               className="text-sm font-semibold hover:text-primary transition-colors"
             >
               Projets Éco
+            </Link>
+            <Link
+              href="/impact"
+              className="text-sm font-semibold hover:text-primary transition-colors"
+            >
+              Impact
             </Link>
           </nav>
         )}

@@ -1245,7 +1245,7 @@ export default function ProjectOwnerProfilePage() {
     <>
     {netReport && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6">
+        <div className="modal-content bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0"><Flag size={16} className="text-red-500" /></div>
             <div><p className="font-extrabold text-slate-800 text-sm">Signaler {netReport.name}</p><p className="text-xs text-slate-400">Choisissez un motif</p></div>
@@ -1287,7 +1287,7 @@ export default function ProjectOwnerProfilePage() {
       {/* ══ EDIT PROFILE MODAL ═══════════════════════════════════════════════ */}
       {editProfileOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[92vh]">
+          <div className="modal-content bg-white rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden flex flex-col max-h-[92vh]">
             <button onClick={closeEditProfile}
               className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">
               <X size={16} />
@@ -1511,7 +1511,7 @@ export default function ProjectOwnerProfilePage() {
       {/* ══ PUBLISH OFFER MODAL ══════════════════════════════════════════════ */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="modal-content bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
             <button onClick={closeModal}
               className="absolute top-5 right-5 z-10 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 flex items-center justify-center transition-colors">
               <X size={16} />
@@ -1577,13 +1577,15 @@ export default function ProjectOwnerProfilePage() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white placeholder:text-slate-400 mb-2"
                   />
                   {showPublishMap && (
-                    <MapPicker
-                      lat={publishMapLat} lng={publishMapLng}
-                      onPick={(lat, lng, address) => {
-                        setPublishMapLat(lat); setPublishMapLng(lng);
-                        setForm((f) => ({ ...f, meeting_point: address }));
-                      }}
-                    />
+                    <div className="overflow-hidden rounded-xl">
+                      <MapPicker
+                        lat={publishMapLat} lng={publishMapLng}
+                        onPick={(lat, lng, address) => {
+                          setPublishMapLat(lat); setPublishMapLng(lng);
+                          setForm((f) => ({ ...f, meeting_point: address }));
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -1747,7 +1749,7 @@ export default function ProjectOwnerProfilePage() {
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="modal-content bg-white rounded-3xl w-full max-w-xl shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
 
               {/* Shared X button */}
               <button onClick={closeEditModal}
@@ -2049,13 +2051,15 @@ export default function ProjectOwnerProfilePage() {
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white placeholder:text-slate-400 mb-2"
                         />
                         {showEditMap && (
-                          <MapPicker
-                            lat={editMapLat} lng={editMapLng}
-                            onPick={(lat, lng, address) => {
-                              setEditMapLat(lat); setEditMapLng(lng);
-                              setEditForm((f) => ({ ...f, meeting_point: address }));
-                            }}
-                          />
+                          <div className="overflow-hidden rounded-xl">
+                            <MapPicker
+                              lat={editMapLat} lng={editMapLng}
+                              onPick={(lat, lng, address) => {
+                                setEditMapLat(lat); setEditMapLng(lng);
+                                setEditForm((f) => ({ ...f, meeting_point: address }));
+                              }}
+                            />
+                          </div>
                         )}
                       </div>
                       {/* Groupe + âge */}
@@ -2230,7 +2234,7 @@ export default function ProjectOwnerProfilePage() {
       {/* ══ PROJECT DETAIL / EDIT MODAL ══════════════════════════════════════ */}
       {projDetailOpen && viewProject && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeProjDetail}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
               <h2 className="text-lg font-extrabold text-slate-900 truncate">{viewProject.name}</h2>
@@ -2381,7 +2385,9 @@ export default function ProjectOwnerProfilePage() {
                   <input readOnly value={projEditForm.address} placeholder="Auto-rempli par la carte…"
                     className="w-full px-4 py-3 bg-slate-50 rounded-xl text-slate-500 font-medium cursor-default" />
                   {showProjEditMap && (
-                    <MapPicker lat={projEditMapLat} lng={projEditMapLng} onPick={(lat, lng, address) => { setProjEditMapLat(lat); setProjEditMapLng(lng); setProjEditForm((f) => ({ ...f, address })); }} />
+                    <div className="overflow-hidden rounded-xl">
+                      <MapPicker lat={projEditMapLat} lng={projEditMapLng} onPick={(lat, lng, address) => { setProjEditMapLat(lat); setProjEditMapLng(lng); setProjEditForm((f) => ({ ...f, address })); }} />
+                    </div>
                   )}
                 </div>
 
@@ -2470,7 +2476,7 @@ export default function ProjectOwnerProfilePage() {
       {/* ══ PROJECT CREATION MODAL ═══════════════════════════════════════════ */}
       {projModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={closeProjModal}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <h2 className="text-xl font-extrabold text-slate-900">Ajouter un projet</h2>
               <button onClick={closeProjModal} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
@@ -2637,7 +2643,9 @@ export default function ProjectOwnerProfilePage() {
                 <input readOnly value={projForm.address} placeholder="Auto-rempli par la carte…"
                   className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl text-slate-500 font-medium cursor-default" />
                 {showProjCreateMap && (
-                  <MapPicker lat={projCreateMapLat} lng={projCreateMapLng} onPick={(lat, lng, address) => { setProjCreateMapLat(lat); setProjCreateMapLng(lng); setProjForm((f) => ({ ...f, address })); }} />
+                  <div className="overflow-hidden rounded-xl">
+                    <MapPicker lat={projCreateMapLat} lng={projCreateMapLng} onPick={(lat, lng, address) => { setProjCreateMapLat(lat); setProjCreateMapLng(lng); setProjForm((f) => ({ ...f, address })); }} />
+                  </div>
                 )}
               </div>
 
@@ -3193,7 +3201,7 @@ export default function ProjectOwnerProfilePage() {
     {/* ══ SUSTAINABILITY QUESTIONNAIRE MODAL ══════════════════════════════════ */}
     {qOpen && (
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
 
           {/* Header */}
           <div className="relative px-6 pt-6 pb-4 border-b border-slate-100">

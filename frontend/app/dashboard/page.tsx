@@ -317,7 +317,7 @@ function DeleteConfirmModal({ onClose, onConfirm, title, message }: {
 }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 text-center">
           <span className="material-symbols-outlined text-5xl text-red-400 mb-3">delete</span>
           <h3 className="text-lg font-extrabold text-slate-900 mb-2">{title}</h3>
@@ -375,7 +375,7 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">
             {step === null ? "Que voulez-vous partager ?" : step === "place" ? "Partager un lieu" : "Partager une expérience"}
@@ -417,7 +417,9 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
                     <span className="material-symbols-outlined text-base text-primary">location_on</span>
                     Cliquez sur la carte pour placer le lieu
                   </label>
-                  <MapPicker lat={form.lat} lng={form.lng} onPick={(lat, lng) => setForm({ ...form, lat, lng })} />
+                  <div className="overflow-hidden rounded-xl">
+                    <MapPicker lat={form.lat} lng={form.lng} onPick={(lat, lng) => setForm({ ...form, lat, lng })} />
+                  </div>
                   {form.lat !== null && <p className="text-xs text-slate-400 font-medium">📍 {form.lat.toFixed(5)}, {form.lng?.toFixed(5)}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -507,7 +509,7 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">Ajouter une offre</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
@@ -630,7 +632,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">Ajouter une offre</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
@@ -795,7 +797,7 @@ function EditProjectModal({ onClose, onSuccess, token, project }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">Modifier le projet</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100"><span className="material-symbols-outlined text-slate-500">close</span></button>
@@ -930,7 +932,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">Ajouter un projet</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
@@ -1044,10 +1046,12 @@ function AddProjectModal({ onClose, onSuccess, token }: {
             <input readOnly value={form.address} placeholder="Auto-rempli par la carte..."
               className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl text-slate-500 font-medium cursor-default" />
             {showMap && (
-              <MapPicker lat={mapLat} lng={mapLng} onPick={(lat, lng, address) => {
-                setMapLat(lat); setMapLng(lng);
-                setForm((f) => ({ ...f, address: address ?? "" }));
-              }} />
+              <div className="overflow-hidden rounded-xl">
+                <MapPicker lat={mapLat} lng={mapLng} onPick={(lat, lng, address) => {
+                  setMapLat(lat); setMapLng(lng);
+                  setForm((f) => ({ ...f, address: address ?? "" }));
+                }} />
+              </div>
             )}
           </div>
 
@@ -1410,7 +1414,7 @@ function CreateCircuitModal({ onClose, onCreated }: { onClose: () => void; onCre
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-lg mx-4 w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-2xl shadow-lg mx-4 w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-bold text-slate-800 mb-4">Nouveau circuit</h3>
         {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3 mb-4 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -1439,7 +1443,7 @@ function BookCircuitModal({ onClose, circuit }: { onClose: () => void; circuit: 
   const router = useRouter();
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 text-center">
           <span className="material-symbols-outlined text-5xl text-primary mb-3">route</span>
           <h3 className="text-lg font-extrabold text-slate-900 mb-2">{circuit.title}</h3>
@@ -1478,7 +1482,7 @@ function TripPlansList() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {plans.map((p: any) => (
         <div key={p.id} className="bg-white rounded-2xl border border-slate-100 p-4">
           <h4 className="font-semibold text-slate-800 mb-1">{p.title}</h4>
@@ -1548,7 +1552,7 @@ function EcoTravelerOffersSection({ router }: { router: any }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
           {filtered.map((offer) => {
             const isReserved = reservedIds.has(offer.id);
             return (
@@ -1639,7 +1643,7 @@ function CircuitsTab({ role, router, token }: { role: string; router: any; token
           <p className="text-slate-500">{isProvider ? "Vous n'avez pas encore créé de circuit" : "Aucun circuit disponible"}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {circuits.map((c: any) => (
             <div key={c.id} className="bg-white rounded-2xl border border-slate-100 p-4">
               <h4 className="font-semibold text-slate-800 mb-1">{c.title}</h4>
@@ -1935,6 +1939,15 @@ export default function DashboardPage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    apiFetch<any[]>("/notifications", { headers: { Authorization: `Bearer ${token}` } })
+      .then((notifs) => setUnreadNotifCount(notifs.filter((n: any) => !n.is_read).length))
+      .catch(() => {});
+  }, [token]);
 
   useEffect(() => {
     if (!searchQ.trim() || !token) { setSearchRes([]); return; }
@@ -1968,6 +1981,8 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
+  const [sidebarHovered, setSidebarHovered] = useState(false);
+
   if (!role || !profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -1980,100 +1995,183 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
 
-        <aside className="w-72 bg-white border-r border-primary/10 flex flex-col fixed h-full z-20">
-          <div className="p-6 flex flex-col h-full overflow-y-auto">
-            <div className="flex items-center gap-3 mb-6 shrink-0">
-              <span className="material-symbols-outlined text-primary text-3xl">eco</span>
-              <h1 className="text-xl font-extrabold tracking-tight">Éco-Voyage</h1>
-            </div>
+        <button onClick={() => setSidebarOpen(true)}
+          className="xl:hidden fixed top-4 left-4 z-50 bg-white border border-slate-200 rounded-xl p-2 shadow-lg hover:bg-slate-50 transition-colors">
+          <span className="material-symbols-outlined">menu</span>
+        </button>
 
-            <nav className="flex-1 space-y-1">
+        {sidebarOpen && (
+          <div className="xl:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+        )}
+
+        {/* Mobile drawer */}
+        <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 xl:hidden ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}>
+          <div className="p-4 flex flex-col h-full">
+            <div className="flex items-center justify-between mb-6 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white text-xl">eco</span>
+                </div>
+                <span className="text-lg font-extrabold tracking-tight">Éco-Voyage</span>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                <span className="material-symbols-outlined text-slate-400">close</span>
+              </button>
+            </div>
+            <nav className="flex-1 space-y-0.5">
               {navItems.map((item) => (
-                <button key={item.label} onClick={() => setActiveItem(item.label)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                <button key={item.label} onClick={() => { setActiveItem(item.label); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${
                     activeItem === item.label
-                      ? "bg-primary/10 text-primary font-bold"
+                      ? "bg-emerald-50 text-emerald-700 font-bold"
                       : "text-slate-600 hover:bg-slate-50"
                   }`}>
-                  <span className="material-symbols-outlined">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {item.label === "Notifications" && unreadNotifCount > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                      {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                    </span>
+                  )}
                 </button>
               ))}
-              <button onClick={() => router.push("/messagerie")}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 transition-all">
-                <span className="material-symbols-outlined">chat</span>
-                <span>Messagerie</span>
+              <button onClick={() => { router.push("/messagerie"); setSidebarOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all text-sm">
+                <span className="material-symbols-outlined text-[20px]">chat</span>
+                <span className="flex-1 text-left">Messagerie</span>
                 {dashConvos.reduce((s, c) => s + c.unread_count, 0) > 0 && (
-                  <span className="ml-auto bg-primary text-slate-900 text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                  <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
                     {dashConvos.reduce((s, c) => s + c.unread_count, 0)}
                   </span>
                 )}
               </button>
               <button onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 transition-all">
-                <span className="material-symbols-outlined">logout</span>
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all text-sm">
+                <span className="material-symbols-outlined text-[20px]">logout</span>
                 <span>Déconnexion</span>
               </button>
             </nav>
-
-            <div className="mt-auto pt-6 border-t border-slate-100">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Profil complété</p>
-                <p className="text-xs font-extrabold text-primary">{profile.profile_completion}%</p>
-              </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${profile.profile_completion}%` }} />
-              </div>
+            <div className="mt-auto pt-4 border-t border-slate-100">
+              <button onClick={() => router.push(profilePath)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-all">
+                <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
+                  {profile.photo
+                    ? <img src={profile.photo} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center bg-emerald-100"><span className="material-symbols-outlined text-emerald-600 text-sm">person</span></div>
+                  }
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-bold text-slate-800 truncate">{profile.full_name || "Mon profil"}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{role === "project" ? "Propriétaire" : role === "guide" ? "Guide" : "Voyageur"}</p>
+                </div>
+              </button>
             </div>
-
-            {role === "eco_traveler" && (
-              <button onClick={() => router.push(questionnairePath)}
-                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined">add_location_alt</span>
-                Réserver un voyage
-              </button>
-            )}
-            {role === "guide" && (
-              <button onClick={() => router.push(questionnairePath)}
-                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined">quiz</span>
-                {score === null ? "Passer l'évaluation" : "Voir mon score"}
-              </button>
-            )}
-            {role === "project" && (
-              <button onClick={() => router.push(questionnairePath)}
-                className="mt-4 w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined">quiz</span>
-                {score === null ? "Passer l'évaluation" : "Voir mon score"}
-              </button>
-            )}
           </div>
         </aside>
 
-        <main className="flex-1 ml-72">
+        {/* Tablet collapsed sidebar (768px-1280px) — icons only, hover expands */}
+        <aside
+          className="hidden xl:flex fixed inset-y-0 left-0 z-30 flex-col bg-white border-r border-slate-200 transition-all duration-300 ease-in-out"
+          style={{ width: sidebarHovered ? 288 : 80 }}
+          onMouseEnter={() => setSidebarHovered(true)}
+          onMouseLeave={() => setSidebarHovered(false)}
+        >
+          <div className="p-4 flex flex-col h-full">
+            <div className="flex items-center gap-2.5 mb-6 shrink-0 h-10">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-white text-xl">eco</span>
+              </div>
+              <span className={`text-lg font-extrabold tracking-tight whitespace-nowrap transition-opacity duration-300 ${sidebarHovered ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                Éco-Voyage
+              </span>
+            </div>
+            <nav className="flex-1 space-y-0.5">
+              {navItems.map((item) => (
+                <button key={item.label} onClick={() => setActiveItem(item.label)}
+                  title={!sidebarHovered ? item.label : undefined}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${
+                    activeItem === item.label
+                      ? "bg-emerald-50 text-emerald-700 font-bold"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}>
+                  <span className="material-symbols-outlined text-[20px] flex-shrink-0">{item.icon}</span>
+                  <span className={`whitespace-nowrap transition-opacity duration-300 ${sidebarHovered ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                    {item.label}
+                  </span>
+                  {item.label === "Notifications" && unreadNotifCount > 0 && (
+                    <span className={`bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center flex-shrink-0 ${!sidebarHovered ? "absolute top-1 right-1 min-w-[16px] h-[16px] text-[8px]" : ""}`}>
+                      {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                    </span>
+                  )}
+                </button>
+              ))}
+              <button onClick={() => router.push("/messagerie")}
+                title={!sidebarHovered ? "Messagerie" : undefined}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all text-sm relative">
+                <span className="material-symbols-outlined text-[20px] flex-shrink-0">chat</span>
+                <span className={`whitespace-nowrap transition-opacity duration-300 ${sidebarHovered ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                  Messagerie
+                </span>
+                {dashConvos.reduce((s, c) => s + c.unread_count, 0) > 0 && (
+                  <span className={`bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${!sidebarHovered ? "absolute top-1 right-1 min-w-[16px] h-[16px] text-[8px]" : ""}`}>
+                    {dashConvos.reduce((s, c) => s + c.unread_count, 0)}
+                  </span>
+                )}
+              </button>
+              <button onClick={handleLogout}
+                title={!sidebarHovered ? "Déconnexion" : undefined}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all text-sm">
+                <span className="material-symbols-outlined text-[20px] flex-shrink-0">logout</span>
+                <span className={`whitespace-nowrap transition-opacity duration-300 ${sidebarHovered ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                  Déconnexion
+                </span>
+              </button>
+            </nav>
+            <div className={`mt-auto pt-4 border-t border-slate-100 transition-opacity duration-300 ${sidebarHovered ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}>
+              <button onClick={() => router.push(profilePath)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-all">
+                <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
+                  {profile.photo
+                    ? <img src={profile.photo} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center bg-emerald-100"><span className="material-symbols-outlined text-emerald-600 text-sm">person</span></div>
+                  }
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-bold text-slate-800 truncate">{profile.full_name || "Mon profil"}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{role === "project" ? "Propriétaire" : role === "guide" ? "Guide" : "Voyageur"}</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </aside>
 
-          <header className="h-24 bg-white/80 backdrop-blur-md border-b border-primary/10 px-10 flex items-center justify-between sticky top-0 z-10">
-            <div className="flex items-center gap-12 shrink-0">
-              <h2 className="text-2xl font-bold whitespace-nowrap">
+        <main className="flex-1 min-w-0 xl:ml-20 transition-all duration-300">
+
+          <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-10">
+            <div className="flex items-center gap-4 shrink-0 xl:hidden w-10" />
+            <div className="flex items-center gap-3 shrink-0">
+              <h2 className="text-base lg:text-lg font-bold text-slate-800 whitespace-nowrap">
                 Bonjour, {profile.full_name || (role === "guide" ? "Guide" : role === "project" ? "Propriétaire" : "Voyageur")}
               </h2>
-              <div className="flex items-center bg-slate-100 rounded-full px-5 py-2 gap-2 whitespace-nowrap">
-                <span className="material-symbols-outlined text-primary text-base">
+              <div className="hidden md:flex items-center gap-1.5 bg-slate-100 rounded-full px-3 py-1">
+                <span className="material-symbols-outlined text-emerald-500 text-sm">
                   {role === "project" ? "domain_verification" : "verified_user"}
                 </span>
-                <span className="text-sm font-semibold">
-                  {score !== null ? getScoreLabel(score, role) : role === "eco_traveler" ? "Nouveau voyageur" : "Évaluation en attente"}
+                <span className="text-xs font-semibold text-slate-600">
+                  {score !== null ? getScoreLabel(score, role) : "Évaluation en attente"}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-6 flex-1 justify-end">
-              <div className="relative w-full max-w-md" ref={searchRef}>
-                <input className="w-full bg-slate-100 border-none rounded-xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/50"
+            <div className="flex items-center gap-3 flex-1 justify-end">
+              <div className="relative w-full max-w-sm hidden sm:block" ref={searchRef}>
+                <input className="w-full bg-slate-100 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-300 transition-shadow"
                   placeholder={searchPlaceholder} value={searchQ}
                   onChange={(e) => { setSearchQ(e.target.value); setSearchOpen(true); }}
                   onFocus={() => setSearchOpen(true)} />
-                <span className="material-symbols-outlined absolute left-4 top-3 text-slate-400 text-xl">search</span>
+                <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">search</span>
                 {searchQ && (
                   <button onClick={() => { setSearchQ(""); setSearchRes([]); }}
                     className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600">
@@ -2116,17 +2214,16 @@ export default function DashboardPage() {
                 )}
               </div>
               <button onClick={() => router.push("/notifications")}
-                className="relative size-11 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-primary/10 hover:text-primary transition-colors shrink-0">
-                <span className="material-symbols-outlined">notifications</span>
+                className="relative size-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 transition-colors shrink-0">
+                <span className="material-symbols-outlined text-xl">notifications</span>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </button>
-              <div className="h-10 w-[1px] bg-slate-200 shrink-0" />
               <button onClick={() => router.push(profilePath)}
-                className="size-11 rounded-full bg-slate-200 border-2 border-primary overflow-hidden shrink-0 hover:opacity-80 transition-opacity" title="Voir mon profil">
+                className="size-9 rounded-full bg-slate-200 overflow-hidden shrink-0 hover:opacity-80 transition-opacity border-2 border-transparent hover:border-emerald-300" title="Voir mon profil">
                 {profile.photo ? (
                   <img src={profile.photo} alt="Photo de profil" className="w-full h-full object-cover" />
                 ) : (
@@ -2138,19 +2235,21 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8 xl:p-10 max-w-[1800px]">
 
             {activeItem === "Tableau de bord" && (
               <>
                 {score === null && (
-                  <div className="mb-6 p-5 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
+                  <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-2xl">quiz</span>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <span className="material-symbols-outlined text-emerald-600">quiz</span>
+                      </div>
                       <div>
-                        <p className="font-bold text-slate-800">
+                        <p className="font-bold text-slate-800 text-sm">
                           {role === "eco_traveler" ? "Passez votre test de durabilité" : "Passez votre évaluation de durabilité"}
                         </p>
-                        <p className="text-sm text-slate-500 font-medium">
+                        <p className="text-xs text-slate-500 font-medium">
                           {role === "eco_traveler"
                             ? "Obtenez votre score initial et des recommandations personnalisées."
                             : "Obtenez votre score et valorisez votre profil auprès des voyageurs."}
@@ -2158,37 +2257,31 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <button onClick={() => router.push(questionnairePath)}
-                      className="px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl text-sm shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all">
-                      Commencer →
+                      className="px-5 py-2 bg-emerald-500 text-white font-bold rounded-xl text-sm hover:bg-emerald-600 transition-all whitespace-nowrap">
+                      Commencer
                     </button>
                   </div>
                 )}
 
-                <div className={`grid grid-cols-1 md:grid-cols-2 ${role === "eco_traveler" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-6 mb-8`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-2 ${role === "eco_traveler" ? "xl:grid-cols-5" : "xl:grid-cols-4"} gap-4 lg:gap-5 mb-8`}>
 
-                  <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col justify-between lg:col-span-2">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="text-slate-500 text-sm font-medium">Score de durabilité</p>
-                        <h3 className={`text-3xl font-extrabold mt-1 ${getScoreColor(score)}`}>
+                        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Score de durabilité</p>
+                        <h3 className={`text-2xl lg:text-3xl font-extrabold mt-1 ${getScoreColor(score)}`}>
                           {score !== null ? score : "—"}
-                          {score !== null && <span className="text-slate-400 text-lg font-normal">/100</span>}
+                          {score !== null && <span className="text-slate-400 text-base font-normal">/100</span>}
                         </h3>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="bg-primary/20 p-2 rounded-lg text-primary">
-                          <span className="material-symbols-outlined">analytics</span>
-                        </div>
-                        <button onClick={() => setShowScoreDetail((v) => !v)}
-                          className="text-xs text-slate-400 hover:text-primary font-bold transition-colors">
-                          <span className="material-symbols-outlined text-lg">{showScoreDetail ? "expand_less" : "expand_more"}</span>
-                        </button>
+                      <div className="bg-emerald-50 p-2 rounded-lg text-emerald-500">
+                        <span className="material-symbols-outlined text-xl">analytics</span>
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                       <div className={`h-full ${getBarColor(score)} rounded-full transition-all duration-1000`} style={{ width: scoreWidth }} />
                     </div>
-                    <p className="text-xs font-bold mt-2" style={{ color: score !== null ? (score >= 60 ? "#22c55e" : "#f97316") : "#94a3b8" }}>
+                    <p className="text-[11px] font-bold mt-2" style={{ color: score !== null ? (score >= 60 ? "#22c55e" : "#f97316") : "#94a3b8" }}>
                       {score !== null ? getScoreLabel(score, role) : "Questionnaire non complété"}
                     </p>
                     {showScoreDetail && <ScoreBreakdown profile={profile} role={role} />}
@@ -2196,40 +2289,40 @@ export default function DashboardPage() {
 
                   {role === "eco_traveler" && (
                     <>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Expériences créées</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{publications.filter((p) => p.type === "experience").length}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Expériences</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{publications.filter((p) => p.type === "experience").length}</h3>
                           </div>
-                          <div className="bg-teal-500/10 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined">hiking</span></div>
+                          <div className="bg-teal-50 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined text-xl">hiking</span></div>
                         </div>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Lieux créés</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{publications.filter((p) => p.type === "place").length}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Lieux</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{publications.filter((p) => p.type === "place").length}</h3>
                           </div>
-                          <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined">location_on</span></div>
+                          <div className="bg-blue-50 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined text-xl">location_on</span></div>
                         </div>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Réservations</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{profile.reservations_made ?? 0}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Réservations</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{profile.reservations_made ?? 0}</h3>
                           </div>
-                          <div className="bg-green-500/10 p-2 rounded-lg text-green-500"><span className="material-symbols-outlined">task_alt</span></div>
+                          <div className="bg-green-50 p-2 rounded-lg text-green-500"><span className="material-symbols-outlined text-xl">task_alt</span></div>
                         </div>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Plans</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{profile.plans_shared ?? 0}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Plans</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{profile.plans_shared ?? 0}</h3>
                           </div>
-                          <div className="bg-purple-500/10 p-2 rounded-lg text-purple-500"><span className="material-symbols-outlined">map</span></div>
+                          <div className="bg-purple-50 p-2 rounded-lg text-purple-500"><span className="material-symbols-outlined text-xl">map</span></div>
                         </div>
                       </div>
                     </>
@@ -2237,31 +2330,31 @@ export default function DashboardPage() {
 
                   {role === "guide" && (
                     <>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Offres</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{offers.length}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Offres</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{offers.length}</h3>
                           </div>
-                          <div className="bg-teal-500/10 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined">sell</span></div>
+                          <div className="bg-teal-50 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined text-xl">sell</span></div>
                         </div>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Réservations gérées</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{profile.reservations_handled ?? 0}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Réservations</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{profile.reservations_handled ?? 0}</h3>
                           </div>
-                          <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined">event_available</span></div>
+                          <div className="bg-blue-50 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined text-xl">event_available</span></div>
                         </div>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Avis reçus</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{profile.feedback_received ?? 0}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Avis</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{profile.feedback_received ?? 0}</h3>
                           </div>
-                          <div className="bg-green-500/10 p-2 rounded-lg text-green-500"><span className="material-symbols-outlined">star</span></div>
+                          <div className="bg-green-50 p-2 rounded-lg text-green-500"><span className="material-symbols-outlined text-xl">star</span></div>
                         </div>
                       </div>
                     </>
@@ -2269,95 +2362,54 @@ export default function DashboardPage() {
 
                   {role === "project" && (
                     <>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Projets actifs</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{profile.projects?.length ?? 0}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Projets actifs</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{profile.projects?.length ?? 0}</h3>
                           </div>
-                          <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined">domain</span></div>
+                          <div className="bg-blue-50 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined text-xl">domain</span></div>
                         </div>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Offres</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{offers.length}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Offres</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{offers.length}</h3>
                           </div>
-                          <div className="bg-teal-500/10 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined">sell</span></div>
+                          <div className="bg-teal-50 p-2 rounded-lg text-teal-500"><span className="material-symbols-outlined text-xl">sell</span></div>
                         </div>
                       </div>
-                      <div className="bg-white p-6 rounded-2xl border border-primary/10 flex flex-col self-start">
+                      <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-sm font-medium">Réservations reçues</p>
-                            <h3 className="text-3xl font-extrabold mt-1">{profile.total_reservations ?? 0}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Réservations</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{profile.total_reservations ?? 0}</h3>
                           </div>
-                          <div className="bg-green-500/10 p-2 rounded-lg text-green-500"><span className="material-symbols-outlined">event_available</span></div>
+                          <div className="bg-green-50 p-2 rounded-lg text-green-500"><span className="material-symbols-outlined text-xl">event_available</span></div>
                         </div>
                       </div>
                     </>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
 
-                  <div className="lg:col-span-2">
+                  <div className="lg:col-span-8 xl:col-span-9">
                     {role === "eco_traveler" && (
                       <>
                         <div className="flex items-center justify-between mb-6">
                           <h3 className="text-xl font-bold">Mes Plans de Voyage</h3>
-                          <a className="text-primary font-bold text-sm hover:underline" href="#">Voir tout</a>
+                          <button onClick={() => router.push("/trip-plans")} className="text-primary font-bold text-sm hover:underline">Voir tout</button>
                         </div>
-                        <div className="space-y-4">
-                          {[
-                            { title: "Randonnée durable à Zaghouan", badge: "Randonnée", badgeColor: "bg-green-100 text-green-700", date: "14 - 15 Oct. • 4 participants", status: "Confirmé", statusColor: "bg-green-500", eco: "A+", icon: "hiking", tag: "Zéro déchet", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBD5akWau1kblm8fq7Tx2Gb_0_xLp3mQzhBkmRMTCwP4gTD9CSQAANQlL0YDLaTPuPJRU6KvcFPO6k2Z0XaqbQoKbMAOK5WBHeMHMnt1TRMgl1Y7aUZFQNg1FT4jZWgn0Wrxv71JI-UPJCAjt8_4-3bzG2SNsAgq_Ftpl-L1bToKH-hqsogDzYBKSTbxXhEQLfsVHEB_B4TUu3cTA9B7ioPh1f6qctmXGcTpXYceiy91_3s4bDfyCVRUFpnILZV0dgP9ZKtZF0fa6A" },
-                            { title: "Séjour nature à Aïn Draham", badge: "Plan partagé", badgeColor: "bg-blue-100 text-blue-700", date: "22 - 25 Oct. • 2 participants", status: "En cours", statusColor: "bg-orange-400", eco: "A", icon: "cottage", tag: "Éco-gîte", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBPCrg1ZmXVLbEPD-8lp6H0mdqw8OUDeijVrAZTFq0zto2v3-_cD4n4oGhCFYORXsbpOhhim9BsoK6fLjA3KZ4WXULIFZ4GtIDPiqVEGjsr2jqkm0Eo5SO102iyX57ppBgj1gpfLy_3nCiWbRpyYAzfzsG-z1YeqFFSsfqFDlXhUdy0YrGeHUEP4uCOZxSFvr0V9ZOTlmb9te0xg3vgZkiVH0xWtqyukLVEbUxYn580NOCZ7P712ArePj4isI0atUXHzpvfrtqTrpw" },
-                            { title: "Week-end éco en groupe à Tozeur", badge: "Groupe", badgeColor: "bg-orange-100 text-orange-700", date: "02 - 04 Nov. • 8 participants", status: "Confirmé", statusColor: "bg-green-500", eco: "A+", icon: "train", tag: "Transport collectif", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuB5jT6WYwSYRRMZkPCNOBrnz44sPEOf3vt8vGQAXP_9oauhXfRuN3iCW8E7E6gc-OZQ8vsDzOUvVh_5xdOYt_rO_F8qZPcDl9P-dGlbHnCdip5hG5VauEsZxb7L4MFmkIgmuxDjB5jpLJ24b6cbwAGNiHXzgmm7GYixoWH_vRGfaPxQiDRFW6S80aZzKe_X0FtOCQKwgh_TcAdy4tAq9weqRrUYIrpoC7OXPXi8oF6ZKGnTcuPoGSJuouQ9yZ3yhw7ldps2FdgyNBg" },
-                          ].map((plan, idx) => (
-                            <div key={idx} className="bg-white rounded-2xl p-4 border border-primary/5 hover:border-primary/30 transition-all group cursor-pointer">
-                              <div className="flex flex-col md:flex-row gap-6">
-                                <div className="w-full md:w-48 h-32 rounded-xl bg-slate-200 overflow-hidden shrink-0">
-                                  <div className="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-500" style={{ backgroundImage: `url("${plan.img}")` }} />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider mb-2 ${plan.badgeColor}`}>{plan.badge}</span>
-                                      <h4 className="text-lg font-bold group-hover:text-primary transition-colors">{plan.title}</h4>
-                                      <p className="text-slate-500 text-sm flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-sm">calendar_today</span> {plan.date}
-                                      </p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                      <span className={`px-2 py-1 rounded text-white text-[10px] font-bold uppercase ${plan.statusColor}`}>{plan.status}</span>
-                                      <div className="bg-green-100 px-3 py-1 rounded-full flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-green-600 text-sm">eco</span>
-                                        <span className="text-green-600 text-xs font-bold">{plan.eco}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="material-symbols-outlined text-slate-400 text-lg">{plan.icon}</span>
-                                      <span className="text-xs text-slate-500">{plan.tag}</span>
-                                    </div>
-                                    <button className="text-slate-400 hover:text-slate-900">
-                                      <span className="material-symbols-outlined">more_horiz</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <TripPlansList />
                       </>
                     )}
 
                     {role === "guide" && (
                       <>
                         <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-xl font-bold">Mes Spécialités & Circuits</h3>
+                          <h3 className="text-lg lg:text-xl font-bold">Mes Spécialités & Circuits</h3>
                           <a className="text-primary font-bold text-sm hover:underline" href="#">Voir tout</a>
                         </div>
                         <div className="space-y-4">
@@ -2508,34 +2560,33 @@ export default function DashboardPage() {
                     )}
                   </div>
 
-                  <div>
-                    <h3 className="text-xl font-bold mb-6">Mes Badges</h3>
-                    <div className="bg-white rounded-2xl p-6 border border-primary/10">
-                      <div className="grid grid-cols-2 gap-4">
+                  <div className="lg:col-span-4 xl:col-span-3">
+                    <h3 className="text-base font-bold mb-4 text-slate-800">Mes Badges</h3>
+                    <div className="bg-white rounded-2xl p-5 border border-slate-200">
+                      <div className="grid grid-cols-2 gap-3">
                         {badgeConfig.map((config) => {
                           const obtained = obtainedBadgeLabels.has(config.label);
                           const obtainedData = profile.badges.find((b) => b.label === config.label);
                           return (
                             <div key={config.label}
                               title={obtained && obtainedData ? `Obtenu le ${new Date(obtainedData.obtained_at).toLocaleDateString("fr-FR")}` : config.description}
-                              className={`flex flex-col items-center text-center p-4 rounded-xl border-2 transition-all ${obtained ? "bg-slate-50 border-primary/20" : "bg-slate-100/50 border-dashed border-slate-200"}`}>
-                              <div className="size-16 flex items-center justify-center mb-2">
-                                <span className={`material-symbols-outlined text-4xl transition-all ${obtained ? "text-primary" : "text-slate-300"}`}
+                              className={`flex flex-col items-center text-center p-3 rounded-xl border transition-all ${obtained ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-dashed border-slate-200"}`}>
+                              <div className="size-12 flex items-center justify-center mb-1.5">
+                                <span className={`material-symbols-outlined text-3xl transition-all ${obtained ? "text-emerald-500" : "text-slate-300"}`}
                                   style={obtained ? { fontVariationSettings: '"FILL" 1' } : {}}>
                                   {config.icon}
                                 </span>
                               </div>
-                              <p className={`text-xs font-bold ${obtained ? "text-slate-700" : "text-slate-300"}`}>{config.label}</p>
-                              <p className={`text-[10px] font-bold uppercase mt-1 ${obtained ? "text-green-500" : "text-slate-300"}`}>
+                              <p className={`text-[11px] font-bold ${obtained ? "text-slate-700" : "text-slate-300"}`}>{config.label}</p>
+                              <p className={`text-[9px] font-bold uppercase mt-0.5 ${obtained ? "text-emerald-500" : "text-slate-300"}`}>
                                 {obtained ? "Débloqué" : "Verrouillé"}
                               </p>
-                              {!obtained && <p className="text-[9px] text-slate-300 mt-1 italic">{config.description}</p>}
                             </div>
                           );
                         })}
                       </div>
 
-                      <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+                      <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
                         {role === "eco_traveler" && (
                           <>
                             <div><p className="text-lg font-extrabold text-slate-800">{profile.feedback_given ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Feedbacks</p></div>
@@ -2584,7 +2635,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
                     {publications.map((pub) => (
                       <div key={pub.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex flex-col gap-3">
                         <div className="flex items-start justify-between gap-2">
@@ -2656,7 +2707,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
                     {offers
                       .filter((offer) => !offerTypeFilter || offer.offer_type === offerTypeFilter)
                       .map((offer) => {
@@ -2763,7 +2814,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
                     {profile.projects!.map((project) => (
                       <div key={project.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex gap-5">
                         <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden">
