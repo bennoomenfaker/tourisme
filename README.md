@@ -575,9 +575,6 @@ git push origin feature/nouvelle-fonctionnalite
 - [API Documentation](http://localhost:3003/api) (Swagger)
 - [Architecture détaillée](./docs/architecture-tourisme-durable.md)
 
-### Issues & Bugs
-- Créer un issue sur GitHub pour tout problème
-- Utiliser les labels appropriés : `bug`, `feature`, `documentation`
 
 ---
 
