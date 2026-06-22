@@ -5,7 +5,7 @@
 **Éco-Voyage** est une plateforme web de **tourisme durable / éco-tourisme** qui connecte trois types d'acteurs :
 
 - Les **voyageurs éco-responsables** (Écovoyageurs)
-- Les **guides locaux et professionnels** 
+- Les **guides locaux et professionnels**
 - Les **propriétaires de projets éco-touristiques** (hébergements, restaurants, agences, artisanat, centres de loisir)
 
 L'objectif est de promouvoir un tourisme respectueux de l'environnement via un système de **score de durabilité** et de **badges** gamifiant l'engagement écologique.
