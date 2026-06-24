@@ -226,28 +226,6 @@ export class CreateOfferItemDto {
   details_json?: Record<string, any>;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Type(() => Number)
-  bed_count?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  nights?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  tent_capacity?: number;
-
-  @IsOptional()
-  @IsString()
-  room_type?: string;
-
-  @IsOptional()
   @IsBoolean()
   requires_confirmation?: boolean;
 
@@ -286,28 +264,6 @@ export class UpdateOfferItemDto {
 
   @IsOptional()
   details_json?: Record<string, any>;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Type(() => Number)
-  bed_count?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  nights?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  tent_capacity?: number;
-
-  @IsOptional()
-  @IsString()
-  room_type?: string;
 
   @IsOptional()
   @IsBoolean()

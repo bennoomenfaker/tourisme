@@ -5,6 +5,7 @@ import { Offer } from './entities/offer.entity';
 import { OfferCategory } from './entities/offer-category.entity';
 import { OfferItem } from './entities/offer-item.entity';
 import { OfferItemPrice } from './entities/offer-item-price.entity';
+import { OfferItemCapacity } from './entities/offer-item-capacity.entity';
 import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
 import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Project } from '../project-owner/entities/project.entity';
@@ -36,6 +37,8 @@ export class OfferService {
     private readonly ruleRepo: Repository<OfferItemAvailabilityRule>,
     @InjectRepository(OfferItemSession)
     private readonly sessionRepo: Repository<OfferItemSession>,
+    @InjectRepository(OfferItemCapacity)
+    private readonly capacityRepo: Repository<OfferItemCapacity>,
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
   ) {}
@@ -199,7 +202,7 @@ export class OfferService {
   async findItemById(itemId: string): Promise<OfferItem> {
     const item = await this.itemRepo.findOne({
       where: { id: itemId },
-      relations: ['prices', 'sessions'],
+      relations: ['prices', 'sessions', 'capacity'],
     });
     if (!item) throw new NotFoundException('Élément d\'offre introuvable.');
     return item;
@@ -225,7 +228,7 @@ export class OfferService {
       offerItem: { id: itemId } as OfferItem,
       label: dto.label,
       price: dto.price,
-      currency: dto.currency ?? 'XAF',
+      currency: dto.currency ?? 'TND',
       pricing_unit: dto.pricing_unit ?? 'per_person',
       min_quantity: dto.min_quantity ?? null,
       max_quantity: dto.max_quantity ?? null,
@@ -248,6 +251,37 @@ export class OfferService {
     return { message: 'Prix supprimé.' };
   }
 
+  // ─── OfferItem Capacity ────────────────────────────────
+
+  async setCapacity(itemId: string, dto: { capacity_type: string; total_quantity: number }): Promise<OfferItemCapacity> {
+    await this.findItemById(itemId);
+    // Remove existing capacity for this item
+    const existing = await this.capacityRepo.find({ where: { offerItem: { id: itemId } } });
+    if (existing.length) await this.capacityRepo.remove(existing);
+
+    const cap = this.capacityRepo.create({
+      offerItem: { id: itemId } as OfferItem,
+      capacity_type: dto.capacity_type,
+      total_quantity: dto.total_quantity,
+      remaining_quantity: dto.total_quantity,
+    });
+    return this.capacityRepo.save(cap);
+  }
+
+  async getCapacity(itemId: string): Promise<OfferItemCapacity | null> {
+    const caps = await this.capacityRepo.find({
+      where: { offerItem: { id: itemId } },
+    });
+    return caps[0] ?? null;
+  }
+
+  async removeCapacity(capacityId: string): Promise<{ message: string }> {
+    const cap = await this.capacityRepo.findOne({ where: { id: capacityId } });
+    if (!cap) throw new NotFoundException('Capacité introuvable.');
+    await this.capacityRepo.remove(cap);
+    return { message: 'Capacité supprimée.' };
+  }
+
   // ─── OfferItem Availability Rules ──────────────────────
 
   async addAvailabilityRule(itemId: string, dto: CreateAvailabilityRuleDto): Promise<OfferItemAvailabilityRule> {
@@ -263,6 +297,160 @@ export class OfferService {
       recurrence_rule: dto.recurrence_rule ?? null,
     });
     return this.ruleRepo.save(rule);
+  }
+
+  async findAvailabilityRules(itemId: string): Promise<OfferItemAvailabilityRule[]> {
+    await this.findItemById(itemId);
+    return this.ruleRepo.find({
+      where: { offerItem: { id: itemId }, is_active: true },
+      order: { created_at: 'ASC' },
+    });
+  }
+
+  async removeAvailabilityRule(ruleId: string): Promise<{ message: string }> {
+    const rule = await this.ruleRepo.findOne({ where: { id: ruleId } });
+    if (!rule) throw new NotFoundException('Règle de disponibilité introuvable.');
+    await this.ruleRepo.remove(rule);
+    return { message: 'Règle supprimée.' };
+  }
+
+  // ─── Session Generator ────────────────────────────────
+
+  async generateSessions(itemId: string, daysAhead: number = 90): Promise<OfferItemSession[]> {
+    const rules = await this.ruleRepo.find({
+      where: { offerItem: { id: itemId }, is_active: true },
+    });
+    if (!rules.length) throw new BadRequestException('Aucune règle de disponibilité trouvée. Créez d\'abord une règle.');
+
+    const item = await this.findItemById(itemId);
+    const capacity = item.capacity?.[0]?.total_quantity ?? null;
+
+    // Remove future sessions before regenerating
+    const existing = await this.sessionRepo.find({
+      where: { offerItem: { id: itemId } },
+    });
+    if (existing.length) {
+      await this.sessionRepo.remove(existing);
+    }
+
+    const sessions: OfferItemSession[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + daysAhead);
+
+    for (const rule of rules) {
+      const startTime = rule.start_time ?? '09:00';
+      const endTime = rule.end_time ?? '17:00';
+
+      switch (rule.availability_type) {
+        case 'date_range': {
+          if (rule.start_date && rule.end_date) {
+            const start = new Date(rule.start_date);
+            const end = new Date(rule.end_date);
+            const weekdays = rule.weekdays;
+
+            for (let d = new Date(start); d <= end && d <= maxDate; d.setDate(d.getDate() + 1)) {
+              if (d < today) continue;
+              if (weekdays?.length && !weekdays.includes(d.getDay())) continue;
+              sessions.push(this.sessionRepo.create({
+                offerItem: { id: itemId } as OfferItem,
+                date: d.toISOString().split('T')[0],
+                start_time: startTime,
+                end_time: endTime,
+                total_capacity: capacity,
+                remaining_capacity: capacity,
+              }));
+            }
+          }
+          break;
+        }
+
+        case 'weekly': {
+          const weekdays = rule.weekdays ?? [1, 2, 3, 4, 5];
+          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
+            if (weekdays.includes(d.getDay())) {
+              sessions.push(this.sessionRepo.create({
+                offerItem: { id: itemId } as OfferItem,
+                date: d.toISOString().split('T')[0],
+                start_time: startTime,
+                end_time: endTime,
+                total_capacity: capacity,
+                remaining_capacity: capacity,
+              }));
+            }
+          }
+          break;
+        }
+
+        case 'daily': {
+          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
+            sessions.push(this.sessionRepo.create({
+              offerItem: { id: itemId } as OfferItem,
+              date: d.toISOString().split('T')[0],
+              start_time: startTime,
+              end_time: endTime,
+              total_capacity: capacity,
+              remaining_capacity: capacity,
+            }));
+          }
+          break;
+        }
+
+        case 'weekend_only': {
+          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
+            const day = d.getDay();
+            if (day === 0 || day === 6) {
+              sessions.push(this.sessionRepo.create({
+                offerItem: { id: itemId } as OfferItem,
+                date: d.toISOString().split('T')[0],
+                start_time: startTime,
+                end_time: endTime,
+                total_capacity: capacity,
+                remaining_capacity: capacity,
+              }));
+            }
+          }
+          break;
+        }
+
+        case 'custom': {
+          // RRULE support
+          if (rule.recurrence_rule) {
+            const rruleStr = rule.recurrence_rule;
+            const freq = rruleStr.match(/FREQ=(\w+)/)?.[1];
+            const byDay = rruleStr.match(/BYDAY=([\w,]+)/)?.[1]?.split(',');
+            const byMonth = rruleStr.match(/BYMONTH=(\d+)/)?.[1];
+
+            const dayMap: Record<string, number> = { 'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6 };
+            const targetDays = byDay?.map((d) => dayMap[d]).filter((d) => d !== undefined) ?? [];
+            const targetMonth = byMonth ? parseInt(byMonth) - 1 : null;
+
+            for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
+              let match = false;
+              if (freq === 'WEEKLY' && targetDays.length) {
+                match = targetDays.includes(d.getDay());
+              } else if (freq === 'YEARLY' && targetMonth !== null) {
+                match = d.getMonth() === targetMonth && targetDays.includes(d.getDay());
+              }
+              if (match) {
+                sessions.push(this.sessionRepo.create({
+                  offerItem: { id: itemId } as OfferItem,
+                  date: d.toISOString().split('T')[0],
+                  start_time: startTime,
+                  end_time: endTime,
+                  total_capacity: capacity,
+                  remaining_capacity: capacity,
+                }));
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    return this.sessionRepo.save(sessions);
   }
 
   // ─── OfferItem Sessions ────────────────────────────────

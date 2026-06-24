@@ -23,28 +23,30 @@ BEGIN;
 -- Utilisez DO $$ ... $$ pour déclarer des variables PL/pgSQL
 DO $$
 DECLARE
-  -- ── Remplacez ces valeurs par les vrais UUIDs de vos utilisateurs ──
-  v_admin_id       UUID := '00000000-0000-0000-0000-000000000001';
-  v_guide1_id      UUID := '00000000-0000-0000-0000-000000000002';
-  v_guide2_id      UUID := '00000000-0000-0000-0000-000000000003';
-  v_owner1_id      UUID := '00000000-0000-0000-0000-000000000004';
-  v_owner2_id      UUID := '00000000-0000-0000-0000-000000000005';
-  v_traveler1_id   UUID := '00000000-0000-0000-0000-000000000006';
-  v_traveler2_id   UUID := '00000000-0000-0000-0000-000000000007';
-  v_traveler3_id   UUID := '00000000-0000-0000-0000-000000000008';
+  -- ── Vrais UUIDs de vos utilisateurs ──
+  v_admin_id       UUID := 'faf06ea0-3c4a-4cff-b180-5ff4bedab682';
+  v_guide1_id      UUID := '87a38946-9a54-4bb4-be4a-887be312af15';
+  v_guide2_id      UUID := '6fb2d1e7-39db-4152-b9b5-5b440f551cc9';
+  v_owner1_id      UUID := '92a3ba7f-6bb3-4a57-bbb8-c70ff253a15e';
+  v_owner2_id      UUID := '8148d448-9c88-4aa3-b2f1-7d71bc112f12';
+  v_owner3_id      UUID := '3f8cb3e8-b8d1-4d27-a9ff-1b6699079b9f';
+  v_traveler1_id   UUID := '7b83e87d-276d-4d89-bb00-ab8ea1243a14';
+  v_traveler2_id   UUID := 'a602737a-b07d-4a41-b9c3-cdf1be17036a';
+  v_traveler3_id   UUID := 'b09808ee-30a9-4089-bbf7-698e73004ef4';
+  v_traveler4_id   UUID := '90b4c5bf-4a47-4737-b033-f7385e22a2e6';
 
   -- ── UUIDs générés pour les entités seedées ──
-  -- Offer Categories
-  v_cat_eco_tour    UUID := 'c0000000-0001-0000-0000-000000000001';
-  v_cat_accom       UUID := 'c0000000-0001-0000-0000-000000000002';
-  v_cat_activity    UUID := 'c0000000-0001-0000-0000-000000000003';
-  v_cat_restaurant  UUID := 'c0000000-0001-0000-0000-000000000004';
-  v_cat_craft       UUID := 'c0000000-0001-0000-0000-000000000005';
-  v_cat_workshop    UUID := 'c0000000-0001-0000-0000-000000000006';
-  v_cat_transfer    UUID := 'c0000000-0001-0000-0000-000000000007';
-  v_cat_sejour      UUID := 'c0000000-0001-0000-0000-000000000008';
-  v_cat_circuit     UUID := 'c0000000-0001-0000-0000-000000000009';
-  v_cat_other       UUID := 'c0000000-0001-0000-0000-000000000010';
+  -- Offer Categories (vrais IDs de la table offer_categories)
+  v_cat_eco_tour    UUID := '8a9f65cd-b3fe-43d7-a98d-1870e5f68b65';
+  v_cat_accom       UUID := 'e52ace62-a074-45e6-b3ee-b462aee4b03f';
+  v_cat_activity    UUID := '21a655e0-de08-4b62-b0da-7c5337fd93be';
+  v_cat_restaurant  UUID := '9bd16abf-aa62-41f6-a04e-f98c47239705';
+  v_cat_craft       UUID := '04137263-fdbc-468c-8f6b-a7c9b1cc6ae8';
+  v_cat_workshop    UUID := '00c21f9c-37ac-4a75-9950-eee33b8a90e7';
+  v_cat_transfer    UUID := 'f3b4967a-c5fd-4df1-8dfb-598afb941cb9';
+  v_cat_sejour      UUID := '4c50bfe4-dc54-4b5d-bfa9-308c31c8b356';
+  v_cat_circuit     UUID := '98bed090-080f-447f-b24b-19d4ca794c04';
+  v_cat_other       UUID := '23e7deba-3e18-4e89-900d-3662cf8634d0';
 
   -- Projects
   v_proj1  UUID := 'a1000000-0001-0000-0000-000000000001';
@@ -263,10 +265,10 @@ ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO projects (id, owner_id, name, project_type, description, region, address, lat, lng, opening_hours, status, sustainability_score, services, eco_labels, phone) VALUES
   (v_proj1, v_owner1_id, 'Éco-Lodge Forêt de Kroumirie',       'hebergement,eco_tourisme',   'Lodge écologique niché dans la forêt de chênes-lièges. Bungalows en bois, énergie solaire, cuisine locale bio.',                      'Ain Draham',       'Route de la Forêt, Ain Draham 8130',          36.7837, 8.6865,  '24h/24',        'active',  85, 'hebergement,restauration,randonnee,spa_naturel',     'label_vert,bio',                    '+216 78 655 001'),
   (v_proj2, v_owner2_id, 'Coopérative Artisanale de Guellala',  'artisanat',                  'Coopérative féminine de poterie et tissage. Ateliers participatifs pour touristes. Matières premières 100% locales.',                 'Djerba',           'Guellala, Djerba 4155',                       33.8000, 10.8500, '09:00 - 18:00', 'active',  90, 'atelier,vente,visite_guidee',                        'commerce_equitable,artisanat_local', '+216 75 612 345'),
-  (v_proj3, v_owner1_id, 'Ferme Bio Oasis de Tozeur',           'agriculture,restauration',   'Ferme bio dans l''oasis de Tozeur. Dégustation de dattes, huile d''olive bio, repas traditionnels sous les palmiers.',                 'Tozeur',           'Route de l''Oasis, Tozeur 2200',               33.9197, 8.1335,  '08:00 - 20:00', 'active',  92, 'restauration,visite_guidee,vente_produits',           'bio,terroir',                       '+216 76 452 100'),
+  (v_proj3, v_owner3_id, 'Ferme Bio Oasis de Tozeur',           'agriculture,restauration',   'Ferme bio dans l''oasis de Tozeur. Dégustation de dattes, huile d''olive bio, repas traditionnels sous les palmiers.',                 'Tozeur',           'Route de l''Oasis, Tozeur 2200',               33.9197, 8.1335,  '08:00 - 20:00', 'active',  92, 'restauration,visite_guidee,vente_produits',           'bio,terroir',                       '+216 76 452 100'),
   (v_proj4, v_owner2_id, 'Centre de Plongée Éco Djerba',        'activite,eco_tourisme',      'Centre de plongée écoresponsable. Observation des herbiers de posidonie et des tortues marines. Zéro impact sur les récifs.',         'Djerba',           'Zone Touristique Midoun, Djerba 4116',        33.8300, 11.0100, '07:00 - 19:00', 'active',  88, 'plongee,snorkeling,formation,education_marine',      'blue_flag,eco_dive',                '+216 75 731 200'),
-  (v_proj5, v_owner1_id, 'Maison d''Hôtes Berbère Matmata',      'hebergement',               'Maison d''hôtes troglodytique traditionnelle à Matmata. Architecture souterraine millénaire, cuisine berbère authentique.',            'Matmata',          'Matmata Ancienne, Matmata 6070',              33.5444, 9.9671,  '24h/24',        'active',  80, 'hebergement,restauration,visite_culturelle',         'patrimoine,authentique',             '+216 75 240 033'),
-  (v_proj6, v_owner2_id, 'Kayak Mangrove Kerkennah',            'activite,eco_tourisme',      'Excursions en kayak dans la mangrove des îles Kerkennah. Observation des flamants roses et pêche traditionnelle à la charfia.',       'Kerkennah',        'Port de Sidi Youssef, Kerkennah 3070',        34.7100, 11.1400, '06:00 - 18:00', 'active',  87, 'kayak,observation_oiseaux,peche_traditionnelle',     'reserve_naturelle,eco_tourisme',    '+216 74 281 055')
+  (v_proj5, v_owner3_id, 'Maison d''Hôtes Berbère Matmata',      'hebergement',               'Maison d''hôtes troglodytique traditionnelle à Matmata. Architecture souterraine millénaire, cuisine berbère authentique.',            'Matmata',          'Matmata Ancienne, Matmata 6070',              33.5444, 9.9671,  '24h/24',        'active',  80, 'hebergement,restauration,visite_culturelle',         'patrimoine,authentique',             '+216 75 240 033'),
+  (v_proj6, v_owner1_id, 'Kayak Mangrove Kerkennah',            'activite,eco_tourisme',      'Excursions en kayak dans la mangrove des îles Kerkennah. Observation des flamants roses et pêche traditionnelle à la charfia.',       'Kerkennah',        'Port de Sidi Youssef, Kerkennah 3070',        34.7100, 11.1400, '06:00 - 18:00', 'active',  87, 'kayak,observation_oiseaux,peche_traditionnelle',     'reserve_naturelle,eco_tourisme',    '+216 74 281 055')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -285,8 +287,8 @@ INSERT INTO offers (id, author_id, author_type, project_id, category_id, title, 
   (v_off7,  v_owner2_id, 'project_owner', v_proj6, v_cat_activity, 'Kayak Mangrove Kerkennah',              'Excursion en kayak dans la mangrove de Kerkennah. 3h de pagaie, observation flamants roses, pêche traditionnelle charfia.',             55.00,  '3h',         'activite',    NULL, 'Kayak, gilet, guide naturaliste, collation',                        'Kerkennah',   'Port de Sidi Youssef',                      34.7100, 11.1400,  'Port Sidi Youssef', 34.7100, 11.1400, 2, 10, 8,  'Remboursement intégral si météo défavorable',     90, 'automatic', 'approved'),
 
   -- Restauration
-  (v_off8,  v_owner1_id, 'project_owner', v_proj3, v_cat_restaurant, 'Déjeuner sous les Palmiers',          'Repas traditionnel tunisien bio sous les palmiers de l''oasis de Tozeur. Couscous aux légumes du jardin, brick, salade mechouia.',       25.00,  '2h',         'restauration', NULL, 'Repas 4 plats, thé à la menthe, dattes fraîches',                  'Tozeur',      'Oasis de Tozeur',                           33.9197, 8.1335,   'Entrée de l''oasis', 33.9190, 8.1340, 2, 30, NULL, 'Annulation gratuite 24h avant',                   92, 'automatic', 'approved'),
-  (v_off9,  v_owner1_id, 'project_owner', v_proj3, v_cat_restaurant, 'Atelier Cuisine Oasis',               'Apprenez à préparer le couscous tunisien, la harissa maison et les pâtisseries aux dattes avec nos cuisinières locales.',               40.00,  '3h',         'restauration', NULL, 'Ingrédients bio, tablier, recettes imprimées, dégustation',        'Tozeur',      'Ferme Bio, Route de l''Oasis',               33.9197, 8.1335,   NULL, NULL, NULL, 2, 12, 8,  'Annulation gratuite 48h avant',                   90, 'manual',    'approved'),
+  (v_off8,  v_owner3_id, 'project_owner', v_proj3, v_cat_restaurant, 'Déjeuner sous les Palmiers',          'Repas traditionnel tunisien bio sous les palmiers de l''oasis de Tozeur. Couscous aux légumes du jardin, brick, salade mechouia.',       25.00,  '2h',         'restauration', NULL, 'Repas 4 plats, thé à la menthe, dattes fraîches',                  'Tozeur',      'Oasis de Tozeur',                           33.9197, 8.1335,   'Entrée de l''oasis', 33.9190, 8.1340, 2, 30, NULL, 'Annulation gratuite 24h avant',                   92, 'automatic', 'approved'),
+  (v_off9,  v_owner3_id, 'project_owner', v_proj3, v_cat_restaurant, 'Atelier Cuisine Oasis',               'Apprenez à préparer le couscous tunisien, la harissa maison et les pâtisseries aux dattes avec nos cuisinières locales.',               40.00,  '3h',         'restauration', NULL, 'Ingrédients bio, tablier, recettes imprimées, dégustation',        'Tozeur',      'Ferme Bio, Route de l''Oasis',               33.9197, 8.1335,   NULL, NULL, NULL, 2, 12, 8,  'Annulation gratuite 48h avant',                   90, 'manual',    'approved'),
 
   -- Artisanat
   (v_off10, v_owner2_id, 'project_owner', v_proj2, v_cat_craft,    'Atelier Poterie de Guellala',           'Initiez-vous à la poterie traditionnelle de Guellala avec les artisanes de la coopérative. Repartez avec votre création.',              30.00,  '2h30',       'artisanat',   NULL, 'Matériel, cuisson, emballage de votre pièce',                       'Djerba',      'Guellala, Djerba',                          33.8000, 10.8500,  NULL, NULL, NULL, 1, 8,  6,  'Non remboursable',                                90, 'automatic', 'approved'),
@@ -299,31 +301,31 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 -- 7. OFFER ITEMS (éléments réservables dans les offres)
 -- ============================================================================
-INSERT INTO offer_items (id, offer_id, name, description, item_type, bed_count, nights, tent_capacity, room_type, requires_confirmation, status) VALUES
+INSERT INTO offer_items (id, offer_id, name, description, item_type, details_json, requires_confirmation, status) VALUES
   -- Off1: Bungalow Kroumirie
-  (v_item1,  v_off1,  'Bungalow Double',             'Bungalow 2 personnes avec terrasse privée',                'room',           2, 1, NULL, 'double',           false, 'active'),
-  (v_item2,  v_off1,  'Bungalow Familial',           'Bungalow 4 personnes avec mezzanine',                      'room',           4, 1, NULL, 'family',           false, 'active'),
+  (v_item1,  v_off1,  'Bungalow Double',             'Bungalow 2 personnes avec terrasse privée',                'room',           '{"bed_count":2,"nights":1,"room_sub_type":"double"}',                    false, 'active'),
+  (v_item2,  v_off1,  'Bungalow Familial',           'Bungalow 4 personnes avec mezzanine',                      'room',           '{"bed_count":4,"nights":1,"room_sub_type":"family"}',                    false, 'active'),
   -- Off2: Matmata
-  (v_item3,  v_off2,  'Chambre Troglodyte Standard', 'Chambre creusée dans la roche, lit double',                'room',           2, 1, NULL, 'private',          false, 'active'),
+  (v_item3,  v_off2,  'Chambre Troglodyte Standard', 'Chambre creusée dans la roche, lit double',                'room',           '{"bed_count":2,"nights":1,"room_sub_type":"private"}',                   false, 'active'),
   -- Off3: Séjour 3 nuits Kroumirie
-  (v_item4,  v_off3,  'Pack Séjour Solo',            'Séjour 3 nuits en chambre individuelle + activités',       'room',           1, 3, NULL, 'private',          true,  'active'),
-  (v_item5,  v_off3,  'Pack Séjour Couple',          'Séjour 3 nuits en bungalow double + activités',            'room',           2, 3, NULL, 'double',           true,  'active'),
+  (v_item4,  v_off3,  'Pack Séjour Solo',            'Séjour 3 nuits en chambre individuelle + activités',       'room',           '{"bed_count":1,"nights":3,"room_sub_type":"private"}',                   true,  'active'),
+  (v_item5,  v_off3,  'Pack Séjour Couple',          'Séjour 3 nuits en bungalow double + activités',            'room',           '{"bed_count":2,"nights":3,"room_sub_type":"double"}',                    true,  'active'),
   -- Off4: Randonnée Zaghouan
-  (v_item6,  v_off4,  'Place Randonnée',             'Participation à la randonnée guidée du Djebel Zaghouan',   'activity',    NULL, NULL, NULL, NULL,             false, 'active'),
+  (v_item6,  v_off4,  'Place Randonnée',             'Participation à la randonnée guidée du Djebel Zaghouan',   'activity',       NULL,                                                                     false, 'active'),
   -- Off5: Tour Houmt Souk
-  (v_item7,  v_off5,  'Place Tour Guidé',            'Place pour le tour culturel de Houmt Souk',                'activity',    NULL, NULL, NULL, NULL,             false, 'active'),
+  (v_item7,  v_off5,  'Place Tour Guidé',            'Place pour le tour culturel de Houmt Souk',                'activity',       NULL,                                                                     false, 'active'),
   -- Off6: Plongée Djerba
-  (v_item8,  v_off6,  'Plongée Découverte',          'Plongée avec moniteur pour débutants',                     'activity',    NULL, NULL, NULL, NULL,             true,  'active'),
-  (v_item9,  v_off6,  'Plongée Autonome',            'Plongée pour plongeurs certifiés (Niveau 1+)',             'activity',    NULL, NULL, NULL, NULL,             false, 'active'),
+  (v_item8,  v_off6,  'Plongée Découverte',          'Plongée avec moniteur pour débutants',                     'activity',       NULL,                                                                     true,  'active'),
+  (v_item9,  v_off6,  'Plongée Autonome',            'Plongée pour plongeurs certifiés (Niveau 1+)',             'activity',       NULL,                                                                     false, 'active'),
   -- Off8: Déjeuner Tozeur
-  (v_item10, v_off8,  'Menu Traditionnel',           'Couscous + brick + salade mechouia + dessert',             'menu',        NULL, NULL, NULL, NULL,             false, 'active'),
+  (v_item10, v_off8,  'Menu Traditionnel',           'Couscous + brick + salade mechouia + dessert',             'menu',           NULL,                                                                     false, 'active'),
   -- Off10: Poterie Guellala
-  (v_item11, v_off10, 'Atelier Poterie Adulte',      'Atelier de 2h30 avec pièce à emporter',                    'workshop',    NULL, NULL, NULL, NULL,             false, 'active'),
+  (v_item11, v_off10, 'Atelier Poterie Adulte',      'Atelier de 2h30 avec pièce à emporter',                    'workshop',       NULL,                                                                     false, 'active'),
   -- Off12: Bivouac Sahara
-  (v_item12, v_off12, 'Tente Bédouine 2 pers.',      'Tente traditionnelle pour 2 personnes',                    'tent_space',  NULL, 1,    2,    'tent',           false, 'active'),
-  (v_item13, v_off12, 'Tente Bédouine 4 pers.',      'Grande tente pour famille ou groupe',                      'tent_space',  NULL, 1,    4,    'tent',           false, 'active'),
+  (v_item12, v_off12, 'Tente Bédouine 2 pers.',      'Tente traditionnelle pour 2 personnes',                    'camping_space',  '{"tent_capacity":2,"nights":1}',                                         false, 'active'),
+  (v_item13, v_off12, 'Tente Bédouine 4 pers.',      'Grande tente pour famille ou groupe',                      'camping_space',  '{"tent_capacity":4,"nights":1}',                                         false, 'active'),
   -- Off7: Kayak Kerkennah
-  (v_item14, v_off7,  'Kayak Simple',                'Kayak individuel + gilet + pagaie',                        'equipment',   NULL, NULL, NULL, NULL,             false, 'active')
+  (v_item14, v_off7,  'Kayak Simple',                'Kayak individuel + gilet + pagaie',                        'equipment',      NULL,                                                                     false, 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================

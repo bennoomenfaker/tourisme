@@ -35,16 +35,16 @@ export const OFFER_CATEGORIES = [
  * Which offer categories are available for each project type
  */
 export const PROJECT_TYPE_OFFERS: Record<string, string[]> = {
-  accommodation: ['accommodation', 'restaurant', 'activity'],
-  camping: ['accommodation', 'activity', 'equipment_rental'],
-  restaurant: ['restaurant', 'event'],
-  activity_center: ['activity', 'workshop', 'equipment_rental'],
-  artisan: ['workshop', 'event', 'equipment_rental'],
-  farm: ['accommodation', 'restaurant', 'activity', 'workshop'],
-  transport: ['transport', 'equipment_rental'],
-  event_space: ['event', 'accommodation', 'restaurant'],
-  tourism_association: ['activity', 'guide_service', 'workshop', 'transport'],
-  eco_park: ['activity', 'accommodation', 'guide_service', 'equipment_rental'],
+  accommodation: ['accommodation', 'restaurant', 'activity', 'sejour'],
+  camping: ['accommodation', 'activity', 'equipment_rental', 'sejour'],
+  restaurant: ['restaurant', 'event', 'craft'],
+  activity_center: ['activity', 'workshop', 'equipment_rental', 'event'],
+  artisan: ['workshop', 'event', 'equipment_rental', 'craft'],
+  farm: ['accommodation', 'restaurant', 'activity', 'workshop', 'sejour', 'eco_tour'],
+  transport: ['transport', 'equipment_rental', 'circuit'],
+  event_space: ['event', 'accommodation', 'restaurant', 'workshop'],
+  tourism_association: ['activity', 'guide_service', 'workshop', 'transport', 'eco_tour', 'circuit', 'event'],
+  eco_park: ['activity', 'accommodation', 'guide_service', 'equipment_rental', 'eco_tour', 'circuit'],
 };
 
 /**
@@ -63,7 +63,11 @@ export const CATEGORY_FORM_FIELDS: Record<string, string[]> = {
   workshop: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items', 'sessions'],
   guide_service: ['title', 'description', 'region', 'address', 'gps', 'meeting_point', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items', 'sessions'],
   equipment_rental: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items'],
-  event: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items', 'sessions'],
+  event: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'min_age', 'confirmation_mode', 'items', 'sessions'],
+  craft: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items', 'sessions'],
+  circuit: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items', 'sessions'],
+  sejour: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items', 'sessions'],
+  eco_tour: ['title', 'description', 'region', 'address', 'gps', 'meeting_point', 'images', 'min_group_size', 'max_group_size', 'min_age', 'confirmation_mode', 'items', 'sessions'],
 };
 
 /**
@@ -79,7 +83,15 @@ export const ITEM_TYPES_BY_CATEGORY: Record<string, { value: string; label: stri
     { value: 'activity', label: 'Activité' },
     { value: 'guided_tour', label: 'Visite guidée' },
     { value: 'hiking', label: 'Randonnée' },
-    { value: 'water_sport', label: 'Sport nautique' },
+    { value: 'kayak', label: 'Kayak' },
+    { value: 'vtt', label: 'VTT' },
+    { value: 'escalade', label: 'Escalade' },
+    { value: 'equitation', label: 'Équitation' },
+    { value: 'observation', label: 'Observation' },
+    { value: 'yoga', label: 'Yoga' },
+    { value: 'meditation', label: 'Méditation' },
+    { value: 'photographie', label: 'Photographie' },
+    { value: 'other', label: 'Autre' },
   ],
   restaurant: [
     { value: 'dish', label: 'Plat' },
@@ -90,6 +102,11 @@ export const ITEM_TYPES_BY_CATEGORY: Record<string, { value: string; label: stri
   ],
   workshop: [
     { value: 'workshop', label: 'Atelier' },
+    { value: 'poterie', label: 'Poterie' },
+    { value: 'cuisine', label: 'Cuisine' },
+    { value: 'tissage', label: 'Tissage' },
+    { value: 'musique', label: 'Musique' },
+    { value: 'other', label: 'Autre' },
   ],
   guide_service: [
     { value: 'guided_tour', label: 'Visite guidée' },
@@ -99,7 +116,35 @@ export const ITEM_TYPES_BY_CATEGORY: Record<string, { value: string; label: stri
     { value: 'equipment', label: 'Équipement' },
   ],
   event: [
-    { value: 'activity', label: 'Événement' },
+    { value: 'festival', label: 'Festival' },
+    { value: 'concert', label: 'Concert' },
+    { value: 'conference', label: 'Conférence' },
+    { value: 'workshop', label: 'Atelier spécial' },
+    { value: 'celebration', label: 'Célébration' },
+    { value: 'exposition', label: 'Exposition' },
+    { value: 'food_tasting', label: 'Dégustation' },
+    { value: 'other', label: 'Autre' },
+  ],
+  craft: [
+    { value: 'product', label: 'Produit artisanal' },
+    { value: 'poterie', label: 'Poterie' },
+    { value: 'tissage', label: 'Tissage' },
+    { value: 'bijouterie', label: 'Bijouterie' },
+    { value: 'other', label: 'Autre' },
+  ],
+  circuit: [
+    { value: 'circuit', label: 'Circuit complet' },
+  ],
+  sejour: [
+    { value: 'package', label: 'Forfait séjour' },
+    { value: 'all_inclusive', label: 'Tout inclus' },
+  ],
+  eco_tour: [
+    { value: 'activity', label: 'Activité éco' },
+    { value: 'guided_tour', label: 'Visite éco-guidée' },
+    { value: 'hiking', label: 'Randonnée nature' },
+    { value: 'observation', label: 'Observation faune/flore' },
+    { value: 'workshop', label: 'Atelier éco' },
   ],
 };
 
@@ -124,4 +169,10 @@ export const PRICING_UNITS = [
   { value: 'per_hour', label: 'Par heure' },
   { value: 'per_half_day', label: 'Par demi-journée' },
   { value: 'per_day', label: 'Par jour' },
+  { value: 'per_trip', label: 'Par trajet' },
+  { value: 'per_group', label: 'Par groupe' },
+  { value: 'per_vehicle', label: 'Par véhicule' },
+  { value: 'per_meal', label: 'Par repas' },
+  { value: 'per_stay', label: 'Par séjour' },
+  { value: 'per_item', label: 'Par article' },
 ] as const;

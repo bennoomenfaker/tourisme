@@ -55,7 +55,7 @@ export class Circuit {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   base_price!: number | null;
 
-  @Column({ default: 'XAF' })
+  @Column({ default: 'TND' })
   currency!: string;
 
   @Column({ type: 'int', nullable: true })

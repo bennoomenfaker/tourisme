@@ -29,7 +29,7 @@ export class OfferItemPrice {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price!: number;
 
-  @Column({ default: 'XAF' })
+  @Column({ default: 'TND' })
   currency!: string;
 
   @Column({ default: 'per_person' })

@@ -12,11 +12,17 @@ import { Offer } from './offer.entity';
 import { OfferItemPrice } from './offer-item-price.entity';
 import { OfferItemSession } from './offer-item-session.entity';
 import { OfferItemCapacity } from './offer-item-capacity.entity';
+import { OfferItemAvailabilityRule } from './offer-item-availability-rule.entity';
 
 /**
  * Élément réellement vendable dans une offre
  * Exemples : "Couscous", "Tente 2 places", "Vélo VTT", "Atelier poterie"
  * Un OfferItem est l'unité de réservation : on réserve un item, pas une offre entière
+ *
+ * item_type : room | bed | camping_space | dish | menu
+ *            | equipment | activity | workshop | transport_service
+ *
+ * Les attributs spécifiques (bed_count, tent_capacity, etc.) vont dans details_json
  */
 @Entity('offer_items')
 export class OfferItem {
@@ -29,7 +35,6 @@ export class OfferItem {
 
   @Column()
   name!: string;
-  // "Couscous", "Tente 2 places", "Vélo VTT"
 
   @Column({ type: 'text', nullable: true })
   description!: string | null;
@@ -38,27 +43,14 @@ export class OfferItem {
   item_type!: string | null;
   // 'room' | 'bed' | 'camping_space' | 'dish' | 'menu'
   // | 'equipment' | 'activity' | 'workshop' | 'transport_service'
-  // | 'dormitory' | 'private_room' | 'tent_space' | 'kayak' | 'restaurant'
-
-  @Column({ type: 'int', nullable: true })
-  bed_count!: number | null;
-  // Nombre de lits pour un hébergement
-
-  @Column({ type: 'int', nullable: true })
-  nights!: number | null;
-  // Nombre de nuits pour un séjour
-
-  @Column({ type: 'int', nullable: true })
-  tent_capacity!: number | null;
-  // Capacité en personnes pour un espace tente
-
-  @Column({ type: 'varchar', nullable: true })
-  room_type!: string | null;
-  // 'shared_dormitory' | 'private' | 'double' | 'family' | 'tent'
 
   @Column({ type: 'json', nullable: true })
   details_json!: Record<string, any> | null;
-  // Infos complémentaires libres (matériel fourni, prérequis, etc.)
+  // Attributs spécifiques selon item_type :
+  // - room : { room_type: 'private'|'double'|'family'|'suite'|'studio', bed_count: 2 }
+  // - camping_space : { capacity_persons: 4 }
+  // - dish : { ingredients: [...], allergens: [...] }
+  // Libres pour tout autre attribut complémentaire
 
   @Column({ default: false })
   requires_confirmation!: boolean;
@@ -69,15 +61,12 @@ export class OfferItem {
 
   @Column({ type: 'int', nullable: true })
   booking_deadline_days!: number | null;
-  // Réservation au plus tard X jours avant la date
 
   @Column({ type: 'int', nullable: true })
   cancellation_deadline_days!: number | null;
-  // Annulation gratuite jusqu'à X jours avant
 
   @Column({ type: 'int', nullable: true })
   production_delay_days!: number | null;
-  // Délai de préparation après confirmation (ex: 2 jours pour un plat)
 
   @Column({ default: 'active' })
   status!: string;
@@ -91,6 +80,9 @@ export class OfferItem {
 
   @OneToMany(() => OfferItemCapacity, (c) => c.offerItem)
   capacity!: OfferItemCapacity[];
+
+  @OneToMany(() => OfferItemAvailabilityRule, (r) => r.offerItem)
+  availabilityRules!: OfferItemAvailabilityRule[];
 
   @CreateDateColumn()
   created_at!: Date;

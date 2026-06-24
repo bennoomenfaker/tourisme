@@ -192,6 +192,54 @@ export class OfferController {
     return this.service.addAvailabilityRule(itemId, dto);
   }
 
+  /** Liste les règles de disponibilité */
+  @Public()
+  @Get('items/:itemId/availability')
+  findAvailabilityRules(@Param('itemId') itemId: string) {
+    return this.service.findAvailabilityRules(itemId);
+  }
+
+  /** Supprime une règle de disponibilité */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete('availability/:ruleId')
+  removeAvailabilityRule(@Param('ruleId') ruleId: string) {
+    return this.service.removeAvailabilityRule(ruleId);
+  }
+
+  /** Génère les sessions automatiquement depuis les règles */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Post('items/:itemId/availability/generate')
+  generateSessions(@Param('itemId') itemId: string) {
+    return this.service.generateSessions(itemId);
+  }
+
+  // ─── Capacity ──────────────────────────────────────
+
+  /** Définit la capacité d'un item */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Post('items/:itemId/capacity')
+  setCapacity(@Param('itemId') itemId: string, @Body() dto: { capacity_type: string; total_quantity: number }) {
+    return this.service.setCapacity(itemId, dto);
+  }
+
+  /** Récupère la capacité d'un item */
+  @Public()
+  @Get('items/:itemId/capacity')
+  getCapacity(@Param('itemId') itemId: string) {
+    return this.service.getCapacity(itemId);
+  }
+
+  /** Supprime la capacité */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete('capacity/:capacityId')
+  removeCapacity(@Param('capacityId') capacityId: string) {
+    return this.service.removeCapacity(capacityId);
+  }
+
   // ─── Sessions ──────────────────────────────────────
 
   /** Crée une session (créneau concret) */

@@ -41,7 +41,10 @@ const ITEM_TYPE_ICONS: Record<string, string> = {
   photographie: "📷", yoga: "🧘", meditation: "🧘", poterie: "🏺", tissage: "🧶",
   cuisine: "🍲", musique: "🎵", calligraphie: "✍️", other: "📌",
   room: "🛏️", bed: "🛏️", camping_space: "⛺", dish: "🍲", menu: "📋",
-  transport_service: "🚐", hiking: "🥾", water_sport: "🏄", guided_tour: "🧭",
+  transport_service: "🚐", hiking: "🥾", water_sport: "🏄",
+  festival: "🎪", concert: "🎵", conference: "🎤", celebration: "🥳",
+  exposition: "🖼️", food_tasting: "🍷", product: "🏺", package: "🎁",
+  all_inclusive: "⭐", bijouterie: "💍", craft: "🏺",
 };
 
 const PRICING_LABELS: Record<string, string> = {

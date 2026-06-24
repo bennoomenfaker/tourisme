@@ -43,9 +43,10 @@ export class Offer {
   @Column({ type: 'varchar' })
   title!: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   description!: string | null;
 
+  // Prix indicatif (auto-calculé depuis les prix des items si null)
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price!: number | null;
 

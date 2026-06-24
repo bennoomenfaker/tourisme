@@ -48,7 +48,11 @@ function LoginForm() {
       localStorage.setItem("refresh_token", result.refresh_token);
       localStorage.setItem("user", JSON.stringify(result.user));
 
-      router.push(redirectUrl || result.dashboard);
+      // Preserve guest cart through login
+      const guestCart = localStorage.getItem("guest_cart");
+
+      const target = redirectUrl || result.dashboard;
+      router.push(target);
     } catch (err: any) {
       setError(err.message || "Erreur lors de la connexion.");
     } finally {
@@ -206,6 +210,10 @@ function LoginForm() {
 
               <div className="grid gap-4 grid-cols-1">
                 <button onClick={() => {
+                  // Save redirect URL before Google OAuth redirect
+                  if (redirectUrl) {
+                    localStorage.setItem("post_login_redirect", redirectUrl);
+                  }
                   window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
                   }} className="flex items-center justify-center gap-3 py-3 px-4 border-2 border-surface-container-highest rounded-xl hover:bg-surface-container-low transition-colors font-bold text-sm w-full">
                   <svg className="w-5 h-5" viewBox="0 0 24 24">

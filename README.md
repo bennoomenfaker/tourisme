@@ -42,6 +42,7 @@ L'objectif est de promouvoir un tourisme respectueux de l'environnement via un s
 │                    réseau interne tourisme_net                 │
 └──────────────────────────────────────────────────────────────┘
 ```
+
 # Rapport d'Analyse — Éco-Voyage
 
 ## 1. Qu'est-ce que ce projet ?
@@ -89,13 +90,32 @@ Score Final = Questionnaire × 20% + Réservations × 40% + Feedbacks × 20% + P
 ### 3. Gestion des Offres Éco-Touristiques
 
 **Types d'offres supportés :**
+
 - 🏕️ **Hébergement** : Chambres, camping, éco-lodges
 - 🚣 **Activités** : Randonnées, kayak, ateliers, observation faune
 - 🍽️ **Restauration** : Restaurants éco-responsables, cuisine traditionnelle
 - 🎨 **Artisanat** : Ateliers poterie, tissage, produits locaux
 - 🚐 **Transport** : Navettes, transferts, location vélo
 
+**Types d'activités enrichis (25+) :**
+
+| Catégorie | Activités |
+|-----------|-----------|
+| **Outdoor** | Randonnée, Trekking, VTT, Escalade, Kayak, Paddle, Tyrolienne, Spéléologie, Équitation |
+| **Nature** | Observation oiseaux, Astronomie, Photographie |
+| **Culture & Bien-être** | Yoga, Méditation, Poterie, Tissage, Cuisine locale, Musique traditionnelle, Calligraphie |
+| **Services** | Hébergement, Repas, Transport, Atelier |
+
+**Smart Date Picker :**
+- 📅 Date unique
+- 📆 Plusieurs dates
+- 🔄 Chaque semaine (weekday picker)
+- 🌊 Période saisonnière (date range + weekdays)
+- 🎉 Chaque année (yearly recurrence)
+- ⚙️ Personnalisé (full control)
+
 **Workflow de validation :**
+
 ```
 Création → status = "pending"
               │
@@ -113,15 +133,27 @@ Création → status = "pending"
 ### 4. Circuits Multi-Jours
 
 **Fonctionnalités :**
+
 - Itinéraire jour par jour avec programme détaillé
 - Options additionnelles (transport, hébergement, équipement)
 - Réservation avec participants
 - Carte interactive avec tracé GPS
 - Gestion des capacités et prix
 
-### 5. Plans de Voyage (TripPlan)
+### 5. Panier de Voyage (TravelCart) — NOUVEAU
+
+**Workflow complet :** Explorer → Panier → Trip Plan → Réservation
+
+- **Panier temporaire** : Ajouter des OfferItems et Circuits librement
+- **Carte interactive** : Explorer les offres/circuits sur OpenStreetMap, ajouter au panier en un clic
+- **Conversion** : Le panier se transforme en TripPlan structuré avec dates et programme
+- **Widget flottant** : Bouton panier avec compteur d'items
+- API : `/travel-carts/me`, `/travel-carts/:id/items`, `/travel-carts/:id/convert`
+
+### 6. Plans de Voyage (TripPlan)
 
 **Innovation clé :** Permet aux écovoyageurs de :
+
 - Rassembler plusieurs offres/activités dans un même plan
 - Organiser par jour avec notes
 - Vérifier les limites de participants et d'âge
@@ -330,6 +362,7 @@ tourisme/
 ## 🔧 API Endpoints Principaux
 
 ### Authentification
+
 ```
 POST   /api/auth/register     # Inscription
 POST   /api/auth/login        # Connexion
@@ -339,6 +372,7 @@ GET    /api/auth/google       # Google OAuth
 ```
 
 ### Éco-Voyageur
+
 ```
 GET    /api/eco-traveler/profile      # Profil
 POST   /api/eco-traveler/profile      # Compléter profil
@@ -347,6 +381,7 @@ POST   /api/eco-traveler/onboarded    # Onboard terminé
 ```
 
 ### Offres
+
 ```
 POST   /api/offers                   # Créer offre
 GET    /api/offers                   # Toutes les offres
@@ -356,6 +391,7 @@ DELETE /api/offers/:id              # Supprimer offre
 ```
 
 ### Réservations
+
 ```
 POST   /api/bookings                # Réserver
 GET    /api/bookings/mine           # Mes réservations
@@ -365,6 +401,7 @@ PATCH  /api/bookings/:id/confirm   # Confirmer
 ```
 
 ### Circuits
+
 ```
 POST   /api/circuits               # Créer circuit
 GET    /api/circuits              # Circuits publiés
@@ -372,7 +409,21 @@ GET    /api/circuits/:id          # Détail circuit
 POST   /api/circuits/:id/reserve   # Réserver circuit
 ```
 
+### Panier de Voyage (TravelCart) — NOUVEAU
+
+```
+GET    /api/travel-carts/me        # Panier actif
+GET    /api/travel-carts/:id      # Détail panier
+PATCH  /api/travel-carts/:id      # Modifier panier
+DELETE /api/travel-carts/:id      # Supprimer panier
+POST   /api/travel-carts/:id/items        # Ajouter item
+PATCH  /api/travel-carts/:id/items/:iid   # Modifier item
+DELETE /api/travel-carts/:id/items/:iid   # Supprimer item
+POST   /api/travel-carts/:id/convert      # Convertir → TripPlan
+```
+
 ### Trip Plans
+
 ```
 POST   /api/trip-plans            # Créer plan
 GET    /api/trip-plans/mine       # Mes plans
@@ -393,6 +444,8 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 | **Détail Offre** | `/offers/[id]` | Détail d'une offre avec réservation |
 | **Circuits** | `/circuits` | Liste des circuits touristiques |
 | **Détail Circuit** | `/circuits/[id]` | Détail d'un circuit avec itinéraire |
+| **Explorer** | `/explore` | Carte Leaflet + catalogue + ajout au panier |
+| **Panier** | `/cart` | Gestion du panier, conversion en TripPlan |
 | **Mes Réservations** | `/dashboard/reservations` | Réservations de l'utilisateur |
 | **Notifications** | `/notifications` | Page des notifications |
 | **Plans de Voyage** | `/trip-plans` | Gestion des plans personnels |
@@ -403,6 +456,7 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 ## 🎨 Design & UX
 
 ### Style Visuel
+
 - **Design Material You / Google-like** : Interface moderne et épurée
 - **Icônes** : Material Symbols (Lucide React)
 - **Couleurs** : Palette éco-friendly (verts, bleus, terres)
@@ -410,6 +464,7 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 - **Responsive** : Design mobile-first
 
 ### Patterns UX
+
 - **Progressive disclosure** : Information par étapes
 - **Wizard forms** : Formulaires multi-étapes (onboarding, création offres)
 - **Empty states** : Messages clairs pour vides
@@ -421,18 +476,21 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 ## 🔐 Sécurité
 
 ### Authentification
+
 - **JWT tokens** avec expiration (15min access, 7j refresh)
 - **Rotation de refresh tokens** pour sécurité renforcée
 - **Google OAuth2** pour connexion sociale
 - **Hash bcrypt** pour mots de passe (10 rounds)
 
 ### Protection des Données
+
 - **Validation des entrées** : class-validator + Joi
 - **Type-safe** : TypeScript partout
 - **JWT Guards** : Protection des routes par rôle
 - **Rate limiting** : Protection contre brute force
 
 ### Base de Données
+
 - **Synchronisation TypeORM** : `synchronize: true` en dev, désactivé en prod
 - **Transactions** : Opérations atomiques pour réservations
 - **Optimistic locking** : Version fields pour mises à jour concurrentes
@@ -442,6 +500,7 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 ## 📊 Statut Actuel & Données
 
 ### Progrès Réalisé
+
 ✅ **Backend complet** : Tous les modules implémentés  
 ✅ **Frontend complet** : Toutes les pages et composants  
 ✅ **Base de données** : Schéma relationnel + NoSQL  
@@ -454,6 +513,7 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 ✅ **Modération admin** : Workflow de validation  
 
 ### Données Ajoutées
+
 - **4 projets** : Kayak center, éco bike, poterie, éco-gîte
 - **4 offres** : Kayak, vélo, poterie, chambre troglodyte
 - **3 circuits** : Aventure vélo, VTT, trésors artisanaux
@@ -462,9 +522,10 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 - **Questionnaires** : Système de scoring durabilité opérationnel
 
 ### Utilisateurs
+
 - **10 utilisateurs** répartis dans les 4 rôles
 - **Données existantes** : Réservations, activités, favoris, avis
-- **Système multi-email** : Support des variations de point (fakerbennoomen@gmail.com, etc.)
+- **Système multi-email** : Support des variations de point (<fakerbennoomen@gmail.com>, etc.)
 
 ---
 
@@ -488,6 +549,7 @@ DB_NAME=tourism_db_prod
 ```
 
 ### Processus de Déploiement
+
 1. **Build frontend** : `npm run build` → Next.js static export
 2. **Build backend** : `npm run build` → NestJS compiled
 3. **Docker images** : Construction des images
@@ -500,6 +562,7 @@ DB_NAME=tourism_db_prod
 ## 🧪 Tests
 
 ### Tests Backend
+
 ```bash
 # Exécuter tous les tests
 npm test
@@ -512,6 +575,7 @@ npm run test:watch
 ```
 
 ### Tests Frontend
+
 ```bash
 # Tests unitaires
 npm run test
@@ -525,6 +589,7 @@ npm run test:e2e
 ## 🤝 Contribuer
 
 ### Workflow Git
+
 ```bash
 # Travailler sur une branche feature
 git checkout -b feature/nouvelle-fonctionnalite
@@ -537,6 +602,7 @@ git push origin feature/nouvelle-fonctionnalite
 ```
 
 ### Code Quality
+
 - **TypeScript** : Typage strict partout
 - **ESLint** : Standard de code
 - **Prettier** : Formatage automatique
@@ -547,6 +613,7 @@ git push origin feature/nouvelle-fonctionnalite
 ## 📈 Roadmap Futur
 
 ### Prochaines Étapes
+
 - [ ] **Intégration de paiement** : Stripe/PayPal
 - [ ] **WebSocket** : Notifications temps réel
 - [ ] **Analytics** : Tableau de bord avancé
@@ -556,6 +623,7 @@ git push origin feature/nouvelle-fonctionnalite
 - [ ] **CI/CD** : GitHub Actions automatisé
 
 ### Améliorations Continues
+
 - [ ] **Performance** : Optimisation SEO et loading
 - [ ] **Accessibilité** : WCAG 2.1 compliance
 - [ ] **Internationalisation** : Support multi-langue
@@ -567,14 +635,15 @@ git push origin feature/nouvelle-fonctionnalite
 ## 📞 Support
 
 ### Équipe de Développement
-- **Maram Mejri** https://github.com/Maram172003
-- **BEN NOOMEN Faker** https://github.com/bennoomenfaker/tourisme
+
+- **Maram Mejri** <https://github.com/Maram172003>
+- **BEN NOOMEN Faker** <https://github.com/bennoomenfaker/tourisme>
 
 ### Documentation Complète
+
 - [Documentation technique](./docs/)
 - [API Documentation](http://localhost:3003/api) (Swagger)
 - [Architecture détaillée](./docs/architecture-tourisme-durable.md)
-
 
 ---
 
