@@ -1,0 +1,465 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { Search, ShoppingCart, Plus, Loader2, MapPin, Check, LayoutGrid, Map, SlidersHorizontal, X, Leaf } from "lucide-react";
+import { apiFetch } from "@/lib/api";
+
+const MapView = dynamic(() => import("@/components/map/MapView"), {
+  ssr: false,
+  loading: () => <div className="h-full bg-slate-100 animate-pulse rounded-2xl" />,
+});
+
+interface OfferItem {
+  id: string;
+  offer_id: string;
+  name: string;
+  item_type: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  region: string | null;
+  prices: { price: number; currency: string; pricing_unit: string }[];
+  offer_title?: string;
+}
+
+interface Circuit {
+  id: string;
+  title: string;
+  region: string | null;
+  lat: number | null;
+  lng: number | null;
+  base_price: number | null;
+  currency: string;
+  duration_days: number | null;
+}
+
+const ITEM_TYPE_ICONS: Record<string, string> = {
+  activity: "🚴", accommodation: "🏨", meal: "🍽️", transport: "🚐", workshop: "🎨",
+  event: "🎪", guided_tour: "🧭", equipment: "🎿", equipment_rental: "🎿",
+  kayak: "🛶", paddle: "🏄", trekking: "🥾", vtt: "🚲", escalade: "🧗", tyrolienne: "🪢",
+  speleologie: "🕳️", randonnee: "🥾", equitation: "🐴", observation: "🐦", astronomie: "🔭",
+  photographie: "📷", yoga: "🧘", meditation: "🧘", poterie: "🏺", tissage: "🧶",
+  cuisine: "🍲", musique: "🎵", calligraphie: "✍️", other: "📌",
+  room: "🛏️", bed: "🛏️", camping_space: "⛺", dish: "🍲", menu: "📋",
+  transport_service: "🚐", hiking: "🥾", water_sport: "🏄", guided_tour: "🧭",
+};
+
+const PRICING_LABELS: Record<string, string> = {
+  per_person: "/pers", per_night: "/nuit", per_hour: "/h",
+  per_half_day: "/½j", per_day: "/jour", per_person_per_night: "/pers/nuit",
+  per_room_per_night: "/chambre/nuit", per_bed: "/lit",
+};
+
+const PRICE_RANGES = [
+  { label: "Tous", min: 0, max: Infinity },
+  { label: "0–50 TND", min: 0, max: 50 },
+  { label: "50–100 TND", min: 50, max: 100 },
+  { label: "100–300 TND", min: 100, max: 300 },
+  { label: "300+ TND", min: 300, max: Infinity },
+];
+
+const TYPE_FILTERS = [
+  { value: "all", label: "Tout", icon: "🌍" },
+  { value: "outdoor", label: "Outdoor", icon: "🚴" },
+  { value: "nature", label: "Nature", icon: "🌿" },
+  { value: "culture", label: "Culture", icon: "🎭" },
+  { value: "hebergement", label: "Hébergement", icon: "🏨" },
+  { value: "restaurant", label: "Restaurant", icon: "🍽️" },
+  { value: "transport", label: "Transport", icon: "🚐" },
+  { value: "event", label: "Événement", icon: "🎪" },
+  { value: "workshop", label: "Atelier", icon: "🎨" },
+  { value: "circuit", label: "Circuits", icon: "🗺️" },
+] as const;
+
+const OUTDOOR_TYPES = ["activity", "kayak", "paddle", "trekking", "vtt", "escalade", "tyrolienne", "speleologie", "randonnee", "equitation"];
+const NATURE_TYPES = ["observation", "astronomie", "photographie"];
+const CULTURE_TYPES = ["yoga", "meditation", "poterie", "tissage", "cuisine", "musique", "calligraphie", "workshop"];
+const EVENT_TYPES = ["event", "activity", "guided_tour"];
+const HEBERGEMENT_TYPES = ["accommodation", "room", "bed", "camping_space"];
+const RESTAURANT_TYPES = ["meal", "dish", "menu"];
+const TRANSPORT_TYPES = ["transport", "transport_service"];
+
+function isValidUUID(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+function getGuestCart(): any[] {
+  try { return JSON.parse(localStorage.getItem("guest_cart") || "[]"); }
+  catch { return []; }
+}
+
+function saveGuestCart(items: any[]) {
+  localStorage.setItem("guest_cart", JSON.stringify(items));
+}
+
+function getItemCategories(type: string | null): string[] {
+  if (!type) return [];
+  const cats: string[] = [];
+  if (OUTDOOR_TYPES.includes(type)) cats.push("outdoor");
+  if (NATURE_TYPES.includes(type)) cats.push("nature");
+  if (CULTURE_TYPES.includes(type)) cats.push("culture");
+  if (EVENT_TYPES.includes(type)) cats.push("event");
+  if (HEBERGEMENT_TYPES.includes(type)) cats.push("hebergement");
+  if (RESTAURANT_TYPES.includes(type)) cats.push("restaurant");
+  if (TRANSPORT_TYPES.includes(type)) cats.push("transport");
+  if (type === "workshop") cats.push("workshop");
+  return cats;
+}
+
+export default function ExplorePage() {
+  const [offers, setOffers] = useState<OfferItem[]>([]);
+  const [circuits, setCircuits] = useState<Circuit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAdded, setShowAdded] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+  const [cartIds, setCartIds] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"split" | "map" | "grid">("split");
+  const [showFilters, setShowFilters] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [priceRange, setPriceRange] = useState(0);
+  const [selectedItem, setSelectedItem] = useState<OfferItem | Circuit | null>(null);
+
+  useEffect(() => {
+    const cart = getGuestCart();
+    setCartCount(cart.length);
+    setCartIds(new Set(cart.map((i: any) => `${i.type}:${i.ref_id}`)));
+    loadData();
+  }, []);
+
+  async function addToCart(type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) {
+    if (!isValidUUID(id)) return;
+    setAdding(id);
+    try {
+      const cart = getGuestCart();
+      const existing = cart.find((i: any) => i.type === type && i.ref_id === id);
+      if (existing) {
+        existing.quantity = (existing.quantity || 1) + 1;
+      } else {
+        cart.push({ id: crypto.randomUUID(), type, ref_id: id, name: name ?? "", unit_price: unitPrice ?? null, currency: currency ?? "TND", quantity: 1, added_at: new Date().toISOString() });
+      }
+      saveGuestCart(cart);
+      setCartCount(cart.length);
+      setCartIds(new Set(cart.map((i: any) => `${i.type}:${i.ref_id}`)));
+      setShowAdded(true);
+      setTimeout(() => setShowAdded(false), 2000);
+    } catch (e) { console.error("Add to cart error:", e); }
+    finally { setAdding(null); }
+  }
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [offersData, circuitsData] = await Promise.all([
+        apiFetch<any[]>("/offers").catch(() => []),
+        apiFetch<any[]>("/circuits").catch(() => []),
+      ]);
+      const enrichedOffers: OfferItem[] = [];
+      for (const offer of offersData ?? []) {
+        if (!offer.latitude && !offer.longitude) continue;
+        const items = await apiFetch<any[]>(`/offers/${offer.id}/items`).catch(() => []);
+        for (const item of items ?? []) {
+          if (!isValidUUID(item.id)) continue;
+          enrichedOffers.push({
+            id: item.id, offer_id: offer.id, name: item.name, item_type: item.item_type,
+            latitude: offer.latitude ?? null, longitude: offer.longitude ?? null,
+            region: offer.region ?? null, prices: item.prices ?? [], offer_title: offer.title,
+          });
+        }
+      }
+      setOffers(enrichedOffers);
+      setCircuits((circuitsData ?? []).filter((c: any) => isValidUUID(c.id)).map((c: any) => ({
+        id: c.id, title: c.title, region: c.region ?? null, lat: c.lat ?? null, lng: c.lng ?? null,
+        base_price: c.base_price ?? null, currency: c.currency ?? "TND", duration_days: c.duration_days ?? null,
+      })));
+    } catch {} finally { setLoading(false); }
+  }
+
+  const filteredOffers = useMemo(() => {
+    return offers.filter((o) => {
+      if (searchQuery && !o.name.toLowerCase().includes(searchQuery.toLowerCase()) && !o.region?.toLowerCase().includes(searchQuery.toLowerCase()) && !o.offer_title?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (typeFilter !== "all") {
+        if (typeFilter === "circuit") return false;
+        const cats = getItemCategories(o.item_type);
+        if (!cats.includes(typeFilter)) return false;
+      }
+      if (priceRange > 0) {
+        const p = PRICE_RANGES[priceRange];
+        const price = o.prices?.[0]?.price ?? 0;
+        if (price < p.min || price > p.max) return false;
+      }
+      return true;
+    });
+  }, [offers, searchQuery, typeFilter, priceRange]);
+
+  const filteredCircuits = useMemo(() => {
+    return circuits.filter((c) => {
+      if (searchQuery && !c.title.toLowerCase().includes(searchQuery.toLowerCase()) && !c.region?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (typeFilter !== "all" && typeFilter !== "circuit") return false;
+      if (priceRange > 0) {
+        const p = PRICE_RANGES[priceRange];
+        const price = c.base_price ?? 0;
+        if (price < p.min || price > p.max) return false;
+      }
+      return true;
+    });
+  }, [circuits, searchQuery, typeFilter, priceRange]);
+
+  const markers = useMemo(() => [
+    ...filteredOffers.map((o) => ({ lat: o.latitude!, lng: o.longitude!, label: o.name, type: "offer" as const })),
+    ...filteredCircuits.filter((c) => c.lat && c.lng).map((c) => ({ lat: c.lat!, lng: c.lng!, label: c.title, type: "circuit" as const })),
+  ], [filteredOffers, filteredCircuits]);
+
+  const hasActiveFilters = typeFilter !== "all" || priceRange > 0;
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-100 px-4 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <h1 className="text-xl font-black text-slate-900">Explorer</h1>
+          <div className="flex items-center gap-2">
+            {/* View mode toggles */}
+            <div className="hidden sm:flex bg-slate-100 rounded-xl overflow-hidden">
+              <button onClick={() => setViewMode("split")} className={`p-2 ${viewMode === "split" ? "bg-white shadow-sm text-primary" : "text-slate-400"}`} title="Split">
+                <LayoutGrid size={16} />
+              </button>
+              <button onClick={() => setViewMode("map")} className={`p-2 ${viewMode === "map" ? "bg-white shadow-sm text-primary" : "text-slate-400"}`} title="Map">
+                <Map size={16} />
+              </button>
+              <button onClick={() => setViewMode("grid")} className={`p-2 ${viewMode === "grid" ? "bg-white shadow-sm text-primary" : "text-slate-400"}`} title="Grid">
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+            <a href="/cart" className="relative flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50">
+              <ShoppingCart size={16} />
+              {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartCount}</span>}
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Search + Filters */}
+      <div className="bg-white border-b border-slate-100 px-4 py-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm" placeholder="Rechercher une activité, un lieu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </div>
+            <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-bold transition-colors ${showFilters || hasActiveFilters ? "bg-primary text-white border-primary" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
+              <SlidersHorizontal size={14} />
+              Filtres
+              {hasActiveFilters && <span className="w-4 h-4 bg-white text-primary text-[9px] rounded-full flex items-center justify-center">!</span>}
+            </button>
+          </div>
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 uppercase">Type</span>
+                {hasActiveFilters && (
+                  <button onClick={() => { setTypeFilter("all"); setPriceRange(0); }} className="text-[10px] text-primary font-medium hover:underline">Réinitialiser</button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {TYPE_FILTERS.map((t) => (
+                  <button key={t.value} onClick={() => setTypeFilter(t.value)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${typeFilter === t.value ? "bg-primary text-white" : "bg-white text-slate-600 border border-slate-200 hover:border-primary/30"}`}>
+                    <span>{t.icon}</span> {t.label}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-500 uppercase block mb-1.5">Prix</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRICE_RANGES.map((p, i) => (
+                    <button key={i} onClick={() => setPriceRange(i)} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${priceRange === i ? "bg-primary text-white" : "bg-white text-slate-600 border border-slate-200 hover:border-primary/30"}`}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Toast */}
+      {showAdded && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-xl z-50 flex items-center gap-2">
+          <ShoppingCart size={16} /> Ajouté au panier !
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        {viewMode === "split" && (
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Map */}
+            <div className="lg:w-1/2 h-[400px] lg:h-[calc(100vh-200px)] rounded-2xl overflow-hidden border border-slate-100 sticky top-20">
+              {loading ? (
+                <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
+              ) : markers.length > 0 ? (
+                <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" />
+              ) : (
+                <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
+              )}
+            </div>
+            {/* Cards */}
+            <div className="lg:w-1/2 space-y-3">
+              <p className="text-xs text-slate-400 font-medium">{filteredOffers.length + filteredCircuits.length} résultat{(filteredOffers.length + filteredCircuits.length) !== 1 ? "s" : ""}</p>
+              <ExploreCards offers={filteredOffers} circuits={filteredCircuits} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
+            </div>
+          </div>
+        )}
+
+        {viewMode === "map" && (
+          <div className="h-[calc(100vh-180px)] rounded-2xl overflow-hidden border border-slate-100">
+            {loading ? (
+              <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
+            ) : markers.length > 0 ? (
+              <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" />
+            ) : (
+              <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
+            )}
+          </div>
+        )}
+
+        {viewMode === "grid" && (
+          <div>
+            <p className="text-xs text-slate-400 font-medium mb-3">{filteredOffers.length + filteredCircuits.length} résultat{(filteredOffers.length + filteredCircuits.length) !== 1 ? "s" : ""}</p>
+            <ExploreCards offers={filteredOffers} circuits={filteredCircuits} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
+          </div>
+        )}
+      </div>
+
+      {/* Mobile selected item detail */}
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center lg:hidden" onClick={() => setSelectedItem(null)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-4" />
+            {"name" in selectedItem ? (
+              <OfferCard item={selectedItem as OfferItem} cartIds={cartIds} adding={adding} onAdd={addToCart} />
+            ) : (
+              <CircuitCard item={selectedItem as Circuit} cartIds={cartIds} adding={adding} onAdd={addToCart} />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExploreCards({ offers, circuits, cartIds, adding, onAdd, onSelect }: {
+  offers: OfferItem[]; circuits: Circuit[]; cartIds: Set<string>; adding: string | null;
+  onAdd: (type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) => void;
+  onSelect: (item: OfferItem | Circuit) => void;
+}) {
+  if (!offers.length && !circuits.length) {
+    return (
+      <div className="text-center py-16 text-slate-400">
+        <Search size={40} className="mx-auto mb-3 opacity-30" />
+        <p className="font-medium">Aucun résultat</p>
+        <p className="text-sm mt-1">Essayez de modifier vos filtres</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {offers.map((item) => (
+        <div key={item.id} className="bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onSelect(item)}>
+          <OfferCard item={item} cartIds={cartIds} adding={adding} onAdd={onAdd} />
+        </div>
+      ))}
+      {circuits.map((circuit) => (
+        <div key={circuit.id} className="bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onSelect(circuit)}>
+          <CircuitCard item={circuit} cartIds={cartIds} adding={adding} onAdd={onAdd} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OfferCard({ item, cartIds, adding, onAdd }: { item: OfferItem; cartIds: Set<string>; adding: string | null; onAdd: (type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) => void }) {
+  const inCart = cartIds.has(`offer_item:${item.id}`);
+  const icon = ITEM_TYPE_ICONS[item.item_type ?? ""] ?? "📌";
+  const pricingUnit = item.prices?.[0]?.pricing_unit;
+  const pricingLabel = pricingUnit ? PRICING_LABELS[pricingUnit] ?? "" : "";
+
+  return (
+    <div className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg shrink-0">{icon}</div>
+        <div className="flex-1 min-w-0">
+          <a href={`/offers/${item.offer_id}`} className="block" onClick={(e) => e.stopPropagation()}>
+            <p className="font-bold text-sm text-slate-800 hover:text-primary transition-colors truncate">{item.name}</p>
+          </a>
+          {item.offer_title && <p className="text-[11px] text-slate-400 truncate">{item.offer_title}</p>}
+          <div className="flex items-center gap-2 mt-1">
+            {item.region && <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><MapPin size={9} /> {item.region}</span>}
+            {item.item_type && <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-medium">{item.item_type}</span>}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          {item.prices?.length > 0 && (
+            <div>
+              <p className="text-sm font-black text-primary">{Number(item.prices[0].price).toLocaleString()} <span className="text-[10px] font-medium">{item.prices[0].currency ?? "TND"}</span></p>
+              {pricingLabel && <p className="text-[9px] text-slate-400">{pricingLabel}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="mt-3">
+        <button
+          onClick={(e) => { e.stopPropagation(); if (!inCart) onAdd("offer_item", item.id, item.name, item.prices?.[0]?.price ?? null, item.prices?.[0]?.currency ?? "TND"); }}
+          disabled={adding === item.id || inCart}
+          className={`w-full py-2 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 ${
+            inCart ? "bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-default" : "bg-primary text-white hover:bg-emerald-600 disabled:opacity-50"
+          }`}
+        >
+          {inCart ? <><Check size={12} /> Déjà en panier</> : adding === item.id ? <><Loader2 size={12} className="animate-spin" /> Ajout...</> : <><Plus size={12} /> Ajouter au panier</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CircuitCard({ item, cartIds, adding, onAdd }: { item: Circuit; cartIds: Set<string>; adding: string | null; onAdd: (type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) => void }) {
+  const inCart = cartIds.has(`circuit:${item.id}`);
+
+  return (
+    <div className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-lg shrink-0">🗺️</div>
+        <div className="flex-1 min-w-0">
+          <a href={`/circuits/${item.id}`} className="block" onClick={(e) => e.stopPropagation()}>
+            <p className="font-bold text-sm text-slate-800 hover:text-primary transition-colors truncate">{item.title}</p>
+          </a>
+          <div className="flex items-center gap-2 mt-1">
+            {item.region && <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><MapPin size={9} /> {item.region}</span>}
+            {item.duration_days && <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full font-medium">{item.duration_days}j</span>}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          {item.base_price != null && (
+            <p className="text-sm font-black text-primary">{Number(item.base_price).toLocaleString()} <span className="text-[10px] font-medium">{item.currency}</span></p>
+          )}
+        </div>
+      </div>
+      <div className="mt-3">
+        <button
+          onClick={(e) => { e.stopPropagation(); if (!inCart) onAdd("circuit", item.id, item.title, item.base_price, item.currency); }}
+          disabled={adding === item.id || inCart}
+          className={`w-full py-2 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 ${
+            inCart ? "bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-default" : "bg-primary text-white hover:bg-emerald-600 disabled:opacity-50"
+          }`}
+        >
+          {inCart ? <><Check size={12} /> Déjà en panier</> : adding === item.id ? <><Loader2 size={12} className="animate-spin" /> Ajout...</> : <><Plus size={12} /> Ajouter au panier</>}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -59,7 +59,6 @@ export class BookingService {
     // ── Calcul du prix côté serveur ──
     let totalPrice = 0;
     const participantCount = dto.participants?.length ?? 1;
-    const nights = dto.nights ?? 1;
 
     if (dto.offer_item_id) {
       const offerItem = await this.offerItemRepo.findOne({
@@ -70,6 +69,7 @@ export class BookingService {
         const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
         const unitPrice = Number(priceRow.price);
         const pricingUnit = priceRow.pricing_unit ?? 'per_person';
+        const nights = dto.nights ?? offerItem.details_json?.nights ?? 1;
 
         switch (pricingUnit) {
           case 'per_person_per_night':
@@ -79,9 +79,11 @@ export class BookingService {
           case 'per_room_per_night':
             totalPrice = unitPrice * nights;
             break;
-          case 'per_bed':
-            totalPrice = unitPrice * (offerItem.bed_count ?? participantCount) * nights;
+          case 'per_bed': {
+            const bedCount = offerItem.details_json?.bed_count ?? participantCount;
+            totalPrice = unitPrice * bedCount * nights;
             break;
+          }
           case 'per_person':
           default:
             totalPrice = unitPrice * participantCount;
@@ -89,7 +91,7 @@ export class BookingService {
         }
       }
     } else if (offer.price) {
-      // Offre simple sans item : utiliser le prix de l'offre directement
+      // Offre sans item selectionne : utiliser le prix indicatif de l'offre
       totalPrice = Number(offer.price) * participantCount;
     } else {
       // Offre avec items mais pas d'item selectionne : somme des prix par defaut
@@ -114,7 +116,7 @@ export class BookingService {
       offerItem: dto.offer_item_id ? ({ id: dto.offer_item_id } as OfferItem) : null,
       session: dto.session_id ? ({ id: dto.session_id } as OfferItemSession) : null,
       total_price: totalPrice,
-      currency: dto.currency ?? 'XAF',
+      currency: dto.currency ?? 'TND',
       special_requests: dto.special_requests ?? null,
       confirmation_mode: dto.confirmation_mode ?? 'automatic',
       status: dto.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
@@ -304,7 +306,7 @@ export class BookingService {
         const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
         const unitPrice = Number(priceRow.price);
         const pricingUnit = priceRow.pricing_unit ?? 'per_person';
-        const nights = offerItem.nights ?? 1;
+        const nights = offerItem.details_json?.nights ?? 1;
 
         switch (pricingUnit) {
           case 'per_person_per_night':
@@ -314,9 +316,11 @@ export class BookingService {
           case 'per_room_per_night':
             totalPrice = unitPrice * nights;
             break;
-          case 'per_bed':
-            totalPrice = unitPrice * (offerItem.bed_count ?? totalCount) * nights;
+          case 'per_bed': {
+            const bedCount = offerItem.details_json?.bed_count ?? totalCount;
+            totalPrice = unitPrice * bedCount * nights;
             break;
+          }
           case 'per_person':
           default:
             totalPrice = unitPrice * totalCount;

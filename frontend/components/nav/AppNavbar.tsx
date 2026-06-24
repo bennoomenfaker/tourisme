@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Leaf, User } from "lucide-react";
+import { Bell, Leaf, ShoppingCart, User } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 type AppNavbarProps = {
@@ -60,6 +60,20 @@ export default function AppNavbar({ title }: AppNavbarProps) {
             className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
           >
             Circuits
+          </Link>
+
+          <Link
+            href="/explore"
+            className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
+          >
+            Explorer
+          </Link>
+
+          <Link
+            href="/cart"
+            className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-primary transition-all"
+          >
+            <ShoppingCart size={20} />
           </Link>
 
           <Link

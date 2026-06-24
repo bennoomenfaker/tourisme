@@ -50,7 +50,6 @@ export async function apiFetch<T>(
       throw new Error(Array.isArray(msg) ? msg.join(", ") : msg);
     }
 
-    // If another request is already refreshing, wait for it
     if (isRefreshing) {
       const newToken = await new Promise<string>((resolve, reject) => {
         refreshQueue.push((token) => (token ? resolve(token) : reject()));
@@ -66,12 +65,10 @@ export async function apiFetch<T>(
       } catch {
         refreshQueue.forEach((cb) => cb(""));
         refreshQueue = [];
-        // Refresh failed — clear session and redirect to login
         if (typeof window !== "undefined") {
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
           localStorage.removeItem("user");
-          window.location.href = "/auth/login";
         }
         throw new Error("Session expirée. Veuillez vous reconnecter.");
       } finally {

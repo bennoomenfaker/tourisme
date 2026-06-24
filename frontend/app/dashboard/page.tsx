@@ -31,10 +31,7 @@ type OfferItem = {
   name: string;
   description: string | null;
   item_type: string | null;
-  bed_count: number | null;
-  nights: number | null;
-  tent_capacity: number | null;
-  room_type: string | null;
+  details_json: Record<string, any> | null;
   status: string;
   prices: { id: string; label: string; price: number; currency: string; is_default: boolean }[];
 };
@@ -166,7 +163,10 @@ const GUIDE_OFFER_TYPES = [
   { value: "eco_tour", label: "Éco-Tour", icon: "hiking" },
   { value: "activity", label: "Activité", icon: "sports" },
   { value: "workshop", label: "Atelier", icon: "school" },
+  { value: "event", label: "Événement", icon: "event" },
   { value: "transfer", label: "Transfert", icon: "directions_car" },
+  { value: "guide_service", label: "Service guide", icon: "tour" },
+  { value: "equipment_rental", label: "Location équipement", icon: "kayaking" },
 ];
 
 const PROJ_OFFER_TYPES = [
@@ -175,7 +175,10 @@ const PROJ_OFFER_TYPES = [
   { value: "restaurant", label: "Restaurant" },
   { value: "transport", label: "Transport" },
   { value: "workshop", label: "Atelier" },
-  { value: "package", label: "Séjour complet" },
+  { value: "event", label: "Événement" },
+  { value: "craft", label: "Artisanat" },
+  { value: "circuit", label: "Circuit" },
+  { value: "sejour", label: "Séjour" },
 ];
 
 const PROJECT_TYPES = [
@@ -557,8 +560,8 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
               {fieldErrors.price && <p className="text-xs font-semibold text-red-500">{fieldErrors.price}</p>}
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-bold text-slate-700">Durée</label>
-              <input className={inputClass(false)} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2h, 1 journée..." />
+              <label className="text-sm font-bold text-slate-700">Durée de l&apos;activité</label>
+              <input className={inputClass(false)} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2h, ½ journée, 1 journée..." />
             </div>
           </div>
 
@@ -698,7 +701,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
               {fieldErrors.price && <p className="text-xs font-semibold text-red-500">{fieldErrors.price}</p>}
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-bold text-slate-700">Durée</label>
+              <label className="text-sm font-bold text-slate-700">Durée de l&apos;activité</label>
               <input className={inputClass(false)} value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2 jours, 1 semaine..." />
             </div>
           </div>
@@ -1329,10 +1332,9 @@ function ActividadesSection({ offerId, items, token }: { offerId: string; items:
               <div>
                 <span className="text-sm font-medium text-slate-700">{item.name}</span>
                 <div className="flex flex-wrap gap-1 mt-0.5">
-                  {item.room_type && <span className="text-[9px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded-full">{item.room_type}</span>}
-                  {item.bed_count != null && <span className="text-[9px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded-full">🛏 {item.bed_count}</span>}
-                  {item.nights != null && <span className="text-[9px] text-purple-600 bg-purple-50 px-1 py-0.5 rounded-full">🌙 {item.nights}n</span>}
-                  {item.tent_capacity != null && <span className="text-[9px] text-green-600 bg-green-50 px-1 py-0.5 rounded-full">⛺ {item.tent_capacity}p</span>}
+                  {item.details_json?.room_sub_type && <span className="text-[9px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded-full">{item.details_json.room_sub_type}</span>}
+                  {item.details_json?.bed_count != null && <span className="text-[9px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded-full">🛏 {item.details_json.bed_count}</span>}
+                  {item.details_json?.tent_capacity != null && <span className="text-[9px] text-green-600 bg-green-50 px-1 py-0.5 rounded-full">⛺ {item.details_json.tent_capacity}p</span>}
                   {item.prices?.[0] && <span className="text-xs text-primary ml-1">{Number(item.prices[0].price).toLocaleString()} TND</span>}
                 </div>
               </div>
@@ -1349,14 +1351,45 @@ function ActividadesSection({ offerId, items, token }: { offerId: string; items:
           <div className="grid grid-cols-2 gap-2">
             <select value={type} onChange={(e) => setType(e.target.value)} className="text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300">
               <option value="">Type</option>
-              <option value="activity">Activité</option>
-              <option value="accommodation">Hébergement</option>
-              <option value="meal">Repas</option>
-              <option value="transport">Transport</option>
-              <option value="workshop">Atelier</option>
+              <optgroup label="Outdoor">
+                <option value="activity">Activité outdoor</option>
+                <option value="kayak">Kayak</option>
+                <option value="paddle">Paddle</option>
+                <option value="trekking">Trekking</option>
+                <option value="vtt">VTT</option>
+                <option value="escalade">Escalade</option>
+                <option value="tyrolienne">Tyrolienne</option>
+                <option value="speleologie">Spéléologie</option>
+                <option value="randonnee">Randonnée</option>
+                <option value="equitation">Équitation</option>
+              </optgroup>
+              <optgroup label="Nature">
+                <option value="observation">Observation oiseaux</option>
+                <option value="astronomie">Astronomie</option>
+                <option value="photographie">Photographie</option>
+              </optgroup>
+              <optgroup label="Culture & Bien-être">
+                <option value="yoga">Yoga</option>
+                <option value="meditation">Méditation</option>
+                <option value="poterie">Poterie</option>
+                <option value="tissage">Tissage</option>
+                <option value="cuisine">Cuisine locale</option>
+                <option value="musique">Musique traditionnelle</option>
+                <option value="calligraphie">Calligraphie</option>
+              </optgroup>
+              <optgroup label="Services">
+                <option value="accommodation">Hébergement</option>
+                <option value="meal">Repas</option>
+                <option value="transport">Transport</option>
+                <option value="workshop">Atelier</option>
+              </optgroup>
+              <option value="other">Autre</option>
             </select>
             <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Prix *" className="text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
           </div>
+          {type === "other" && (
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom de l'activité *" className="text-slate-800 w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+          )}
           <input value={priceLabel} onChange={(e) => setPriceLabel(e.target.value)} placeholder="Libellé du prix (ex: Plein tarif)" className="text-slate-800 w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
           {error && <p className="text-xs text-red-500">{error}</p>}
           <div className="flex gap-2">
@@ -2748,10 +2781,9 @@ export default function DashboardPage() {
                                     <div>
                                       <span className="text-sm font-medium text-slate-700">{item.name}</span>
                                       <div className="flex flex-wrap gap-1 mt-0.5">
-                                        {item.room_type && <span className="text-[9px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded-full">{item.room_type}</span>}
-                                        {item.bed_count != null && <span className="text-[9px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded-full">🛏 {item.bed_count}</span>}
-                                        {item.nights != null && <span className="text-[9px] text-purple-600 bg-purple-50 px-1 py-0.5 rounded-full">🌙 {item.nights}n</span>}
-                                        {item.tent_capacity != null && <span className="text-[9px] text-green-600 bg-green-50 px-1 py-0.5 rounded-full">⛺ {item.tent_capacity}p</span>}
+                                        {item.details_json?.room_sub_type && <span className="text-[9px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded-full">{item.details_json.room_sub_type}</span>}
+                                        {item.details_json?.bed_count != null && <span className="text-[9px] text-blue-600 bg-blue-50 px-1 py-0.5 rounded-full">🛏 {item.details_json.bed_count}</span>}
+                                        {item.details_json?.tent_capacity != null && <span className="text-[9px] text-green-600 bg-green-50 px-1 py-0.5 rounded-full">⛺ {item.details_json.tent_capacity}p</span>}
                                         {item.prices?.[0] && <span className="text-xs text-primary ml-1">{Number(item.prices[0].price).toLocaleString()} TND</span>}
                                       </div>
                                     </div>

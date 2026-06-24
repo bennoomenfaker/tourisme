@@ -230,7 +230,7 @@ export class TripPlanService {
         if (defaultPrice) {
           const unitPrice = Number(defaultPrice.price);
           const pricingUnit = defaultPrice.pricing_unit ?? 'per_person';
-          const nights = offerItem.nights ?? 1;
+          const nights = offerItem.details_json?.nights ?? 1;
 
           switch (pricingUnit) {
             case 'per_person_per_night':
@@ -240,9 +240,11 @@ export class TripPlanService {
             case 'per_room_per_night':
               totalPrice = unitPrice * nights;
               break;
-            case 'per_bed':
-              totalPrice = unitPrice * (offerItem.bed_count ?? participantCount) * nights;
+            case 'per_bed': {
+              const bedCount = offerItem.details_json?.bed_count ?? participantCount;
+              totalPrice = unitPrice * bedCount * nights;
               break;
+            }
             case 'per_person':
             default:
               totalPrice = unitPrice * participantCount;

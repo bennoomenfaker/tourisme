@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -11,12 +10,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class AddTripPlanItemDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   offer_item_id?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   circuit_id?: string;
 
   @ApiPropertyOptional()

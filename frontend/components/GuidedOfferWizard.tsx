@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import {
   PROJECT_TYPES, OFFER_CATEGORIES, PROJECT_TYPE_OFFERS, GUIDE_ALLOWED_OFFERS,
-  CATEGORY_FORM_FIELDS, ACCOMMODATION_TYPES, ITEM_TYPES_BY_CATEGORY,
+  CATEGORY_FORM_FIELDS, ITEM_TYPES_BY_CATEGORY, ROOM_SUB_TYPES, PRICING_UNITS,
 } from "@/lib/offer-config";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
@@ -33,11 +33,10 @@ interface OfferItemForm {
   name: string;
   description: string;
   item_type: string;
-  room_type: string;
+  room_sub_type: string;
   bed_count: string;
-  nights: string;
   tent_capacity: string;
-  prices: { id?: string; label: string; price: string; currency: string; is_default: boolean }[];
+  prices: { id?: string; label: string; price: string; currency: string; pricing_unit: string; is_default: boolean }[];
 }
 
 export default function GuidedOfferWizard({ token, userRole, userProjectId, userProjectType, onClose, onSuccess, editOffer }: Props) {
@@ -62,7 +61,6 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [minAge, setMinAge] = useState("");
   const [duration, setDuration] = useState("");
   const [images, setImages] = useState<string[]>([]);
-  const [price, setPrice] = useState("");
   const [inclusions, setInclusions] = useState("");
   const [cancellationPolicy, setCancellationPolicy] = useState("");
 
@@ -91,7 +89,6 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     setMinAge(editOffer.min_age?.toString() || "");
     setDuration(editOffer.duration || "");
     setImages(editOffer.images || []);
-    setPrice(editOffer.price?.toString() || "");
     setInclusions(editOffer.inclusions || "");
     setCancellationPolicy(editOffer.cancellation_policy || "");
 
@@ -101,13 +98,12 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         name: it.name || "",
         description: it.description || "",
         item_type: it.item_type || "",
-        room_type: it.room_type || "",
-        bed_count: it.bed_count?.toString() || "",
-        nights: it.nights?.toString() || "",
-        tent_capacity: it.tent_capacity?.toString() || "",
+        room_sub_type: it.details_json?.room_sub_type || "",
+        bed_count: it.details_json?.bed_count?.toString() || "",
+        tent_capacity: it.details_json?.tent_capacity?.toString() || "",
         prices: it.prices?.length
-          ? it.prices.map((p: any) => ({ id: p.id, label: p.label || "", price: p.price?.toString() || "", currency: p.currency || "TND", is_default: p.is_default ?? false }))
-          : [{ label: "Plein tarif", price: "", currency: "TND", is_default: true }],
+          ? it.prices.map((p: any) => ({ id: p.id, label: p.label || "", price: p.price?.toString() || "", currency: p.currency || "TND", pricing_unit: p.pricing_unit || "per_person", is_default: p.is_default ?? false }))
+          : [{ label: "Plein tarif", price: "", currency: "TND", pricing_unit: "per_person", is_default: true }],
       })));
     }
 
@@ -162,8 +158,6 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     restauration: 'restaurant',
     artisanat: 'workshop',
     eco_tourisme: 'activity',
-    sejour: 'package',
-    circuit: 'activity',
     autre: 'activity',
   };
 
@@ -184,11 +178,10 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
       name: "",
       description: "",
       item_type: currentItemTypes[0]?.value ?? "",
-      room_type: "",
+      room_sub_type: "",
       bed_count: "",
-      nights: "",
       tent_capacity: "",
-      prices: [{ label: "Plein tarif", price: "", currency: "TND", is_default: true }],
+      prices: [{ label: "Plein tarif", price: "", currency: "TND", pricing_unit: "per_person", is_default: true }],
     }]);
   }
 
@@ -204,7 +197,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
   function addItemPrice(itemIdx: number) {
     const updated = [...items];
-    updated[itemIdx].prices.push({ label: "", price: "", currency: "TND", is_default: false });
+    updated[itemIdx].prices.push({ label: "", price: "", currency: "TND", pricing_unit: "per_person", is_default: false });
     setItems(updated);
   }
 
@@ -234,6 +227,18 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     setSessions(updated);
   }
 
+  function buildItemDetailsJson(item: OfferItemForm, offerCategory: string): Record<string, any> | undefined {
+    if (offerCategory !== 'accommodation') return undefined;
+    const details: Record<string, any> = {};
+    if (item.item_type === 'room') {
+      if (item.room_sub_type) details.room_sub_type = item.room_sub_type;
+      if (item.bed_count) details.bed_count = Number(item.bed_count);
+    } else if (item.item_type === 'camping_space') {
+      if (item.tent_capacity) details.tent_capacity = Number(item.tent_capacity);
+    }
+    return Object.keys(details).length > 0 ? details : undefined;
+  }
+
   async function handleSubmit() {
     if (!title.trim()) { setError("Le titre est obligatoire."); return; }
     if (!category) { setError("Choisissez une catégorie."); return; }
@@ -246,7 +251,6 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         title: title.trim(),
         offer_type: category,
         description: description.trim() || undefined,
-        price: price ? Number(price) : undefined,
         region: region.trim() || undefined,
         address: address.trim() || undefined,
         latitude: lat ?? undefined,
@@ -287,10 +291,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           name: item.name.trim(),
           description: item.description.trim() || undefined,
           item_type: item.item_type || undefined,
-          room_type: category === 'accommodation' ? item.room_type || undefined : undefined,
-          bed_count: category === 'accommodation' && item.bed_count ? Number(item.bed_count) : undefined,
-          nights: category === 'accommodation' && item.nights ? Number(item.nights) : undefined,
-          tent_capacity: category === 'accommodation' && item.tent_capacity ? Number(item.tent_capacity) : undefined,
+          details_json: buildItemDetailsJson(item, category),
           confirmation_mode: confirmationMode,
         };
 
@@ -320,6 +321,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                   label: price.label || "Plein tarif",
                   price: Number(price.price),
                   currency: price.currency || "TND",
+                  pricing_unit: price.pricing_unit || "per_person",
                   is_default: price.is_default,
                 }),
               }).catch(() => {});
@@ -331,6 +333,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                   label: price.label || "Plein tarif",
                   price: Number(price.price),
                   currency: price.currency || "TND",
+                  pricing_unit: price.pricing_unit || "per_person",
                   is_default: price.is_default,
                 }),
               }).catch(() => {});
@@ -467,19 +470,12 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
               <ImageUploader images={images} onChange={setImages} maxImages={5} label="Images de l'offre" />
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Prix (TND)</label>
-                  <input type="number" min="0" step="0.5" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex: 50" />
-                  <p className="text-[10px] text-slate-400">Prix de base de l'offre</p>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Confirmation</label>
-                  <select className={inputClass} value={confirmationMode} onChange={(e) => setConfirmationMode(e.target.value)}>
-                    <option value="automatic">Automatique</option>
-                    <option value="manual">Manuelle</option>
-                  </select>
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500">Confirmation</label>
+                <select className={inputClass} value={confirmationMode} onChange={(e) => setConfirmationMode(e.target.value)}>
+                  <option value="automatic">Automatique</option>
+                  <option value="manual">Manuelle</option>
+                </select>
               </div>
 
               {formFields.includes('gps') && (
@@ -570,51 +566,50 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
                   <input className={inputClass} value={item.name} onChange={(e) => updateItem(idx, "name", e.target.value)} placeholder="Nom de l'élément" />
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <select className={inputClass} value={item.item_type} onChange={(e) => updateItem(idx, "item_type", e.target.value)}>
-                      <option value="">Type</option>
-                      {currentItemTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
+                  <select className={inputClass} value={item.item_type} onChange={(e) => updateItem(idx, "item_type", e.target.value)}>
+                    <option value="">Type d'élément</option>
+                    {currentItemTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
 
-                    {normalizedCategory === 'accommodation' && (
-                      <select className={inputClass} value={item.room_type} onChange={(e) => updateItem(idx, "room_type", e.target.value)}>
-                        <option value="">Type chambre</option>
-                        {ACCOMMODATION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
+                  {normalizedCategory === 'accommodation' && item.item_type === 'room' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className={inputClass} value={item.room_sub_type} onChange={(e) => updateItem(idx, "room_sub_type", e.target.value)}>
+                        <option value="">Sous-type chambre</option>
+                        {ROOM_SUB_TYPES.map((t) => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
                       </select>
-                    )}
-                  </div>
-
-                  {normalizedCategory === 'accommodation' && (
-                    <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400">Nombre de lits</label>
                         <input type="number" min="1" className={inputClass} value={item.bed_count} onChange={(e) => updateItem(idx, "bed_count", e.target.value)} placeholder="2" />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400">Nombre de nuits</label>
-                        <input type="number" min="1" className={inputClass} value={item.nights} onChange={(e) => updateItem(idx, "nights", e.target.value)} placeholder="1" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400">Capacité tente (pers.)</label>
-                        <input type="number" min="1" className={inputClass} value={item.tent_capacity} onChange={(e) => updateItem(idx, "tent_capacity", e.target.value)} placeholder="4" />
-                      </div>
+                    </div>
+                  )}
+
+                  {normalizedCategory === 'accommodation' && item.item_type === 'camping_space' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400">Capacité tente (pers.)</label>
+                      <input type="number" min="1" className={`${inputClass} w-48`} value={item.tent_capacity} onChange={(e) => updateItem(idx, "tent_capacity", e.target.value)} placeholder="4" />
                     </div>
                   )}
 
                   {/* Prices */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-500">Prix par personne</label>
+                      <label className="text-xs font-bold text-slate-500">Tarifs</label>
                       <button onClick={() => addItemPrice(idx)} type="button" className="text-[10px] font-bold text-primary hover:underline">+ Ajouter un prix</button>
                     </div>
                     {item.prices.map((price, pIdx) => (
-                      <div key={pIdx} className="flex items-center gap-2">
-                        <input className={`${inputClass} flex-1`} value={price.label} onChange={(e) => updateItemPrice(idx, pIdx, "label", e.target.value)} placeholder="Ex: Plein tarif, Étudiant, Enfant..." />
-                        <input type="number" min="0" step="0.5" className={`${inputClass} w-24`} value={price.price} onChange={(e) => updateItemPrice(idx, pIdx, "price", e.target.value)} placeholder="0" />
-                        <span className="text-xs text-slate-400">TND</span>
-                        {item.prices.length > 1 && (
-                          <button onClick={() => removeItemPrice(idx, pIdx)} type="button" className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={12} /></button>
-                        )}
+                      <div key={pIdx} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <input className={`${inputClass} flex-1`} value={price.label} onChange={(e) => updateItemPrice(idx, pIdx, "label", e.target.value)} placeholder="Ex: Plein tarif, Étudiant, Enfant..." />
+                          <input type="number" min="0" step="0.5" className={`${inputClass} w-24`} value={price.price} onChange={(e) => updateItemPrice(idx, pIdx, "price", e.target.value)} placeholder="0" />
+                          <span className="text-xs text-slate-400">TND</span>
+                          {item.prices.length > 1 && (
+                            <button onClick={() => removeItemPrice(idx, pIdx)} type="button" className="p-1 text-slate-400 hover:text-red-500"><Trash2 size={12} /></button>
+                          )}
+                        </div>
+                        <select className={`${inputClass} text-[11px]`} value={price.pricing_unit} onChange={(e) => updateItemPrice(idx, pIdx, "pricing_unit", e.target.value)}>
+                          {PRICING_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                        </select>
                       </div>
                     ))}
                   </div>

@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Calendar,
-  Check, DollarSign, Info, Plus, Trash2, Edit, X, Share2, Copy, Heart,
+  Check, DollarSign, Info, Plus, Trash2, Edit, X, Share2, Copy, Heart, ShoppingCart,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -148,6 +148,8 @@ export default function CircuitDetailPage() {
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [showAddedToCart, setShowAddedToCart] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmCancelReservation, setConfirmCancelReservation] = useState(false);
@@ -184,6 +186,31 @@ export default function CircuitDetailPage() {
       setIsFavorite((prev) => !prev);
     } catch {}
     setTogglingFav(false);
+  };
+
+  const addToCart = async () => {
+    setAddingToCart(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        const cartRes = await apiFetch<any>("/travel-carts/me", { headers: { Authorization: `Bearer ${token}` } });
+        await apiFetch(`/travel-carts/${cartRes.id}/items`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ circuit_id: id, quantity: 1 }),
+        });
+      } else {
+        const cart = JSON.parse(localStorage.getItem("guest_cart") || "[]");
+        cart.push({ id: crypto.randomUUID(), type: "circuit", ref_id: id, quantity: 1, added_at: new Date().toISOString() });
+        localStorage.setItem("guest_cart", JSON.stringify(cart));
+      }
+      setShowAddedToCart(true);
+      setTimeout(() => setShowAddedToCart(false), 2000);
+    } catch (e) {
+      console.error("Add to cart error:", e);
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   useEffect(() => {
@@ -643,10 +670,25 @@ export default function CircuitDetailPage() {
               </div>
             )}
 
+            {/* Added to cart notification */}
+            {showAddedToCart && (
+              <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-xl z-50 flex items-center gap-2">
+                <ShoppingCart size={16} /> Ajouté au panier !
+              </div>
+            )}
+
+            <button
+              onClick={addToCart}
+              disabled={addingToCart}
+              className="w-full py-3 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+            >
+              <ShoppingCart size={18} /> {addingToCart ? "Ajout en cours..." : "Ajouter au panier"}
+            </button>
+
             {!user && !reserveSuccess && (
               <button
                 onClick={() => router.push(`/auth/login?redirect=/circuits/${id}`)}
-                className="w-full py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 flex items-center justify-center gap-2 transition-colors"
+                className="w-full mt-3 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 flex items-center justify-center gap-2 transition-colors"
               >
                 <Check size={18} /> Réserver ce circuit
               </button>

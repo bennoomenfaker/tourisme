@@ -24,15 +24,18 @@ export const OFFER_CATEGORIES = [
   { value: 'workshop', label: 'Atelier', icon: '🎨', description: 'Artisanat, cuisine, art' },
   { value: 'guide_service', label: 'Service guide', icon: '🧭', description: 'Guide touristique local' },
   { value: 'equipment_rental', label: 'Location équipement', icon: '🎿', description: 'Vélo, kayak, matériel' },
-  { value: 'event', label: 'Événement', icon: '🎪', description: 'Festival, spectacle' },
-  { value: 'package', label: 'Séjour complet', icon: '📦', description: 'Forfait hébergement+activité' },
+  { value: 'event', label: 'Événement', icon: '🎪', description: 'Festival, spectacle, conférence' },
+  { value: 'craft', label: 'Artisanat', icon: '🏺', description: 'Produits artisanaux locaux' },
+  { value: 'circuit', label: 'Circuit', icon: '🗺️', description: 'Circuit multi-jours organisé' },
+  { value: 'sejour', label: 'Séjour', icon: '🌴', description: 'Forfait hébergement + activités' },
+  { value: 'eco_tour', label: 'Éco-Tour', icon: '🌿', description: 'Tourisme durable et responsable' },
 ] as const;
 
 /**
  * Which offer categories are available for each project type
  */
 export const PROJECT_TYPE_OFFERS: Record<string, string[]> = {
-  accommodation: ['accommodation', 'restaurant', 'activity', 'package'],
+  accommodation: ['accommodation', 'restaurant', 'activity'],
   camping: ['accommodation', 'activity', 'equipment_rental'],
   restaurant: ['restaurant', 'event'],
   activity_center: ['activity', 'workshop', 'equipment_rental'],
@@ -47,89 +50,78 @@ export const PROJECT_TYPE_OFFERS: Record<string, string[]> = {
 /**
  * For guides (no project), allowed offer categories
  */
-export const GUIDE_ALLOWED_OFFERS = ['activity', 'guide_service', 'workshop', 'transport', 'equipment_rental'];
+export const GUIDE_ALLOWED_OFFERS = ['activity', 'guide_service', 'workshop', 'transport', 'equipment_rental', 'event', 'craft', 'circuit'];
 
 /**
  * Offer category → fields that appear in the creation form
  */
 export const CATEGORY_FORM_FIELDS: Record<string, string[]> = {
-  accommodation: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items_accommodation', 'sessions'],
-  activity: ['title', 'description', 'region', 'address', 'gps', 'meeting_point', 'images', 'min_group_size', 'max_group_size', 'min_age', 'confirmation_mode', 'items_activity', 'sessions'],
-  restaurant: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items_restaurant', 'sessions'],
-  transport: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items_transport'],
-  workshop: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items_workshop', 'sessions'],
-  guide_service: ['title', 'description', 'region', 'address', 'gps', 'meeting_point', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items_guide', 'sessions'],
-  equipment_rental: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items_rental'],
-  event: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items_event', 'sessions'],
-  package: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items_package'],
+  accommodation: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items', 'sessions'],
+  activity: ['title', 'description', 'region', 'address', 'gps', 'meeting_point', 'images', 'min_group_size', 'max_group_size', 'min_age', 'confirmation_mode', 'items', 'sessions'],
+  restaurant: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items', 'sessions'],
+  transport: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items'],
+  workshop: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items', 'sessions'],
+  guide_service: ['title', 'description', 'region', 'address', 'gps', 'meeting_point', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items', 'sessions'],
+  equipment_rental: ['title', 'description', 'region', 'address', 'gps', 'images', 'confirmation_mode', 'items'],
+  event: ['title', 'description', 'region', 'address', 'gps', 'images', 'min_group_size', 'max_group_size', 'confirmation_mode', 'items', 'sessions'],
 };
 
 /**
- * Accommodation sub-types for offer items
+ * OfferItem item_type values per category (fiche technique)
  */
-export const ACCOMMODATION_TYPES = [
-  { value: 'private_room', label: 'Chambre privée', icon: '🏠' },
-  { value: 'shared_dormitory', label: 'Dortoir partagé', icon: '🛏' },
-  { value: 'double_room', label: 'Chambre double', icon: '👫' },
-  { value: 'family_room', label: 'Chambre famille', icon: '👨‍👩‍👧‍👦' },
-  { value: 'tent_space', label: 'Espace tente', icon: '⛺' },
+export const ITEM_TYPES_BY_CATEGORY: Record<string, { value: string; label: string }[]> = {
+  accommodation: [
+    { value: 'room', label: 'Chambre' },
+    { value: 'bed', label: 'Lit (dortoir)' },
+    { value: 'camping_space', label: 'Espace tente' },
+  ],
+  activity: [
+    { value: 'activity', label: 'Activité' },
+    { value: 'guided_tour', label: 'Visite guidée' },
+    { value: 'hiking', label: 'Randonnée' },
+    { value: 'water_sport', label: 'Sport nautique' },
+  ],
+  restaurant: [
+    { value: 'dish', label: 'Plat' },
+    { value: 'menu', label: 'Menu complet' },
+  ],
+  transport: [
+    { value: 'transport_service', label: 'Service de transport' },
+  ],
+  workshop: [
+    { value: 'workshop', label: 'Atelier' },
+  ],
+  guide_service: [
+    { value: 'guided_tour', label: 'Visite guidée' },
+    { value: 'hiking', label: 'Guide randonnée' },
+  ],
+  equipment_rental: [
+    { value: 'equipment', label: 'Équipement' },
+  ],
+  event: [
+    { value: 'activity', label: 'Événement' },
+  ],
+};
+
+/**
+ * Sous-types spécifiques pour room (stockés dans details_json)
+ */
+export const ROOM_SUB_TYPES = [
+  { value: 'private', label: 'Chambre privée', icon: '🏠' },
+  { value: 'double', label: 'Chambre double', icon: '👫' },
+  { value: 'family', label: 'Chambre famille', icon: '👨‍👩‍👧‍👦' },
+  { value: 'shared', label: 'Dortoir partagé', icon: '🛏' },
   { value: 'suite', label: 'Suite', icon: '👑' },
   { value: 'studio', label: 'Studio', icon: '🏢' },
 ] as const;
 
 /**
- * Item types for different offer categories
+ * Unités de tarification (fiche technique: pricing_unit)
  */
-export const ITEM_TYPES_BY_CATEGORY: Record<string, { value: string; label: string }[]> = {
-  accommodation: ACCOMMODATION_TYPES.map(t => ({ value: t.value, label: t.label })),
-  activity: [
-    { value: 'guided_tour', label: 'Visite guidée' },
-    { value: 'hiking', label: 'Randonnée' },
-    { value: 'water_sport', label: 'Sport nautique' },
-    { value: 'cultural', label: 'Visite culturelle' },
-    { value: 'nature', label: 'Nature & safari' },
-  ],
-  restaurant: [
-    { value: 'main_dish', label: 'Plat principal' },
-    { value: 'appetizer', label: 'Entrée' },
-    { value: 'dessert', label: 'Dessert' },
-    { value: 'menu', label: 'Menu complet' },
-    { value: 'breakfast', label: 'Petit déjeuner' },
-    { value: 'buffet', label: 'Buffet' },
-  ],
-  transport: [
-    { value: 'transfer', label: 'Transfert' },
-    { value: 'rental', label: 'Location véhicule' },
-    { value: 'shuttle', label: 'Navette' },
-  ],
-  workshop: [
-    { value: 'pottery', label: 'Poterie' },
-    { value: 'cooking', label: 'Cuisine' },
-    { value: 'weaving', label: 'Tissage' },
-    { value: 'painting', label: 'Peinture' },
-    { value: 'craft', label: 'Artisanat' },
-  ],
-  guide_service: [
-    { value: 'guided_tour', label: 'Visite guidée' },
-    { value: 'hiking_guide', label: 'Guide randonnée' },
-    { value: 'cultural_guide', label: 'Guide culturel' },
-    { value: 'photography', label: 'Guide photo' },
-  ],
-  equipment_rental: [
-    { value: 'bike', label: 'Vélo' },
-    { value: 'kayak', label: 'Kayak' },
-    { value: 'hiking_gear', label: 'Matériel rando' },
-    { value: 'camping_gear', label: 'Matériel camping' },
-  ],
-  event: [
-    { value: 'festival', label: 'Festival' },
-    { value: 'concert', label: 'Concert' },
-    { value: 'exhibition', label: 'Exposition' },
-    { value: 'conference', label: 'Conférence' },
-  ],
-  package: [
-    { value: 'all_inclusive', label: 'Tout compris' },
-    { value: 'half_board', label: 'Demi-pension' },
-    { value: 'full_board', label: 'Pension complète' },
-  ],
-};
+export const PRICING_UNITS = [
+  { value: 'per_person', label: 'Par personne' },
+  { value: 'per_night', label: 'Par nuit' },
+  { value: 'per_hour', label: 'Par heure' },
+  { value: 'per_half_day', label: 'Par demi-journée' },
+  { value: 'per_day', label: 'Par jour' },
+] as const;

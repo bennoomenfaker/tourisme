@@ -29,6 +29,7 @@ import { NotificationModule } from './notification/notification.module';
 import { TripPlanModule } from './trip-plan/trip-plan.module';
 import { FavoriteModule } from './favorite/favorite.module';
 import { ReviewModule } from './review/review.module';
+import { TravelCartModule } from './travel-cart/travel-cart.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { ReviewModule } from './review/review.module';
     TripPlanModule,
     FavoriteModule,
     ReviewModule,
+    TravelCartModule,
   ],
   providers: [GoogleStrategy, {
     provide: APP_GUARD,

@@ -32,6 +32,20 @@ interface TripPlanItem {
   notes: string | null;
   created_at: string;
   offerItem: OfferItem | null;
+  circuit: CircuitBrief | null;
+}
+
+interface CircuitBrief {
+  id: string;
+  title: string;
+  region: string | null;
+  lat: number | null;
+  lng: number | null;
+  base_price: number | null;
+  currency: string;
+  duration_days: number | null;
+  max_participants: number | null;
+  description: string | null;
 }
 
 interface OfferItem {
@@ -39,10 +53,7 @@ interface OfferItem {
   name: string;
   description: string | null;
   item_type: string | null;
-  bed_count: number | null;
-  nights: number | null;
-  tent_capacity: number | null;
-  room_type: string | null;
+  details_json: Record<string, any> | null;
   status: string;
   prices: OfferItemPrice[];
   offer: OfferBrief | null;
@@ -82,10 +93,7 @@ interface OfferItemFull {
   name: string;
   description: string | null;
   item_type: string | null;
-  bed_count: number | null;
-  nights: number | null;
-  tent_capacity: number | null;
-  room_type: string | null;
+  details_json: Record<string, any> | null;
   status: string;
   prices: OfferItemPrice[];
 }
@@ -224,7 +232,67 @@ export default function TripPlanDetailPage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+
+                {/* Budget summary */}
+                {plan.items && plan.items.length > 0 && (() => {
+                  let totalBudget = 0;
+                  for (const item of plan.items) {
+                    if (item.offerItem?.prices?.length) {
+                      const price = item.offerItem.prices.find((p) => p.is_default)?.price ?? item.offerItem.prices[0]?.price;
+                      if (price) totalBudget += Number(price);
+                    } else if (item.circuit?.base_price) {
+                      totalBudget += Number(item.circuit.base_price);
+                    }
+                  }
+                  if (totalBudget > 0) {
+                    return (
+                      <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Budget estimé</p>
+                            <p className="text-2xl font-black text-emerald-700">{totalBudget.toLocaleString()} TND</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-emerald-500">{plan.items.length} activité{plan.items.length > 1 ? "s" : ""}</p>
+                            <p className="text-xs text-emerald-400">~{Math.round(totalBudget / (plan.items.length || 1))} TND/activité</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Timeline */}
+                {plan.items && plan.items.length > 1 && (
+                  <div className="mt-4">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Timeline</h3>
+                    <div className="relative">
+                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
+                      <div className="space-y-3">
+                        {plan.items
+                          .sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0) || a.sort_order - b.sort_order)
+                          .map((item, idx) => (
+                            <div key={item.id} className="flex items-start gap-3 relative">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 shrink-0 ${
+                                item.circuit ? "bg-purple-100 text-purple-700 border-2 border-purple-300" : "bg-primary text-white"
+                              }`}>
+                                {item.day_number ?? idx + 1}
+                              </div>
+                              <div className="flex-1 bg-white rounded-xl border border-slate-100 p-3 -mt-1">
+                                <p className="text-sm font-semibold text-slate-800">
+                                  {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
+                                </p>
+                                {item.notes && <p className="text-xs text-slate-400 mt-0.5">{item.notes}</p>}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 shrink-0 mt-4">
                   <button
                     onClick={() => setShowBook(true)}
                     disabled={!plan.items?.length}
@@ -279,14 +347,26 @@ export default function TripPlanDetailPage() {
                 <>
                   <TripMap
                     className="mb-4"
-                    items={plan.items
-                      .filter((item) => item.offerItem?.offer?.latitude && item.offerItem?.offer?.longitude)
-                      .map((item) => ({
-                        label: item.offerItem?.name ?? item.offerItem?.offer?.title ?? "",
-                        lat: Number(item.offerItem!.offer!.latitude),
-                        lng: Number(item.offerItem!.offer!.longitude),
-                        day_number: item.day_number,
-                      }))}
+                    items={[
+                      ...plan.items
+                        .filter((item) => item.offerItem?.offer?.latitude && item.offerItem?.offer?.longitude)
+                        .map((item) => ({
+                          label: item.offerItem?.name ?? item.offerItem?.offer?.title ?? "",
+                          lat: Number(item.offerItem!.offer!.latitude),
+                          lng: Number(item.offerItem!.offer!.longitude),
+                          day_number: item.day_number,
+                          type: "offer" as const,
+                        })),
+                      ...plan.items
+                        .filter((item) => item.circuit?.lat && item.circuit?.lng)
+                        .map((item) => ({
+                          label: item.circuit!.title,
+                          lat: Number(item.circuit!.lat),
+                          lng: Number(item.circuit!.lng),
+                          day_number: item.day_number,
+                          type: "circuit" as const,
+                        })),
+                    ]}
                   />
                   <div className="space-y-3">
                   {plan.items.map((item) => (
@@ -295,11 +375,16 @@ export default function TripPlanDetailPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <h4 className="font-semibold text-slate-800">
-                              {item.offerItem?.name ?? "Élément supprimé"}
+                              {item.offerItem?.name ?? item.circuit?.title ?? "Élément supprimé"}
                             </h4>
                             {item.offerItem?.item_type && (
                               <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
                                 {item.offerItem.item_type}
+                              </span>
+                            )}
+                            {item.circuit && (
+                              <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                                Circuit {item.circuit.duration_days ? `(${item.circuit.duration_days}j)` : ""}
                               </span>
                             )}
                             {item.day_number && (
@@ -315,31 +400,34 @@ export default function TripPlanDetailPage() {
                               {item.offerItem.offer.region && ` — ${item.offerItem.offer.region}`}
                             </p>
                           )}
-                          {(item.offerItem?.bed_count || item.offerItem?.nights || item.offerItem?.tent_capacity || item.offerItem?.room_type) && (
+                          {item.circuit && (
+                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
+                              <MapPin size={10} />
+                              {item.circuit.title}
+                              {item.circuit.region && ` — ${item.circuit.region}`}
+                            </p>
+                          )}
+                            {(item.offerItem?.details_json?.room_sub_type || item.offerItem?.details_json?.bed_count || item.offerItem?.details_json?.tent_capacity) && (
                             <div className="flex flex-wrap gap-2 mt-1.5">
-                              {item.offerItem.room_type && (
+                              {item.offerItem.details_json?.room_sub_type && (
                                 <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">
-                                  {item.offerItem.room_type === 'shared_dormitory' ? '🛏 Dortoir' :
-                                   item.offerItem.room_type === 'private' ? '🏠 Privé' :
-                                   item.offerItem.room_type === 'double' ? '👫 Double' :
-                                   item.offerItem.room_type === 'family' ? '👨‍👩‍👧‍👦 Famille' :
-                                   item.offerItem.room_type === 'tent' ? '⛺ Tente' :
-                                   item.offerItem.room_type}
+                                  {item.offerItem.details_json.room_sub_type === 'shared' ? '🛏 Dortoir' :
+                                   item.offerItem.details_json.room_sub_type === 'private' ? '🏠 Privé' :
+                                   item.offerItem.details_json.room_sub_type === 'double' ? '👫 Double' :
+                                   item.offerItem.details_json.room_sub_type === 'family' ? '👨‍👩‍👧‍👦 Famille' :
+                                   item.offerItem.details_json.room_sub_type === 'suite' ? '👑 Suite' :
+                                   item.offerItem.details_json.room_sub_type === 'studio' ? '🏢 Studio' :
+                                   item.offerItem.details_json.room_sub_type}
                                 </span>
                               )}
-                              {item.offerItem.bed_count != null && (
+                              {item.offerItem.details_json?.bed_count != null && (
                                 <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full">
-                                  🛏 {item.offerItem.bed_count} lit{item.offerItem.bed_count > 1 ? 's' : ''}
+                                  🛏 {item.offerItem.details_json.bed_count} lit{item.offerItem.details_json.bed_count > 1 ? 's' : ''}
                                 </span>
                               )}
-                              {item.offerItem.nights != null && (
-                                <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded-full">
-                                  🌙 {item.offerItem.nights} nuit{item.offerItem.nights > 1 ? 's' : ''}
-                                </span>
-                              )}
-                              {item.offerItem.tent_capacity != null && (
+                              {item.offerItem.details_json?.tent_capacity != null && (
                                 <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded-full">
-                                  ⛺ {item.offerItem.tent_capacity} pers.
+                                  ⛺ {item.offerItem.details_json.tent_capacity} pers.
                                 </span>
                               )}
                             </div>
@@ -354,6 +442,25 @@ export default function TripPlanDetailPage() {
                                   {Number(p.price).toLocaleString()} {p.currency}
                                 </span>
                               ))}
+                            </div>
+                          )}
+                          {item.circuit && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {item.circuit.base_price != null && (
+                                <span className="text-xs bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
+                                  {Number(item.circuit.base_price).toLocaleString()} {item.circuit.currency}
+                                </span>
+                              )}
+                              {item.circuit.duration_days && (
+                                <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                                  {item.circuit.duration_days} jour{item.circuit.duration_days > 1 ? "s" : ""}
+                                </span>
+                              )}
+                              {item.circuit.max_participants && (
+                                <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
+                                  Max {item.circuit.max_participants} pers.
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -501,10 +608,9 @@ function AddItemModal({ planId, onClose, onAdded }: { planId: string; onClose: (
                           <p className="font-medium text-sm text-slate-800">{item.name}</p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {item.item_type && <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{item.item_type}</span>}
-                            {item.room_type && <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">{item.room_type}</span>}
-                            {item.bed_count != null && <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">🛏 {item.bed_count} lit(s)</span>}
-                            {item.nights != null && <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">🌙 {item.nights} nuit(s)</span>}
-                            {item.tent_capacity != null && <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">⛺ {item.tent_capacity} pers.</span>}
+                            {item.details_json?.room_sub_type && <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">{item.details_json.room_sub_type}</span>}
+                            {item.details_json?.bed_count != null && <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">🛏 {item.details_json.bed_count} lit(s)</span>}
+                            {item.details_json?.tent_capacity != null && <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">⛺ {item.details_json.tent_capacity} pers.</span>}
                           </div>
                           {item.prices.length > 0 && (
                             <p className="text-xs text-primary font-semibold mt-1">
@@ -572,9 +678,24 @@ function AddItemModal({ planId, onClose, onAdded }: { planId: string; onClose: (
 }
 
 function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: TripPlan; onClose: () => void; onBooked: () => void }) {
-  const [participants, setParticipants] = useState<Participant[]>([
-    { full_name: "", age: null, document_type: "none", document_number: "", is_group_leader: true },
-  ]);
+  const parsedParticipantCount = (() => {
+    let max = 1;
+    for (const item of plan.items ?? []) {
+      if (!item.notes) continue;
+      const match = item.notes.match(/(\d+)\s*participants?/i);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!isNaN(n) && n > max) max = n;
+      }
+    }
+    return max;
+  })();
+
+  const [participants, setParticipants] = useState<Participant[]>(() =>
+    Array.from({ length: parsedParticipantCount }, (_, i) => ({
+      full_name: "", age: null, document_type: "none", document_number: "", is_group_leader: i === 0,
+    }))
+  );
   const [specialRequests, setSpecialRequests] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

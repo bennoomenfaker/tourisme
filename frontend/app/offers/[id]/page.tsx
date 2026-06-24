@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Star, Calendar,
   DollarSign, ShieldCheck, Info, ChevronDown, ChevronUp,
-  ChevronRight, Check, Heart,
+  ChevronRight, Check, Heart, ShoppingCart,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -39,10 +39,7 @@ interface OfferItem {
   name: string;
   description: string | null;
   item_type: string | null;
-  bed_count: number | null;
-  nights: number | null;
-  tent_capacity: number | null;
-  room_type: string | null;
+  details_json: Record<string, any> | null;
   requires_confirmation: boolean;
   booking_deadline_days: number | null;
   cancellation_deadline_days: number | null;
@@ -101,6 +98,8 @@ export default function OfferDetailPage() {
   const [showEditWizard, setShowEditWizard] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
+  const [showAddedToCart, setShowAddedToCart] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -138,6 +137,31 @@ export default function OfferDetailPage() {
       setIsFavorite((prev) => !prev);
     } catch {}
     setTogglingFav(false);
+  };
+
+  const addToCart = async (offerItemId: string) => {
+    setAddingToCart(offerItemId);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        const cartRes = await apiFetch<any>("/travel-carts/me", { headers: { Authorization: `Bearer ${token}` } });
+        await apiFetch(`/travel-carts/${cartRes.id}/items`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ offer_item_id: offerItemId, quantity: 1 }),
+        });
+      } else {
+        const cart = JSON.parse(localStorage.getItem("guest_cart") || "[]");
+        cart.push({ id: crypto.randomUUID(), type: "offer_item", ref_id: offerItemId, quantity: 1, added_at: new Date().toISOString() });
+        localStorage.setItem("guest_cart", JSON.stringify(cart));
+      }
+      setShowAddedToCart(true);
+      setTimeout(() => setShowAddedToCart(false), 2000);
+    } catch (e) {
+      console.error("Add to cart error:", e);
+    } finally {
+      setAddingToCart(null);
+    }
   };
 
   if (loading) {
@@ -345,29 +369,25 @@ export default function OfferDetailPage() {
                                 {item.item_type}
                               </span>
                             )}
-                            {item.room_type && (
+                            {item.details_json?.room_sub_type && (
                               <span className="text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
-                                {item.room_type === 'shared_dormitory' ? '🛏 Dortoir' :
-                                 item.room_type === 'private' ? '🏠 Privé' :
-                                 item.room_type === 'double' ? '👫 Double' :
-                                 item.room_type === 'family' ? '👨‍👩‍👧‍👦 Famille' :
-                                 item.room_type === 'tent' ? '⛺ Tente' :
-                                 item.room_type}
+                                {item.details_json.room_sub_type === 'shared' ? '🛏 Dortoir' :
+                                 item.details_json.room_sub_type === 'private' ? '🏠 Privé' :
+                                 item.details_json.room_sub_type === 'double' ? '👫 Double' :
+                                 item.details_json.room_sub_type === 'family' ? '👨‍👩‍👧‍👦 Famille' :
+                                 item.details_json.room_sub_type === 'suite' ? '👑 Suite' :
+                                 item.details_json.room_sub_type === 'studio' ? '🏢 Studio' :
+                                 item.details_json.room_sub_type}
                               </span>
                             )}
-                            {item.bed_count != null && (
+                            {item.details_json?.bed_count != null && (
                               <span className="text-xs text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">
-                                🛏 {item.bed_count} lit{item.bed_count > 1 ? 's' : ''}
+                                🛏 {item.details_json.bed_count} lit{item.details_json.bed_count > 1 ? 's' : ''}
                               </span>
                             )}
-                            {item.nights != null && (
-                              <span className="text-xs text-purple-600 bg-purple-50 rounded-full px-2 py-0.5">
-                                🌙 {item.nights} nuit{item.nights > 1 ? 's' : ''}
-                              </span>
-                            )}
-                            {item.tent_capacity != null && (
+                            {item.details_json?.tent_capacity != null && (
                               <span className="text-xs text-green-600 bg-green-50 rounded-full px-2 py-0.5">
-                                ⛺ {item.tent_capacity} pers.
+                                ⛺ {item.details_json.tent_capacity} pers.
                               </span>
                             )}
                           </div>
@@ -425,6 +445,13 @@ export default function OfferDetailPage() {
                             </div>
                           )}
 
+                          <button
+                            onClick={() => addToCart(item.id)}
+                            disabled={addingToCart === item.id}
+                            className="w-full mt-2 py-2 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                          >
+                            <ShoppingCart size={16} /> Ajouter au panier
+                          </button>
                           {!user && (
                             <button
                               onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
@@ -454,14 +481,38 @@ export default function OfferDetailPage() {
               </div>
             )}
 
-            {/* Global Réserver button */}
+            {/* Added to cart notification */}
+            {showAddedToCart && (
+              <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-xl z-50 flex items-center gap-2">
+                <ShoppingCart size={16} /> Ajouté au panier !
+              </div>
+            )}
+
+            {/* Global Add to cart + Réserver buttons */}
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <button
+                onClick={() => {
+                  const firstItem = offer.items?.find(i => i.status === "active");
+                  if (firstItem) addToCart(firstItem.id);
+                }}
+                className="py-3 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-base flex items-center justify-center gap-2 transition-colors"
+              >
+                <ShoppingCart size={18} /> Ajouter au panier
+              </button>
+              {!user && (
+                <button
+                  onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
+                  className="py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"
+                >
+                  <Check size={18} /> Réserver
+                </button>
+              )}
+            </div>
             {!user && (
               <button
                 onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
-                className="w-full mt-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"
-              >
-                <Check size={18} /> Réserver cette offre
-              </button>
+                className="hidden"
+              />
             )}
             {user?.role === "eco_traveler" && !existingBooking && (
               <button
