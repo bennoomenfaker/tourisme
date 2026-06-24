@@ -95,4 +95,8 @@ export class CreateCircuitDto {
   @IsOptional()
   @IsUUID()
   project_id?: string;
+
+  @IsOptional()
+  @IsString()
+  waypoints?: string;
 }

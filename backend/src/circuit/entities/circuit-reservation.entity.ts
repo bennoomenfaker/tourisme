@@ -19,7 +19,7 @@ export class CircuitReservation {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Circuit)
+  @ManyToOne(() => Circuit, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'circuit_id' })
   circuit!: Circuit;
 

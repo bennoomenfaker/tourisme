@@ -98,6 +98,9 @@ export class Circuit {
   @Column({ type: 'simple-array', nullable: true })
   images!: string[] | null;
 
+  @Column({ type: 'text', nullable: true })
+  waypoints!: string | null;
+
   @CreateDateColumn()
   created_at!: Date;
 

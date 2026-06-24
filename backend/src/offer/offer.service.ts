@@ -483,10 +483,43 @@ export class OfferService {
     return { message: 'Session supprimée.' };
   }
 
+  async findMyItems(authorId: string): Promise<{ id: string; name: string; item_type: string | null; offer_id: string; offer_title: string }[]> {
+    const offers = await this.findByAuthor(authorId);
+    const items: { id: string; name: string; item_type: string | null; offer_id: string; offer_title: string }[] = [];
+    for (const offer of offers) {
+      for (const item of offer.items || []) {
+        items.push({ id: item.id, name: item.name, item_type: item.item_type, offer_id: offer.id, offer_title: offer.title });
+      }
+    }
+    return items;
+  }
+
   async findSessions(itemId: string): Promise<OfferItemSession[]> {
     return this.sessionRepo.find({
       where: { offerItem: { id: itemId } },
       order: { date: 'ASC', start_time: 'ASC' },
     });
+  }
+
+  async getPopularLocations(): Promise<{ lat: number; lng: number; weight: number; label: string; type: string }[]> {
+    const items = await this.itemRepo.find({
+      where: { status: 'active' },
+      relations: ['prices'],
+    });
+
+    const locations: { lat: number; lng: number; weight: number; label: string; type: string }[] = [];
+
+    for (const item of items) {
+      const details = item.details_json || {};
+      const lat = details.lat || (item as any).lat;
+      const lng = details.lng || (item as any).lng;
+      if (lat != null && lng != null) {
+        const priceCount = item.prices?.length || 1;
+        const weight = Math.min(1 + priceCount * 0.3, 3);
+        locations.push({ lat: Number(lat), lng: Number(lng), weight, label: item.name, type: 'offer' });
+      }
+    }
+
+    return locations;
   }
 }

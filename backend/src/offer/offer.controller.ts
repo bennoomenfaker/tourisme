@@ -64,6 +64,14 @@ export class OfferController {
     return this.service.findByAuthor(req.user.sub);
   }
 
+  /** Mes propres items d'offres */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Get('items/mine')
+  findMyItems(@Req() req: any) {
+    return this.service.findMyItems(req.user.sub);
+  }
+
   /** Toutes les offres approuvées (page Destinations) */
   @Public()
   @Get()
@@ -271,5 +279,12 @@ export class OfferController {
   @Get('items/:itemId/sessions')
   findSessions(@Param('itemId') itemId: string) {
     return this.service.findSessions(itemId);
+  }
+
+  /** Lieux populaires pour la heatmap */
+  @Public()
+  @Get('popular-locations')
+  getPopularLocations() {
+    return this.service.getPopularLocations();
   }
 }

@@ -119,6 +119,7 @@ export default function ExplorePage() {
   const [cartCount, setCartCount] = useState(0);
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"split" | "map" | "grid">("split");
+  const [showHeatmap, setShowHeatmap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priceRange, setPriceRange] = useState(0);
@@ -235,6 +236,13 @@ export default function ExplorePage() {
                 <LayoutGrid size={16} />
               </button>
             </div>
+            <button
+              onClick={() => setShowHeatmap(!showHeatmap)}
+              className={`p-2 rounded-xl text-sm font-bold transition-colors ${showHeatmap ? "bg-primary text-white" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}
+              title="Carte de chaleur"
+            >
+              🔥
+            </button>
             <a href="/cart" className="relative flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50">
               <ShoppingCart size={16} />
               {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartCount}</span>}
@@ -305,7 +313,7 @@ export default function ExplorePage() {
               {loading ? (
                 <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
               ) : markers.length > 0 ? (
-                <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" />
+                <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} />
               ) : (
                 <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
               )}
@@ -323,7 +331,7 @@ export default function ExplorePage() {
             {loading ? (
               <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
             ) : markers.length > 0 ? (
-              <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" />
+              <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} />
             ) : (
               <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
             )}

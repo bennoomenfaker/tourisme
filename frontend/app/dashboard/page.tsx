@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { logoutUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import GuidedOfferWizard from "@/components/GuidedOfferWizard";
+import CircuitBuilderWizard from "@/components/CircuitBuilderWizard";
 import ImageUploader from "@/components/ImageUploader";
 
 const MapPicker = dynamic(
@@ -1701,7 +1702,7 @@ function CircuitsTab({ role, router, token }: { role: string; router: any; token
         </div>
       )}
 
-      {showCreate && <CreateCircuitModal onClose={() => setShowCreate(false)} onCreated={loadCircuits} />}
+      {showCreate && <CircuitBuilderWizard token={token} onClose={() => setShowCreate(false)} onSuccess={loadCircuits} />}
       {bookCircuit && <BookCircuitModal onClose={() => setBookCircuit(null)} circuit={bookCircuit} />}
     </div>
   );

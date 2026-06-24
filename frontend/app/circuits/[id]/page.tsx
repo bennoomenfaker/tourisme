@@ -108,6 +108,13 @@ export default function CircuitDetailPage() {
   const [editLng, setEditLng] = useState<number | null>(null);
   const [editAddress, setEditAddress] = useState("");
   const [editImages, setEditImages] = useState<string[]>([]);
+  const [editInclusions, setEditInclusions] = useState("");
+  const [editExclusions, setEditExclusions] = useState("");
+  const [editConfirmationMode, setEditConfirmationMode] = useState("automatic");
+  const [editBookingDeadlineDays, setEditBookingDeadlineDays] = useState("");
+  const [editCurrency, setEditCurrency] = useState("TND");
+  const [editSearchQuery, setEditSearchQuery] = useState("");
+  const [editSearching, setEditSearching] = useState(false);
 
   const [showAddDay, setShowAddDay] = useState(false);
   const [dayTitle, setDayTitle] = useState("");
@@ -332,6 +339,11 @@ export default function CircuitDetailPage() {
     if (editLng !== null) body.lng = editLng;
     if (editAddress) body.address = editAddress;
     if (editImages.length > 0) body.images = editImages;
+    if (editInclusions) body.inclusions = editInclusions;
+    if (editExclusions) body.exclusions = editExclusions;
+    if (editConfirmationMode) body.confirmation_mode = editConfirmationMode;
+    if (editBookingDeadlineDays) body.booking_deadline_days = Number(editBookingDeadlineDays);
+    if (editCurrency) body.currency = editCurrency;
     try {
       await apiFetch(`/circuits/${id}`, {
         method: "PATCH",
@@ -496,7 +508,7 @@ export default function CircuitDetailPage() {
 
             {isAuthor && (
               <div className="flex flex-wrap gap-2 mb-4">
-                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
+                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setEditInclusions(circuit.inclusions ?? ""); setEditExclusions(circuit.exclusions ?? ""); setEditConfirmationMode(circuit.confirmation_mode ?? "automatic"); setEditBookingDeadlineDays(String(circuit.booking_deadline_days ?? "")); setEditCurrency(circuit.currency ?? "TND"); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
                   <Edit size={14} /> Modifier
                 </button>
                 <button onClick={() => setShowAddDay(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-primary border border-emerald-200 hover:bg-emerald-100">
@@ -741,28 +753,55 @@ export default function CircuitDetailPage() {
       </div>
 
       {/* ─── Modal Édition ─────────────────────────────── */}
-      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Modifier le circuit">
-        <div className="p-6 space-y-3">
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Modifier le circuit" maxWidth="max-w-xl">
+        <div className="p-6 space-y-3 max-h-[75vh] overflow-y-auto">
           <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Titre" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
           <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={3} />
           <div className="grid grid-cols-2 gap-3">
             <input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} placeholder="Prix" type="number" min={0} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-            <input value={editRegion} onChange={(e) => setEditRegion(e.target.value)} placeholder="Région" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <select value={editRegion} onChange={(e) => setEditRegion(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              <option value="">Région</option>
+              <option value="Tunis">Tunis</option><option value="Sousse">Sousse</option><option value="Nabeul">Nabeul</option>
+              <option value="Hammamet">Hammamet</option><option value="Bizerte">Bizerte</option><option value="Gabès">Gabès</option>
+              <option value="Médenine">Médenine</option><option value="Tataouine">Tataouine</option><option value="Tozeur">Tozeur</option>
+              <option value="Djerba">Djerba</option><option value="Sfax">Sfax</option><option value="Kairouan">Kairouan</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
             <input value={editDays} onChange={(e) => setEditDays(e.target.value)} placeholder="Jours" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             <input value={editNights} onChange={(e) => setEditNights(e.target.value)} placeholder="Nuits" type="number" min={0} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             <input value={editMax} onChange={(e) => setEditMax(e.target.value)} placeholder="Max participants" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Date de début</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Début</label>
               <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Date de fin</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Fin</label>
               <input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Délai réservation</label>
+              <input type="number" min={0} value={editBookingDeadlineDays} onChange={(e) => setEditBookingDeadlineDays(e.target.value)} placeholder="Jours" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
           </div>
-
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Devise</label>
+              <select value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="TND">TND</option><option value="EUR">EUR</option><option value="USD">USD</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Confirmation</label>
+              <select value={editConfirmationMode} onChange={(e) => setEditConfirmationMode(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="automatic">Automatique</option><option value="manual">Manuelle</option>
+              </select>
+            </div>
+          </div>
+          <textarea value={editInclusions} onChange={(e) => setEditInclusions(e.target.value)} placeholder="Inclus (ex: Transport, hébergement, guide...)" rows={2} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <textarea value={editExclusions} onChange={(e) => setEditExclusions(e.target.value)} placeholder="Non inclus (ex: Repas du soir...)" rows={2} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
           <ImageUploader images={editImages} onChange={setEditImages} maxImages={5} label="Images du circuit" />
 
           <div>
@@ -785,7 +824,7 @@ export default function CircuitDetailPage() {
           </div>
 
           <button onClick={handleEdit} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600">
-            Enregistrer
+            Enregistrer les modifications
           </button>
         </div>
       </Modal>

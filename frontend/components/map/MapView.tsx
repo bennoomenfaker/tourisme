@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
+import HeatmapLayer from "@/components/map/HeatmapLayer";
 
 const defaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -39,9 +40,10 @@ interface MapViewProps {
   markers?: MarkerData[];
   className?: string;
   height?: string;
+  showHeatmap?: boolean;
 }
 
-export default function MapView({ lat, lng, markers, className, height = "220px" }: MapViewProps) {
+export default function MapView({ lat, lng, markers, className, height = "220px", showHeatmap = false }: MapViewProps) {
   const [cssReady, setCssReady] = useState(false);
 
   useEffect(() => {
@@ -78,6 +80,7 @@ export default function MapView({ lat, lng, markers, className, height = "220px"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      {showHeatmap && <HeatmapLayer />}
       {allMarkers.map((m, i) => (
         <Marker
           key={`${m.lat}-${m.lng}-${i}`}
