@@ -45,9 +45,11 @@ export async function apiFetch<T>(
     const hasSession = typeof window !== "undefined" && !!localStorage.getItem("refresh_token");
 
     if (!hasSession) {
-      const errData = await res.json().catch(() => null);
-      const msg = errData?.message || errData?.error || "Identifiants incorrects.";
-      throw new Error(Array.isArray(msg) ? msg.join(", ") : msg);
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth/login")) {
+        const currentPath = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/auth/login?redirect=${currentPath}`;
+      }
+      throw new Error("Authentification requise.");
     }
 
     if (isRefreshing) {
@@ -74,6 +76,17 @@ export async function apiFetch<T>(
       } finally {
         isRefreshing = false;
       }
+    }
+  }
+
+  if (res.status === 403) {
+    const hasSession = typeof window !== "undefined" && !!localStorage.getItem("refresh_token");
+    if (!hasSession) {
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth/login")) {
+        const currentPath = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/auth/login?redirect=${currentPath}`;
+      }
+      throw new Error("Authentification requise.");
     }
   }
 

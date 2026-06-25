@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import ImageUploader from "@/components/ImageUploader";
 import SmartDatePicker from "@/components/SmartDatePicker";
 import {
-  ArrowLeft, ArrowRight, X, Plus, Trash2, Loader2, Check, MapPin, Leaf, Clock,
+  ArrowLeft, ArrowRight, X, Plus, Trash2, Loader2, Check, MapPin, Leaf, Clock, Calendar, Info, Sparkles,
 } from "lucide-react";
 import {
   OFFER_CATEGORIES, PROJECT_TYPE_OFFERS, GUIDE_ALLOWED_OFFERS,
@@ -135,6 +135,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const isEdit = !!editOffer;
   const [step, setStep] = useState<number>(isEdit ? 2 : 1);
   const [loading, setLoading] = useState(false);
+  const [generatingSessions, setGeneratingSessions] = useState(false);
   const [error, setError] = useState("");
 
   const normalizedProjectType = userProjectType
@@ -166,6 +167,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [images, setImages] = useState<string[]>([]);
   const [inclusions, setInclusions] = useState("");
   const [cancellationPolicy, setCancellationPolicy] = useState("");
+  const [bookingDeadlineDays, setBookingDeadlineDays] = useState("");
+  const [cancellationDeadlineDays, setCancellationDeadlineDays] = useState("");
   const [items, setItems] = useState<OfferItemForm[]>([]);
   const [availabilityRules, setAvailabilityRules] = useState<AvailabilityRule[]>([]);
 
@@ -179,6 +182,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const hasMeetingPoint = formFields.includes('meeting_point');
 
   const inputClass = "w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
+
+  const [capacityType, setCapacityType] = useState("persons");
+  const [totalQuantity, setTotalQuantity] = useState("");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -203,6 +209,15 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     setImages(editOffer.images || []);
     setInclusions(editOffer.inclusions || "");
     setCancellationPolicy(editOffer.cancellation_policy || "");
+
+    if (editOffer.items?.[0]) {
+      setBookingDeadlineDays(editOffer.items[0].booking_deadline_days?.toString() || "");
+      setCancellationDeadlineDays(editOffer.items[0].cancellation_deadline_days?.toString() || "");
+      if (editOffer.items[0].capacity?.[0]) {
+        setCapacityType(editOffer.items[0].capacity[0].capacity_type || "persons");
+        setTotalQuantity(editOffer.items[0].capacity[0].total_quantity?.toString() || "");
+      }
+    }
 
     if (editOffer.items?.length) {
       setItems(editOffer.items.map((it: any) => ({
@@ -271,6 +286,22 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     updateFirstItem("name", autoName);
     if (value !== "other") updateFirstItem("activity_custom_name", "");
     if (!hasDifficulty(value)) updateFirstItem("difficulty_level", "");
+  }
+
+  async function handleGenerateSessions() {
+    if (!editOffer?.items?.[0]?.id) return;
+    setGeneratingSessions(true);
+    try {
+      await apiFetch(`/offers/items/${editOffer.items[0].id}/availability/generate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Sessions générées avec succès !");
+    } catch (err: any) {
+      alert(err.message || "Erreur lors de la génération des sessions");
+    } finally {
+      setGeneratingSessions(false);
+    }
   }
 
   function addItemPrice() {
@@ -404,6 +435,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           item_type: item.item_type || undefined,
           details_json: buildDetailsJson(),
           confirmation_mode: confirmationMode,
+          booking_deadline_days: bookingDeadlineDays ? Number(bookingDeadlineDays) : undefined,
+          cancellation_deadline_days: cancellationDeadlineDays ? Number(cancellationDeadlineDays) : undefined,
         };
 
         let createdItem;
@@ -446,11 +479,39 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
             }
           }
 
+          // Delete old rules before creating new ones (avoids duplicates on edit)
+          if (isEdit) {
+            await apiFetch(`/offers/items/${createdItem.id}/availability/delete-all`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {});
+          }
+
           for (const rule of availabilityRules) {
             await apiFetch(`/offers/items/${createdItem.id}/availability`, {
               method: "POST",
               headers: { Authorization: `Bearer ${token}` },
               body: JSON.stringify(rule),
+            }).catch(() => {});
+          }
+
+          // Auto-generate sessions from rules
+          if (availabilityRules.length > 0) {
+            await apiFetch(`/offers/items/${createdItem.id}/availability/generate`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {});
+          }
+
+          // Set capacity if provided
+          if (totalQuantity) {
+            await apiFetch(`/offers/items/${createdItem.id}/capacity`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                capacity_type: capacityType,
+                total_quantity: Number(totalQuantity),
+              }),
             }).catch(() => {});
           }
         }
@@ -782,10 +843,47 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           {/* STEP 5: Smart Calendar */}
           {step === 5 && (
             <div className="space-y-4">
-              <h3 className="font-bold text-slate-800">Disponibilités et Calendrier</h3>
-              <p className="text-xs text-slate-400">Définissez quand votre offre est disponible</p>
+              <div>
+                <h3 className="font-bold text-slate-800">Disponibilités et Calendrier</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Définissez quand votre offre est disponible. Les règles créent automatiquement des créneaux réservables (sessions).
+                </p>
+              </div>
 
               <SmartDatePicker rules={availabilityRules} onChange={setAvailabilityRules} />
+
+              {isEdit && editOffer?.items?.[0]?.id && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Info size={14} className="text-blue-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-blue-700">Régénérer les sessions</p>
+                      <p className="text-[10px] text-blue-500 mt-0.5">
+                        Si vous modifiez les règles, cliquez pour recréer les créneaux disponibles. Les sessions avec des réservations existantes ne seront pas supprimées.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleGenerateSessions}
+                    disabled={generatingSessions || availabilityRules.length === 0}
+                    className="w-full py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-40"
+                  >
+                    {generatingSessions ? (
+                      <><Loader2 size={14} className="animate-spin" /> Génération en cours...</>
+                    ) : (
+                      <><Sparkles size={14} /> Régénérer les sessions</>
+                    )}
+                  </button>
+                </div>
+              )}
+              {!isEdit && availabilityRules.length > 0 && (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-start gap-2">
+                  <Sparkles size={14} className="text-emerald-500 mt-0.5 shrink-0" />
+                  <p className="text-[10px] text-emerald-600">
+                    Les sessions seront créées automatiquement lors de la publication. Vous pourrez les régénérer après.
+                  </p>
+                </div>
+              )}
 
               {error && <p className="text-sm text-red-500 font-semibold">{error}</p>}
 
@@ -822,14 +920,50 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 </div>
               )}
 
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Capacité de stock</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500">Type de capacité</label>
+                    <select className={inputClass} value={capacityType} onChange={(e) => setCapacityType(e.target.value)}>
+                      <option value="persons">Personnes</option>
+                      <option value="rooms">Chambres</option>
+                      <option value="beds">Lits</option>
+                      <option value="seats">Places</option>
+                      <option value="tents">Tentes</option>
+                      <option value="items">Articles</option>
+                      <option value="spaces">Espaces</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500">Quantité totale</label>
+                    <input type="number" min="1" className={inputClass} value={totalQuantity} onChange={(e) => setTotalQuantity(e.target.value)} placeholder="Ex: 20" />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400">Définit le stock global disponible (ex: 20 vélos, 5 chambres)</p>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500">Inclus dans l'offre</label>
                 <textarea className={`${inputClass} resize-none`} value={inclusions} onChange={(e) => setInclusions(e.target.value)} rows={2} placeholder="Matériel, guide, repas, transport..." />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500">Politique d'annulation</label>
+                <label className="text-xs font-bold text-slate-500">Politique d&apos;annulation</label>
                 <textarea className={`${inputClass} resize-none`} value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={2} placeholder="Remboursable 48h avant..." />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500">Délai réservation (jours)</label>
+                  <input type="number" min="0" className={inputClass} value={bookingDeadlineDays} onChange={(e) => setBookingDeadlineDays(e.target.value)} placeholder="Ex: 2" />
+                  <p className="text-[10px] text-slate-400">Jours minimum avant la session pour réserver</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500">Délai annulation (jours)</label>
+                  <input type="number" min="0" className={inputClass} value={cancellationDeadlineDays} onChange={(e) => setCancellationDeadlineDays(e.target.value)} placeholder="Ex: 1" />
+                  <p className="text-[10px] text-slate-400">Jours minimum avant la session pour annuler</p>
+                </div>
               </div>
 
               {error && <p className="text-sm text-red-500 font-semibold">{error}</p>}

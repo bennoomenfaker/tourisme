@@ -18,14 +18,30 @@ export default function HeatmapLayer() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    apiFetch<{ lat: number; lng: number; weight: number }[]>("/offers/popular-locations")
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setPoints(data.map((p) => ({ lat: p.lat, lng: p.lng, weight: Math.min(p.weight, 1) })));
+    Promise.all([
+      apiFetch<{ lat: number; lng: number; weight: number }[]>("/offers/popular-locations").catch(() => []),
+      apiFetch<any[]>("/publications/heatmap").catch(() => []),
+    ]).then(([offerData, placeData]) => {
+      const all: HeatPoint[] = [];
+
+      if (Array.isArray(offerData)) {
+        for (const p of offerData) {
+          all.push({ lat: p.lat, lng: p.lng, weight: Math.min(p.weight, 1) });
         }
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
+      }
+
+      if (Array.isArray(placeData)) {
+        for (const p of placeData) {
+          const w = Math.min((p.likes || 0) * 0.3 + (p.comments || 0) * 0.5 + (p.contributions || 0) * 0.7, 1);
+          if (p.lat != null && p.lng != null) {
+            all.push({ lat: p.lat, lng: p.lng, weight: w || 0.2 });
+          }
+        }
+      }
+
+      setPoints(all);
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
   }, []);
 
   useEffect(() => {

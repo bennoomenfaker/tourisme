@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { Search, ShoppingCart, Plus, Loader2, MapPin, Check, LayoutGrid, Map, SlidersHorizontal, X, Leaf } from "lucide-react";
+import { Search, ShoppingCart, Plus, Loader2, MapPin, Check, LayoutGrid, Map, SlidersHorizontal, X, Leaf, Eye, EyeOff } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
@@ -31,6 +31,21 @@ interface Circuit {
   base_price: number | null;
   currency: string;
   duration_days: number | null;
+  waypoints: string | null;
+}
+
+interface Place {
+  id: string;
+  title: string;
+  description: string | null;
+  images: string[] | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_name: string | null;
+  region: string | null;
+  category: string | null;
+  tags: string[] | null;
+  popularity_score: number;
 }
 
 const ITEM_TYPE_ICONS: Record<string, string> = {
@@ -124,6 +139,11 @@ export default function ExplorePage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priceRange, setPriceRange] = useState(0);
   const [selectedItem, setSelectedItem] = useState<OfferItem | Circuit | null>(null);
+  const [showOffers, setShowOffers] = useState(true);
+  const [showCircuits, setShowCircuits] = useState(true);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [showPlaces, setShowPlaces] = useState(true);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
 
   useEffect(() => {
     const cart = getGuestCart();
@@ -176,7 +196,10 @@ export default function ExplorePage() {
       setCircuits((circuitsData ?? []).filter((c: any) => isValidUUID(c.id)).map((c: any) => ({
         id: c.id, title: c.title, region: c.region ?? null, lat: c.lat ?? null, lng: c.lng ?? null,
         base_price: c.base_price ?? null, currency: c.currency ?? "TND", duration_days: c.duration_days ?? null,
+        waypoints: c.waypoints ?? null,
       })));
+      setLoadingPlaces(true);
+      apiFetch<Place[]>("/publications/places?limit=100").then(setPlaces).catch(() => {}).finally(() => setLoadingPlaces(false));
     } catch {} finally { setLoading(false); }
   }
 
@@ -210,10 +233,34 @@ export default function ExplorePage() {
     });
   }, [circuits, searchQuery, typeFilter, priceRange]);
 
+  const filteredPlaces = useMemo(() => {
+    return places.filter((p) => {
+      if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase()) && !p.region?.toLowerCase().includes(searchQuery.toLowerCase()) && !p.place_name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (typeFilter !== "all") {
+        if (typeFilter === "place" && !p.category) return true;
+        if (p.category && !["place", p.category].includes(typeFilter)) return false;
+      }
+      return true;
+    });
+  }, [places, searchQuery, typeFilter]);
+
   const markers = useMemo(() => [
-    ...filteredOffers.map((o) => ({ lat: o.latitude!, lng: o.longitude!, label: o.name, type: "offer" as const })),
-    ...filteredCircuits.filter((c) => c.lat && c.lng).map((c) => ({ lat: c.lat!, lng: c.lng!, label: c.title, type: "circuit" as const })),
-  ], [filteredOffers, filteredCircuits]);
+    ...(showOffers ? filteredOffers.filter((o) => o.latitude && o.longitude).map((o) => ({ lat: o.latitude!, lng: o.longitude!, label: o.name, type: "offer" as const, id: o.offer_id })) : []),
+    ...(showCircuits ? filteredCircuits.filter((c) => c.lat && c.lng).map((c) => ({ lat: c.lat!, lng: c.lng!, label: c.title, type: "circuit" as const, id: c.id })) : []),
+    ...(showPlaces ? filteredPlaces.filter((p) => p.latitude && p.longitude).map((p) => ({ lat: p.latitude!, lng: p.longitude!, label: p.title, type: "place" as const, id: p.id })) : []),
+  ], [filteredOffers, filteredCircuits, filteredPlaces, showOffers, showCircuits, showPlaces]);
+
+  const polylines = useMemo(() => {
+    return filteredCircuits
+      .filter((c) => c.waypoints)
+      .map((c) => {
+        try {
+          const pts: [number, number][] = JSON.parse(c.waypoints!);
+          return pts.filter((p) => p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]));
+        } catch { return []; }
+      })
+      .filter((pts) => pts.length > 1);
+  }, [filteredCircuits]);
 
   const hasActiveFilters = typeFilter !== "all" || priceRange > 0;
 
@@ -243,6 +290,29 @@ export default function ExplorePage() {
             >
               🔥
             </button>
+            <div className="hidden sm:flex bg-slate-100 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowOffers(!showOffers)}
+                className={`flex items-center gap-1 px-2.5 py-2 text-xs font-bold transition-colors ${showOffers ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-600"}`}
+                title="Afficher les offres"
+              >
+                {showOffers ? <Eye size={14} /> : <EyeOff size={14} />} Offres
+              </button>
+              <button
+                onClick={() => setShowCircuits(!showCircuits)}
+                className={`flex items-center gap-1 px-2.5 py-2 text-xs font-bold transition-colors ${showCircuits ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-600"}`}
+                title="Afficher les circuits"
+              >
+                {showCircuits ? <Eye size={14} /> : <EyeOff size={14} />} Circuits
+              </button>
+              <button
+                onClick={() => setShowPlaces(!showPlaces)}
+                className={`flex items-center gap-1 px-2.5 py-2 text-xs font-bold transition-colors ${showPlaces ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-600"}`}
+                title="Afficher les lieux"
+              >
+                {showPlaces ? <Eye size={14} /> : <EyeOff size={14} />} Lieux
+              </button>
+            </div>
             <a href="/cart" className="relative flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50">
               <ShoppingCart size={16} />
               {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{cartCount}</span>}
@@ -313,7 +383,7 @@ export default function ExplorePage() {
               {loading ? (
                 <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
               ) : markers.length > 0 ? (
-                <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} />
+                <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} polylines={polylines} layerVisibility={{ offers: showOffers, circuits: showCircuits, places: showPlaces }} />
               ) : (
                 <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
               )}
@@ -331,7 +401,7 @@ export default function ExplorePage() {
             {loading ? (
               <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
             ) : markers.length > 0 ? (
-              <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} />
+              <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} polylines={polylines} layerVisibility={{ offers: showOffers, circuits: showCircuits, places: showPlaces }} />
             ) : (
               <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
             )}

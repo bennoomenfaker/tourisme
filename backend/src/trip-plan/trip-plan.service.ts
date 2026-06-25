@@ -117,6 +117,8 @@ export class TripPlanService {
       circuit: dto.circuit_id ? ({ id: dto.circuit_id } as Circuit) : null,
       day_number: dto.day_number ?? null,
       sort_order: dto.sort_order ?? 0,
+      lat: dto.lat ?? null,
+      lng: dto.lng ?? null,
       notes: dto.notes ?? null,
     });
     return this.itemRepo.save(item);
@@ -294,6 +296,9 @@ export class TripPlanService {
           this.notificationService.create(offer.author_id, notifType, notifTitle, notifBody, notifLink).catch(() => {});
         }
       }
+
+      fullPlan.status = 'confirmed';
+      await queryRunner.manager.save(fullPlan);
 
       await queryRunner.commitTransaction();
 

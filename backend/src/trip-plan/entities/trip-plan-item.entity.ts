@@ -33,6 +33,12 @@ export class TripPlanItem {
   @Column({ default: 0 })
   sort_order!: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lat!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  lng!: number | null;
+
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 

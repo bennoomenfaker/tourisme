@@ -13,6 +13,7 @@ import { User } from '../users/entities/user.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { OfferItem } from '../offer/entities/offer-item.entity';
 import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
+import { OfferItemCapacity } from '../offer/entities/offer-item-capacity.entity';
 import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
@@ -28,6 +29,8 @@ export class BookingService {
     private readonly offerRepo: Repository<Offer>,
     @InjectRepository(OfferItem)
     private readonly offerItemRepo: Repository<OfferItem>,
+    @InjectRepository(OfferItemCapacity)
+    private readonly capacityRepo: Repository<OfferItemCapacity>,
     private readonly notificationService: NotificationService,
   ) {}
 
@@ -48,6 +51,35 @@ export class BookingService {
 
     const offer = await this.offerRepo.findOne({ where: { id: dto.offer_id } });
     if (!offer) throw new NotFoundException('Offre introuvable');
+
+    // ── Vérification des délais de réservation ──
+    if (dto.offer_item_id && dto.session_id && session) {
+      const offerItem = await this.offerItemRepo.findOne({ where: { id: dto.offer_item_id } });
+      if (offerItem?.booking_deadline_days != null && session.date) {
+        const sessionDate = new Date(session.date);
+        const now = new Date();
+        const daysUntilSession = Math.ceil((sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysUntilSession < offerItem.booking_deadline_days) {
+          throw new BadRequestException(
+            `La réservation doit être faite au moins ${offerItem.booking_deadline_days} jour(s) avant la session (plus que ${daysUntilSession} jour(s))`
+          );
+        }
+      }
+    }
+
+    // ── Vérification du stock global (items sans session) ──
+    let itemCapacity: OfferItemCapacity | null = null;
+    if (dto.offer_item_id && !dto.session_id) {
+      itemCapacity = await this.capacityRepo.findOne({ where: { offerItem: { id: dto.offer_item_id } } });
+      if (itemCapacity?.remaining_quantity != null) {
+        const participantCount = dto.participants?.length ?? 1;
+        if (itemCapacity.remaining_quantity < participantCount) {
+          throw new BadRequestException(
+            `Stock insuffisant : ${itemCapacity.remaining_quantity} ${itemCapacity.capacity_type} restant(s) (demandé : ${participantCount})`
+          );
+        }
+      }
+    }
 
     const existingBooking = await this.bookingRepo.findOne({
       where: { traveler: { id: travelerId } as any, offer: { id: dto.offer_id } as any, status: Not('cancelled') },
@@ -132,6 +164,12 @@ export class BookingService {
       await this.sessionRepo.save(session);
     }
 
+    // ── Décrémentation du stock global (items sans session) ──
+    if (itemCapacity && itemCapacity.remaining_quantity !== null) {
+      itemCapacity.remaining_quantity = Math.max(0, itemCapacity.remaining_quantity - participantCount);
+      await this.capacityRepo.save(itemCapacity);
+    }
+
     if (dto.participants?.length) {
       const participants = dto.participants.map((p) =>
         this.participantRepo.create({
@@ -191,6 +229,23 @@ export class BookingService {
     if (booking.traveler.id !== travelerId) {
       throw new ForbiddenException('Vous ne pouvez annuler que vos propres réservations');
     }
+
+    // ── Vérification du délai d'annulation ──
+    if (booking.offerItem?.id && booking.session?.id) {
+      const offerItem = await this.offerItemRepo.findOne({ where: { id: booking.offerItem.id } });
+      const session = await this.sessionRepo.findOne({ where: { id: booking.session.id } });
+      if (offerItem?.cancellation_deadline_days != null && session?.date) {
+        const sessionDate = new Date(session.date);
+        const now = new Date();
+        const daysUntilSession = Math.ceil((sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysUntilSession < offerItem.cancellation_deadline_days) {
+          throw new BadRequestException(
+            `L'annulation doit être faite au moins ${offerItem.cancellation_deadline_days} jour(s) avant la session (plus que ${daysUntilSession} jour(s))`
+          );
+        }
+      }
+    }
+
     booking.status = 'cancelled';
     booking.cancelled_at = new Date();
     booking.cancel_reason = reason ?? null;
@@ -206,6 +261,16 @@ export class BookingService {
           session.status = 'available';
         }
         await this.sessionRepo.save(session);
+      }
+    }
+
+    // Restaurer le stock global (items sans session)
+    if (booking.offerItem?.id && !booking.session?.id) {
+      const capacity = await this.capacityRepo.findOne({ where: { offerItem: { id: booking.offerItem.id } } });
+      if (capacity && capacity.remaining_quantity !== null) {
+        const participantCount = booking.participants?.length ?? 1;
+        capacity.remaining_quantity = capacity.remaining_quantity + participantCount;
+        await this.capacityRepo.save(capacity);
       }
     }
 

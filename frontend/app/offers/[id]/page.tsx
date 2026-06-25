@@ -6,7 +6,8 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Star, Calendar,
   DollarSign, ShieldCheck, Info, ChevronDown, ChevronUp,
-  ChevronRight, Check, Heart, ShoppingCart,
+  ChevronRight, Check, Heart, ShoppingCart, AlertTriangle,
+  CalendarDays, Timer, Hash, Tag,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -21,6 +22,13 @@ interface OfferItemPrice {
   price: number;
   currency: string;
   is_default: boolean;
+}
+
+interface OfferItemCapacity {
+  id: string;
+  capacity_type: string;
+  total_quantity: number;
+  remaining_quantity: number;
 }
 
 interface OfferItemSession {
@@ -46,6 +54,7 @@ interface OfferItem {
   status: string;
   prices: OfferItemPrice[];
   sessions: OfferItemSession[];
+  capacity: OfferItemCapacity[];
 }
 
 interface Offer {
@@ -351,6 +360,42 @@ export default function OfferDetailPage() {
               </div>
             )}
 
+            {/* ─── Règles de disponibilité ──────────────────────── */}
+            {offer.items.some((item) => item.status === "active") && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-1.5">
+                  <CalendarDays size={14} /> Règles de disponibilité
+                </h3>
+                <div className="bg-blue-50 rounded-xl p-3 text-sm space-y-1.5">
+                  {(() => {
+                    const activeItems = offer.items.filter((i) => i.status === "active");
+                    const firstItem = activeItems[0];
+                    const rules: string[] = [];
+                    if (firstItem.booking_deadline_days !== null) {
+                      rules.push(`Réservation obligatoire ${firstItem.booking_deadline_days} jour${firstItem.booking_deadline_days > 1 ? "s" : ""} avant la date`);
+                    }
+                    if (firstItem.cancellation_deadline_days !== null) {
+                      rules.push(`Annulation gratuite jusqu'à ${firstItem.cancellation_deadline_days} jour${firstItem.cancellation_deadline_days > 1 ? "s" : ""} avant`);
+                    }
+                    if (rules.length > 0) {
+                      return rules.map((r, i) => (
+                        <div key={i} className="flex items-start gap-2 text-blue-700">
+                          <Info size={14} className="mt-0.5 shrink-0" />
+                          <span>{r}</span>
+                        </div>
+                      ));
+                    }
+                    return (
+                      <div className="flex items-center gap-2 text-blue-600">
+                        <Info size={14} />
+                        <span>Disponible sous réserve de places</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
             {offer.items.length > 0 && (
               <div className="mt-6">
                 <h2 className="text-lg font-bold text-slate-800 mb-3">Ce qui est proposé</h2>
@@ -361,9 +406,9 @@ export default function OfferDetailPage() {
                         onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
                         className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
                       >
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <span className="font-medium text-slate-800">{item.name}</span>
-                          <div className="flex flex-wrap gap-1.5 mt-1">
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             {item.item_type && (
                               <span className="text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
                                 {item.item_type}
@@ -371,28 +416,48 @@ export default function OfferDetailPage() {
                             )}
                             {item.details_json?.room_sub_type && (
                               <span className="text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
-                                {item.details_json.room_sub_type === 'shared' ? '🛏 Dortoir' :
-                                 item.details_json.room_sub_type === 'private' ? '🏠 Privé' :
-                                 item.details_json.room_sub_type === 'double' ? '👫 Double' :
-                                 item.details_json.room_sub_type === 'family' ? '👨‍👩‍👧‍👦 Famille' :
-                                 item.details_json.room_sub_type === 'suite' ? '👑 Suite' :
-                                 item.details_json.room_sub_type === 'studio' ? '🏢 Studio' :
+                                {item.details_json.room_sub_type === 'shared' ? 'Dortoir' :
+                                 item.details_json.room_sub_type === 'private' ? 'Privé' :
+                                 item.details_json.room_sub_type === 'double' ? 'Double' :
+                                 item.details_json.room_sub_type === 'family' ? 'Famille' :
+                                 item.details_json.room_sub_type === 'suite' ? 'Suite' :
+                                 item.details_json.room_sub_type === 'studio' ? 'Studio' :
                                  item.details_json.room_sub_type}
                               </span>
                             )}
                             {item.details_json?.bed_count != null && (
                               <span className="text-xs text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">
-                                🛏 {item.details_json.bed_count} lit{item.details_json.bed_count > 1 ? 's' : ''}
+                                {item.details_json.bed_count} lit{item.details_json.bed_count > 1 ? 's' : ''}
                               </span>
                             )}
                             {item.details_json?.tent_capacity != null && (
                               <span className="text-xs text-green-600 bg-green-50 rounded-full px-2 py-0.5">
-                                ⛺ {item.details_json.tent_capacity} pers.
+                                {item.details_json.tent_capacity} pers.
                               </span>
                             )}
                           </div>
+                          {/* ─── Session preview (visible sans expansion) ─── */}
+                          {(() => {
+                            const availSessions = item.sessions.filter((s) => s.status === "available" && (!s.remaining_capacity || s.remaining_capacity > 0));
+                            if (availSessions.length === 0) return null;
+                            const next = availSessions.slice(0, 3);
+                            return (
+                              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                <CalendarDays size={12} className="text-primary shrink-0" />
+                                {next.map((s) => (
+                                  <span key={s.id} className="text-[11px] font-medium text-primary bg-emerald-50 rounded-md px-1.5 py-0.5 whitespace-nowrap">
+                                    {new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
+                                    {s.start_time ? ` ${s.start_time}` : ""}
+                                  </span>
+                                ))}
+                                {availSessions.length > 3 && (
+                                  <span className="text-[11px] text-slate-400">+{availSessions.length - 3}</span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                           {item.prices.find((p) => p.is_default) && (
                             <span className="text-primary font-bold">
                               {Number(item.prices.find((p) => p.is_default)!.price).toLocaleString()} TND
@@ -406,6 +471,39 @@ export default function OfferDetailPage() {
                         <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-3">
                           {item.description && (
                             <p className="text-sm text-slate-500">{item.description}</p>
+                          )}
+
+                          {/* Capacité globale (depuis OfferItemCapacity) */}
+                          {item.capacity?.[0] && (
+                            <div className="bg-emerald-50 rounded-lg px-3 py-2 flex items-center justify-between text-sm">
+                              <span className="text-emerald-700 flex items-center gap-1.5">
+                                <Hash size={14} /> Capacité ({item.capacity[0].capacity_type})
+                              </span>
+                              <span className="font-semibold text-primary">
+                                {item.capacity[0].total_quantity} place{item.capacity[0].total_quantity > 1 ? "s" : ""}
+                                {item.capacity[0].remaining_quantity != null && (
+                                  <span className="text-xs text-slate-400 ml-1">({item.capacity[0].remaining_quantity} restante{item.capacity[0].remaining_quantity > 1 ? "s" : ""})</span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Délais */}
+                          {(item.booking_deadline_days !== null || item.cancellation_deadline_days !== null) && (
+                            <div className="bg-amber-50 rounded-lg px-3 py-2 text-sm space-y-1">
+                              {item.booking_deadline_days !== null && (
+                                <div className="flex items-center gap-1.5 text-amber-700">
+                                  <Timer size={14} />
+                                  <span>Réservation {item.booking_deadline_days} jour{item.booking_deadline_days > 1 ? "s" : ""} avant</span>
+                                </div>
+                              )}
+                              {item.cancellation_deadline_days !== null && (
+                                <div className="flex items-center gap-1.5 text-amber-700">
+                                  <AlertTriangle size={14} />
+                                  <span>Annulation gratuite {item.cancellation_deadline_days} jour{item.cancellation_deadline_days > 1 ? "s" : ""} avant</span>
+                                </div>
+                              )}
+                            </div>
                           )}
 
                           {item.prices.length > 0 && (
@@ -426,8 +524,10 @@ export default function OfferDetailPage() {
 
                           {item.sessions.length > 0 && (
                             <div>
-                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sessions disponibles</span>
-                              <div className="mt-1 space-y-1">
+                              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                Toutes les sessions ({item.sessions.filter((s) => s.status === "available").length})
+                              </span>
+                              <div className="mt-1 space-y-1 max-h-60 overflow-y-auto">
                                 {item.sessions
                                   .filter((s) => s.status === "available" && (!s.remaining_capacity || s.remaining_capacity > 0))
                                   .map((session) => (

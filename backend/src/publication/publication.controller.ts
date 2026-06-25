@@ -84,10 +84,37 @@ export class PublicationController {
   addReply(@Req() req: any, @Param('commentId') commentId: string, @Body('content') content: string) {
     return this.service.addReply(commentId, req.user.sub, req.user.role, content);
   }
-
-  @ApiBearerAuth('bearer') @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
   @Delete('comments/:commentId')
   deleteComment(@Req() req: any, @Param('commentId') commentId: string) {
     return this.service.deleteComment(commentId, req.user.sub);
+  }
+
+  // ─── Places / Trending / Heatmap ──────────────────────────────────────────
+
+  @Public() @Get('places')
+  findAllPlaces(@Query('limit') limit?: string, @Query('offset') offset?: string) {
+    return this.service.findAllPlaces(limit ? parseInt(limit) : 50, offset ? parseInt(offset) : 0);
+  }
+
+  @Public() @Get('places/trending')
+  findTrending(@Query('limit') limit?: string) {
+    return this.service.findTrending(limit ? parseInt(limit) : 20);
+  }
+
+  @Public() @Get('places/category/:category')
+  findByCategory(@Param('category') category: string, @Query('limit') limit?: string) {
+    return this.service.findByCategory(category, limit ? parseInt(limit) : 20);
+  }
+
+  @Public() @Get('heatmap')
+  getHeatmap() {
+    return this.service.getHeatmapData();
+  }
+
+  @Public() @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
   }
 }

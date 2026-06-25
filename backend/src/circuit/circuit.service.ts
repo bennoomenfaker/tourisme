@@ -108,6 +108,7 @@ export class CircuitService {
     if (dto.address !== undefined) circuit.address = dto.address ?? null;
     if (dto.project_id !== undefined) circuit.project_id = dto.project_id ?? null;
     if (dto.images !== undefined) circuit.images = dto.images?.length ? dto.images : null;
+    if (dto.waypoints !== undefined) circuit.waypoints = dto.waypoints ?? null;
     return this.circuitRepo.save(circuit);
   }
 

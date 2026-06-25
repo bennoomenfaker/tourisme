@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Clock, Repeat, X, Plus } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Calendar, Clock, Repeat, X, Plus, Info, Sparkles } from "lucide-react";
 
 interface AvailabilityRule {
   availability_type: string;
@@ -19,17 +19,98 @@ interface SmartDatePickerProps {
 }
 
 const WEEKDAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const WEEKDAY_NAMES_FULL = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
 const PRESETS = [
-  { label: "Date unique", icon: "📅", type: "single" },
-  { label: "Plusieurs dates", icon: "📆", type: "multiple" },
-  { label: "Chaque semaine", icon: "🔄", type: "weekly" },
-  { label: "Période saisonnière", icon: "🌊", type: "seasonal" },
-  { label: "Chaque année", icon: "🎉", type: "yearly" },
-  { label: "Personnalisé", icon: "⚙️", type: "custom" },
+  { label: "Date unique", icon: "📅", type: "single", desc: "Un seul jour précis" },
+  { label: "Plusieurs dates", icon: "📆", type: "multiple", desc: "Jours spécifiques" },
+  { label: "Chaque semaine", icon: "🔄", type: "weekly", desc: "Jours fixes par semaine" },
+  { label: "Période saisonnière", icon: "🌊", type: "seasonal", desc: "Ex: tous les week-ends d'été" },
+  { label: "Chaque année", icon: "🎉", type: "yearly", desc: "Événement annuel" },
+  { label: "Personnalisé", icon: "⚙️", type: "custom", desc: "Règle avancée (RRULE)" },
 ] as const;
 
 type PresetType = typeof PRESETS[number]["type"];
+
+/** Estime le nombre de sessions que la règle va générer (sur 90 jours) */
+function estimateSessionCount(rule: AvailabilityRule): number {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const maxDate = new Date(now);
+  maxDate.setDate(maxDate.getDate() + 90);
+
+  switch (rule.availability_type) {
+    case "date_range": {
+      if (!rule.start_date || !rule.end_date) return 0;
+      const start = new Date(rule.start_date);
+      const end = new Date(rule.end_date);
+      let count = 0;
+      for (let d = new Date(start); d <= end && d <= maxDate; d.setDate(d.getDate() + 1)) {
+        if (d < now) continue;
+        if (rule.weekdays?.length && !rule.weekdays.includes(d.getDay())) continue;
+        count++;
+      }
+      return count;
+    }
+    case "weekly": {
+      const days = rule.weekdays ?? [1, 2, 3, 4, 5];
+      const msPerDay = 86400000;
+      const totalDays = Math.min(90, Math.ceil((maxDate.getTime() - now.getTime()) / msPerDay));
+      return Math.floor((totalDays * days.length) / 7);
+    }
+    case "daily":
+      return 90;
+    case "weekend_only":
+      return 90 * 2 / 7 | 0;
+    case "yearly":
+      return 1;
+    case "custom": {
+      if (!rule.recurrence_rule) return 0;
+      const freq = rule.recurrence_rule.match(/FREQ=(\w+)/)?.[1];
+      if (freq === "WEEKLY") {
+        const byDay = rule.recurrence_rule.match(/BYDAY=([\w,]+)/)?.[1]?.split(",") ?? [];
+        return Math.floor((90 * byDay.length) / 7);
+      }
+      if (freq === "YEARLY") return 1;
+      return 0;
+    }
+    default:
+      return 0;
+  }
+}
+
+/** Génère un résumé lisible de la règle */
+function describeRule(rule: AvailabilityRule): string {
+  switch (rule.availability_type) {
+    case "date_range": {
+      if (!rule.start_date) return "Période non définie";
+      const start = new Date(rule.start_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+      if (rule.start_date === rule.end_date) {
+        const time = rule.start_time && rule.end_time ? ` de ${rule.start_time} à ${rule.end_time}` : "";
+        return `Le ${start}${time}`;
+      }
+      const end = rule.end_date ? new Date(rule.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "...";
+      const days = rule.weekdays?.length ? `, ${rule.weekdays.map((d) => WEEKDAY_NAMES_FULL[d]).join(", ")}` : "";
+      const time = rule.start_time && rule.end_time ? ` (${rule.start_time}-${rule.end_time})` : "";
+      return `Du ${start} au ${end}${days}${time}`;
+    }
+    case "weekly": {
+      const days = rule.weekdays?.length ? rule.weekdays.map((d) => WEEKDAY_NAMES_FULL[d]).join(", ") : "tous les jours";
+      const time = rule.start_time && rule.end_time ? ` de ${rule.start_time} à ${rule.end_time}` : "";
+      return `Chaque ${days}${time}`;
+    }
+    case "daily":
+      return `Tous les jours${rule.start_time && rule.end_time ? ` de ${rule.start_time} à ${rule.end_time}` : ""}`;
+    case "weekend_only":
+      return `Samedis et dimanches${rule.start_time && rule.end_time ? ` (${rule.start_time}-${rule.end_time})` : ""}`;
+    case "yearly":
+      return `Événement annuel${rule.start_date ? ` (${new Date(rule.start_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })})` : ""}`;
+    case "custom":
+      return rule.recurrence_rule ? `Règle: ${rule.recurrence_rule}` : "Règle personnalisée";
+    default:
+      return "Non défini";
+  }
+}
 
 function DateRangePicker({ rule, onChange }: { rule: AvailabilityRule; onChange: (r: AvailabilityRule) => void }) {
   return (
@@ -156,6 +237,11 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
   const [activePreset, setActivePreset] = useState<PresetType>("single");
   const [showPresets, setShowPresets] = useState(true);
 
+  const totalEstimatedSessions = useMemo(
+    () => rules.reduce((sum, rule) => sum + estimateSessionCount(rule), 0),
+    [rules],
+  );
+
   const createRule = (type: PresetType): AvailabilityRule => {
     const now = new Date().toISOString().split("T")[0];
     const base: AvailabilityRule = {
@@ -213,6 +299,8 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
     switch (rule.availability_type) {
       case "weekly": return "🔄 Hebdomadaire";
       case "yearly": return "🎉 Annuel";
+      case "daily": return "📌 Quotidien";
+      case "weekend_only": return "🌴 Week-end";
       case "date_range":
         if (rule.weekdays?.length) return "🌊 Saisonnière";
         if (rule.start_date === rule.end_date) return "📅 Date unique";
@@ -223,10 +311,15 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
 
   if (showPresets) {
     return (
-      <div className="space-y-2">
-        <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-          <Calendar size={14} /> Disponibilité
-        </label>
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+            <Calendar size={14} /> Disponibilités
+          </label>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            Définissez quand votre offre sera disponible à la réservation
+          </p>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           {PRESETS.map((p) => (
             <button
@@ -237,6 +330,7 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
             >
               <span className="text-lg">{p.icon}</span>
               <span className="text-[10px] font-semibold text-slate-600">{p.label}</span>
+              <span className="text-[9px] text-slate-400">{p.desc}</span>
             </button>
           ))}
         </div>
@@ -245,11 +339,16 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-          <Calendar size={14} /> Disponibilité
-        </label>
+        <div>
+          <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+            <Calendar size={14} /> Disponibilités
+          </label>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            {describeRule(rules[0])}
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setShowPresets(true)}
@@ -327,6 +426,21 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
         >
           <Plus size={12} /> Ajouter une date
         </button>
+      )}
+
+      {/* Estimation des sessions */}
+      {totalEstimatedSessions > 0 && (
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-2">
+          <Sparkles size={14} className="text-primary mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-slate-700">
+              ~{totalEstimatedSessions} session{totalEstimatedSessions > 1 ? "s" : ""} seront générées
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Sur les 90 prochains jours. Les sessions seront créées automatiquement lors de la publication.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -109,7 +109,7 @@ export class OfferService {
   async findById(id: string): Promise<Offer> {
     const offer = await this.repo.findOne({
       where: { id },
-      relations: ['items', 'items.prices', 'items.sessions', 'category'],
+      relations: ['items', 'items.prices', 'items.sessions', 'items.capacity', 'category'],
     });
     if (!offer) throw new NotFoundException('Offre introuvable.');
     return offer;
@@ -314,6 +314,13 @@ export class OfferService {
     return { message: 'Règle supprimée.' };
   }
 
+  async removeAllAvailabilityRules(itemId: string): Promise<void> {
+    const rules = await this.ruleRepo.find({ where: { offerItem: { id: itemId } } });
+    if (rules.length) {
+      await this.ruleRepo.remove(rules);
+    }
+  }
+
   // ─── Session Generator ────────────────────────────────
 
   async generateSessions(itemId: string, daysAhead: number = 90): Promise<OfferItemSession[]> {
@@ -325,12 +332,21 @@ export class OfferService {
     const item = await this.findItemById(itemId);
     const capacity = item.capacity?.[0]?.total_quantity ?? null;
 
-    // Remove future sessions before regenerating
+    // Remove future sessions that have NO active bookings before regenerating
+    const bookedSessionIds = await this.sessionRepo
+      .createQueryBuilder('session')
+      .select('session.id')
+      .innerJoin('bookings', 'booking', 'booking.session_id = session.id AND booking.status != :cancelled', { cancelled: 'cancelled' })
+      .where('session.offer_item_id = :itemId', { itemId })
+      .getRawMany()
+      .then((rows) => new Set(rows.map((r) => r.session_id)));
+
     const existing = await this.sessionRepo.find({
       where: { offerItem: { id: itemId } },
     });
-    if (existing.length) {
-      await this.sessionRepo.remove(existing);
+    const deletable = existing.filter((s) => !bookedSessionIds.has(s.id));
+    if (deletable.length) {
+      await this.sessionRepo.remove(deletable);
     }
 
     const sessions: OfferItemSession[] = [];

@@ -1,10 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { Publication } from './entities/publication.entity';
 import { PublicationLike } from './entities/publication-like.entity';
 import { PublicationComment } from './entities/publication-comment.entity';
 import { CommentLike } from './entities/comment-like.entity';
+import { PlaceContribution } from '../place-contribution/entities/place-contribution.entity';
 import { CreatePublicationDto, UpdatePublicationDto } from './dto/publication.dto';
 import { EcoTravelerService } from '../eco-traveler/eco-traveler.service';
 import { EcoTravelerMongoService } from '../eco-traveler/eco-traveler-mongo.service';
@@ -31,6 +32,8 @@ export class PublicationService {
     private readonly guideRepo: Repository<Guide>,
     @InjectRepository(ProjectOwner)
     private readonly ownerRepo: Repository<ProjectOwner>,
+    @InjectRepository(PlaceContribution)
+    private readonly contribRepo: Repository<PlaceContribution>,
     private readonly ecoTravelerService: EcoTravelerService,
     private readonly ecoTravelerMongoService: EcoTravelerMongoService,
   ) {}
@@ -47,7 +50,9 @@ export class PublicationService {
       author_id: authorId, type: dto.type, title: dto.title,
       description: dto.description ?? null, images: dto.images?.length ? dto.images : null,
       latitude: dto.latitude ?? null, longitude: dto.longitude ?? null,
-      place_name: dto.place_name ?? null, region: dto.region ?? null, status,
+      place_name: dto.place_name ?? null, region: dto.region ?? null,
+      category: dto.category ?? null, tags: dto.tags?.length ? dto.tags : null,
+      popularity_score: 0, status,
     });
     const saved = await this.repo.save(pub);
     await this.syncPartagesScore(authorId);
@@ -74,6 +79,8 @@ export class PublicationService {
     if (dto.images !== undefined) pub.images = dto.images.length ? dto.images : null;
     if (dto.place_name !== undefined) pub.place_name = dto.place_name;
     if (dto.region !== undefined) pub.region = dto.region;
+    if (dto.category !== undefined) pub.category = dto.category;
+    if (dto.tags !== undefined) pub.tags = dto.tags.length ? dto.tags : null;
     return this.repo.save(pub);
   }
 
@@ -102,6 +109,7 @@ export class PublicationService {
       await this.likeRepo.save(this.likeRepo.create({ publication_id: pubId, user_id: userId, user_role: userRole }));
     }
     const count = await this.likeRepo.count({ where: { publication_id: pubId } });
+    await this.recalculatePopularity(pubId);
     return { liked: !existing, count };
   }
 
@@ -132,6 +140,7 @@ export class PublicationService {
     const comment = await this.commentRepo.save(
       this.commentRepo.create({ publication_id: pubId, author_id: authorId, author_role: authorRole, content, parent_id: null }),
     );
+    await this.recalculatePopularity(pubId);
     const author = await this.getAuthorInfo(authorId, authorRole);
     return { ...comment, author, likes_count: 0, liked_by_viewer: false, replies: [] };
   }
@@ -223,6 +232,83 @@ export class PublicationService {
     }
     const count = await this.commentLikeRepo.count({ where: { comment_id: commentId } });
     return { liked: !existing, count };
+  }
+
+  // ─── Popularité ────────────────────────────────────────────────────────────
+
+  async recalculatePopularity(pubId: string): Promise<void> {
+    const [likes, comments, contributions] = await Promise.all([
+      this.likeRepo.count({ where: { publication_id: pubId } }),
+      this.commentRepo.count({ where: { publication_id: pubId } }),
+      this.contribRepo.count({ where: { publication_id: pubId } }),
+    ]);
+    const score = likes + comments * 2 + contributions * 3;
+    await this.repo.update(pubId, { popularity_score: score });
+  }
+
+  async findTrending(limit = 20): Promise<Publication[]> {
+    return this.repo.find({
+      where: { type: 'place', status: 'approved' },
+      order: { popularity_score: 'DESC', created_at: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async findOne(id: string): Promise<Publication> {
+    return this.findOrFail(id);
+  }
+
+  async findByCategory(category: string, limit = 20): Promise<Publication[]> {
+    return this.repo.find({
+      where: { type: 'place', status: 'approved', category },
+      order: { popularity_score: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async findAllPlaces(limit = 50, offset = 0): Promise<Publication[]> {
+    return this.repo.find({
+      where: { type: 'place', status: 'approved' },
+      order: { popularity_score: 'DESC', created_at: 'DESC' },
+      take: limit,
+      skip: offset,
+    });
+  }
+
+  async getHeatmapData(): Promise<any[]> {
+    const places = await this.repo.find({
+      where: { type: 'place', status: 'approved', latitude: In([null] as any), longitude: In([null] as any) },
+    }) as any[];
+    // Actually get places with lat/lng
+    const raw = await this.repo.createQueryBuilder('p')
+      .leftJoin(PublicationLike, 'pl', 'pl.publication_id = p.id')
+      .leftJoin(PublicationComment, 'pc', 'pc.publication_id = p.id')
+      .leftJoin(PlaceContribution, 'pc2', 'pc2.publication_id = p.id')
+      .select([
+        'p.id', 'p.title', 'p.latitude', 'p.longitude',
+        'COUNT(DISTINCT pl.id) AS likes',
+        'COUNT(DISTINCT pc.id) AS comments',
+        'COUNT(DISTINCT pc2.id) AS contributions',
+        'p.popularity_score',
+      ])
+      .where('p.type = :type', { type: 'place' })
+      .andWhere('p.status = :status', { status: 'approved' })
+      .andWhere('p.latitude IS NOT NULL')
+      .andWhere('p.longitude IS NOT NULL')
+      .groupBy('p.id')
+      .getRawMany();
+
+    return raw.map((r: any) => ({
+      id: r.p_id,
+      title: r.p_title,
+      lat: Number(r.p_latitude),
+      lng: Number(r.p_longitude),
+      weight: (Number(r.likes) || 0) + (Number(r.comments) || 0) * 2 + (Number(r.contributions) || 0) * 3,
+      likes: Number(r.likes) || 0,
+      comments: Number(r.comments) || 0,
+      contributions: Number(r.contributions) || 0,
+      popularity_score: Number(r.p_popularity_score) || 0,
+    }));
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────

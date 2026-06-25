@@ -17,13 +17,13 @@ export default function Navbar({
   const isAuth = variant === "auth";
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white px-6 md:px-20 lg:px-40 py-4">
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-8">
-        <div className="flex items-center gap-4 shrink-0">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 md:px-20 lg:px-40 py-4">
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between">
+        <div className="flex items-center gap-4">
           {isAuth && (
             <Link
               href={backHref}
-              className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-all"
+              className="hidden sm:flex items-center gap-2 text-sm font-semibold text-black hover:text-primary transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Retour
@@ -40,23 +40,23 @@ export default function Navbar({
         </div>
 
         {!isAuth && (
-          <nav className="hidden lg:flex items-center gap-8">
-            <Link href="/explore" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">
+          <nav className="flex items-center gap-6 text-sm font-semibold">
+            <Link href="/explore" className="text-sm font-semibold text-black hover:text-primary transition-colors">
               Explorer
             </Link>
-            <Link href="/destinations" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">
+            <Link href="/destinations" className="text-sm font-semibold text-black hover:text-primary transition-colors">
               Destinations
             </Link>
-            <Link href="/circuits" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">
+            <Link href="/circuits" className="text-sm font-semibold text-black hover:text-primary transition-colors">
               Circuits
             </Link>
-            <Link href="/how-it-works" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">
+            <Link href="/how-it-works" className="text-sm font-semibold text-black hover:text-primary transition-colors">
               Comment ça marche
             </Link>
-            <Link href="/eco-projects" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">
+            <Link href="/eco-projects" className="text-sm font-semibold text-black hover:text-primary transition-colors">
               Projets Éco
             </Link>
-            <Link href="/impact" className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors">
+            <Link href="/impact" className="text-sm font-semibold text-black hover:text-primary transition-colors">
               Impact
             </Link>
           </nav>

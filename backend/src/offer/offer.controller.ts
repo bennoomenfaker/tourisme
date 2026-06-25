@@ -215,6 +215,14 @@ export class OfferController {
     return this.service.removeAvailabilityRule(ruleId);
   }
 
+  /** Supprime toutes les règles de disponibilité d'un item */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete('items/:itemId/availability/delete-all')
+  removeAllAvailabilityRules(@Param('itemId') itemId: string) {
+    return this.service.removeAllAvailabilityRules(itemId);
+  }
+
   /** Génère les sessions automatiquement depuis les règles */
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)

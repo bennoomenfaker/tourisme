@@ -217,18 +217,39 @@ export class TravelCartService {
     });
     const savedPlan = await this.tripPlanRepo.save(plan);
 
+    const planStartDate = cart.start_date ? new Date(cart.start_date) : null;
+
+    let sortOrder = 0;
     for (const cartItem of cart.items) {
       const notes = [
         cartItem.notes,
         participantCount > 1 ? `${participantCount} participants` : null,
       ].filter(Boolean).join(' — ');
 
+      // Auto-assign day_number from session date or circuit start_date
+      let dayNumber: number | null = null;
+      if (planStartDate) {
+        let itemDate: Date | null = null;
+        if (cartItem.session?.date) {
+          itemDate = new Date(cartItem.session.date);
+        } else if (cartItem.circuit?.start_date) {
+          itemDate = new Date(cartItem.circuit.start_date);
+        }
+        if (itemDate) {
+          const diffMs = itemDate.getTime() - planStartDate.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          dayNumber = Math.max(1, diffDays + 1);
+        }
+      }
+
+      sortOrder++;
+
       const planItem = this.tripPlanItemRepo.create({
         tripPlan: savedPlan as TripPlan,
         offerItem: cartItem.offerItem ? { id: cartItem.offerItem.id } as OfferItem : null,
         circuit: cartItem.circuit ? { id: cartItem.circuit.id } as Circuit : null,
-        day_number: null,
-        sort_order: 0,
+        day_number: dayNumber,
+        sort_order: sortOrder,
         notes: notes || null,
       });
       await this.tripPlanItemRepo.save(planItem);

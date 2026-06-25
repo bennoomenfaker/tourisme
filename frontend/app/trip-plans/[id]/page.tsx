@@ -64,6 +64,7 @@ interface OfferItemPrice {
   label: string;
   price: number;
   currency: string;
+  pricing_unit?: string;
   is_default: boolean;
 }
 
@@ -308,34 +309,99 @@ export default function TripPlanDetailPage() {
                 return null;
               })()}
 
-              {/* Timeline */}
-              {plan.items && plan.items.length > 1 && (
-                <div className="mt-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Timeline</h3>
-                  <div className="relative">
-                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
-                    <div className="space-y-3">
-                      {plan.items
-                        .sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0) || a.sort_order - b.sort_order)
-                        .map((item, idx) => (
-                          <div key={item.id} className="flex items-start gap-3 relative">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 shrink-0 ${
-                              item.circuit ? "bg-purple-100 text-purple-700 border-2 border-purple-300" : "bg-primary text-white"
-                            }`}>
-                              {item.day_number ?? idx + 1}
+              {/* Timeline grouped by day */}
+              {plan.items && plan.items.length > 1 && (() => {
+                const sorted = [...plan.items].sort((a, b) => (a.day_number ?? 999) - (b.day_number ?? 999) || a.sort_order - b.sort_order);
+                const grouped: Record<number, typeof sorted> = {};
+                const unassigned: typeof sorted = [];
+                for (const item of sorted) {
+                  if (item.day_number) {
+                    if (!grouped[item.day_number]) grouped[item.day_number] = [];
+                    grouped[item.day_number].push(item);
+                  } else {
+                    unassigned.push(item);
+                  }
+                }
+                const days = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+                const totalDays = days.length + (unassigned.length > 0 ? 1 : 0);
+
+                return (
+                  <div className="mt-4">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Itinéraire jour par jour</h3>
+                    <div className="relative">
+                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
+                      <div className="space-y-4">
+                        {days.map((dayNum) => (
+                          <div key={dayNum}>
+                            <div className="flex items-center gap-3 relative mb-2">
+                              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold z-10 shrink-0">
+                                {dayNum}
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="text-sm font-bold text-slate-700">Jour {dayNum}</h4>
+                                <p className="text-[10px] text-slate-400">
+                                  {grouped[dayNum].length} activité{grouped[dayNum].length > 1 ? "s" : ""}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex-1 bg-white rounded-xl border border-slate-100 p-3 -mt-1">
-                              <p className="text-sm font-semibold text-slate-800">
-                                {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
-                              </p>
-                              {item.notes && <p className="text-xs text-slate-400 mt-0.5">{item.notes}</p>}
+                            <div className="ml-[18px] space-y-2 border-l-2 border-dashed border-slate-200 pl-5 mb-3">
+                              {grouped[dayNum].map((item) => (
+                                <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-5 relative">
+                                  <div className="absolute -left-[9px] top-3 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white" />
+                                  <p className="text-sm font-semibold text-slate-800">
+                                    {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
+                                  </p>
+                                  {item.offerItem?.offer && (
+                                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                      <MapPin size={10} />
+                                      {item.offerItem.offer.title}
+                                      {item.offerItem.offer.region && ` — ${item.offerItem.offer.region}`}
+                                    </p>
+                                  )}
+                                  {item.circuit && (
+                                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                      <MapPin size={10} />
+                                      {item.circuit.title}
+                                      {item.circuit.region && ` — ${item.circuit.region}`}
+                                    </p>
+                                  )}
+                                  {item.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{item.notes}</p>}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ))}
+                        {unassigned.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-3 relative mb-2">
+                              <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold z-10 shrink-0">
+                                ?
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="text-sm font-bold text-slate-500">Non assigné</h4>
+                                <p className="text-[10px] text-slate-400">
+                                  {unassigned.length} activité{unassigned.length > 1 ? "s" : ""}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="ml-[18px] space-y-2 border-l-2 border-dashed border-slate-200 pl-5">
+                              {unassigned.map((item) => (
+                                <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-5 relative">
+                                  <div className="absolute -left-[9px] top-3 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white" />
+                                  <p className="text-sm font-semibold text-slate-800">
+                                    {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
+                                  </p>
+                                  {item.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{item.notes}</p>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -513,7 +579,7 @@ export default function TripPlanDetailPage() {
         )}
       </div>
 
-      {showAddItem && plan && <AddItemModal planId={id} onClose={() => setShowAddItem(false)} onAdded={loadPlan} />}
+      {showAddItem && plan && <AddItemModal planId={id} plan={plan} onClose={() => setShowAddItem(false)} onAdded={loadPlan} />}
       {showBook && plan && <BookModal planId={id} plan={plan} onClose={() => setShowBook(false)} onBooked={() => { loadPlan(); setShowBook(false); }} />}
 
       {editingItem && (
@@ -575,13 +641,19 @@ export default function TripPlanDetailPage() {
   );
 }
 
-function AddItemModal({ planId, onClose, onAdded }: { planId: string; onClose: () => void; onAdded: () => void }) {
+function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan: TripPlan; onClose: () => void; onAdded: () => void }) {
   const [offers, setOffers] = useState<OfferListItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedOffer, setSelectedOffer] = useState<OfferFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
-  const [dayNumber, setDayNumber] = useState("");
+  const [dayNumber, setDayNumber] = useState(() => {
+    // Auto-suggest next day number
+    const existingDays = (plan.items ?? [])
+      .map((i) => i.day_number)
+      .filter((d): d is number => d != null);
+    return existingDays.length > 0 ? String(Math.max(...existingDays) + 1) : "1";
+  });
   const [notes, setNotes] = useState("");
   const [mapLat, setMapLat] = useState<number | null>(null);
   const [mapLng, setMapLng] = useState<number | null>(null);
@@ -611,6 +683,8 @@ function AddItemModal({ planId, onClose, onAdded }: { planId: string; onClose: (
         body: JSON.stringify({
           offer_item_id: offerItemId,
           day_number: dayNumber ? parseInt(dayNumber) : undefined,
+          lat: mapLat ?? undefined,
+          lng: mapLng ?? undefined,
           notes: notes.trim() || undefined,
         }),
       });
@@ -802,6 +876,28 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
 
   const itemCount = plan.items?.length ?? 0;
 
+  const planCurrency = plan.items?.reduce<string | null>((cur, item) => {
+    return cur ?? item.circuit?.currency ?? item.offerItem?.prices?.[0]?.currency ?? null;
+  }, null) ?? "TND";
+
+  const estimatedTotal = plan.items?.reduce((sum, item) => {
+    if (item.circuit?.base_price) {
+      return sum + Number(item.circuit.base_price) * participants.length;
+    }
+    if (item.offerItem?.prices?.length) {
+      const defaultPrice = item.offerItem.prices.find(p => p.is_default) ?? item.offerItem.prices[0];
+      if (defaultPrice?.price) {
+        const unitPrice = Number(defaultPrice.price);
+        const pricingUnit = defaultPrice.pricing_unit ?? 'per_person';
+        if (pricingUnit === 'per_person' || pricingUnit === 'per_person_per_night') {
+          return sum + unitPrice * participants.length;
+        }
+        return sum + unitPrice;
+      }
+    }
+    return sum;
+  }, 0) ?? 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/30 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-lg mx-4 w-full max-w-md mb-12">
@@ -856,6 +952,45 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
                 ))}
                 <button onClick={addParticipant} className="text-sm text-primary hover:text-emerald-700 font-medium">+ Ajouter un participant</button>
               </div>
+
+              {estimatedTotal > 0 && (
+                <div className="mb-4 bg-slate-50 rounded-xl p-3">
+                  <h4 className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Récapitulatif des prix</h4>
+                  <div className="space-y-1">
+                    {plan.items?.map((item) => {
+                      let label = "";
+                      let price: number | null = null;
+                      if (item.circuit?.base_price) {
+                        label = item.circuit.title;
+                        price = Number(item.circuit.base_price) * participants.length;
+                      } else if (item.offerItem?.prices?.length) {
+                        const p = item.offerItem.prices.find(p => p.is_default) ?? item.offerItem.prices[0];
+                        label = item.offerItem.name;
+                        if (p?.price) {
+                          const unitPrice = Number(p.price);
+                          const pricingUnit = p.pricing_unit ?? 'per_person';
+                          if (pricingUnit === 'per_person' || pricingUnit === 'per_person_per_night') {
+                            price = unitPrice * participants.length;
+                          } else {
+                            price = unitPrice;
+                          }
+                        }
+                      }
+                      if (!price) return null;
+                      return (
+                        <div key={item.id} className="flex justify-between text-xs text-slate-500">
+                          <span className="truncate mr-2">{label}</span>
+                          <span className="font-medium shrink-0">{price.toLocaleString()} {planCurrency}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between text-sm font-bold text-slate-800 pt-2 mt-2 border-t border-slate-200">
+                    <span>Total estimé</span>
+                    <span className="text-primary">{estimatedTotal.toLocaleString()} {planCurrency}</span>
+                  </div>
+                </div>
+              )}
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Demandes spéciales</label>

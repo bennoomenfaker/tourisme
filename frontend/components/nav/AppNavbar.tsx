@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Leaf, ShoppingCart, User } from "lucide-react";
+import { Bell, Leaf, MapPin, ShoppingCart, User } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 type AppNavbarProps = {
@@ -67,6 +67,13 @@ export default function AppNavbar({ title }: AppNavbarProps) {
             className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
           >
             Explorer
+          </Link>
+
+          <Link
+            href="/places"
+            className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
+          >
+            <MapPin size={14} className="mr-1" /> Lieux
           </Link>
 
           <Link

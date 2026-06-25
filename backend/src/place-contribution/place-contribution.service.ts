@@ -7,6 +7,7 @@ import { In, IsNull, Repository } from 'typeorm';
 import { PlaceContribution } from './entities/place-contribution.entity';
 import { ContributionVote } from './entities/contribution-vote.entity';
 import { Publication } from '../publication/entities/publication.entity';
+import { PublicationService } from '../publication/publication.service';
 import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
@@ -27,6 +28,7 @@ export class PlaceContributionService {
     private readonly guideRepo: Repository<Guide>,
     @InjectRepository(ProjectOwner)
     private readonly ownerRepo: Repository<ProjectOwner>,
+    private readonly publicationService: PublicationService,
   ) {}
 
   private async getAuthorInfo(userId: string, role: string) {
@@ -57,7 +59,9 @@ export class PlaceContributionService {
       images: dto.type === 'images' ? dto.images : null,
       vote_count: 0,
     });
-    return this.contribRepo.save(contrib);
+    const saved = await this.contribRepo.save(contrib);
+    await this.publicationService.recalculatePopularity(publicationId);
+    return saved;
   }
 
   async findByPublication(publicationId: string, viewerId?: string) {
@@ -146,6 +150,8 @@ export class PlaceContributionService {
       ? allVotes.filter((v) => v.image_index === imgIdx).length
       : allVotes.filter((v) => v.image_index === null).length;
 
+    await this.publicationService.recalculatePopularity(contrib.publication_id);
+
     return { voted, image_index: imgIdx, vote_count: contrib.vote_count, image_vote_count: imageVoteCount };
   }
 
@@ -158,6 +164,7 @@ export class PlaceContributionService {
     if (!isAuthor && !isAdmin) throw new ForbiddenException('Accès refusé.');
 
     await this.contribRepo.remove(contrib);
+    await this.publicationService.recalculatePopularity(contrib.publication_id);
     return { message: 'Contribution supprimée.' };
   }
 }

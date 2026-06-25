@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Calendar,
   Check, DollarSign, Info, Plus, Trash2, Edit, X, Share2, Copy, Heart, ShoppingCart,
+  AlertTriangle, Timer, Tag,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -607,10 +608,37 @@ export default function CircuitDetailPage() {
                   <Info size={12} /> Sur demande
                 </span>
               ) : null}
+              {circuit.booking_deadline_days !== null && (
+                <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
+                  <Timer size={12} /> Délai : {circuit.booking_deadline_days}j
+                </span>
+              )}
             </div>
 
             {circuit.description && (
               <p className="text-slate-600 leading-relaxed mb-4 whitespace-pre-line">{circuit.description}</p>
+            )}
+
+            {/* ─── Dates & Délais ───────────────────────────── */}
+            {(circuit.start_date || circuit.end_date || circuit.booking_deadline_days !== null) && (
+              <div className="bg-blue-50 rounded-xl p-3 mb-4 text-sm space-y-1.5">
+                {circuit.start_date && circuit.end_date && (
+                  <div className="flex items-center gap-1.5 text-blue-700">
+                    <Calendar size={14} />
+                    <span>
+                      Du {new Date(circuit.start_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                      {" au "}
+                      {new Date(circuit.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                    </span>
+                  </div>
+                )}
+                {circuit.booking_deadline_days !== null && (
+                  <div className="flex items-center gap-1.5 text-blue-700">
+                    <Timer size={14} />
+                    <span>Réservation obligatoire {circuit.booking_deadline_days} jour{circuit.booking_deadline_days > 1 ? "s" : ""} avant le départ</span>
+                  </div>
+                )}
+              </div>
             )}
 
             {circuit.inclusions && (
@@ -669,10 +697,20 @@ export default function CircuitDetailPage() {
                                 <div key={item.id} className="flex items-start gap-2 text-sm text-slate-500">
                                   {item.start_time && (
                                     <span className="text-xs font-medium text-primary bg-emerald-50 rounded px-1.5 py-0.5 shrink-0">
-                                      {item.start_time}
+                                      {item.start_time}{item.end_time ? `–${item.end_time}` : ""}
                                     </span>
                                   )}
-                                  <span>{item.title}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <span>{item.title}</span>
+                                    <div className="flex gap-1.5 mt-0.5">
+                                      {item.is_included && (
+                                        <span className="text-[10px] text-emerald-600 bg-emerald-50 rounded-full px-1.5 py-0">Inclus</span>
+                                      )}
+                                      {item.is_required && (
+                                        <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0">Requis</span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -709,7 +747,9 @@ export default function CircuitDetailPage() {
 
             {availableOptions.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-lg font-bold text-slate-800 mb-3">Options disponibles</h2>
+                <h2 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <Tag size={18} className="text-primary" /> Options disponibles
+                </h2>
                 <div className="space-y-2">
                   {availableOptions.map((option) => (
                     <label
@@ -727,13 +767,17 @@ export default function CircuitDetailPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm text-slate-800">
                             {option.option_group ?? "Option"}
-                            {option.is_required && <span className="ml-1 text-xs text-amber-500">(Requis)</span>}
                           </span>
-                          {option.extra_price !== null && option.extra_price > 0 && (
-                            <span className="text-sm font-semibold text-primary">
-                              +{Number(option.extra_price).toLocaleString()} {circuit.currency}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {option.is_required && (
+                              <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0.5 font-medium">Requis</span>
+                            )}
+                            {option.extra_price !== null && option.extra_price > 0 && (
+                              <span className="text-sm font-semibold text-primary">
+                                +{Number(option.extra_price).toLocaleString()} {circuit.currency}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </label>
@@ -746,6 +790,38 @@ export default function CircuitDetailPage() {
             {showAddedToCart && (
               <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-xl z-50 flex items-center gap-2">
                 <ShoppingCart size={16} /> Ajouté au panier !
+              </div>
+            )}
+
+            {/* Budget summary */}
+            {circuit.base_price !== null && (
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-4">
+                <h3 className="font-semibold text-slate-700 text-sm mb-2 flex items-center gap-1.5">
+                  <DollarSign size={15} /> Budget estimé
+                </h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Prix de base</span>
+                    <span>{Number(circuit.base_price).toLocaleString()} {circuit.currency}</span>
+                  </div>
+                  {selectedOptionIds.length > 0 && circuit.options?.filter(o => selectedOptionIds.includes(o.id) && o.status === "active").map(o => (
+                    <div key={o.id} className="flex justify-between text-slate-500">
+                      <span className="text-xs">{o.option_group ?? "Option"}</span>
+                      <span className="text-primary">+{Number(o.extra_price ?? 0).toLocaleString()} {circuit.currency}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold text-slate-800 pt-2 border-t border-slate-200">
+                    <span>Total</span>
+                    <span className="text-primary">
+                      {(
+                        Number(circuit.base_price) +
+                        (circuit.options ?? [])
+                          .filter(o => selectedOptionIds.includes(o.id) && o.status === "active")
+                          .reduce((s, o) => s + Number(o.extra_price ?? 0), 0)
+                      ).toLocaleString()} {circuit.currency}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 

@@ -9,7 +9,7 @@
 ## 2. Fonctionnalités (Use Cases)
 
 | Fonctionnalité | Description |
-|---|---|
+| --- | --- |
 | **Inscription & Connexion** | Register/Login avec email + Google OAuth, avec 3 rôles |
 | **Vérification email** | Email de confirmation avec lien (via Nodemailer) |
 | **Mot de passe oublié** | Forgot/reset password avec token + email |
@@ -38,7 +38,7 @@
 
 ## 3. Architecture Technique
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │  Docker Compose                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌──────┐ │
@@ -266,6 +266,7 @@ Création → status = "pending"
 ### 8.5 Use Cases — Offres
 
 #### 🗺️ Guide
+
 - **Créer une offre** : Définit un circuit/activité (titre, description, prix, durée, lieu, groupe)
 - **Lier à son projet** : Les guides peuvent rattacher l'offre à un projet existant
 - **Voir ses offres** : Dashboard "Mes Offres" avec statut (en attente/approuvée/refusée)
@@ -273,16 +274,19 @@ Création → status = "pending"
 - **Noter la durabilité** : Attribuer un score éco (0-100)
 
 #### 🏗️ Propriétaire de Projet
+
 - **Créer une offre liée** : Une offre rattachée à un projet (ex: "Séjour dans votre éco-gîte")
 - **CRUD complet** : Créer, consulter, modifier, supprimer ses offres
 - **Validation projet requis** : L'offre ne peut être créée que si le projet est `active`
 
 #### 🧳 Éco-Voyageur
+
 - **Parcourir les offres** : Page Destinations avec filtres (type, région, prix, score)
 - **Voir les détails** : Modal avec photos, description, inclus, carte, politique d'annulation
 - **Contacter le créateur** : Via messagerie intégrée
 
 #### 👑 Admin
+
 - **Modérer les offres** : Liste des offres en attente avec aperçu
 - **Approuver/Refuser** : Valide la qualité avant publication
 - **Motif de refus** : Raison communiquée au créateur
@@ -301,16 +305,20 @@ Création → status = "pending"
 ## 9. Publications — Partage de lieux & expériences
 
 ### 9.1 Concept
+
 Les **voyageurs** peuvent partager leurs découvertes via des **publications** de deux types :
+
 - **`place`** : Recommandation d'un lieu (avec coordonnées GPS, nom du lieu, région)
 - **`experience`** : Récit d'expérience de voyage (avec photos, description)
 
 ### 9.2 Workflow
+
 - Les **places** sont soumises à modération (sauf pour les **Ambassadeurs**)
 - Les **experiences** sont publiées immédiatement
 - Chaque publication contribue au score `partages` (20% du score final)
 
 ### 9.3 Interactions sociales
+
 | Action | Description |
 |---|---|
 | **Like** | Toggle like sur une publication |
@@ -318,6 +326,7 @@ Les **voyageurs** peuvent partager leurs découvertes via des **publications** d
 | **Like commentaire** | Toggle like sur un commentaire |
 
 ### 9.4 Use cases
+
 - 🧳 **Voyageur** : Crée des publications (places/expériences), like, commente
 - 👑 **Admin** : Modère les places en attente, approuve/refuse
 
@@ -326,9 +335,11 @@ Les **voyageurs** peuvent partager leurs découvertes via des **publications** d
 ## 10. Messagerie privée
 
 ### 10.1 Concept
+
 Messagerie interne entre utilisateurs avec système de **conversations**.
 
 ### 10.2 Règles de messagerie
+
 | Expéditeur | Destinataire |
 |---|---|
 | Éco-voyageur | Guide ou Propriétaire |
@@ -336,6 +347,7 @@ Messagerie interne entre utilisateurs avec système de **conversations**.
 | Propriétaire | Guide |
 
 ### 10.3 Endpoints
+
 | Méthode | Route | Description |
 |---|---|---|
 | `POST` | `/api/messages/conversations` | Créer/obtenir une conversation |
@@ -346,6 +358,7 @@ Messagerie interne entre utilisateurs avec système de **conversations**.
 | `POST` | `/api/messages` | Envoyer un message |
 
 ### 10.4 Use cases
+
 - 🧳 **Voyageur** : Contacte un guide ou propriétaire
 - 🗺️ **Guide** : Répond aux voyageurs, contacte propriétaires
 - 🏗️ **Propriétaire** : Répond aux voyageurs et guides
@@ -355,9 +368,11 @@ Messagerie interne entre utilisateurs avec système de **conversations**.
 ## 11. Système de Follow (Abonnements)
 
 ### 11.1 Concept
+
 Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaires).
 
 ### 11.2 Règles de follow
+
 | Followeur | Followé |
 |---|---|
 | Éco-voyageur | Guide ou Propriétaire |
@@ -365,6 +380,7 @@ Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaire
 | Propriétaire | Guide |
 
 ### 11.3 Endpoints
+
 | Méthode | Route | Description |
 |---|---|---|
 | `POST` | `/api/follows/:targetId/:targetType` | Follow un utilisateur |
@@ -382,9 +398,11 @@ Les utilisateurs peuvent **suivre** d'autres utilisateurs (guides, propriétaire
 ## 12. Administration & Modération
 
 ### 12.1 Rôle Admin
+
 Le panneau d'administration permet de gérer l'ensemble du contenu soumis.
 
 ### 12.2 Actions de modération
+
 | Contenu | Actions |
 |---|---|
 | **Offres** | Approuver / Refuser les offres en attente |
@@ -456,6 +474,7 @@ Niveaux :
 ## 15. Use Cases par Rôle
 
 ### 🧳 Éco-Voyageur
+
 - S'inscrit, se connecte (email ou Google)
 - Complète son onboarding (type voyageur, motivations, intérêts, paysages, objectifs)
 - Passe le questionnaire de durabilité (score initial)
@@ -470,6 +489,7 @@ Niveaux :
 - Consulte son **profil public** avec ses expériences, lieux partagés, et statistiques
 
 ### 🗺️ Guide
+
 - Crée un profil (type guide, zone, spécialités, langues, années d'expérience, certifications)
 - Passe l'évaluation de durabilité
 - **Crée et gère ses offres éco-touristiques** (circuits, activités, etc.)
@@ -483,6 +503,7 @@ Niveaux :
 - Reçoit des avis et accumule des badges
 
 ### 🏗️ Propriétaire de Projet
+
 - Crée un profil (organisation, poste, bio)
 - Ajoute/modifie/supprime des projets éco-touristiques (hébergement, restauration, artisanat, etc.)
 - **Crée des offres liées à ses projets** (ex: séjour dans son éco-gîte)
@@ -499,6 +520,7 @@ Niveaux :
 ## 16. Déploiement
 
 L'infrastructure est **100% Docker** :
+
 - `docker compose up` démarre les services (db, mongo, api, web ; minio présent mais non utilisé — images via Cloudinary)
 - Le réseau `tourisme_net` doit être créé au préalable (`external: true`)
 - Variables d'environnement dans `.env` / `.env.production`

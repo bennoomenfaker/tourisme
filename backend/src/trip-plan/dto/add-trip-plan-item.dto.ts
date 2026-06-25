@@ -1,6 +1,7 @@
 import {
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -34,6 +35,16 @@ export class AddTripPlanItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsNumber()
+  lat?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  lng?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   notes?: string;
 }
@@ -50,6 +61,16 @@ export class UpdateTripPlanItemDto {
   @IsInt()
   @Min(0)
   sort_order?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  lat?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  lng?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

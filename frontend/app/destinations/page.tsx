@@ -237,6 +237,11 @@ function OfferModal({ offer, onClose }: { offer: Offer; onClose: () => void }) {
   const fallback = OFFER_PLACEHOLDERS[seedFromId(offer.id, OFFER_PLACEHOLDERS.length)];
   const isGuide = offer.author_type === "guide";
   const router = useRouter();
+  const [detail, setDetail] = useState<{ items: any[] } | null>(null);
+
+  useEffect(() => {
+    apiFetch<any>(`/offers/${offer.id}`).then(setDetail).catch(() => {});
+  }, [offer.id]);
 
   function handleReserve() {
     const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
@@ -350,6 +355,63 @@ function OfferModal({ offer, onClose }: { offer: Offer; onClose: () => void }) {
               </div>
             </div>
           )}
+
+          {/* ─── Sessions / disponibilités ─── */}
+          {detail?.items?.length ? (
+            <div className="mb-6">
+              {detail.items.filter((i: any) => i.status === "active").map((item: any) => {
+                const avail = (item.sessions || []).filter(
+                  (s: any) => s.status === "available" && (!s.remaining_capacity || s.remaining_capacity > 0)
+                );
+                if (!avail.length && !item.capacity?.[0] && !item.booking_deadline_days) return null;
+                return (
+                  <div key={item.id} className="bg-blue-50 rounded-xl p-4 mb-3 last:mb-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-bold text-slate-700">{item.name}</p>
+                      {item.prices?.find((p: any) => p.is_default) && (
+                        <span className="text-sm font-black text-primary">
+                          {Number(item.prices.find((p: any) => p.is_default).price).toLocaleString()} TND
+                        </span>
+                      )}
+                    </div>
+                    {/* Capacity */}
+                    {item.capacity?.[0] && (
+                      <p className="text-[11px] text-slate-500 mb-2">
+                        Capacité : {item.capacity[0].total_quantity} places
+                        {item.capacity[0].remaining_quantity != null ? ` (${item.capacity[0].remaining_quantity} restantes)` : ""}
+                      </p>
+                    )}
+                    {/* Session dates */}
+                    {avail.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {avail.slice(0, 5).map((s: any) => (
+                          <span key={s.id} className="text-[11px] font-medium text-primary bg-white rounded-md px-2 py-1 shadow-sm">
+                            {new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
+                            {s.start_time ? ` ${s.start_time}` : ""}
+                            {s.remaining_capacity != null ? ` (${s.remaining_capacity} pl.)` : ""}
+                          </span>
+                        ))}
+                        {avail.length > 5 && (
+                          <span className="text-[11px] text-slate-400 self-center">+{avail.length - 5} autres</span>
+                        )}
+                      </div>
+                    )}
+                    {/* Deadlines */}
+                    {(item.booking_deadline_days || item.cancellation_deadline_days) && (
+                      <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-blue-100">
+                        {item.booking_deadline_days && (
+                          <span className="text-[10px] font-medium text-amber-600">Réservation {item.booking_deadline_days}j avant</span>
+                        )}
+                        {item.cancellation_deadline_days && (
+                          <span className="text-[10px] font-medium text-amber-600">Annul. gratuite {item.cancellation_deadline_days}j avant</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
           {/* Sustainability score */}
           {offer.sustainability_score !== null && (() => {
