@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, Calendar, Plus, Trash2, MapPin, Clock,
-  Search, X, Loader2, Check, AlertCircle, Tag, Share2,
+  Search, X, Loader2, Check, AlertCircle, Tag, Share2, Edit,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -134,6 +134,10 @@ export default function TripPlanDetailPage() {
   const [editTitle, setEditTitle] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
 
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editItemDay, setEditItemDay] = useState("");
+  const [editItemNotes, setEditItemNotes] = useState("");
+
   const loadPlan = useCallback(() => {
     setLoading(true);
     apiFetch<TripPlan>(`/trip-plans/${id}`)
@@ -159,6 +163,20 @@ export default function TripPlanDetailPage() {
       setEditingTitle(false);
     } catch (e: any) { alert(e.message); }
     setSavingTitle(false);
+  };
+
+  const handleSaveItem = async (itemId: string) => {
+    try {
+      await apiFetch(`/trip-plans/${id}/items/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          day_number: editItemDay ? parseInt(editItemDay) : null,
+          notes: editItemNotes.trim() || null,
+        }),
+      });
+      setEditingItem(null);
+      loadPlan();
+    } catch (e: any) { alert(e.message); }
   };
 
   return (
@@ -233,66 +251,7 @@ export default function TripPlanDetailPage() {
                   </div>
                 </div>
 
-                {/* Budget summary */}
-                {plan.items && plan.items.length > 0 && (() => {
-                  let totalBudget = 0;
-                  for (const item of plan.items) {
-                    if (item.offerItem?.prices?.length) {
-                      const price = item.offerItem.prices.find((p) => p.is_default)?.price ?? item.offerItem.prices[0]?.price;
-                      if (price) totalBudget += Number(price);
-                    } else if (item.circuit?.base_price) {
-                      totalBudget += Number(item.circuit.base_price);
-                    }
-                  }
-                  if (totalBudget > 0) {
-                    return (
-                      <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Budget estimé</p>
-                            <p className="text-2xl font-black text-emerald-700">{totalBudget.toLocaleString()} TND</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-emerald-500">{plan.items.length} activité{plan.items.length > 1 ? "s" : ""}</p>
-                            <p className="text-xs text-emerald-400">~{Math.round(totalBudget / (plan.items.length || 1))} TND/activité</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-
-                {/* Timeline */}
-                {plan.items && plan.items.length > 1 && (
-                  <div className="mt-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Timeline</h3>
-                    <div className="relative">
-                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
-                      <div className="space-y-3">
-                        {plan.items
-                          .sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0) || a.sort_order - b.sort_order)
-                          .map((item, idx) => (
-                            <div key={item.id} className="flex items-start gap-3 relative">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 shrink-0 ${
-                                item.circuit ? "bg-purple-100 text-purple-700 border-2 border-purple-300" : "bg-primary text-white"
-                              }`}>
-                                {item.day_number ?? idx + 1}
-                              </div>
-                              <div className="flex-1 bg-white rounded-xl border border-slate-100 p-3 -mt-1">
-                                <p className="text-sm font-semibold text-slate-800">
-                                  {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
-                                </p>
-                                {item.notes && <p className="text-xs text-slate-400 mt-0.5">{item.notes}</p>}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 shrink-0 mt-4">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => setShowBook(true)}
                     disabled={!plan.items?.length}
@@ -318,6 +277,65 @@ export default function TripPlanDetailPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Budget summary */}
+              {plan.items && plan.items.length > 0 && (() => {
+                let totalBudget = 0;
+                for (const item of plan.items) {
+                  if (item.offerItem?.prices?.length) {
+                    const price = item.offerItem.prices.find((p) => p.is_default)?.price ?? item.offerItem.prices[0]?.price;
+                    if (price) totalBudget += Number(price);
+                  } else if (item.circuit?.base_price) {
+                    totalBudget += Number(item.circuit.base_price);
+                  }
+                }
+                if (totalBudget > 0) {
+                  return (
+                    <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Budget estimé</p>
+                          <p className="text-2xl font-black text-emerald-700">{totalBudget.toLocaleString()} TND</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-emerald-500">{plan.items.length} activité{plan.items.length > 1 ? "s" : ""}</p>
+                          <p className="text-xs text-emerald-400">~{Math.round(totalBudget / (plan.items.length || 1))} TND/activité</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Timeline */}
+              {plan.items && plan.items.length > 1 && (
+                <div className="mt-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Timeline</h3>
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
+                    <div className="space-y-3">
+                      {plan.items
+                        .sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0) || a.sort_order - b.sort_order)
+                        .map((item, idx) => (
+                          <div key={item.id} className="flex items-start gap-3 relative">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold z-10 shrink-0 ${
+                              item.circuit ? "bg-purple-100 text-purple-700 border-2 border-purple-300" : "bg-primary text-white"
+                            }`}>
+                              {item.day_number ?? idx + 1}
+                            </div>
+                            <div className="flex-1 bg-white rounded-xl border border-slate-100 p-3 -mt-1">
+                              <p className="text-sm font-semibold text-slate-800">
+                                {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
+                              </p>
+                              {item.notes && <p className="text-xs text-slate-400 mt-0.5">{item.notes}</p>}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -464,18 +482,26 @@ export default function TripPlanDetailPage() {
                             </div>
                           )}
                         </div>
-                        <button
-                          onClick={async () => {
-                            if (!confirm("Retirer cette activité du plan ?")) return;
-                            try {
-                              await apiFetch(`/trip-plans/${id}/items/${item.id}`, { method: "DELETE" });
-                              loadPlan();
-                            } catch (e: any) { alert(e.message); }
-                          }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => { setEditingItem(item.id); setEditItemDay(String(item.day_number ?? "")); setEditItemNotes(item.notes ?? ""); }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Retirer cette activité du plan ?")) return;
+                              try {
+                                await apiFetch(`/trip-plans/${id}/items/${item.id}`, { method: "DELETE" });
+                                loadPlan();
+                              } catch (e: any) { alert(e.message); }
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -489,6 +515,41 @@ export default function TripPlanDetailPage() {
 
       {showAddItem && plan && <AddItemModal planId={id} onClose={() => setShowAddItem(false)} onAdded={loadPlan} />}
       {showBook && plan && <BookModal planId={id} plan={plan} onClose={() => setShowBook(false)} onBooked={() => { loadPlan(); setShowBook(false); }} />}
+
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-lg p-6 mx-4 max-w-sm w-full">
+            <h3 className="font-bold text-slate-800 mb-4">Modifier l&apos;activité</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Numéro du jour</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={editItemDay}
+                  onChange={(e) => setEditItemDay(e.target.value)}
+                  placeholder="Ex: 1"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Notes</label>
+                <textarea
+                  value={editItemNotes}
+                  onChange={(e) => setEditItemNotes(e.target.value)}
+                  placeholder="Notes optionnelles..."
+                  rows={3}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button onClick={() => setEditingItem(null)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600">Annuler</button>
+              <button onClick={() => handleSaveItem(editingItem)} className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-emerald-600">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">

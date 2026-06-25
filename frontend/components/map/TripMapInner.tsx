@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 
 interface MapItem {
@@ -76,6 +76,12 @@ export default function TripMapInner({ items }: TripMapInnerProps) {
           </Popup>
         </Marker>
       ))}
+      {located.length > 1 && (
+        <Polyline
+          positions={located.map((i) => [i.lat, i.lng])}
+          pathOptions={{ color: "#13ec49", weight: 3, dashArray: "8 6" }}
+        />
+      )}
     </MapContainer>
   );
 }
