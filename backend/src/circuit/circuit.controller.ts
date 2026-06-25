@@ -109,6 +109,26 @@ export class CircuitController {
   }
 
   /**
+   * Modifie un jour du circuit
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Patch(':circuitId/days/:dayId')
+  updateDay(@Req() req: any, @Param('circuitId') circuitId: string, @Param('dayId') dayId: string, @Body() dto: CreateCircuitDayDto) {
+    return this.service.updateDay(circuitId, dayId, dto, req.user.sub);
+  }
+
+  /**
+   * Supprime un jour du circuit
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete(':circuitId/days/:dayId')
+  removeDay(@Req() req: any, @Param('circuitId') circuitId: string, @Param('dayId') dayId: string) {
+    return this.service.removeDay(circuitId, dayId, req.user.sub);
+  }
+
+  /**
    * Ajoute une option au circuit
    */
   @ApiBearerAuth('bearer')

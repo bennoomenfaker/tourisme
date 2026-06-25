@@ -125,6 +125,15 @@ export default function CircuitDetailPage() {
   const [dayLng, setDayLng] = useState<number | null>(null);
   const [dayLocationName, setDayLocationName] = useState("");
 
+  const [showEditDay, setShowEditDay] = useState<string | null>(null);
+  const [editDayTitle, setEditDayTitle] = useState("");
+  const [editDayDesc, setEditDayDesc] = useState("");
+  const [editDayNum, setEditDayNum] = useState("");
+  const [editDayDate, setEditDayDate] = useState("");
+  const [editDayLat, setEditDayLat] = useState<number | null>(null);
+  const [editDayLng, setEditDayLng] = useState<number | null>(null);
+  const [editDayLocationName, setEditDayLocationName] = useState("");
+
   const [showAddOption, setShowAddOption] = useState(false);
   const [optType, setOptType] = useState("single_choice");
   const [optGroup, setOptGroup] = useState("");
@@ -140,6 +149,7 @@ export default function CircuitDetailPage() {
 
   const [showEditMap, setShowEditMap] = useState(false);
   const [showDayMap, setShowDayMap] = useState(false);
+  const [showEditDayMap, setShowEditDayMap] = useState(false);
 
   const [showReserve, setShowReserve] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
@@ -393,6 +403,42 @@ export default function CircuitDetailPage() {
     }
   }
 
+  async function handleEditDay(dayId: string) {
+    if (!token || !editDayTitle || !editDayNum || editDayLat === null || editDayLng === null) return;
+    try {
+      await apiFetch(`/circuits/${id}/days/${dayId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          day_number: Number(editDayNum),
+          title: editDayTitle,
+          description: editDayDesc || undefined,
+          date: editDayDate || undefined,
+          lat: editDayLat,
+          lng: editDayLng,
+          location_name: editDayLocationName || undefined,
+        }),
+      });
+      setShowEditDay(null);
+      loadCircuit();
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de la modification du jour");
+    }
+  }
+
+  async function handleDeleteDay(dayId: string) {
+    if (!token || !confirm("Supprimer ce jour ?")) return;
+    try {
+      await apiFetch(`/circuits/${id}/days/${dayId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      loadCircuit();
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de la suppression du jour");
+    }
+  }
+
   async function handleAddOption() {
     if (!token) return;
     try {
@@ -632,12 +678,26 @@ export default function CircuitDetailPage() {
                             </div>
                           )}
                           {isAuthor && (
-                            <button
-                              onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); }}
-                              className="mt-2 text-xs text-primary hover:text-primary flex items-center gap-1"
-                            >
-                              <Plus size={12} /> Ajouter une activité
-                            </button>
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              <button
+                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); }}
+                                className="text-xs text-primary hover:text-primary flex items-center gap-1"
+                              >
+                                <Plus size={12} /> Ajouter une activité
+                              </button>
+                              <button
+                                onClick={() => { setShowEditDay(day.id); setEditDayTitle(day.title); setEditDayDesc(day.description ?? ""); setEditDayNum(String(day.day_number)); setEditDayDate(day.date?.slice(0, 10) ?? ""); setEditDayLat(day.lat ? Number(day.lat) : null); setEditDayLng(day.lng ? Number(day.lng) : null); setEditDayLocationName(day.location_name ?? ""); setShowEditDayMap(false); }}
+                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                              >
+                                <Edit size={12} /> Modifier
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDay(day.id)}
+                                className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                              >
+                                <Trash2 size={12} /> Supprimer
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -841,11 +901,14 @@ export default function CircuitDetailPage() {
           <textarea value={dayDesc} onChange={(e) => setDayDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-medium text-slate-500">Lieu de la journée (optionnel)</label>
+              <label className="text-xs font-medium text-slate-500">Lieu de la journée <span className="text-red-500">*</span></label>
               <button type="button" onClick={() => setShowDayMap((v) => !v)} className="text-xs font-bold text-primary hover:underline">
                 {showDayMap ? "Masquer la carte" : "Choisir sur la carte"}
               </button>
             </div>
+            {dayLat !== null && dayLng !== null && (
+              <p className="text-xs text-emerald-600 mb-1">Coordonnées : {dayLat.toFixed(4)}, {dayLng.toFixed(4)}{dayLocationName ? ` — ${dayLocationName}` : ""}</p>
+            )}
             {showDayMap && (
               <div className="overflow-hidden rounded-xl">
                 <MapPicker
@@ -856,8 +919,44 @@ export default function CircuitDetailPage() {
               </div>
             )}
           </div>
-          <button onClick={handleAddDay} disabled={!dayTitle || !dayNum} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
+          <button onClick={handleAddDay} disabled={!dayTitle || !dayNum || dayLat === null || dayLng === null} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
             Ajouter
+          </button>
+        </div>
+      </Modal>
+
+      {/* ─── Modal Modifier Jour ────────────────────────── */}
+      <Modal open={!!showEditDay} onClose={() => setShowEditDay(null)} title="Modifier le jour">
+        <div className="p-6 space-y-3">
+          <input value={editDayNum} onChange={(e) => setEditDayNum(e.target.value)} placeholder="Numéro du jour (ex: 1)" type="number" min={1} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <input value={editDayTitle} onChange={(e) => setEditDayTitle(e.target.value)} placeholder="Titre (ex: Arrivée)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Date (optionnel)</label>
+            <input type="date" value={editDayDate} onChange={(e) => setEditDayDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <textarea value={editDayDesc} onChange={(e) => setEditDayDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-slate-500">Lieu de la journée <span className="text-red-500">*</span></label>
+              <button type="button" onClick={() => setShowEditDayMap((v) => !v)} className="text-xs font-bold text-primary hover:underline">
+                {showEditDayMap ? "Masquer la carte" : "Choisir sur la carte"}
+              </button>
+            </div>
+            {editDayLat !== null && editDayLng !== null && (
+              <p className="text-xs text-emerald-600 mb-1">Coordonnées : {editDayLat.toFixed(4)}, {editDayLng.toFixed(4)}{editDayLocationName ? ` — ${editDayLocationName}` : ""}</p>
+            )}
+            {showEditDayMap && (
+              <div className="overflow-hidden rounded-xl">
+                <MapPicker
+                  lat={editDayLat}
+                  lng={editDayLng}
+                  onPick={(lat, lng, name) => { setEditDayLat(lat); setEditDayLng(lng); setEditDayLocationName(name); }}
+                />
+              </div>
+            )}
+          </div>
+          <button onClick={() => showEditDay && handleEditDay(showEditDay)} disabled={!editDayTitle || !editDayNum || editDayLat === null || editDayLng === null} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
+            Enregistrer
           </button>
         </div>
       </Modal>

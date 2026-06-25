@@ -81,9 +81,9 @@ export default function CircuitMapInner({ circuitLat, circuitLng, days }: Circui
         </Marker>
       )}
 
-      {locatedDays.map((day) => (
+      {locatedDays.map((day, index) => (
         <Marker
-          key={day.day_number}
+          key={`${day.day_number}-${index}`}
           position={[day.lat!, day.lng!]}
           icon={createNumberIcon(day.day_number)}
         >

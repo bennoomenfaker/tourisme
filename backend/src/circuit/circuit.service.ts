@@ -132,6 +132,33 @@ export class CircuitService {
     return this.dayRepo.save(day);
   }
 
+  async updateDay(circuitId: string, dayId: string, dto: Partial<CreateCircuitDayDto>, authorId?: string): Promise<CircuitDay> {
+    const day = await this.dayRepo.findOne({ where: { id: dayId }, relations: ['circuit'] });
+    if (!day) throw new NotFoundException('Jour introuvable');
+    if (day.circuit.id !== circuitId) throw new NotFoundException('Jour n\'appartient pas à ce circuit');
+    if (authorId && day.circuit?.author_id !== authorId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
+    }
+    if (dto.day_number !== undefined) day.day_number = dto.day_number;
+    if (dto.title !== undefined) day.title = dto.title;
+    if (dto.description !== undefined) day.description = dto.description ?? null;
+    if (dto.date !== undefined) day.date = dto.date ? new Date(dto.date) : null;
+    if (dto.lat !== undefined) day.lat = dto.lat ?? null;
+    if (dto.lng !== undefined) day.lng = dto.lng ?? null;
+    if (dto.location_name !== undefined) day.location_name = dto.location_name ?? null;
+    return this.dayRepo.save(day);
+  }
+
+  async removeDay(circuitId: string, dayId: string, authorId?: string): Promise<void> {
+    const day = await this.dayRepo.findOne({ where: { id: dayId }, relations: ['circuit'] });
+    if (!day) throw new NotFoundException('Jour introuvable');
+    if (day.circuit.id !== circuitId) throw new NotFoundException('Jour n\'appartient pas à ce circuit');
+    if (authorId && day.circuit?.author_id !== authorId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
+    }
+    await this.dayRepo.remove(day);
+  }
+
   // ─── Options du circuit ────────────────────────────────
 
   async addOption(circuitId: string, dto: CreateCircuitOptionDto, authorId?: string): Promise<CircuitOption> {
