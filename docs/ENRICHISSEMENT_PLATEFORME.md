@@ -19,6 +19,8 @@
 | ✅ | Timeline visuelle du voyage | Nouveau module TimelineEntry (backend) + composants TimelineEditor/TimelineView (frontend). Intégré dans création, édition et détail des expériences du profil éco-voyageur. |
 | ✅ | Dashboard analytics complet | Nouvel onglet "Statistiques" dans le profil guide. KPIs, graphiques offres par statut/type, réservations, derniers avis. |
 | ✅ | Événements dynamiques | Nouveau module Event + section dans page lieu. Types : Festival, Concert, Marché, Compétition, Exposition, Atelier. |
+| ✅ | Circuit Builder enrichi | `CircuitProgramItem` enrichi : emoji, durée (min), distance (km), mode transport + sélecteur émoji et champs dans modal "Ajouter une activité" + affichage enrichi dans l'itinéraire. Coordonnées GPS réelles pour tous les circuits. |
+| ✅ | Correction data circuits | 52 jours en double supprimés de 14 circuits. Coordonnées GPS corrigées vers 52 localisations réelles (Djerba, Sahara, Tataouine, Tozeur, Kerkennah, Cap Bon, Kairouan, Tunis, Nabeul, Ain Draham). |
 | ⬜ | Q&R communautaire | |
 | ⬜ | Wishlist & Collections | |
 | ⬜ | Assistant IA | |
@@ -324,12 +326,9 @@ Si ces éléments sont réalisés, **Éco-Voyage ne sera plus une plateforme de 
 
 C'est ce type d'intégration qui différencie un produit complet d'une simple application.
 
-Prêt à coder les enrichissements. Par où veux-tu commencer ?
-1. Entité Place centrale — chaque lieu devient un hub avec offres, circuits, projets, météo, avis
-2. Galerie centralisée Photo/Media — photos unifiées depuis toutes les entités
-3. Hero Image automatique — scoring pour la photo de couverture
-4. Carte enrichie — infobulles avec photo, note, prix
-5. Timeline visuelle du voyage
-6. Dashboard analytics complet
-7. Météo intégrée — API météo sur chaque lieu/activité
-8. Autre (précise)
+Prêt pour la prochaine étape. Suggestions :
+1. **Enrichir le CircuitBuilderWizard** — ajouter emoji/durée/distance/transport dans l'assistant de création de circuit
+2. **Q&R communautaire** — questions/réponses sur les lieux (comme Google Maps)
+3. **Wishlist & Collections** — listes de souhaits + collections type Pinterest
+4. **Routes & Itinéraires** — entité Route avec altitude, difficulté, intégration OSRM
+5. **Autre** (précise)

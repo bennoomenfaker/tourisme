@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
+import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
 
 export class CreateCircuitProgramItemDto {
   @IsString()
@@ -34,4 +34,22 @@ export class CreateCircuitProgramItemDto {
   @IsOptional()
   @IsUUID()
   linked_location_id?: string;
+
+  @IsOptional()
+  @IsString()
+  emoji?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  duration_minutes?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  distance_km?: number;
+
+  @IsOptional()
+  @IsString()
+  transport_mode?: string;
 }

@@ -158,6 +158,26 @@ export class CircuitController {
   }
 
   /**
+   * Modifie une activité du programme
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Patch(':circuitId/days/:dayId/program/:itemId')
+  updateProgramItem(@Req() req: any, @Param('itemId') itemId: string, @Body() dto: CreateCircuitProgramItemDto) {
+    return this.service.updateProgramItem(itemId, dto, req.user.sub);
+  }
+
+  /**
+   * Supprime une activité du programme
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Delete(':circuitId/days/:dayId/program/:itemId')
+  removeProgramItem(@Req() req: any, @Param('itemId') itemId: string) {
+    return this.service.removeProgramItem(itemId, req.user.sub);
+  }
+
+  /**
    * Réserve un circuit (éco-voyageur)
    */
   @ApiBearerAuth('bearer')

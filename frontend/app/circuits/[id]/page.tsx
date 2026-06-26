@@ -21,6 +21,10 @@ const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   loading: () => <div className="h-[268px] rounded-2xl bg-slate-100 animate-pulse" />,
 });
 
+const PROG_EMOJIS = ["📍", "🚐", "🥾", "🛶", "🏛️", "🍽️", "🏕️", "🌅", "📸", "🎒", "🚲", "🐪", "🦅", "🌿", "🏊", "🧗", "🎶", "🎨", "🛒", "⛺", "🚗", "🐴", "🚌", "✈️", "🚣"];
+
+const PROG_TRANSPORTS = ["", "🚐 Van", "🥾 À pied", "🚲 Vélo", "🐪 Chameau", "🚗 Voiture", "🛶 Kayak", "🐴 Cheval", "🚌 Bus", "✈️ Vol", "🚣 Barque"];
+
 interface CircuitProgramItem {
   id: string;
   title: string;
@@ -29,6 +33,10 @@ interface CircuitProgramItem {
   end_time: string | null;
   is_included: boolean;
   is_required: boolean;
+  emoji: string | null;
+  duration_minutes: number | null;
+  distance_km: number | null;
+  transport_mode: string | null;
 }
 
 interface CircuitDay {
@@ -143,10 +151,16 @@ export default function CircuitDetailPage() {
   const [optRequired, setOptRequired] = useState(false);
 
   const [showAddProgram, setShowAddProgram] = useState<string | null>(null);
+  const [editProgramItem, setEditProgramItem] = useState<{ dayId: string; item: CircuitProgramItem } | null>(null);
   const [progTitle, setProgTitle] = useState("");
   const [progDesc, setProgDesc] = useState("");
   const [progStart, setProgStart] = useState("");
   const [progEnd, setProgEnd] = useState("");
+  const [progEmoji, setProgEmoji] = useState("📍");
+  const [progDuration, setProgDuration] = useState("");
+  const [progDistance, setProgDistance] = useState("");
+  const [progTransport, setProgTransport] = useState("");
+  const [showProgEmojiPicker, setShowProgEmojiPicker] = useState(false);
 
   const [showEditMap, setShowEditMap] = useState(false);
   const [showDayMap, setShowDayMap] = useState(false);
@@ -462,6 +476,43 @@ export default function CircuitDetailPage() {
     }
   }
 
+  async function handleEditProgram() {
+    if (!token || !editProgramItem) return;
+    try {
+      await apiFetch(`/circuits/${id}/days/${editProgramItem.dayId}/program/${editProgramItem.item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          title: progTitle,
+          description: progDesc || undefined,
+          start_time: progStart || undefined,
+          end_time: progEnd || undefined,
+          emoji: progEmoji || undefined,
+          duration_minutes: progDuration ? parseInt(progDuration) : undefined,
+          distance_km: progDistance ? parseFloat(progDistance) : undefined,
+          transport_mode: progTransport || undefined,
+        }),
+      });
+      setEditProgramItem(null);
+      loadCircuit();
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de la modification de l'activité");
+    }
+  }
+
+  async function handleDeleteProgram(dayId: string, itemId: string) {
+    if (!token || !confirm("Supprimer cette activité ?")) return;
+    try {
+      await apiFetch(`/circuits/${id}/days/${dayId}/program/${itemId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      loadCircuit();
+    } catch (err: any) {
+      setReserveError(err.message || "Erreur lors de la suppression de l'activité");
+    }
+  }
+
   async function handleAddProgram(dayId: string) {
     if (!token || !progTitle) return;
     try {
@@ -473,10 +524,15 @@ export default function CircuitDetailPage() {
           description: progDesc || undefined,
           start_time: progStart || undefined,
           end_time: progEnd || undefined,
+          emoji: progEmoji || undefined,
+          duration_minutes: progDuration ? parseInt(progDuration) : undefined,
+          distance_km: progDistance ? parseFloat(progDistance) : undefined,
+          transport_mode: progTransport || undefined,
         }),
       });
       setShowAddProgram(null);
       setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd("");
+      setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport("");
       loadCircuit();
     } catch (err: any) {
       setReserveError(err.message || "Erreur lors de l'ajout du programme");
@@ -692,17 +748,32 @@ export default function CircuitDetailPage() {
                             <p className="text-sm text-slate-500 mt-1">{day.description}</p>
                           )}
                           {day.programItems && day.programItems.length > 0 && (
-                            <div className="mt-2 space-y-1">
+                            <div className="mt-2 space-y-1.5">
                               {day.programItems.map((item) => (
-                                <div key={item.id} className="flex items-start gap-2 text-sm text-slate-500">
-                                  {item.start_time && (
-                                    <span className="text-xs font-medium text-primary bg-emerald-50 rounded px-1.5 py-0.5 shrink-0">
-                                      {item.start_time}{item.end_time ? `–${item.end_time}` : ""}
-                                    </span>
+                                <div key={item.id} className="flex items-start gap-2 text-sm text-slate-500 bg-slate-50 rounded-lg p-2 group">
+                                  {item.emoji && (
+                                    <span className="text-base shrink-0 mt-0.5">{item.emoji}</span>
                                   )}
                                   <div className="flex-1 min-w-0">
-                                    <span>{item.title}</span>
-                                    <div className="flex gap-1.5 mt-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                      {item.start_time && (
+                                        <span className="text-[10px] font-medium text-primary bg-emerald-50 rounded px-1.5 py-0.5 shrink-0">
+                                          {item.start_time}{item.end_time ? `–${item.end_time}` : ""}
+                                        </span>
+                                      )}
+                                      <span className="text-xs font-semibold text-slate-700">{item.title}</span>
+                                    </div>
+                                    {item.description && (
+                                      <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>
+                                    )}
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                      {(item.duration_minutes || item.distance_km || item.transport_mode) && (
+                                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                                          {item.duration_minutes && <span>⏱ {item.duration_minutes}min</span>}
+                                          {item.distance_km && <span>📍 {item.distance_km}km</span>}
+                                          {item.transport_mode && <span>{item.transport_mode}</span>}
+                                        </div>
+                                      )}
                                       {item.is_included && (
                                         <span className="text-[10px] text-emerald-600 bg-emerald-50 rounded-full px-1.5 py-0">Inclus</span>
                                       )}
@@ -711,6 +782,22 @@ export default function CircuitDetailPage() {
                                       )}
                                     </div>
                                   </div>
+                                  {isAuthor && (
+                                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); }}
+                                        className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
+                                      >
+                                        <Edit size={11} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteProgram(day.id, item.id)}
+                                        className="w-6 h-6 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -718,7 +805,7 @@ export default function CircuitDetailPage() {
                           {isAuthor && (
                             <div className="mt-2 flex items-center gap-2 flex-wrap">
                               <button
-                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); }}
+                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport(""); }}
                                 className="text-xs text-primary hover:text-primary flex items-center gap-1"
                               >
                                 <Plus size={12} /> Ajouter une activité
@@ -1037,10 +1124,30 @@ export default function CircuitDetailPage() {
         </div>
       </Modal>
 
-      {/* ─── Modal Ajouter Activité ────────────────────── */}
-      <Modal open={!!showAddProgram} onClose={() => setShowAddProgram(null)} title="Ajouter une activité">
+      {/* ─── Modal Modifier Activité ────────────────────── */}
+      <Modal open={!!editProgramItem} onClose={() => setEditProgramItem(null)} title="Modifier l'activité">
         <div className="p-6 space-y-3">
-          <input value={progTitle} onChange={(e) => setProgTitle(e.target.value)} placeholder="Titre (ex: Randonnée)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button type="button" onClick={() => setShowProgEmojiPicker((v) => !v)}
+                className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg hover:border-primary/50 transition-colors">
+                {progEmoji}
+              </button>
+              {showProgEmojiPicker && (
+                <div className="absolute top-12 left-0 z-20 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 w-56">
+                  <div className="grid grid-cols-5 gap-1">
+                    {PROG_EMOJIS.map((e) => (
+                      <button key={e} type="button" onClick={() => { setProgEmoji(e); setShowProgEmojiPicker(false); }}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm hover:bg-primary/10 transition-colors ${progEmoji === e ? "bg-primary/20 ring-2 ring-primary/30" : ""}`}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <input value={progTitle} onChange={(e) => setProgTitle(e.target.value)} placeholder="Titre (ex: Randonnée)" className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          </div>
           <textarea value={progDesc} onChange={(e) => setProgDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1050,6 +1157,83 @@ export default function CircuitDetailPage() {
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Heure de fin</label>
               <input type="time" value={progEnd} onChange={(e) => setProgEnd(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Durée (min)</label>
+              <input type="number" min={0} value={progDuration} onChange={(e) => setProgDuration(e.target.value)} placeholder="ex: 90" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Distance (km)</label>
+              <input type="number" min={0} step="0.1" value={progDistance} onChange={(e) => setProgDistance(e.target.value)} placeholder="ex: 5.2" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Transport</label>
+              <select value={progTransport} onChange={(e) => setProgTransport(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600">
+                {PROG_TRANSPORTS.map((t) => (
+                  <option key={t} value={t.replace(/^[^\s]+\s/, "")}>{t || "—"}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button onClick={handleEditProgram} disabled={!progTitle} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
+            Enregistrer
+          </button>
+        </div>
+      </Modal>
+
+      {/* ─── Modal Ajouter Activité ────────────────────── */}
+      <Modal open={!!showAddProgram} onClose={() => setShowAddProgram(null)} title="Ajouter une activité">
+        <div className="p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button type="button" onClick={() => setShowProgEmojiPicker((v) => !v)}
+                className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-lg hover:border-primary/50 transition-colors">
+                {progEmoji}
+              </button>
+              {showProgEmojiPicker && (
+                <div className="absolute top-12 left-0 z-20 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 w-56">
+                  <div className="grid grid-cols-5 gap-1">
+                    {PROG_EMOJIS.map((e) => (
+                      <button key={e} type="button" onClick={() => { setProgEmoji(e); setShowProgEmojiPicker(false); }}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm hover:bg-primary/10 transition-colors ${progEmoji === e ? "bg-primary/20 ring-2 ring-primary/30" : ""}`}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <input value={progTitle} onChange={(e) => setProgTitle(e.target.value)} placeholder="Titre (ex: Randonnée)" className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <textarea value={progDesc} onChange={(e) => setProgDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Heure de début</label>
+              <input type="time" value={progStart} onChange={(e) => setProgStart(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Heure de fin</label>
+              <input type="time" value={progEnd} onChange={(e) => setProgEnd(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Durée (min)</label>
+              <input type="number" min={0} value={progDuration} onChange={(e) => setProgDuration(e.target.value)} placeholder="ex: 90" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Distance (km)</label>
+              <input type="number" min={0} step="0.1" value={progDistance} onChange={(e) => setProgDistance(e.target.value)} placeholder="ex: 5.2" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Transport</label>
+              <select value={progTransport} onChange={(e) => setProgTransport(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-600">
+                {PROG_TRANSPORTS.map((t) => (
+                  <option key={t} value={t.replace(/^[^\s]+\s/, "")}>{t || "—"}</option>
+                ))}
+              </select>
             </div>
           </div>
           <button onClick={() => handleAddProgram(showAddProgram!)} disabled={!progTitle} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">

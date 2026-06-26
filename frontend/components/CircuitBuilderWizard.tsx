@@ -24,6 +24,7 @@ interface DayForm {
 interface ProgramItemForm {
   id: string; title: string; description: string; start_time: string; end_time: string;
   is_included: boolean; is_required: boolean; linked_offer_item_id: string | null;
+  emoji: string; duration_minutes: string; distance_km: string; transport_mode: string;
 }
 
 interface OptionForm {
@@ -34,6 +35,10 @@ interface OptionForm {
 interface MyOfferItem {
   id: string; name: string; item_type: string | null; offer_id: string; offer_title: string;
 }
+
+const EMOJIS_LIST = ["📍", "🚐", "🥾", "🛶", "🏛️", "🍽️", "🏕️", "🌅", "📸", "🎒", "🚲", "🐪", "🦅", "🌿", "🏊", "🧗", "🎶", "🎨", "🛒", "⛺", "🚗", "🐴", "🚌", "✈️", "🚣"];
+
+const TRANSPORTS_LIST = [{ value: "", label: "Aucun" }, { value: "Van", label: "🚐 Van" }, { value: "À pied", label: "🥾 À pied" }, { value: "Vélo", label: "🚲 Vélo" }, { value: "Chameau", label: "🐪 Chameau" }, { value: "Voiture", label: "🚗 Voiture" }, { value: "Kayak", label: "🛶 Kayak" }, { value: "Cheval", label: "🐴 Cheval" }, { value: "Bus", label: "🚌 Bus" }, { value: "Vol", label: "✈️ Vol" }, { value: "Barque", label: "🚣 Barque" }];
 
 const STEP_LABELS = ["", "Général", "Jours", "Activités", "Itinéraire", "Tarifs & Options", "Aperçu"];
 const TOTAL_STEPS = 6;
@@ -183,7 +188,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   }
 
   function addProgramItem(dayId: string) {
-    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null }] }));
+    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null, emoji: "📍", duration_minutes: "", distance_km: "", transport_mode: "" }] }));
   }
 
   function removeProgramItem(dayId: string, itemId: string) {
@@ -245,7 +250,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
           if (!prog.title.trim()) continue;
           await apiFetch(`/circuits/${circuitId}/days/${createdDay.id}/program`, {
             method: "POST", headers: { Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ title: prog.title.trim(), description: prog.description || undefined, start_time: prog.start_time || undefined, end_time: prog.end_time || undefined, is_included: prog.is_included, is_required: prog.is_required, linked_offer_item_id: prog.linked_offer_item_id || undefined }),
+            body: JSON.stringify({ title: prog.title.trim(), description: prog.description || undefined, start_time: prog.start_time || undefined, end_time: prog.end_time || undefined, is_included: prog.is_included, is_required: prog.is_required, linked_offer_item_id: prog.linked_offer_item_id || undefined, emoji: prog.emoji || undefined, duration_minutes: prog.duration_minutes ? Number(prog.duration_minutes) : undefined, distance_km: prog.distance_km ? Number(prog.distance_km) : undefined, transport_mode: prog.transport_mode || undefined }),
           });
         }
       }
@@ -428,22 +433,23 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                       <div key={prog.id} className="bg-white border border-slate-200 rounded-xl p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 space-y-2">
-                            <div className="grid grid-cols-2 gap-2">
-                              <input value={prog.title} onChange={(e) => updateProgramItem(day.id, prog.id, { title: e.target.value })} placeholder="Titre de l'activité" className="text-sm font-medium text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary w-full" />
-                              <div className="flex gap-1">
-                                <select value={prog.linked_offer_item_id ?? ""} onChange={(e) => updateProgramItem(day.id, prog.id, { linked_offer_item_id: e.target.value || null })} className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
-                                  <option value="">Sans offre liée</option>
-                                  {offerItems.map((item) => (
-                                    <option key={item.id} value={item.id}>{item.name} ({item.offer_title})</option>
-                                  ))}
-                                </select>
-                                {offerItems.length > 0 && (
-                                  <a href="/dashboard?tab=offers" target="_blank" className="text-[10px] text-primary font-medium hover:underline whitespace-nowrap self-center">+ Nouvelle</a>
-                                )}
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <select value={prog.emoji} onChange={(e) => updateProgramItem(day.id, prog.id, { emoji: e.target.value })} className="text-lg border border-slate-200 rounded-lg px-1.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
+                                {EMOJIS_LIST.map((e) => <option key={e} value={e}>{e}</option>)}
+                              </select>
+                              <input value={prog.title} onChange={(e) => updateProgramItem(day.id, prog.id, { title: e.target.value })} placeholder="Titre de l'activité" className="flex-1 text-sm font-medium text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" />
+                              <select value={prog.linked_offer_item_id ?? ""} onChange={(e) => updateProgramItem(day.id, prog.id, { linked_offer_item_id: e.target.value || null })} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="">Sans offre liée</option>
+                                {offerItems.map((item) => (
+                                  <option key={item.id} value={item.id}>{item.name}</option>
+                                ))}
+                              </select>
+                              {offerItems.length > 0 && (
+                                <a href="/dashboard?tab=offers" target="_blank" className="text-[10px] text-primary font-medium hover:underline whitespace-nowrap">+ Nouvelle</a>
+                              )}
                             </div>
                             <textarea value={prog.description} onChange={(e) => updateProgramItem(day.id, prog.id, { description: e.target.value })} placeholder="Description" rows={1} className="w-full text-xs text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-4 gap-2">
                               <div>
                                 <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Début</label>
                                 <input type="time" value={prog.start_time} onChange={(e) => updateProgramItem(day.id, prog.id, { start_time: e.target.value })} className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" />
@@ -452,6 +458,22 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                                 <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Fin</label>
                                 <input type="time" value={prog.end_time} onChange={(e) => updateProgramItem(day.id, prog.id, { end_time: e.target.value })} className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" />
                               </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Durée (min)</label>
+                                <input type="number" min="0" value={prog.duration_minutes} onChange={(e) => updateProgramItem(day.id, prog.id, { duration_minutes: e.target.value })} className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ex: 120" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Distance (km)</label>
+                                <input type="number" min="0" step="0.1" value={prog.distance_km} onChange={(e) => updateProgramItem(day.id, prog.id, { distance_km: e.target.value })} className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ex: 5" />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-medium text-slate-400 shrink-0">Transport</label>
+                              <select value={prog.transport_mode} onChange={(e) => updateProgramItem(day.id, prog.id, { transport_mode: e.target.value })} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
+                                {TRANSPORTS_LIST.map((t) => (
+                                  <option key={t.value} value={t.value}>{t.label}</option>
+                                ))}
+                              </select>
                             </div>
                           </div>
                           <button type="button" onClick={() => removeProgramItem(day.id, prog.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0 mt-1"><Trash2 size={14} /></button>

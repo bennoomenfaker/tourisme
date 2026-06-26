@@ -50,6 +50,18 @@ export class CircuitProgramItem {
   linked_location_id!: string | null;
   // Lien vers un lieu (place_contributions)
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  emoji!: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  duration_minutes!: number | null;
+
+  @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
+  distance_km!: number | null;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  transport_mode!: string | null;
+
   @CreateDateColumn()
   created_at!: Date;
 }

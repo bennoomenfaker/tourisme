@@ -230,8 +230,42 @@ export class CircuitService {
       is_required: dto.is_required ?? true,
       linked_offer_item_id: dto.linked_offer_item_id ?? null,
       linked_location_id: dto.linked_location_id ?? null,
+      emoji: dto.emoji ?? null,
+      duration_minutes: dto.duration_minutes ?? null,
+      distance_km: dto.distance_km ?? null,
+      transport_mode: dto.transport_mode ?? null,
     });
     return this.programItemRepo.save(item);
+  }
+
+  async updateProgramItem(itemId: string, dto: Partial<CreateCircuitProgramItemDto>, authorId?: string): Promise<CircuitProgramItem> {
+    const item = await this.programItemRepo.findOne({ where: { id: itemId }, relations: ['circuitDay', 'circuitDay.circuit'] });
+    if (!item) throw new NotFoundException('Activité introuvable');
+    if (authorId && item.circuitDay?.circuit?.author_id !== authorId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
+    }
+    if (dto.title !== undefined) item.title = dto.title;
+    if (dto.description !== undefined) item.description = dto.description ?? null;
+    if (dto.start_time !== undefined) item.start_time = this.normalizeTime(dto.start_time);
+    if (dto.end_time !== undefined) item.end_time = this.normalizeTime(dto.end_time);
+    if (dto.is_included !== undefined) item.is_included = dto.is_included;
+    if (dto.is_required !== undefined) item.is_required = dto.is_required;
+    if (dto.linked_offer_item_id !== undefined) item.linked_offer_item_id = dto.linked_offer_item_id ?? null;
+    if (dto.linked_location_id !== undefined) item.linked_location_id = dto.linked_location_id ?? null;
+    if (dto.emoji !== undefined) item.emoji = dto.emoji ?? null;
+    if (dto.duration_minutes !== undefined) item.duration_minutes = dto.duration_minutes ?? null;
+    if (dto.distance_km !== undefined) item.distance_km = dto.distance_km ?? null;
+    if (dto.transport_mode !== undefined) item.transport_mode = dto.transport_mode ?? null;
+    return this.programItemRepo.save(item);
+  }
+
+  async removeProgramItem(itemId: string, authorId?: string): Promise<void> {
+    const item = await this.programItemRepo.findOne({ where: { id: itemId }, relations: ['circuitDay', 'circuitDay.circuit'] });
+    if (!item) throw new NotFoundException('Activité introuvable');
+    if (authorId && item.circuitDay?.circuit?.author_id !== authorId) {
+      throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
+    }
+    await this.programItemRepo.remove(item);
   }
 
   // ─── Réservation de circuit ────────────────────────────
