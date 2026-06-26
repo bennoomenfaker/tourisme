@@ -63,8 +63,15 @@ export class CircuitService {
     return this.circuitRepo.save(circuit);
   }
 
-  async findAll(status?: string): Promise<Circuit[]> {
-    const where = status ? { status } : undefined;
+  async findAll(status?: string, region?: string): Promise<Circuit[]> {
+    const where: any = {};
+    if (status) where.status = status;
+    if (region) where.region = region;
+    if (!status && !region) {
+      return this.circuitRepo.find({
+        order: { created_at: 'DESC' },
+      });
+    }
     return this.circuitRepo.find({
       where,
       order: { created_at: 'DESC' },

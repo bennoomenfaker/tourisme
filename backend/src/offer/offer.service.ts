@@ -98,9 +98,11 @@ export class OfferService {
     });
   }
 
-  async findAllPublic(): Promise<Offer[]> {
+  async findAllPublic(region?: string): Promise<Offer[]> {
+    const where: any = { status: 'approved' };
+    if (region) where.region = region;
     return this.repo.find({
-      where: { status: 'approved' },
+      where,
       order: { created_at: 'DESC' },
       relations: ['items', 'items.prices'],
     });

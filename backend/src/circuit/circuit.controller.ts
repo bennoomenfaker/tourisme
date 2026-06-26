@@ -53,8 +53,8 @@ export class CircuitController {
    */
   @Public()
   @Get()
-  findAll(@Query('status') status?: string) {
-    return this.service.findAll(status);
+  findAll(@Query('status') status?: string, @Query('region') region?: string) {
+    return this.service.findAll(status, region);
   }
 
   /**

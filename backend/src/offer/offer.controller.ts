@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -75,8 +76,8 @@ export class OfferController {
   /** Toutes les offres approuvées (page Destinations) */
   @Public()
   @Get()
-  findAllPublic() {
-    return this.service.findAllPublic();
+  findAllPublic(@Query('region') region?: string) {
+    return this.service.findAllPublic(region);
   }
 
   /** Offres publiées d'un auteur (page profil) */

@@ -7,11 +7,12 @@ import {
   Plus, Edit3, ShieldCheck, MapPin, Calendar, Leaf, ArrowLeft,
   LayoutGrid, Tag, Users, Info, Sparkles, ArrowRight, Send, X, Search, UserPlus,
   Clock, ChevronLeft, ChevronRight, Check, Globe, Star, BookOpen,
-  MoreVertical, UserX, ShieldBan, Flag,
+  MoreVertical, UserX, ShieldBan, Flag, BarChart3,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import MessagerieWidget from "@/components/MessagerieWidget";
 import PubInteractions from "@/components/PubInteractions";
+import GuideAnalytics from "@/components/GuideAnalytics";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"),
   { ssr: false, loading: () => <div className="h-[268px] rounded-2xl bg-slate-100 animate-pulse" /> }
@@ -187,7 +188,7 @@ const LANGUAGES_LIST = [
   { value: "de", label: "Allemand" }, { value: "it", label: "Italien" },
 ];
 
-type Tab = "tout" | "offres" | "reseau" | "apropos";
+type Tab = "tout" | "offres" | "statistiques" | "reseau" | "apropos";
 
 // ─── Botanical SVG Cover ──────────────────────────────────────────────────────
 
@@ -1768,6 +1769,7 @@ export default function GuideProfilePage() {
               {[
                 { key: "tout",    label: "Tout",     Icon: LayoutGrid },
                 { key: "offres",  label: "Offres",   Icon: Tag },
+                { key: "statistiques", label: "Statistiques", Icon: BarChart3 },
                 { key: "reseau",  label: "Réseau",   Icon: Users },
                 { key: "apropos", label: "À propos", Icon: Info },
               ].map(({ key, label, Icon }) => (
@@ -1818,6 +1820,11 @@ export default function GuideProfilePage() {
                   offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
                 )}
               </div>
+            )}
+
+            {/* TAB: STATISTIQUES */}
+            {activeTab === "statistiques" && (
+              <GuideAnalytics token={token} userId={profile?.user_id ?? ""} />
             )}
 
             {/* TAB: AMIS */}

@@ -25,12 +25,14 @@ import { InteractionsModule } from './interactions/interactions.module';
 import { PlaceContributionModule } from './place-contribution/place-contribution.module';
 import { BookingModule } from './booking/booking.module';
 import { CircuitModule } from './circuit/circuit.module';
+import { EventModule } from './event/event.module';
 import { NotificationModule } from './notification/notification.module';
 import { TripPlanModule } from './trip-plan/trip-plan.module';
 import { FavoriteModule } from './favorite/favorite.module';
 import { ReviewModule } from './review/review.module';
 import { TravelCartModule } from './travel-cart/travel-cart.module';
 import { PhotoModule } from './photo/photo.module';
+import { TimelineModule } from './timeline/timeline.module';
 
 @Module({
   imports: [
@@ -60,12 +62,14 @@ import { PhotoModule } from './photo/photo.module';
     PlaceContributionModule,
     BookingModule,
     CircuitModule,
+    EventModule,
     NotificationModule,
     TripPlanModule,
     FavoriteModule,
     ReviewModule,
     TravelCartModule,
     PhotoModule,
+    TimelineModule,
   ],
   providers: [GoogleStrategy, {
     provide: APP_GUARD,

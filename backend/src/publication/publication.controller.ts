@@ -24,7 +24,7 @@ export class PublicationController {
   findMine(@Req() req: any) { return this.service.findByAuthor(req.user.sub); }
 
   @Public() @Get('experiences')
-  findAllExperiences() { return this.service.findAllExperiences(); }
+  findAllExperiences(@Query('region') region?: string) { return this.service.findAllExperiences(region); }
 
   @Public() @Get('author/:authorId')
   findByAuthor(@Param('authorId') authorId: string) { return this.service.findPublicByAuthor(authorId); }
@@ -94,8 +94,8 @@ export class PublicationController {
   // ─── Places / Trending / Heatmap ──────────────────────────────────────────
 
   @Public() @Get('places')
-  findAllPlaces(@Query('limit') limit?: string, @Query('offset') offset?: string) {
-    return this.service.findAllPlaces(limit ? parseInt(limit) : 50, offset ? parseInt(offset) : 0);
+  findAllPlaces(@Query('limit') limit?: string, @Query('offset') offset?: string, @Query('region') region?: string) {
+    return this.service.findAllPlaces(limit ? parseInt(limit) : 50, offset ? parseInt(offset) : 0, region);
   }
 
   @Public() @Get('places/trending')

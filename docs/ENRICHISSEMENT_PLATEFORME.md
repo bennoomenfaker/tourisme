@@ -4,6 +4,27 @@
 
 ---
 
+## État d'avancement
+
+| Statut | Fonctionnalité | Détail |
+|--------|---------------|--------|
+| ✅ | Filtre `region` backend | `GET /offers?region=`, `GET /circuits?region=`, `GET /publications/places?region=`, `GET /publications/experiences?region=` |
+| ✅ | Page Place enrichie | Navigation par ancres (sidebar desktop + tabs mobile), 8 sections : Aperçu, Galerie, Offres, Circuits, Expériences, Avis, Carte, À proximité |
+| ✅ | Carte Leaflet | Remplacement iframe OSM par Leaflet avec marqueur stylé + popup |
+| ✅ | Carte enrichie | Marqueurs pour lieux (vert), offres (bleu) et circuits (violet) à proximité. Légende + popups cliquables. Ajustement auto du zoom. |
+| ✅ | Hero Image automatique | Recalcul auto après chaque vote/upload. La photo avec le meilleur score devient la couverture. |
+| ✅ | Météo intégrée | Open-Meteo (gratuit, sans clé). Météo du jour + 5 jours sur chaque lieu. |
+| ✅ | Carte enrichie | Marqueurs lieux/offres/circuits avec popups cliquables + légende |
+| ✅ | Galerie centralisée Photo/Media | Galerie unifiée : photos communauté + images lieu/offres/circuits/expériences. Badges source colorés + hover voter/lien. |
+| ✅ | Timeline visuelle du voyage | Nouveau module TimelineEntry (backend) + composants TimelineEditor/TimelineView (frontend). Intégré dans création, édition et détail des expériences du profil éco-voyageur. |
+| ✅ | Dashboard analytics complet | Nouvel onglet "Statistiques" dans le profil guide. KPIs, graphiques offres par statut/type, réservations, derniers avis. |
+| ✅ | Événements dynamiques | Nouveau module Event + section dans page lieu. Types : Festival, Concert, Marché, Compétition, Exposition, Atelier. |
+| ⬜ | Q&R communautaire | |
+| ⬜ | Wishlist & Collections | |
+| ⬜ | Assistant IA | |
+
+---
+
 ## 1. Les Lieux deviennent le cœur de l'application ⭐⭐⭐⭐⭐
 
 **Aujourd'hui :** les entités sont parallèles (`Offer`, `Circuit`, `Project`, `Experience`, `Review`).
@@ -302,3 +323,13 @@ Si ces éléments sont réalisés, **Éco-Voyage ne sera plus une plateforme de 
 - L'**IA** assiste (et non remplace) la planification
 
 C'est ce type d'intégration qui différencie un produit complet d'une simple application.
+
+Prêt à coder les enrichissements. Par où veux-tu commencer ?
+1. Entité Place centrale — chaque lieu devient un hub avec offres, circuits, projets, météo, avis
+2. Galerie centralisée Photo/Media — photos unifiées depuis toutes les entités
+3. Hero Image automatique — scoring pour la photo de couverture
+4. Carte enrichie — infobulles avec photo, note, prix
+5. Timeline visuelle du voyage
+6. Dashboard analytics complet
+7. Météo intégrée — API météo sur chaque lieu/activité
+8. Autre (précise)

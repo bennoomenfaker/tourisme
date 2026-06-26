@@ -67,8 +67,10 @@ export class PublicationService {
     return this.repo.find({ where: { author_id: authorId, status: 'approved' }, order: { created_at: 'DESC' } });
   }
 
-  async findAllExperiences(): Promise<Publication[]> {
-    return this.repo.find({ where: { type: 'experience', status: 'approved' }, order: { created_at: 'DESC' }, take: 12 });
+  async findAllExperiences(region?: string): Promise<Publication[]> {
+    const where: any = { type: 'experience', status: 'approved' };
+    if (region) where.region = region;
+    return this.repo.find({ where, order: { created_at: 'DESC' }, take: 12 });
   }
 
   async update(authorId: string, pubId: string, dto: UpdatePublicationDto): Promise<Publication> {
@@ -266,9 +268,11 @@ export class PublicationService {
     });
   }
 
-  async findAllPlaces(limit = 50, offset = 0): Promise<Publication[]> {
+  async findAllPlaces(limit = 50, offset = 0, region?: string): Promise<Publication[]> {
+    const where: any = { type: 'place', status: 'approved' };
+    if (region) where.region = region;
     return this.repo.find({
-      where: { type: 'place', status: 'approved' },
+      where,
       order: { popularity_score: 'DESC', created_at: 'DESC' },
       take: limit,
       skip: offset,
