@@ -94,6 +94,13 @@ export class OfferController {
     return this.service.findByProject(projectId);
   }
 
+  /** Lieux populaires pour la heatmap */
+  @Public()
+  @Get('popular-locations')
+  getPopularLocations() {
+    return this.service.getPopularLocations();
+  }
+
   /** Détail d'une offre (public) */
   @Public()
   @Get(':id')
@@ -288,12 +295,5 @@ export class OfferController {
   @Get('items/:itemId/sessions')
   findSessions(@Param('itemId') itemId: string) {
     return this.service.findSessions(itemId);
-  }
-
-  /** Lieux populaires pour la heatmap */
-  @Public()
-  @Get('popular-locations')
-  getPopularLocations() {
-    return this.service.getPopularLocations();
   }
 }
