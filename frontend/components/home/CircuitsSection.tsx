@@ -11,8 +11,10 @@ interface Circuit {
   base_price: number | null;
   duration_days: number | null;
   region: string | null;
-  max_participants: number | null;
   status: string;
+  images: string[] | null;
+  max_participants: number | null;
+  difficulty_level: string | null;
 }
 
 const REGION_COLORS: Record<string, string> = {
@@ -54,6 +56,11 @@ function CircuitCard({ circuit }: { circuit: Circuit }) {
             <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] font-bold text-slate-700 shadow-sm flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {circuit.duration_days}j/{circuit.duration_days - 1}n
+            </div>
+          )}
+          {circuit.difficulty_level && (
+            <div className="absolute top-3 right-3 mt-8 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1">
+              {circuit.difficulty_level === "easy" ? "🟢 Facile" : circuit.difficulty_level === "moderate" ? "🟡 Modéré" : circuit.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
             </div>
           )}
 

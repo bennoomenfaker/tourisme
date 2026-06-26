@@ -1211,10 +1211,10 @@ function MyReservationsTab() {
                   </>
                 )
               )}
-            </div>
-          </div>
-        </div>
-      ))}
+                  </div>
+                </div>
+              </div>
+            ))}
     </div>
   );
 }
@@ -1693,9 +1693,15 @@ function CircuitsTab({ role, router, token }: { role: string; router: any; token
             <div key={c.id} className="bg-white rounded-2xl border border-slate-100 p-4">
               <h4 className="font-semibold text-slate-800 mb-1">{c.title}</h4>
               <p className="text-xs text-slate-400 mb-3 line-clamp-2">{c.description}</p>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
+                {c.difficulty_level && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${c.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : c.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : c.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
+                    {c.difficulty_level === "easy" ? "🟢 Facile" : c.difficulty_level === "moderate" ? "🟡 Modéré" : c.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
+                  </span>
+                )}
                 <span className="font-bold text-primary">{Number(c.base_price ?? c.price ?? 0).toLocaleString()} TND</span>
-                <div className="flex gap-2">
+              </div>
+              <div className="flex gap-2">
                   <button onClick={() => router.push(`/circuits/${c.id}`)} className="text-xs text-primary border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-50">Détails</button>
                   {role === "eco_traveler" && (
                     <button onClick={() => setBookCircuit(c)} className="text-xs text-white bg-primary rounded-lg px-3 py-1.5 hover:bg-emerald-600">Réserver</button>
@@ -1708,7 +1714,6 @@ function CircuitsTab({ role, router, token }: { role: string; router: any; token
                   )}
                 </div>
               </div>
-            </div>
           ))}
         </div>
       )}

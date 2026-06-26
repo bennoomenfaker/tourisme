@@ -16,6 +16,7 @@ interface Circuit {
   images: string[] | null;
   lat: number | null;
   lng: number | null;
+  difficulty_level: string | null;
 }
 
 export default function DestinationsSection() {
@@ -80,6 +81,11 @@ export default function DestinationsSection() {
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-extrabold text-primary shadow-sm flex items-center gap-1">
                   <MapPin size={12} /> {circuit.region ?? "Tunisie"}
                 </div>
+                {circuit.difficulty_level && (
+                  <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-bold shadow-sm ${circuit.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : circuit.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : circuit.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
+                    {circuit.difficulty_level === "easy" ? "🟢 Facile" : circuit.difficulty_level === "moderate" ? "🟡 Modéré" : circuit.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
+                  </div>
+                )}
               </div>
               <div className="p-5">
                 <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors">{circuit.title}</h3>

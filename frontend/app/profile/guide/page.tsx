@@ -7,7 +7,7 @@ import {
   Plus, Edit3, ShieldCheck, MapPin, Calendar, Leaf, ArrowLeft,
   LayoutGrid, Tag, Users, Info, Sparkles, ArrowRight, Send, X, Search, UserPlus,
   Clock, ChevronLeft, ChevronRight, Check, Globe, Star, BookOpen,
-  MoreVertical, UserX, ShieldBan, Flag, BarChart3,
+  MoreVertical, UserX, ShieldBan, Flag, BarChart3, Route,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import MessagerieWidget from "@/components/MessagerieWidget";
@@ -73,6 +73,16 @@ type Offer = {
   min_age: number | null; cancellation_policy: string | null;
   sustainability_score: number | null;
   images?: string[] | null; cover_image?: string | null;
+};
+
+type Circuit = {
+  id: string; title: string; description: string | null;
+  base_price: number | null; currency: string;
+  duration_days: number | null; duration_nights: number | null;
+  region: string | null; status: string; created_at: string;
+  difficulty_level: string | null;
+  images?: string[] | null; cover_image?: string | null;
+  max_participants: number | null;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -188,7 +198,7 @@ const LANGUAGES_LIST = [
   { value: "de", label: "Allemand" }, { value: "it", label: "Italien" },
 ];
 
-type Tab = "tout" | "offres" | "statistiques" | "reseau" | "apropos";
+type Tab = "tout" | "offres" | "circuits" | "statistiques" | "reseau" | "apropos";
 
 // ─── Botanical SVG Cover ──────────────────────────────────────────────────────
 
@@ -225,6 +235,7 @@ export default function GuideProfilePage() {
 
   const [profile,   setProfile]   = useState<GuideProfile | null>(null);
   const [offers,    setOffers]    = useState<Offer[]>([]);
+  const [circuits,  setCircuits]  = useState<Circuit[]>([]);
   const [token,     setToken]     = useState("");
   const [loading,   setLoading]   = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("tout");
@@ -294,9 +305,10 @@ export default function GuideProfilePage() {
       if (!tkn) { router.push("/auth/login"); return; }
       setToken(tkn);
       try {
-        const [p, myOffers] = await Promise.all([
+        const [p, myOffers, myCircuits] = await Promise.all([
           apiFetch<GuideProfile>("/guide/profile", { headers: { Authorization: `Bearer ${tkn}` } }),
           apiFetch<Offer[]>("/offers/mine", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => [] as Offer[]),
+          apiFetch<Circuit[]>("/circuits/mine", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => [] as Circuit[]),
         ]);
         setProfile(p);
         const offersWithCover = myOffers.map((o) => {
@@ -304,6 +316,7 @@ export default function GuideProfilePage() {
           return { ...o, images: validImages?.length ? validImages : null, cover_image: o.cover_image ?? validImages?.[0] ?? null };
         });
         setOffers(offersWithCover);
+        setCircuits(myCircuits);
         // Load network in background
         Promise.all([
           apiFetch<NetUser[]>("/follows/following/profiles", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => []),
@@ -1769,6 +1782,7 @@ export default function GuideProfilePage() {
               {[
                 { key: "tout",    label: "Tout",     Icon: LayoutGrid },
                 { key: "offres",  label: "Offres",   Icon: Tag },
+                { key: "circuits", label: "Circuits", Icon: Route },
                 { key: "statistiques", label: "Statistiques", Icon: BarChart3 },
                 { key: "reseau",  label: "Réseau",   Icon: Users },
                 { key: "apropos", label: "À propos", Icon: Info },
@@ -1801,6 +1815,38 @@ export default function GuideProfilePage() {
                 ) : (
                   offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
                 )}
+
+                {circuits.length > 0 && (
+                  <div className="space-y-3 mt-8">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5">
+                        <Route size={12} className="text-primary" /><span>Circuits</span>
+                      </h3>
+                      <span className="text-[10px] font-bold text-slate-400">{circuits.length} circuit{circuits.length > 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {circuits.slice(0, 4).map((c) => (
+                        <a key={c.id} href={`/circuits/${c.id}`} className="block bg-white rounded-2xl border border-slate-100/90 shadow-sm p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h4 className="font-bold text-slate-800 text-sm truncate">{c.title}</h4>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${c.status === "approved" ? "bg-emerald-100 text-emerald-700" : c.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                              {c.status === "approved" ? "Approuvé" : c.status === "pending" ? "En attente" : "Rejeté"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                            {c.difficulty_level && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${c.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : c.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : c.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
+                                {c.difficulty_level === "easy" ? "🟢 Facile" : c.difficulty_level === "moderate" ? "🟡 Modéré" : c.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
+                              </span>
+                            )}
+                            {c.duration_days && <span><Calendar size={11} className="inline mr-0.5" />{c.duration_days}j</span>}
+                            <span className="font-bold text-primary">{Number(c.base_price ?? 0).toLocaleString()} TND</span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1818,6 +1864,52 @@ export default function GuideProfilePage() {
                   </div>
                 ) : (
                   offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
+                )}
+              </div>
+            )}
+
+            {/* TAB: CIRCUITS */}
+            {activeTab === "circuits" && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-slate-800">Mes circuits ({circuits.length})</h3>
+                  <a href="/dashboard?tab=circuits" className="text-primary hover:text-primary/80 text-xs font-extrabold flex items-center gap-1">+ Créer un circuit</a>
+                </div>
+                {circuits.length === 0 ? (
+                  <div className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-12 text-center">
+                    <p className="text-slate-800 font-extrabold text-base">Aucun circuit pour l'instant</p>
+                    <p className="text-slate-400 text-sm mt-1">Créez votre premier itinéraire éco-responsable.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {circuits.map((c) => (
+                      <div key={c.id} className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-5 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-extrabold text-slate-800 text-sm truncate">{c.title}</h4>
+                            {c.region && <span className="inline-block mt-0.5 text-[10px] font-bold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{c.region}</span>}
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === "approved" ? "bg-emerald-100 text-emerald-700" : c.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                            {c.status === "approved" ? "Approuvé" : c.status === "pending" ? "En attente" : "Rejeté"}
+                          </span>
+                        </div>
+                        {c.description && <p className="text-xs text-slate-400 line-clamp-2 mb-3">{c.description}</p>}
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+                          {c.difficulty_level && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${c.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : c.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : c.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
+                              {c.difficulty_level === "easy" ? "🟢 Facile" : c.difficulty_level === "moderate" ? "🟡 Modéré" : c.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
+                            </span>
+                          )}
+                          {c.duration_days && <span className="flex items-center gap-1"><Calendar size={12} />{c.duration_days} jour{c.duration_days > 1 ? "s" : ""}</span>}
+                          <span className="font-bold text-primary text-sm">{Number(c.base_price ?? 0).toLocaleString()} {c.currency || "TND"}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <a href={`/circuits/${c.id}`} className="flex-1 text-center text-xs font-bold text-primary border border-emerald-200 rounded-xl px-3 py-2 hover:bg-emerald-50">Détails</a>
+                          <a href={`/dashboard?tab=circuits`} className="flex-1 text-center text-xs font-bold text-blue-600 border border-blue-200 rounded-xl px-3 py-2 hover:bg-blue-50">Modifier</a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

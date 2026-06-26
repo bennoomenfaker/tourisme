@@ -18,6 +18,7 @@ interface Circuit {
   region: string | null;
   max_participants: number | null;
   status: string;
+  difficulty_level: string | null;
   images?: string[] | null;
   days?: CircuitDay[];
   options?: CircuitOption[];
@@ -154,6 +155,11 @@ export default function CircuitsPage() {
                       {circuit.title}
                     </h3>
                     <div className="flex flex-wrap gap-2 text-xs text-slate-500 mt-2">
+                      {circuit.difficulty_level && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${circuit.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : circuit.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : circuit.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
+                          {circuit.difficulty_level === "easy" ? "🟢 Facile" : circuit.difficulty_level === "moderate" ? "🟡 Modéré" : circuit.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
+                        </span>
+                      )}
                       {circuit.duration_days && (
                         <span className="flex items-center gap-1">
                           <Clock size={12} /> {circuit.duration_days} jour{circuit.duration_days > 1 ? "s" : ""}

@@ -21,6 +21,10 @@
 | ✅ | Événements dynamiques | Nouveau module Event + section dans page lieu. Types : Festival, Concert, Marché, Compétition, Exposition, Atelier. |
 | ✅ | Circuit Builder enrichi | `CircuitProgramItem` enrichi : emoji, durée (min), distance (km), mode transport + sélecteur émoji et champs dans modal "Ajouter une activité" + affichage enrichi dans l'itinéraire. Coordonnées GPS réelles pour tous les circuits. |
 | ✅ | Correction data circuits | 52 jours en double supprimés de 14 circuits. Coordonnées GPS corrigées vers 52 localisations réelles (Djerba, Sahara, Tataouine, Tozeur, Kerkennah, Cap Bon, Kairouan, Tunis, Nabeul, Ain Draham). |
+| ✅ | Circuit Builder Wizard enrichi | Assistant création circuit (CircuitBuilderWizard) enrichi avec émoji, durée (min), distance (km), mode transport. Création API inclut les 4 nouveaux champs. |
+| ✅ | Onglet Circuits profil guide | Nouveau tab "Circuits" dans /profile/guide avec grille, statut, difficulté, durée, prix. Aperçu dans le tab "Tout". |
+| ✅ | TimelineView dans circuit detail | Affichage Polarsteps-style des activités dans l'itinéraire. TimelineView enrichi avec prop renderActions pour édition/suppression hover. |
+| ✅ | Niveau difficulté visuel | 🟢 Facile / 🟡 Modéré / 🔴 Difficile / ⚫ Expert sur tous les affichages circuits (7 fichiers). Backend : colonne difficulty_level. CircuitBuilderWizard + edit modal. |
 | ⬜ | Q&R communautaire | |
 | ⬜ | Wishlist & Collections | |
 | ⬜ | Assistant IA | |
@@ -327,8 +331,9 @@ Si ces éléments sont réalisés, **Éco-Voyage ne sera plus une plateforme de 
 C'est ce type d'intégration qui différencie un produit complet d'une simple application.
 
 Prêt pour la prochaine étape. Suggestions :
-1. **Enrichir le CircuitBuilderWizard** — ajouter emoji/durée/distance/transport dans l'assistant de création de circuit
-2. **Q&R communautaire** — questions/réponses sur les lieux (comme Google Maps)
-3. **Wishlist & Collections** — listes de souhaits + collections type Pinterest
-4. **Routes & Itinéraires** — entité Route avec altitude, difficulté, intégration OSRM
-5. **Autre** (précise)
+1. **Onglet Circuits dans profil guide** — lister les circuits créés par le guide dans `/profile/guide`
+2. **Intégrer TimelineView dans circuits** — affichage Polarsteps-style dans le détail public d'un circuit
+3. **Niveau de difficulté visuel** — 🟢 Facile / 🟡 Modéré / 🔴 Difficile / ⚫ Expert sur les cartes circuits
+4. **Q&R communautaire** — questions/réponses sur les lieux (comme Google Maps)
+5. **Wishlist & Collections** — listes de souhaits + collections type Pinterest
+6. **Autre** (précise)

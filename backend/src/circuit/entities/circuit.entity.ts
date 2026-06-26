@@ -67,6 +67,10 @@ export class Circuit {
   @Column({ type: 'varchar', nullable: true })
   confirmation_mode!: string | null;
 
+  @Column({ type: 'varchar', nullable: true, default: 'moderate' })
+  difficulty_level!: string | null;
+  // 'easy' | 'moderate' | 'hard' | 'expert'
+
   @Column({ type: 'text', nullable: true })
   inclusions!: string | null;
 

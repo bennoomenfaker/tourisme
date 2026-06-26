@@ -31,6 +31,7 @@ interface Circuit {
   base_price: number | null;
   currency: string;
   duration_days: number | null;
+  difficulty_level: string | null;
   waypoints: string | null;
 }
 
@@ -196,7 +197,7 @@ export default function ExplorePage() {
       setCircuits((circuitsData ?? []).filter((c: any) => isValidUUID(c.id)).map((c: any) => ({
         id: c.id, title: c.title, region: c.region ?? null, lat: c.lat ?? null, lng: c.lng ?? null,
         base_price: c.base_price ?? null, currency: c.currency ?? "TND", duration_days: c.duration_days ?? null,
-        waypoints: c.waypoints ?? null,
+        difficulty_level: c.difficulty_level ?? null, waypoints: c.waypoints ?? null,
       })));
       setLoadingPlaces(true);
       apiFetch<Place[]>("/publications/places?limit=100").then(setPlaces).catch(() => {}).finally(() => setLoadingPlaces(false));
@@ -567,6 +568,11 @@ function CircuitCard({ item, cartIds, adding, onAdd }: { item: Circuit; cartIds:
             <p className="font-bold text-sm text-slate-800 hover:text-primary transition-colors truncate">{item.title}</p>
           </a>
           <div className="flex items-center gap-2 mt-1">
+            {item.difficulty_level && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : item.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : item.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
+                {item.difficulty_level === "easy" ? "🟢 Facile" : item.difficulty_level === "moderate" ? "🟡 Modéré" : item.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
+              </span>
+            )}
             {item.region && <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><MapPin size={9} /> {item.region}</span>}
             {item.duration_days && <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full font-medium">{item.duration_days}j</span>}
           </div>

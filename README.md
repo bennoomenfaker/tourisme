@@ -135,10 +135,15 @@ Création → status = "pending"
 **Fonctionnalités :**
 
 - Itinéraire jour par jour avec programme détaillé
+- Program items enrichis : émoji, durée, distance, mode transport
+- Niveau de difficulté visuel : 🟢 Facile / 🟡 Modéré / 🔴 Difficile / ⚫ Expert
+- Timeline interactive style Polarsteps dans le détail
+- Assistant de création (CircuitBuilderWizard) pas-à-pas en 6 étapes
 - Options additionnelles (transport, hébergement, équipement)
 - Réservation avec participants
 - Carte interactive avec tracé GPS
 - Gestion des capacités et prix
+- Édition et suppression d'activités par jour
 
 ### 5. Panier de Voyage (TravelCart) — NOUVEAU
 
@@ -175,6 +180,29 @@ Création → status = "pending"
 - **Turf.js** pour les calculs géospatiaux
 - Marqueurs par type d'activité
 - Vue calendrier et recherche géolocalisée
+- **Carte de chaleur (Heatmap)** : Visualisation des zones populaires (Offres, Publications)
+- Filtres de calques : Offres, Circuits, Lieux
+
+### 8. Événements Dynamiques
+
+- **Module Event** : Types (festival, concert, marché, compétition, exposition, atelier)
+- Section Événements dans la page de chaque lieu
+- Création d'événements par les éco-voyageurs et guides
+- Badges colorés par type d'événement
+
+### 9. Timeline des Expériences
+
+- **TimelineEntry** : Entité backend avec émoji, durée, distance, transport
+- **TimelineView** : Affichage Polarsteps-style (lecture seule)
+- **TimelineEditor** : Éditeur avec sélecteur émoji, champs durée/distance/transport
+- Intégré dans les expériences et les circuits (itinéraire)
+
+### 10. Dashboard Analytics Guide
+
+- **KPIs** : Offres, circuits, note moyenne, réservations, abonnés
+- **Graphiques** : Répartition offres par statut/type
+- **Réservations** : Breakdown par statut (confirmées/en attente/annulées)
+- **Derniers avis** : 5 derniers avec étoiles et commentaire
 
 ---
 
@@ -403,10 +431,27 @@ PATCH  /api/bookings/:id/confirm   # Confirmer
 ### Circuits
 
 ```
-POST   /api/circuits               # Créer circuit
-GET    /api/circuits              # Circuits publiés
-GET    /api/circuits/:id          # Détail circuit
-POST   /api/circuits/:id/reserve   # Réserver circuit
+POST   /api/circuits                    # Créer circuit
+GET    /api/circuits                   # Circuits publiés
+GET    /api/circuits/mine              # Mes circuits
+GET    /api/circuits/:id               # Détail circuit
+PATCH  /api/circuits/:id              # Modifier circuit
+DELETE /api/circuits/:id              # Supprimer circuit
+POST   /api/circuits/:id/reserve       # Réserver circuit
+
+# Jours du circuit
+POST   /api/circuits/:id/days          # Ajouter un jour
+PATCH  /api/circuits/:id/days/:dayId   # Modifier un jour
+DELETE /api/circuits/:id/days/:dayId   # Supprimer un jour
+
+# Program items (activités)
+POST   /api/circuits/:id/days/:dayId/program    # Ajouter activité
+PATCH  /api/circuits/:id/days/:dayId/program/:itemId  # Modifier activité
+DELETE /api/circuits/:id/days/:dayId/program/:itemId  # Supprimer activité
+
+# Options
+POST   /api/circuits/:id/options       # Ajouter option
+DELETE /api/circuits/:id/options/:optId # Supprimer option
 ```
 
 ### Panier de Voyage (TravelCart) — NOUVEAU
@@ -511,6 +556,15 @@ POST   /api/trip-plans/:id/book   # Réserver plan
 ✅ **Cartographie** : Leaflet/OpenStreetMap intégré  
 ✅ **Notifications** : Système complet  
 ✅ **Modération admin** : Workflow de validation  
+✅ **Événements dynamiques** : Module Event avec types (festival, concert, marché, etc.)  
+✅ **Dashboard Analytics guide** : KPIs, graphiques, réservations, avis  
+✅ **Timeline des expériences** : TimelineEntry (backend) + TimelineView/TimelineEditor (frontend)  
+✅ **Circuit Builder enrichi** : emoji, durée, distance, transport sur les program items  
+✅ **Correction data circuits** : 52 jours en double supprimés, coordonnées GPS réelles  
+✅ **Niveau de difficulté circuits** : 🟢 Facile / 🟡 Modéré / 🔴 Difficile / ⚫ Expert  
+✅ **TimelineView intégré** : Style Polarsteps dans le détail circuit  
+✅ **Onglet Circuits profil guide** : Liste des circuits dans /profile/guide  
+✅ **CircuitBuilderWizard enrichi** : émoji, durée, distance, transport dans l'assistant  
 
 ### Données Ajoutées
 

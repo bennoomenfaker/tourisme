@@ -71,7 +71,8 @@ interface OfferItem {
 interface CircuitItem {
   id: string; title: string; region: string | null;
   base_price: number | null; currency: string;
-  duration_days: number | null; images?: string[] | null;
+  duration_days: number | null; difficulty_level: string | null;
+  images?: string[] | null;
   lat: number | null; lng: number | null;
 }
 interface ExperienceItem {
@@ -825,6 +826,11 @@ export default function PlaceDetailPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-slate-700 truncate">{circuit.title}</p>
                           <p className="text-[11px] text-slate-400 mt-0.5">
+                            {circuit.difficulty_level && (
+                              <span className="mr-1">
+                                {circuit.difficulty_level === "easy" ? "🟢" : circuit.difficulty_level === "moderate" ? "🟡" : circuit.difficulty_level === "hard" ? "🔴" : "⚫"}
+                              </span>
+                            )}
                             {circuit.duration_days ? `${circuit.duration_days} jours` : "Circuit"}
                           </p>
                           {circuit.base_price != null && (

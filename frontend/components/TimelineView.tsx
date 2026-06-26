@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Clock, MapPin, ArrowDown } from "lucide-react";
 
 type TimelineEntryData = {
@@ -14,7 +15,7 @@ type TimelineEntryData = {
   transport_mode?: string | null;
 };
 
-export default function TimelineView({ entries }: { entries: TimelineEntryData[] }) {
+export default function TimelineView({ entries, renderActions }: { entries: TimelineEntryData[]; renderActions?: (entry: TimelineEntryData, index: number) => React.ReactNode }) {
   if (entries.length === 0) return null;
 
   const totalDuration = entries.reduce((s, e) => s + (e.duration_minutes ?? 0), 0);
@@ -39,25 +40,34 @@ export default function TimelineView({ entries }: { entries: TimelineEntryData[]
             <div className="absolute -left-8 top-0.5 w-6 h-6 rounded-full bg-white border-2 border-primary/30 flex items-center justify-center text-xs shadow-sm">
               {entry.emoji}
             </div>
-            <div className="bg-slate-50 rounded-xl border border-slate-100 p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">{entry.time_label}</span>
-                {entry.duration_minutes && (
-                  <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5">
-                    <Clock size={10} /> {entry.duration_minutes}min
-                  </span>
-                )}
-                {entry.distance_km && (
-                  <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5">
-                    <MapPin size={10} /> {entry.distance_km}km
-                  </span>
-                )}
-                {entry.transport_mode && (
-                  <span className="text-[10px] text-slate-400 font-medium">{entry.transport_mode}</span>
+            <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 group">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">{entry.time_label}</span>
+                    {entry.duration_minutes && (
+                      <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5">
+                        <Clock size={10} /> {entry.duration_minutes}min
+                      </span>
+                    )}
+                    {entry.distance_km && (
+                      <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5">
+                        <MapPin size={10} /> {entry.distance_km}km
+                      </span>
+                    )}
+                    {entry.transport_mode && (
+                      <span className="text-[10px] text-slate-400 font-medium">{entry.transport_mode}</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-slate-800">{entry.title}</p>
+                  {entry.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{entry.description}</p>}
+                </div>
+                {renderActions && (
+                  <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                    {renderActions(entry, i)}
+                  </div>
                 )}
               </div>
-              <p className="text-sm font-bold text-slate-800">{entry.title}</p>
-              {entry.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{entry.description}</p>}
             </div>
             {i < entries.length - 1 && (
               <div className="flex justify-center -mb-1 mt-0.5">

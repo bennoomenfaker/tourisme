@@ -67,6 +67,10 @@ export class CreateCircuitDto {
 
   @IsOptional()
   @IsString()
+  difficulty_level?: string;
+
+  @IsOptional()
+  @IsString()
   inclusions?: string;
 
   @IsOptional()

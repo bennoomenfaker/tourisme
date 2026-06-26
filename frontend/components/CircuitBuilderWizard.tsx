@@ -105,6 +105,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   const [durationNights, setDurationNights] = useState("2");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [difficultyLevel, setDifficultyLevel] = useState("moderate");
 
   const [days, setDays] = useState<DayForm[]>([]);
   const [offerItems, setOfferItems] = useState<MyOfferItem[]>([]);
@@ -233,7 +234,8 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
           base_price: basePrice ? Number(basePrice) : undefined, currency,
           max_participants: maxParticipants ? Number(maxParticipants) : undefined,
           booking_deadline_days: bookingDeadlineDays ? Number(bookingDeadlineDays) : undefined,
-          confirmation_mode: confirmationMode, inclusions: inclusions || undefined, exclusions: exclusions || undefined,
+          confirmation_mode: confirmationMode, difficulty_level: difficultyLevel,
+          inclusions: inclusions || undefined, exclusions: exclusions || undefined,
           images: images.length > 0 ? images : undefined, lat: mainLat, lng: mainLng,
           address: circuitAddress || undefined, start_date: startDate || undefined, end_date: endDate || undefined,
           waypoints: finalWaypoints.length > 0 ? JSON.stringify(finalWaypoints) : undefined,
@@ -342,6 +344,15 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                   <label className="block text-xs font-medium text-slate-500 mb-1">Date de fin</label>
                   <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Niveau de difficulté</label>
+                <select value={difficultyLevel} onChange={(e) => setDifficultyLevel(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                  <option value="easy">🟢 Facile</option>
+                  <option value="moderate">🟡 Modéré</option>
+                  <option value="hard">🔴 Difficile</option>
+                  <option value="expert">⚫ Expert</option>
+                </select>
               </div>
               <div>
                 <ImageUploader images={images} onChange={setImages} maxImages={10} label="Images du circuit" />

@@ -15,6 +15,7 @@ import CircuitMap from "@/components/map/CircuitMap";
 import ImageUploader from "@/components/ImageUploader";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import TimelineView from "@/components/TimelineView";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   ssr: false,
@@ -75,6 +76,7 @@ interface CircuitDetails {
   max_participants: number | null;
   booking_deadline_days: number | null;
   confirmation_mode: string | null;
+  difficulty_level: string | null;
   inclusions: string | null;
   exclusions: string | null;
   lat: number | null;
@@ -120,6 +122,7 @@ export default function CircuitDetailPage() {
   const [editInclusions, setEditInclusions] = useState("");
   const [editExclusions, setEditExclusions] = useState("");
   const [editConfirmationMode, setEditConfirmationMode] = useState("automatic");
+  const [editDifficultyLevel, setEditDifficultyLevel] = useState("moderate");
   const [editBookingDeadlineDays, setEditBookingDeadlineDays] = useState("");
   const [editCurrency, setEditCurrency] = useState("TND");
   const [editSearchQuery, setEditSearchQuery] = useState("");
@@ -367,6 +370,7 @@ export default function CircuitDetailPage() {
     if (editInclusions) body.inclusions = editInclusions;
     if (editExclusions) body.exclusions = editExclusions;
     if (editConfirmationMode) body.confirmation_mode = editConfirmationMode;
+    if (editDifficultyLevel) body.difficulty_level = editDifficultyLevel;
     if (editBookingDeadlineDays) body.booking_deadline_days = Number(editBookingDeadlineDays);
     if (editCurrency) body.currency = editCurrency;
     try {
@@ -611,7 +615,7 @@ export default function CircuitDetailPage() {
 
             {isAuthor && (
               <div className="flex flex-wrap gap-2 mb-4">
-                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setEditInclusions(circuit.inclusions ?? ""); setEditExclusions(circuit.exclusions ?? ""); setEditConfirmationMode(circuit.confirmation_mode ?? "automatic"); setEditBookingDeadlineDays(String(circuit.booking_deadline_days ?? "")); setEditCurrency(circuit.currency ?? "TND"); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
+                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setEditInclusions(circuit.inclusions ?? ""); setEditExclusions(circuit.exclusions ?? ""); setEditConfirmationMode(circuit.confirmation_mode ?? "automatic"); setEditDifficultyLevel(circuit.difficulty_level ?? "moderate"); setEditBookingDeadlineDays(String(circuit.booking_deadline_days ?? "")); setEditCurrency(circuit.currency ?? "TND"); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
                   <Edit size={14} /> Modifier
                 </button>
                 <button onClick={() => setShowAddDay(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-primary border border-emerald-200 hover:bg-emerald-100">
@@ -644,6 +648,11 @@ export default function CircuitDetailPage() {
 
             <div className="flex flex-wrap gap-3 text-sm text-slate-500 mb-4">
               {circuit.region && <span className="flex items-center gap-1"><MapPin size={14} /> {circuit.region}</span>}
+              {circuit.difficulty_level && (
+                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${circuit.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : circuit.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : circuit.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
+                  {circuit.difficulty_level === "easy" ? "🟢 Facile" : circuit.difficulty_level === "moderate" ? "🟡 Modéré" : circuit.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
+                </span>
+              )}
               {circuit.duration_days && (
                 <span className="flex items-center gap-1">
                   <Clock size={14} /> {circuit.duration_days} jour{circuit.duration_days > 1 ? "s" : ""}
@@ -748,58 +757,49 @@ export default function CircuitDetailPage() {
                             <p className="text-sm text-slate-500 mt-1">{day.description}</p>
                           )}
                           {day.programItems && day.programItems.length > 0 && (
-                            <div className="mt-2 space-y-1.5">
-                              {day.programItems.map((item) => (
-                                <div key={item.id} className="flex items-start gap-2 text-sm text-slate-500 bg-slate-50 rounded-lg p-2 group">
-                                  {item.emoji && (
-                                    <span className="text-base shrink-0 mt-0.5">{item.emoji}</span>
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      {item.start_time && (
-                                        <span className="text-[10px] font-medium text-primary bg-emerald-50 rounded px-1.5 py-0.5 shrink-0">
-                                          {item.start_time}{item.end_time ? `–${item.end_time}` : ""}
-                                        </span>
-                                      )}
-                                      <span className="text-xs font-semibold text-slate-700">{item.title}</span>
-                                    </div>
-                                    {item.description && (
-                                      <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{item.description}</p>
-                                    )}
-                                    <div className="flex flex-wrap gap-1.5 mt-1">
-                                      {(item.duration_minutes || item.distance_km || item.transport_mode) && (
-                                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                                          {item.duration_minutes && <span>⏱ {item.duration_minutes}min</span>}
-                                          {item.distance_km && <span>📍 {item.distance_km}km</span>}
-                                          {item.transport_mode && <span>{item.transport_mode}</span>}
-                                        </div>
-                                      )}
-                                      {item.is_included && (
-                                        <span className="text-[10px] text-emerald-600 bg-emerald-50 rounded-full px-1.5 py-0">Inclus</span>
-                                      )}
-                                      {item.is_required && (
-                                        <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0">Requis</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {isAuthor && (
-                                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button
-                                        onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); }}
-                                        className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
-                                      >
-                                        <Edit size={11} />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteProgram(day.id, item.id)}
-                                        className="w-6 h-6 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors"
-                                      >
-                                        <Trash2 size={11} />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
+                            <div className="mt-2">
+                              <TimelineView
+                                entries={day.programItems.map((item, idx) => ({
+                                  id: item.id,
+                                  step_order: idx + 1,
+                                  emoji: item.emoji ?? "📍",
+                                  time_label: item.start_time ? `${item.start_time}${item.end_time ? `-${item.end_time}` : ""}` : "",
+                                  title: item.title,
+                                  description: item.description,
+                                  duration_minutes: item.duration_minutes,
+                                  distance_km: item.distance_km,
+                                  transport_mode: item.transport_mode,
+                                }))}
+                                renderActions={
+                                  isAuthor
+                                    ? (_, i) => {
+                                        const item = day.programItems![i];
+                                        return (
+                                          <>
+                                            {item.is_included && (
+                                              <span className="text-[10px] text-emerald-600 bg-emerald-50 rounded-full px-1.5 py-0 mr-1">Inclus</span>
+                                            )}
+                                            {item.is_required && (
+                                              <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0 mr-1">Requis</span>
+                                            )}
+                                            <button
+                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); }}
+                                              className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
+                                            >
+                                              <Edit size={11} />
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteProgram(day.id, item.id)}
+                                              className="w-6 h-6 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors"
+                                            >
+                                              <Trash2 size={11} />
+                                            </button>
+                                          </>
+                                        );
+                                      }
+                                    : undefined
+                                }
+                              />
                             </div>
                           )}
                           {isAuthor && (
@@ -1020,6 +1020,15 @@ export default function CircuitDetailPage() {
               <label className="block text-xs font-medium text-slate-500 mb-1">Confirmation</label>
               <select value={editConfirmationMode} onChange={(e) => setEditConfirmationMode(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
                 <option value="automatic">Automatique</option><option value="manual">Manuelle</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Difficulté</label>
+              <select value={editDifficultyLevel} onChange={(e) => setEditDifficultyLevel(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="easy">🟢 Facile</option>
+                <option value="moderate">🟡 Modéré</option>
+                <option value="hard">🔴 Difficile</option>
+                <option value="expert">⚫ Expert</option>
               </select>
             </div>
           </div>
