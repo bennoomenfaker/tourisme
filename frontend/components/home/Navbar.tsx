@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Leaf, Menu } from "lucide-react";
+import { ArrowLeft, Leaf, Menu, X, MapPin } from "lucide-react";
+import { useState } from "react";
 
 type NavbarProps = {
   variant?: "home" | "auth";
@@ -15,6 +16,7 @@ export default function Navbar({
   backHref = "/",
 }: NavbarProps) {
   const isAuth = variant === "auth";
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 md:px-20 lg:px-40 py-4">
@@ -40,23 +42,26 @@ export default function Navbar({
         </div>
 
         {!isAuth && (
-          <nav className="flex items-center gap-6 text-sm font-semibold">
-            <Link href="/explore" className="text-sm font-semibold text-black hover:text-primary transition-colors">
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-6 text-sm font-semibold mr-4 xl:mr-8">
+            <Link href="/explore" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
               Explorer
             </Link>
-            <Link href="/destinations" className="text-sm font-semibold text-black hover:text-primary transition-colors">
+            <Link href="/places" className="text-sm font-semibold text-black hover:text-primary transition-colors flex items-center gap-1 whitespace-nowrap">
+              <MapPin size={14} /> Lieux
+            </Link>
+            <Link href="/destinations" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
               Destinations
             </Link>
-            <Link href="/circuits" className="text-sm font-semibold text-black hover:text-primary transition-colors">
+            <Link href="/circuits" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
               Circuits
             </Link>
-            <Link href="/how-it-works" className="text-sm font-semibold text-black hover:text-primary transition-colors">
-              Comment ça marche
-            </Link>
-            <Link href="/eco-projects" className="text-sm font-semibold text-black hover:text-primary transition-colors">
+            <Link href="/eco-projects" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
               Projets Éco
             </Link>
-            <Link href="/impact" className="text-sm font-semibold text-black hover:text-primary transition-colors">
+            <Link href="/how-it-works" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
+              Comment ça marche
+            </Link>
+            <Link href="/impact" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
               Impact
             </Link>
           </nav>
@@ -81,11 +86,49 @@ export default function Navbar({
             S&apos;inscrire
           </Link>
 
-          <button className="lg:hidden p-2 text-slate-600">
-            <Menu className="w-6 h-6" />
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="lg:hidden p-2 text-slate-600 hover:text-primary transition-colors"
+            aria-label="Menu"
+          >
+            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
+
+      {mobileOpen && !isAuth && (
+        <nav className="lg:hidden mt-4 pb-4 border-t border-slate-100 pt-4 flex flex-col gap-3">
+          <Link href="/explore" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
+            Explorer
+          </Link>
+          <Link href="/places" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50 flex items-center gap-2">
+            <MapPin size={14} /> Lieux
+          </Link>
+          <Link href="/destinations" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
+            Destinations
+          </Link>
+          <Link href="/circuits" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
+            Circuits
+          </Link>
+          <Link href="/eco-projects" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
+            Projets Éco
+          </Link>
+          <Link href="/how-it-works" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
+            Comment ça marche
+          </Link>
+          <Link href="/impact" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
+            Impact
+          </Link>
+          <div className="flex gap-2 mt-2 pt-3 border-t border-slate-50">
+            <Link href="/auth/login" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-bold">
+              Connexion
+            </Link>
+            <Link href="/auth/register" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2.5 rounded-xl bg-primary text-white text-sm font-bold">
+              S&apos;inscrire
+            </Link>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

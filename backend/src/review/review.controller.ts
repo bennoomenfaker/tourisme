@@ -31,6 +31,12 @@ export class ReviewController {
     return this.service.findByTarget(targetType, targetId);
   }
 
+  @Public()
+  @Get('testimonials')
+  getTestimonials() {
+    return this.service.getTestimonials();
+  }
+
   @ApiBearerAuth('bearer')
   @Get('mine')
   findMine(@Req() req: any) {

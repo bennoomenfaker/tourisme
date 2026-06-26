@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   MapPin, Leaf, ArrowLeft, Globe, UserCheck, UserPlus,
   Clock, Check, X, Quote, Mountain, MoreVertical, Send,
-  UserMinus, ShieldBan, Flag, ChevronLeft, ChevronRight, ArrowRight,
+  UserMinus, ShieldBan, Flag, ChevronLeft, ChevronRight, ArrowRight, Edit3,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
@@ -437,9 +437,20 @@ export default function PublicEcoTravelerProfile() {
                   </div>
                 )}
 
-                {/* Friend button + menu 3 points */}
+                {/* Action buttons (own profile) or Friend button */}
                 <div className="mt-5 w-full flex items-center gap-2">
-                  {viewerRole === "eco_traveler" && (
+                  {viewerId === userId ? (
+                    <>
+                      <button onClick={() => router.push("/profile/ecovoyageur")}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary text-white font-extrabold rounded-2xl text-sm hover:bg-primary/90 active:scale-95 transition-all">
+                        <MapPin size={15} /> Recommander un lieu
+                      </button>
+                      <button onClick={() => router.push("/profile/ecovoyageur")}
+                        className="flex items-center justify-center gap-2 py-3 px-4 border-2 border-slate-200 text-slate-600 font-bold rounded-2xl text-sm hover:bg-slate-50 active:scale-95 transition-all">
+                        <Edit3 size={15} />
+                      </button>
+                    </>
+                  ) : viewerRole === "eco_traveler" && (
                     <div className="flex-1">
                       {profile.friend_status === "none" && (
                         <button onClick={sendRequest} disabled={actionLoading}

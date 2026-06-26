@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
-  MapPin, TrendingUp, Flame, Leaf, ArrowLeft, Tag, Star,
+  MapPin, TrendingUp, Flame, Leaf, ArrowLeft, Tag, Star, Plus,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -38,9 +39,15 @@ const CATEGORIES = [
 ];
 
 export default function PlacesPage() {
+  const router = useRouter();
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setToken(localStorage.getItem("token") || localStorage.getItem("access_token"));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -145,6 +152,16 @@ export default function PlacesPage() {
           </div>
         )}
       </div>
+
+      {token && (
+        <button
+          onClick={() => router.push("/profile/ecovoyageur")}
+          className="fixed bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 active:scale-95 text-white font-bold px-5 py-3.5 rounded-2xl shadow-lg hover:shadow-xl inline-flex items-center gap-2 transition-all"
+        >
+          <Plus size={18} strokeWidth={3} />
+          Recommander un lieu
+        </button>
+      )}
     </div>
   );
 }

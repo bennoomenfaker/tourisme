@@ -336,16 +336,25 @@ function DeleteConfirmModal({ onClose, onConfirm, title, message }: {
   );
 }
 
-function AddPublicationModal({ onClose, onSuccess, token }: {
+function AddPublicationModal({ onClose, onSuccess, token, publication }: {
   onClose: () => void;
   onSuccess: (p: Publication) => void;
   token: string;
+  publication?: Publication;
 }) {
-  const [step, setStep] = useState<"place" | "experience" | null>(null);
+  const isEditing = !!publication;
+  const [step, setStep] = useState<"place" | "experience" | null>(publication?.type ?? null);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [titleError, setTitleError] = useState("");
-  const [form, setForm] = useState({ title: "", description: "", place_name: "", region: "", lat: null as number | null, lng: null as number | null });
+  const [form, setForm] = useState({
+    title: publication?.title ?? "",
+    description: publication?.description ?? "",
+    place_name: publication?.place_name ?? "",
+    region: publication?.region ?? "",
+    lat: publication?.latitude ?? null as number | null,
+    lng: publication?.longitude ?? null as number | null,
+  });
 
   const inputClass = (hasErr: boolean) =>
     `w-full px-4 py-3 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 transition-all ${hasErr ? "bg-red-50 border border-red-400 focus:ring-red-300" : "bg-slate-50 border border-transparent focus:ring-primary"}`;
@@ -356,8 +365,10 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
     setSubmitError("");
     setLoading(true);
     try {
-      const created = await apiFetch<Publication>("/publications", {
-        method: "POST",
+      const url = isEditing ? `/publications/${publication.id}` : "/publications";
+      const method = isEditing ? "PATCH" : "POST";
+      const updated = await apiFetch<Publication>(url, {
+        method,
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           type: step,
@@ -369,7 +380,7 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
           longitude: form.lng ?? undefined,
         }),
       });
-      onSuccess(created);
+      onSuccess(updated);
     } catch (err: any) {
       setSubmitError(err.message || "Une erreur est survenue.");
     } finally {
@@ -382,7 +393,7 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
       <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-xl font-extrabold text-slate-900">
-            {step === null ? "Que voulez-vous partager ?" : step === "place" ? "Partager un lieu" : "Partager une expérience"}
+            {isEditing ? "Modifier la publication" : step === null ? "Que voulez-vous partager ?" : step === "place" ? "Partager un lieu" : "Partager une expérience"}
           </h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
             <span className="material-symbols-outlined text-slate-500">close</span>
@@ -454,9 +465,9 @@ function AddPublicationModal({ onClose, onSuccess, token }: {
             )}
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(null)} className="flex-1 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors">Retour</button>
+              <button type="button" onClick={() => { if (isEditing) onClose(); else setStep(null); }} className="flex-1 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors">{isEditing ? "Annuler" : "Retour"}</button>
               <button type="submit" disabled={loading} className="flex-1 py-3 bg-primary text-slate-900 font-extrabold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all disabled:opacity-60">
-                {loading ? "Publication..." : "Publier"}
+                {loading ? "Enregistrement..." : isEditing ? "Enregistrer" : "Publier"}
               </button>
             </div>
           </form>
@@ -1825,6 +1836,7 @@ export default function DashboardPage() {
   const [token, setToken] = useState("");
   const [publications, setPublications] = useState<Publication[]>([]);
   const [showAddPublication, setShowAddPublication] = useState(false);
+  const [editingPublication, setEditingPublication] = useState<Publication | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [showAddOffer, setShowAddOffer] = useState(false);
   const [editingOffer, setEditingOffer] = useState<any>(null);
@@ -2686,6 +2698,9 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex items-start gap-2 flex-shrink-0">
                             <StatusBadge status={pub.status} reason={pub.rejection_reason} />
+                            <button onClick={() => setEditingPublication(pub)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Modifier">
+                              <span className="material-symbols-outlined text-base">edit</span>
+                            </button>
                             <button onClick={() => handleDeletePublication(pub.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
                               <span className="material-symbols-outlined text-base">close</span>
                             </button>
@@ -2927,6 +2942,10 @@ export default function DashboardPage() {
       {role === "eco_traveler" && showAddPublication && (
         <AddPublicationModal token={token} onClose={() => setShowAddPublication(false)}
           onSuccess={(p) => { setPublications((prev) => [p, ...prev]); setShowAddPublication(false); }} />
+      )}
+      {role === "eco_traveler" && editingPublication && (
+        <AddPublicationModal token={token} publication={editingPublication} onClose={() => setEditingPublication(null)}
+          onSuccess={(p) => { setPublications((prev) => prev.map((pr) => pr.id === p.id ? p : pr)); setEditingPublication(null); }} />
       )}
       {role === "guide" && showAddOffer && (
         <GuidedOfferWizard token={token} userRole="guide" onClose={() => setShowAddOffer(false)}

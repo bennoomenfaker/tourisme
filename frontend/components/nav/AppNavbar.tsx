@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Leaf, MapPin, ShoppingCart, User } from "lucide-react";
+import { Bell, Leaf, MapPin, ShoppingCart, User, Menu, X, LayoutDashboard, Route, Compass, MessageCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 type AppNavbarProps = {
@@ -14,6 +14,7 @@ export default function AppNavbar({ title }: AppNavbarProps) {
   const router = useRouter();
   const [user, setUser] = useState<{ full_name?: string; role?: string } | null>(null);
   const [unread, setUnread] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -47,34 +48,43 @@ export default function AppNavbar({ title }: AppNavbarProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           <Link
             href="/dashboard"
-            className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
+            className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
           >
-            Tableau de bord
+            <LayoutDashboard size={14} className="mr-1.5" /> Tableau de bord
           </Link>
 
           <Link
             href="/circuits"
-            className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
+            className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
           >
-            Circuits
+            <Route size={14} className="mr-1.5" /> Circuits
           </Link>
 
           <Link
             href="/explore"
-            className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
+            className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
           >
-            Explorer
+            <Compass size={14} className="mr-1.5" /> Explorer
           </Link>
 
           <Link
             href="/places"
-            className="hidden md:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
+            className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
           >
-            <MapPin size={14} className="mr-1" /> Lieux
+            <MapPin size={14} className="mr-1.5" /> Lieux
           </Link>
+
+          {user && (
+            <Link
+              href="/messagerie"
+              className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
+            >
+              <MessageCircle size={14} className="mr-1.5" /> Messages
+            </Link>
+          )}
 
           <Link
             href="/cart"
@@ -101,8 +111,45 @@ export default function AppNavbar({ title }: AppNavbarProps) {
           >
             <User size={16} />
           </button>
+
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="lg:hidden p-2 text-slate-500 hover:text-primary transition-colors"
+            aria-label="Menu"
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </div>
+
+      {mobileOpen && (
+        <nav className="lg:hidden mt-3 pb-3 border-t border-slate-100 pt-3 flex flex-col gap-1">
+          <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <LayoutDashboard size={16} className="text-slate-400" /> Tableau de bord
+          </Link>
+          <Link href="/explore" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <Compass size={16} className="text-slate-400" /> Explorer
+          </Link>
+          <Link href="/places" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <MapPin size={16} className="text-slate-400" /> Lieux
+          </Link>
+          <Link href="/circuits" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <Route size={16} className="text-slate-400" /> Circuits
+          </Link>
+          <Link href="/eco-projects" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <Leaf size={16} className="text-slate-400" /> Projets Éco
+          </Link>
+          {user && (
+            <Link href="/messagerie" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+              <MessageCircle size={16} className="text-slate-400" /> Messages
+            </Link>
+          )}
+          <Link href="/notifications" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors relative">
+            <Bell size={16} className="text-slate-400" /> Notifications
+            {unread > 0 && <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unread > 99 ? "99+" : unread}</span>}
+          </Link>
+        </nav>
+      )}
     </header>
   );
 }

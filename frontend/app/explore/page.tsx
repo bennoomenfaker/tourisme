@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { Search, ShoppingCart, Plus, Loader2, MapPin, Check, LayoutGrid, Map, SlidersHorizontal, X, Leaf, Eye, EyeOff } from "lucide-react";
+import { Search, ShoppingCart, Plus, Loader2, MapPin, Check, LayoutGrid, Map, SlidersHorizontal, X, Leaf, Eye, EyeOff, Flame } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
@@ -138,7 +138,7 @@ export default function ExplorePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priceRange, setPriceRange] = useState(0);
-  const [selectedItem, setSelectedItem] = useState<OfferItem | Circuit | null>(null);
+  const [selectedItem, setSelectedItem] = useState<OfferItem | Circuit | Place | null>(null);
   const [showOffers, setShowOffers] = useState(true);
   const [showCircuits, setShowCircuits] = useState(true);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -390,8 +390,8 @@ export default function ExplorePage() {
             </div>
             {/* Cards */}
             <div className="lg:w-1/2 space-y-3">
-              <p className="text-xs text-slate-400 font-medium">{filteredOffers.length + filteredCircuits.length} résultat{(filteredOffers.length + filteredCircuits.length) !== 1 ? "s" : ""}</p>
-              <ExploreCards offers={filteredOffers} circuits={filteredCircuits} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
+              <p className="text-xs text-slate-400 font-medium">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length) !== 1 ? "s" : ""}</p>
+              <ExploreCards offers={filteredOffers} circuits={filteredCircuits} places={filteredPlaces} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
             </div>
           </div>
         )}
@@ -410,8 +410,8 @@ export default function ExplorePage() {
 
         {viewMode === "grid" && (
           <div>
-            <p className="text-xs text-slate-400 font-medium mb-3">{filteredOffers.length + filteredCircuits.length} résultat{(filteredOffers.length + filteredCircuits.length) !== 1 ? "s" : ""}</p>
-            <ExploreCards offers={filteredOffers} circuits={filteredCircuits} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
+            <p className="text-xs text-slate-400 font-medium mb-3">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length) !== 1 ? "s" : ""}</p>
+            <ExploreCards offers={filteredOffers} circuits={filteredCircuits} places={filteredPlaces} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
           </div>
         )}
       </div>
@@ -423,6 +423,17 @@ export default function ExplorePage() {
             <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-4" />
             {"name" in selectedItem ? (
               <OfferCard item={selectedItem as OfferItem} cartIds={cartIds} adding={adding} onAdd={addToCart} />
+            ) : "title" in selectedItem && "category" in selectedItem ? (
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin size={16} className="text-emerald-500" />
+                  <h3 className="font-bold text-slate-800">{(selectedItem as Place).title}</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">{(selectedItem as Place).description}</p>
+                <a href={`/places/${(selectedItem as Place).id}`} className="block w-full text-center py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors" onClick={(e) => e.stopPropagation()}>
+                  Voir le lieu
+                </a>
+              </div>
             ) : (
               <CircuitCard item={selectedItem as Circuit} cartIds={cartIds} adding={adding} onAdd={addToCart} />
             )}
@@ -433,12 +444,12 @@ export default function ExplorePage() {
   );
 }
 
-function ExploreCards({ offers, circuits, cartIds, adding, onAdd, onSelect }: {
-  offers: OfferItem[]; circuits: Circuit[]; cartIds: Set<string>; adding: string | null;
+function ExploreCards({ offers, circuits, places, cartIds, adding, onAdd, onSelect }: {
+  offers: OfferItem[]; circuits: Circuit[]; places: Place[]; cartIds: Set<string>; adding: string | null;
   onAdd: (type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) => void;
-  onSelect: (item: OfferItem | Circuit) => void;
+  onSelect: (item: OfferItem | Circuit | Place) => void;
 }) {
-  if (!offers.length && !circuits.length) {
+  if (!offers.length && !circuits.length && !places.length) {
     return (
       <div className="text-center py-16 text-slate-400">
         <Search size={40} className="mx-auto mb-3 opacity-30" />
@@ -450,6 +461,11 @@ function ExploreCards({ offers, circuits, cartIds, adding, onAdd, onSelect }: {
 
   return (
     <div className="space-y-3">
+      {places.map((place) => (
+        <a key={place.id} href={`/places/${place.id}`} className="block bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-shadow">
+          <PlaceCard place={place} />
+        </a>
+      ))}
       {offers.map((item) => (
         <div key={item.id} className="bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onSelect(item)}>
           <OfferCard item={item} cartIds={cartIds} adding={adding} onAdd={onAdd} />
@@ -460,6 +476,37 @@ function ExploreCards({ offers, circuits, cartIds, adding, onAdd, onSelect }: {
           <CircuitCard item={circuit} cartIds={cartIds} adding={adding} onAdd={onAdd} />
         </div>
       ))}
+    </div>
+  );
+}
+
+function PlaceCard({ place }: { place: Place }) {
+  return (
+    <div className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-lg shrink-0">
+          <MapPin size={18} className="text-emerald-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm text-slate-800 hover:text-primary transition-colors truncate">{place.title}</p>
+          {(place.place_name || place.region) && (
+            <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+              <MapPin size={9} /> {place.place_name}{place.place_name && place.region ? ", " : ""}{place.region}
+            </p>
+          )}
+          {place.description && (
+            <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{place.description}</p>
+          )}
+          {place.category && (
+            <span className="inline-block mt-1.5 text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-medium">{place.category}</span>
+          )}
+        </div>
+        {place.popularity_score > 0 && (
+          <div className="text-right shrink-0">
+            <p className="text-xs font-bold text-primary flex items-center gap-0.5"><Flame size={11} /> {place.popularity_score}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

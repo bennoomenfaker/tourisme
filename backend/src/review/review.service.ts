@@ -48,6 +48,23 @@ export class ReviewService {
     });
   }
 
+  async getTestimonials(limit: number = 6): Promise<any[]> {
+    const reviews = await this.reviewRepo.find({
+      order: { created_at: 'DESC' },
+      take: limit,
+    });
+    return reviews.filter((r) => r.comment).map((r) => ({
+      id: r.id,
+      name: `Voyageur`,
+      role: 'eco_traveler',
+      text: r.comment,
+      rating: r.rating,
+      avatar: null,
+      target_type: r.target_type,
+      created_at: r.created_at,
+    }));
+  }
+
   async findByAuthor(authorId: string): Promise<Review[]> {
     return this.reviewRepo.find({
       where: { author_id: authorId },

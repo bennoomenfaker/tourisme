@@ -603,4 +603,39 @@ UPDATE publications p SET popularity_score = (
 )
 WHERE p.type = 'place' AND p.status = 'approved';
 
+-- ============================================================
+-- 12. PEUPLER LA TABLE photos DEPUIS publications.images
+-- ============================================================
+
+-- Strip curly braces from simple-array columns (TypeORM compatibility)
+UPDATE publications SET images = trim(BOTH '{}' FROM images) WHERE images LIKE '{%';
+UPDATE publications SET tags = trim(BOTH '{}' FROM tags) WHERE tags LIKE '{%';
+
+-- Populate photos table from publication images
+DO $$
+DECLARE
+  pub RECORD;
+  img_urls TEXT[];
+  img_url TEXT;
+  hero BOOLEAN;
+  idx INT;
+  existing_photos INT;
+BEGIN
+  FOR pub IN SELECT id, images, author_id FROM publications WHERE images IS NOT NULL AND images != ''
+  LOOP
+    SELECT COUNT(*) INTO existing_photos FROM photos WHERE entity_type = 'publication' AND entity_id = pub.id;
+    IF existing_photos = 0 THEN
+      img_urls := string_to_array(pub.images, ',');
+      idx := 0;
+      FOREACH img_url IN ARRAY img_urls
+      LOOP
+        hero := (idx = 0);
+        INSERT INTO photos (id, url, entity_type, entity_id, is_hero, score, uploaded_by, created_at)
+        VALUES (gen_random_uuid(), trim(img_url), 'publication', pub.id, hero, 0, pub.author_id, NOW());
+        idx := idx + 1;
+      END LOOP;
+    END IF;
+  END LOOP;
+END $$;
+
 COMMIT;
