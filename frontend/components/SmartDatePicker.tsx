@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Calendar, Clock, Repeat, X, Plus, Info, Sparkles } from "lucide-react";
+import { Calendar, Clock, X, Plus, Sparkles } from "lucide-react";
 
 interface AvailabilityRule {
   availability_type: string;
