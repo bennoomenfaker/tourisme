@@ -9,6 +9,7 @@ import { OfferItemCapacity } from './entities/offer-item-capacity.entity';
 import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
 import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Project } from '../project-owner/entities/project.entity';
+import { RedisService } from '../redis/redis.service';
 import {
   CreateOfferDto,
   OfferSustainabilityDto,
@@ -41,7 +42,14 @@ export class OfferService {
     private readonly capacityRepo: Repository<OfferItemCapacity>,
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
+    private readonly redis: RedisService,
   ) {}
+
+  private readonly OFFER_CACHE_PREFIX = 'offer:';
+
+  private invalidateOfferCache(): Promise<void> {
+    return this.redis.delByPattern(`${this.OFFER_CACHE_PREFIX}*`);
+  }
 
   // ─── Offer CRUD ────────────────────────────────────────
 
@@ -80,7 +88,9 @@ export class OfferService {
       project_id: dto.project_id ?? null,
       status: initialStatus,
     });
-    return this.repo.save(offer);
+    const saved = await this.repo.save(offer);
+    await this.invalidateOfferCache();
+    return saved;
   }
 
   async findByAuthor(authorId: string): Promise<Offer[]> {
@@ -99,21 +109,36 @@ export class OfferService {
   }
 
   async findAllPublic(region?: string): Promise<Offer[]> {
+    const cacheKey = region
+      ? `${this.OFFER_CACHE_PREFIX}list:region:${region}`
+      : `${this.OFFER_CACHE_PREFIX}list:all`;
+    const cached = await this.redis.get<Offer[]>(cacheKey);
+    if (cached) return cached;
+
     const where: any = { status: 'approved' };
     if (region) where.region = region;
-    return this.repo.find({
+    const offers = await this.repo.find({
       where,
       order: { created_at: 'DESC' },
       relations: ['items', 'items.prices'],
     });
+
+    await this.redis.set(cacheKey, offers);
+    return offers;
   }
 
   async findById(id: string): Promise<Offer> {
+    const cacheKey = `${this.OFFER_CACHE_PREFIX}detail:${id}`;
+    const cached = await this.redis.get<Offer>(cacheKey);
+    if (cached) return cached;
+
     const offer = await this.repo.findOne({
       where: { id },
       relations: ['items', 'items.prices', 'items.sessions', 'items.capacity', 'category'],
     });
     if (!offer) throw new NotFoundException('Offre introuvable.');
+
+    await this.redis.set(cacheKey, offer);
     return offer;
   }
 
@@ -151,6 +176,7 @@ export class OfferService {
     if (dto.status !== undefined) offer.status = dto.status;
 
     await this.repo.save(offer);
+    await this.invalidateOfferCache();
     return this.findById(offerId);
   }
 
@@ -165,6 +191,7 @@ export class OfferService {
     const offer = await this.findOrFail(offerId);
     if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
     await this.repo.remove(offer);
+    await this.invalidateOfferCache();
     return { message: 'Offre supprimée.' };
   }
 
@@ -520,6 +547,10 @@ export class OfferService {
   }
 
   async getPopularLocations(): Promise<{ lat: number; lng: number; weight: number; label: string; type: string }[]> {
+    const cacheKey = `${this.OFFER_CACHE_PREFIX}popular-locations`;
+    const cached = await this.redis.get<any[]>(cacheKey);
+    if (cached) return cached;
+
     const items = await this.itemRepo.find({
       where: { status: 'active' },
       relations: ['prices'],
@@ -538,6 +569,7 @@ export class OfferService {
       }
     }
 
+    await this.redis.set(cacheKey, locations, 600);
     return locations;
   }
 }

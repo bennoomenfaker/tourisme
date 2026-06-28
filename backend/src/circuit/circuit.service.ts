@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { RedisService } from '../redis/redis.service';
 import { Circuit } from './entities/circuit.entity';
 import { CircuitDay } from './entities/circuit-day.entity';
 import { CircuitProgramItem } from './entities/circuit-program-item.entity';
@@ -31,7 +32,14 @@ export class CircuitService {
     @InjectRepository(CircuitReservationOption)
     private readonly reservationOptionRepo: Repository<CircuitReservationOption>,
     private readonly notificationService: NotificationService,
+    private readonly redis: RedisService,
   ) {}
+
+  private readonly CIRCUIT_CACHE_PREFIX = 'circuit:';
+
+  private invalidateCircuitCache(): Promise<void> {
+    return this.redis.delByPattern(`${this.CIRCUIT_CACHE_PREFIX}*`);
+  }
 
   // ─── Circuits ──────────────────────────────────────────
 
@@ -60,30 +68,41 @@ export class CircuitService {
       images: dto.images?.length ? dto.images : null,
       status: 'pending',
     });
-    return this.circuitRepo.save(circuit);
+    const saved = await this.circuitRepo.save(circuit);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   async findAll(status?: string, region?: string): Promise<Circuit[]> {
+    const cacheKey = region
+      ? `${this.CIRCUIT_CACHE_PREFIX}list:region:${region}${status ? `:status:${status}` : ''}`
+      : `${this.CIRCUIT_CACHE_PREFIX}list:all${status ? `:status:${status}` : ''}`;
+    const cached = await this.redis.get<Circuit[]>(cacheKey);
+    if (cached) return cached;
+
     const where: any = {};
     if (status) where.status = status;
     if (region) where.region = region;
-    if (!status && !region) {
-      return this.circuitRepo.find({
-        order: { created_at: 'DESC' },
-      });
-    }
-    return this.circuitRepo.find({
-      where,
-      order: { created_at: 'DESC' },
-    });
+    const circuits = !status && !region
+      ? await this.circuitRepo.find({ order: { created_at: 'DESC' } })
+      : await this.circuitRepo.find({ where, order: { created_at: 'DESC' } });
+
+    await this.redis.set(cacheKey, circuits);
+    return circuits;
   }
 
   async findById(id: string): Promise<Circuit> {
+    const cacheKey = `${this.CIRCUIT_CACHE_PREFIX}detail:${id}`;
+    const cached = await this.redis.get<Circuit>(cacheKey);
+    if (cached) return cached;
+
     const circuit = await this.circuitRepo.findOne({
       where: { id },
       relations: ['days', 'days.programItems', 'options'],
     });
     if (!circuit) throw new NotFoundException('Circuit introuvable');
+
+    await this.redis.set(cacheKey, circuit);
     return circuit;
   }
 
@@ -116,7 +135,9 @@ export class CircuitService {
     if (dto.project_id !== undefined) circuit.project_id = dto.project_id ?? null;
     if (dto.images !== undefined) circuit.images = dto.images?.length ? dto.images : null;
     if (dto.waypoints !== undefined) circuit.waypoints = dto.waypoints ?? null;
-    return this.circuitRepo.save(circuit);
+    const saved = await this.circuitRepo.save(circuit);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   // ─── Jours du circuit ──────────────────────────────────
@@ -383,6 +404,7 @@ export class CircuitService {
     if (!circuit) throw new NotFoundException('Circuit introuvable');
     if (circuit.author_id !== authorId) throw new ForbiddenException('Accès refusé');
     await this.circuitRepo.remove(circuit);
+    await this.invalidateCircuitCache();
   }
 
   async updateReservation(id: string, userId: string, body: { participants_count?: number; base_total?: number }): Promise<CircuitReservation> {

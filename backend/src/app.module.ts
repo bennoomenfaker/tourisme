@@ -33,6 +33,7 @@ import { ReviewModule } from './review/review.module';
 import { TravelCartModule } from './travel-cart/travel-cart.module';
 import { PhotoModule } from './photo/photo.module';
 import { TimelineModule } from './timeline/timeline.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { TimelineModule } from './timeline/timeline.module';
     TravelCartModule,
     PhotoModule,
     TimelineModule,
+    RedisModule,
   ],
   providers: [GoogleStrategy, {
     provide: APP_GUARD,

@@ -30,6 +30,13 @@ services:
     networks:
       - tourisme_net
 
+  # ── Redis (Cache) ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - tourisme_net
+
   # ── MongoDB ────────────────────────────────────────────────────────────────
   mongo:
     image: mongo:7
@@ -54,6 +61,7 @@ services:
       - db
       - mongo
       - minio
+      - redis
     networks:
       - tourisme_net
 

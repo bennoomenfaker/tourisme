@@ -25,7 +25,6 @@ const PRESETS = [
   { label: "Date unique", icon: "📅", type: "single", desc: "Un seul jour précis" },
   { label: "Plusieurs dates", icon: "📆", type: "multiple", desc: "Jours spécifiques" },
   { label: "Chaque semaine", icon: "🔄", type: "weekly", desc: "Jours fixes par semaine" },
-  { label: "Période saisonnière", icon: "🌊", type: "seasonal", desc: "Ex: tous les week-ends d'été" },
   { label: "Chaque année", icon: "🎉", type: "yearly", desc: "Événement annuel" },
   { label: "Personnalisé", icon: "⚙️", type: "custom", desc: "Règle avancée (RRULE)" },
 ] as const;
@@ -206,19 +205,6 @@ function SingleDatePicker({ rule, onChange }: { rule: AvailabilityRule; onChange
   );
 }
 
-function SeasonalPicker({ rule, onChange }: { rule: AvailabilityRule; onChange: (r: AvailabilityRule) => void }) {
-  return (
-    <div className="space-y-2">
-      <DateRangePicker rule={rule} onChange={onChange} />
-      <div className="space-y-1">
-        <label className="text-[10px] text-slate-400 block">Jours disponibles</label>
-        <WeekdayPicker rule={rule} onChange={onChange} />
-      </div>
-      <TimeRangePicker rule={rule} onChange={onChange} />
-    </div>
-  );
-}
-
 function YearlyPicker({ rule, onChange }: { rule: AvailabilityRule; onChange: (r: AvailabilityRule) => void }) {
   return (
     <div className="space-y-2">
@@ -261,8 +247,6 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
         return { ...base, availability_type: "date_range", start_date: now, end_date: now };
       case "weekly":
         return { ...base, availability_type: "weekly", weekdays: [6], start_time: "09:00", end_time: "17:00" };
-      case "seasonal":
-        return { ...base, availability_type: "date_range", start_date: now, end_date: now, weekdays: [6, 0], start_time: "08:00", end_time: "18:00" };
       case "yearly":
         return { ...base, availability_type: "yearly", start_date: now, end_date: now, recurrence_rule: "FREQ=YEARLY" };
       default:
@@ -373,10 +357,6 @@ export default function SmartDatePicker({ rules, onChange }: SmartDatePickerProp
 
           {(activePreset === "single" || rule.availability_type === "date_range" && rule.start_date === rule.end_date) && (
             <SingleDatePicker rule={rule} onChange={(r) => handleUpdateRule(idx, r)} />
-          )}
-
-          {activePreset === "seasonal" && (
-            <SeasonalPicker rule={rule} onChange={(r) => handleUpdateRule(idx, r)} />
           )}
 
           {activePreset === "weekly" && (
