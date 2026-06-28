@@ -154,18 +154,80 @@ CircuitService.remove()   → delByPattern("circuit:*")
 
 ## 4. Commandes utiles
 
+### Backend
+
+| Commande | Description |
+|----------|-------------|
+| `yarn build` | Compile le projet NestJS (`nest build`) |
+| `yarn start:dev` | Démarre le serveur en mode watch (dev) |
+| `yarn start:prod` | Démarre le serveur en production (`node dist/main`) |
+| `yarn lint` | ESLint avec `--fix` (auto-formatte) |
+| `yarn test` | Lance tous les tests unitaires Jest |
+| `yarn test -- --testPathPattern=users` | Teste un fichier spécifique |
+| `yarn test:watch` | Tests en mode watch |
+| `yarn test:cov` | Tests avec couverture |
+| `yarn test:e2e` | Tests end-to-end |
+| `yarn format` | Prettier (formate tout le src/) |
+
+### Frontend
+
+| Commande | Description |
+|----------|-------------|
+| `yarn dev` | Démarre Next.js en mode dev |
+| `yarn build` | Build de production (`next build`) |
+| `yarn start` | Démarre le serveur Next.js (production) |
+| `yarn lint` | ESLint (Next.js config) |
+
+### Redis Cache
+
 ```bash
-# Tester le cache Redis
 redis-cli ping                     # PONG
 redis-cli keys "offer:*"           # Lister les clés cache
 redis-cli ttl offer:list:all       # TTL restant
 redis-cli flushall                 # Vider tout le cache (dev)
-
-# Lancer les tests après CI/CD
-npm test                           # Tests unitaires
-npm run test:e2e                   # Tests E2E
-npm run lint                       # Linting
+docker compose up -d redis         # Démarrer Redis
 ```
+
+### CI/CD (GitHub Actions)
+
+```bash
+# Voir les runs
+gh run list --branch main
+
+# Voir les logs d'un run
+gh run view <run-id> --log
+
+# Voir le statut des jobs
+gh run view <run-id> --json jobs
+```
+
+### Linting — Règles ajustées
+
+Les règles préexistantes suivantes ont été passées de **error → warn** pour ne pas bloquer le pipeline :
+
+**Backend** (`backend/eslint.config.mjs`) :
+| Règle | Niveau |
+|-------|--------|
+| `@typescript-eslint/no-explicit-any` | off |
+| `@typescript-eslint/no-unsafe-assignment` | warn |
+| `@typescript-eslint/no-unsafe-member-access` | warn |
+| `@typescript-eslint/no-unsafe-argument` | warn |
+| `@typescript-eslint/no-unsafe-enum-comparison` | warn |
+| `@typescript-eslint/no-unsafe-call` | warn |
+| `@typescript-eslint/no-unsafe-return` | warn |
+| `@typescript-eslint/no-unused-vars` | warn |
+| `@typescript-eslint/no-require-imports` | warn |
+| `@typescript-eslint/require-await` | warn |
+| `no-constant-binary-expression` | warn |
+| `no-empty` | warn |
+
+**Frontend** (`frontend/eslint.config.mjs`) :
+| Règle | Niveau |
+|-------|--------|
+| `@typescript-eslint/no-explicit-any` | warn |
+| `react/no-unescaped-entities` | warn |
+| `react-hooks/set-state-in-effect` | warn |
+| `react-hooks/purity` | warn |
 
 ---
 
