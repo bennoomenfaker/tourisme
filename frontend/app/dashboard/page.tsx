@@ -2793,7 +2793,7 @@ export default function DashboardPage() {
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
-                    <button onClick={() => setShowAddOffer(true)}
+                    <button onClick={() => router.push("/offers/new")}
                       className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
                       <span className="material-symbols-outlined text-base">add</span>Ajouter une offre
                     </button>
@@ -2805,7 +2805,7 @@ export default function DashboardPage() {
                     <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">sell</span>
                     <p className="font-bold text-slate-500">Aucune offre publiée</p>
                     <p className="text-sm text-slate-400 mt-1">Créez votre première offre pour la rendre visible sur votre profil.</p>
-                    <button onClick={() => setShowAddOffer(true)} className="mt-4 px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
+                    <button onClick={() => router.push("/offers/new")} className="mt-4 px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
                       Créer une offre
                     </button>
                   </div>

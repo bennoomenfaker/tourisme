@@ -29,6 +29,7 @@ interface Props {
   onClose: () => void;
   onSuccess: (offer: any) => void;
   editOffer?: any;
+  variant?: 'modal' | 'page';
 }
 
 interface AvailabilityRule {
@@ -137,7 +138,7 @@ function hasDifficulty(itemType: string): boolean {
   return ["randonnee", "trekking", "vtt", "escalade", "kayak", "speleologie"].includes(itemType);
 }
 
-export default function GuidedOfferWizard({ token, userRole, userProjectId, userProjectType, userProjects, onClose, onSuccess, editOffer }: Props) {
+export default function GuidedOfferWizard({ token, userRole, userProjectId, userProjectType, userProjects, onClose, onSuccess, editOffer, variant = 'modal' }: Props) {
   const isEdit = !!editOffer;
   const [step, setStep] = useState<number>(isEdit ? 2 : 1);
   const [loading, setLoading] = useState(false);
@@ -708,9 +709,11 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     });
   }
 
+  const isPage = variant === 'page';
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-[5vh] sm:pt-[8vh] px-4" onClick={onClose}>
-      <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className={isPage ? "" : "fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-[5vh] sm:pt-[8vh] px-4"} onClick={isPage ? undefined : onClose}>
+      <div className={isPage ? "bg-white rounded-3xl shadow-sm border border-slate-100 w-full" : "bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto"} onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
