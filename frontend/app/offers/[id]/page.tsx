@@ -11,10 +11,12 @@ import {
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
+import { OFFER_SCHEMAS } from "@/lib/offer-schema";
 import dynamic from "next/dynamic";
 
 const GuidedOfferWizard = dynamic(() => import("@/components/GuidedOfferWizard"), { ssr: false });
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false });
+const OfferItemDetails = dynamic(() => import("@/components/OfferItemDetails"), { ssr: false });
 
 interface OfferItemPrice {
   id: string;
@@ -422,30 +424,33 @@ export default function OfferDetailPage() {
                           <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             {item.item_type && (
                               <span className="text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
-                                {item.item_type}
+                                {OFFER_SCHEMAS[`${offer.offer_type}_${item.item_type}`]?.label || item.item_type}
                               </span>
                             )}
-                            {item.details_json?.room_sub_type && (
-                              <span className="text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
-                                {item.details_json.room_sub_type === 'shared' ? 'Dortoir' :
-                                 item.details_json.room_sub_type === 'private' ? 'Privé' :
-                                 item.details_json.room_sub_type === 'double' ? 'Double' :
-                                 item.details_json.room_sub_type === 'family' ? 'Famille' :
-                                 item.details_json.room_sub_type === 'suite' ? 'Suite' :
-                                 item.details_json.room_sub_type === 'studio' ? 'Studio' :
-                                 item.details_json.room_sub_type}
-                              </span>
-                            )}
-                            {item.details_json?.bed_count != null && (
-                              <span className="text-xs text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">
-                                {item.details_json.bed_count} lit{item.details_json.bed_count > 1 ? 's' : ''}
-                              </span>
-                            )}
-                            {item.details_json?.tent_capacity != null && (
-                              <span className="text-xs text-green-600 bg-green-50 rounded-full px-2 py-0.5">
-                                {item.details_json.tent_capacity} pers.
-                              </span>
-                            )}
+                            {(() => {
+                              const schema = OFFER_SCHEMAS[`${offer.offer_type}_${item.item_type}`];
+                              if (!schema?.display?.cardFields || !item.details_json) return null;
+                              return schema.display.cardFields.map((f) => {
+                                const val = item.details_json![f];
+                                if (val == null || val === "" || (Array.isArray(val) && val.length === 0)) return null;
+                                const fieldDef = schema.fields[f];
+                                let display: string;
+                                if (fieldDef.type === "number") {
+                                  display = fieldDef.unit ? `${val} ${fieldDef.unit}` : String(val);
+                                } else if (fieldDef.type === "select") {
+                                  display = fieldDef.options?.find((o) => o.value === val)?.label || val;
+                                } else if (Array.isArray(val)) {
+                                  display = val.join(", ");
+                                } else {
+                                  display = String(val);
+                                }
+                                return (
+                                  <span key={f} className="text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
+                                    {fieldDef.label}: {display}
+                                  </span>
+                                );
+                              });
+                            })()}
                           </div>
                           {/* ─── Session preview (visible sans expansion) ─── */}
                           {(() => {
@@ -482,6 +487,13 @@ export default function OfferDetailPage() {
                         <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-3">
                           {item.description && (
                             <p className="text-sm text-slate-500">{item.description}</p>
+                          )}
+
+                          {item.details_json && Object.keys(item.details_json).length > 0 && (
+                            <OfferItemDetails
+                              detailsJson={item.details_json}
+                              schemaKey={`${offer.offer_type}_${item.item_type}`}
+                            />
                           )}
 
                           {/* Capacité globale (depuis OfferItemCapacity) */}
