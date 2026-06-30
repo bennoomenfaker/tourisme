@@ -190,6 +190,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const isActivity = normalizedCategory === 'activity' || normalizedCategory === 'eco_tour';
   const isAccommodation = normalizedCategory === 'accommodation';
   const isEvent = normalizedCategory === 'event';
+  const isSejour = normalizedCategory === 'sejour';
+  const isCircuit = normalizedCategory === 'circuit';
+  const hasItemTypeSelector = !isCircuit;
   const hasMeetingPoint = formFields.includes('meeting_point');
 
   const inputClass = "w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all";
@@ -391,6 +394,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
   function getDefaultPricingUnit(): string {
     if (isAccommodation) return "per_night";
+    if (normalizedCategory === 'circuit') return "per_person";
+    if (normalizedCategory === 'sejour') return "per_person";
     if (normalizedCategory === 'transport') return "per_trip";
     if (normalizedCategory === 'restaurant') return "per_meal";
     if (normalizedCategory === 'craft') return "per_item";
@@ -399,6 +404,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
   function getDefaultPriceLabel(): string {
     if (isAccommodation) return "Par nuit";
+    if (normalizedCategory === 'circuit') return "Par personne";
+    if (normalizedCategory === 'sejour') return "Par personne";
     if (normalizedCategory === 'transport') return "Par trajet";
     if (normalizedCategory === 'restaurant') return "Par repas";
     return "Par personne";
@@ -876,7 +883,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           {step === 3 && (
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800">
-                {isActivity ? "Type d'activité" : isAccommodation ? "Type d'hébergement" : isEvent ? "Type d'événement" : "Élément réservable"}
+                {isActivity ? "Type d'activité" : isAccommodation ? "Type d'hébergement" : isEvent ? "Type d'événement" : isSejour ? "Type de séjour" : "Élément réservable"}
               </h3>
 
               {/* Type selector with groups for activities */}

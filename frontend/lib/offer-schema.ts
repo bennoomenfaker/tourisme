@@ -1044,6 +1044,263 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     },
     display: { cardFields: ['zone_offre', 'duree', 'specialite_offre'], filterable: ['langues', 'specialite_offre'] },
   },
+
+  // ───────── CIRCUIT ─────────
+
+  circuit_circuit: {
+    key: 'circuit_circuit',
+    label: 'Circuit complet',
+    category: 'circuit',
+    sections: [
+      { id: 'general', label: 'Aperçu', fields: ['duree_jours', 'duree_nuits', 'niveau_offre', 'zone_circuit'] },
+      { id: 'itineraire', label: 'Itinéraire', fields: ['points_forts', 'etapes_principales'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['hebergement_inclus', 'repas_inclus', 'guide_inclus', 'inclus'] },
+    ],
+    fields: {
+      duree_jours: { type: 'number', required: true, label: 'Durée (jours)', min: 1, max: 30 },
+      duree_nuits: { type: 'number', label: 'Nombre de nuits', min: 0, max: 29 },
+      niveau_offre: { type: 'select', required: true, label: 'Niveau', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' }, { value: 'expert', label: 'Expert' },
+      ]},
+      zone_circuit: { type: 'select', required: true, label: 'Zone', options: [
+        { value: 'nord', label: 'Nord (Tunis, Bizerte, Béja)' },
+        { value: 'nord_est', label: 'Nord-Est (Nabeul, Hammamet, Cap Bon)' },
+        { value: 'centre', label: 'Centre (Kairouan, Sousse, Monastir)' },
+        { value: 'sud_est', label: 'Sud-Est (Djerba, Zarzis, Gabès)' },
+        { value: 'sud_ouest', label: 'Sud-Ouest (Tozeur, Douz, Tataouine)' },
+        { value: 'multi', label: 'Multi-région' },
+      ]},
+      points_forts: { type: 'textarea', label: "Points forts du circuit" },
+      etapes_principales: { type: 'textarea', label: 'Étapes principales', placeholder: 'Jour 1: Arrivée à Tunis...\nJour 2: Découverte de Carthage...' },
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      hebergement_inclus: { type: 'boolean', label: 'Hébergement inclus' },
+      repas_inclus: { type: 'select', label: 'Repas inclus', options: [
+        { value: 'aucun', label: 'Aucun' }, { value: 'petit_dej', label: 'Petit-déjeuner' },
+        { value: 'demi_pension', label: 'Demi-pension' }, { value: 'pension', label: 'Pension complète' },
+        { value: 'tout', label: 'Tout inclus' },
+      ]},
+      guide_inclus: { type: 'boolean', label: 'Guide accompagnateur inclus' },
+      inclus: { type: 'hierarchy', label: 'Inclus', taxonomy: 'inclus' },
+    },
+    display: { cardFields: ['zone_circuit', 'duree_jours', 'niveau_offre', 'nb_participants_max'], filterable: ['zone_circuit', 'niveau_offre', 'duree_jours'] },
+  },
+
+  // ───────── SÉJOUR ─────────
+
+  sejour_package: {
+    key: 'sejour_package',
+    label: 'Forfait séjour',
+    category: 'sejour',
+    sections: [
+      { id: 'general', label: 'Séjour', fields: ['duree_jours', 'type_hebergement', 'formule_repas'] },
+      { id: 'activities', label: 'Activités', fields: ['activites_incluses', 'equipement_fourni'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+    ],
+    fields: {
+      duree_jours: { type: 'number', required: true, label: 'Durée (jours)', min: 1, max: 30 },
+      type_hebergement: { type: 'select', required: true, label: "Type d'hébergement", options: [
+        { value: 'ecolodge', label: 'Éco-lodge' }, { value: 'hotel', label: 'Hôtel' },
+        { value: 'camping', label: 'Camping' }, { value: 'gite', label: "Gîte d'étape" },
+        { value: 'mixte', label: 'Mixte (plusieurs types)' },
+      ]},
+      formule_repas: { type: 'select', label: 'Formule repas', options: [
+        { value: 'sans', label: 'Sans repas' }, { value: 'petit_dej', label: 'Petit-déjeuner' },
+        { value: 'demi_pension', label: 'Demi-pension' }, { value: 'pension', label: 'Pension complète' },
+      ]},
+      activites_incluses: { type: 'hierarchy', label: 'Activités incluses', taxonomy: 'services_offre' },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'sac_couchage', label: 'Sac de couchage' }, { value: 'matelas', label: 'Matelas' },
+        { value: 'baton_marche', label: 'Bâtons de marche' }, { value: 'gourde', label: 'Gourde réutilisable' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['duree_jours', 'type_hebergement', 'formule_repas', 'nb_participants_max'], filterable: ['type_hebergement', 'formule_repas'] },
+  },
+
+  sejour_all_inclusive: {
+    key: 'sejour_all_inclusive',
+    label: 'Tout inclus',
+    category: 'sejour',
+    sections: [
+      { id: 'general', label: 'Séjour', fields: ['duree_jours', 'type_hebergement', 'formule_repas', 'transport_inclus'] },
+      { id: 'activities', label: 'Activités & Services', fields: ['activites_incluses', 'services_premium'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+    ],
+    fields: {
+      duree_jours: { type: 'number', required: true, label: 'Durée (jours)', min: 1, max: 30 },
+      type_hebergement: { type: 'select', required: true, label: "Type d'hébergement", options: [
+        { value: 'ecolodge', label: 'Éco-lodge' }, { value: 'hotel', label: 'Hôtel' },
+        { value: 'bungalow', label: 'Bungalow' }, { value: 'mixte', label: 'Mixte' },
+      ]},
+      formule_repas: { type: 'select', label: 'Formule repas', options: [
+        { value: 'demi_pension', label: 'Demi-pension' }, { value: 'pension', label: 'Pension complète' },
+      ]},
+      transport_inclus: { type: 'boolean', label: 'Transport aller-retour inclus' },
+      activites_incluses: { type: 'hierarchy', label: 'Activités incluses', taxonomy: 'services_offre' },
+      services_premium: { type: 'multiselect', label: 'Services premium', options: [
+        { value: 'spa', label: 'Accès spa' }, { value: 'massage', label: 'Massage' },
+        { value: 'guide_prive', label: 'Guide privé' }, { value: 'photographe', label: 'Photographe' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['duree_jours', 'type_hebergement', 'formule_repas', 'transport_inclus'], filterable: ['type_hebergement', 'formule_repas', 'transport_inclus'] },
+  },
+
+  // ───────── ÉCO-TOUR ─────────
+
+  eco_tour_activity: {
+    key: 'eco_tour_activity',
+    label: 'Activité éco',
+    category: 'eco_tour',
+    sections: [
+      { id: 'general', label: 'Activité', fields: ['eco_custom_name', 'duree', 'niveau_offre'] },
+      { id: 'eco', label: 'Engagement éco', fields: ['pratiques_eco', 'impact_positif'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+    ],
+    fields: {
+      eco_custom_name: { type: 'text', required: true, label: "Nom de l'activité" },
+      duree: { type: 'text', required: true, label: 'Durée' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      pratiques_eco: { type: 'multiselect', label: 'Pratiques éco-responsables', options: [
+        { value: 'zero_dechet', label: 'Zéro déchet' }, { value: 'compensation', label: 'Compensation carbone' },
+        { value: 'local', label: 'Produits locaux' }, { value: 'solaire', label: 'Énergie solaire' },
+        { value: 'sensibilisation', label: 'Sensibilisation environnementale' },
+      ]},
+      impact_positif: { type: 'textarea', label: "Impact positif sur l'environnement" },
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['eco_custom_name', 'duree', 'niveau_offre', 'pratiques_eco'], filterable: ['niveau_offre', 'pratiques_eco'] },
+  },
+
+  eco_tour_guided_tour: {
+    key: 'eco_tour_guided_tour',
+    label: 'Visite éco-guidée',
+    category: 'eco_tour',
+    sections: [
+      { id: 'general', label: 'Visite', fields: ['themes_visite', 'duree', 'distance_marche', 'langues_guides'] },
+      { id: 'eco', label: 'Démarche', fields: ['pratiques_eco', 'points_interet'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+    ],
+    fields: {
+      themes_visite: { type: 'multiselect', required: true, label: 'Thèmes', options: [
+        { value: 'nature', label: 'Nature' }, { value: 'patrimoine', label: 'Patrimoine' },
+        { value: 'biodiversite', label: 'Biodiversité' }, { value: 'agroecologie', label: 'Agroécologie' },
+        { value: 'culture_berbere', label: 'Culture berbère' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée' },
+      distance_marche: { type: 'number', label: 'Distance à pied (km)', unit: 'km' },
+      langues_guides: { type: 'multiselect', required: true, label: 'Langues du guide', options: [
+        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
+        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
+        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
+      ]},
+      pratiques_eco: { type: 'multiselect', label: 'Pratiques éco', options: [
+        { value: 'sensibilisation', label: 'Sensibilisation' }, { value: 'groupe_restreint', label: 'Groupe restreint (max 8)' },
+        { value: 'deplacement_doux', label: 'Déplacement doux' },
+      ]},
+      points_interet: { type: 'textarea', label: "Points d'intérêt" },
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['themes_visite', 'duree', 'distance_marche', 'langues_guides'], filterable: ['themes_visite', 'pratiques_eco'] },
+  },
+
+  eco_tour_hiking: {
+    key: 'eco_tour_hiking',
+    label: 'Randonnée nature',
+    category: 'eco_tour',
+    sections: [
+      { id: 'course', label: 'Parcours', fields: ['distance_km', 'denivele_m', 'duree_estimee', 'type_parcours', 'point_depart'] },
+      { id: 'eco', label: 'Démarche', fields: ['pratiques_eco', 'points_interet'] },
+      { id: 'level', label: 'Niveau', fields: ['niveau_offre', 'nb_participants_min', 'nb_participants_max'] },
+    ],
+    fields: {
+      distance_km: { type: 'number', required: true, label: 'Distance (km)', unit: 'km', min: 0 },
+      denivele_m: { type: 'number', label: 'Dénivelé (m)', unit: 'm' },
+      duree_estimee: { type: 'text', required: true, label: 'Durée estimée' },
+      type_parcours: { type: 'select', label: 'Type de parcours', options: [
+        { value: 'boucle', label: 'Boucle' }, { value: 'aller_retour', label: 'Aller-retour' },
+        { value: 'traversee', label: 'Traversée' },
+      ]},
+      point_depart: { type: 'text', required: true, label: 'Point de départ' },
+      pratiques_eco: { type: 'multiselect', label: 'Pratiques éco', options: [
+        { value: 'zero_dechet', label: 'Zéro déchet' }, { value: 'faune', label: 'Respect faune' },
+        { value: 'flore', label: 'Respect flore' }, { value: 'groupe_reduit', label: 'Groupe réduit' },
+      ]},
+      points_interet: { type: 'textarea', label: "Points d'intérêt nature" },
+      niveau_offre: { type: 'select', required: true, label: 'Niveau', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['distance_km', 'duree_estimee', 'niveau_offre'], filterable: ['niveau_offre', 'pratiques_eco'] },
+  },
+
+  eco_tour_observation: {
+    key: 'eco_tour_observation',
+    label: 'Observation faune/flore',
+    category: 'eco_tour',
+    sections: [
+      { id: 'type', label: "Type d'observation", fields: ['type_observation', 'saison_ideale', 'duree', 'meilleurs_horaires'] },
+      { id: 'guide', label: 'Guide', fields: ['encadrement_guide', 'langues_guides'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+    ],
+    fields: {
+      type_observation: { type: 'select', required: true, label: "Type d'observation", options: [
+        { value: 'faune', label: 'Faune sauvage' }, { value: 'flore', label: 'Flore endémique' },
+        { value: 'oiseaux', label: 'Observation ornithologique' }, { value: 'etoiles', label: 'Astronomie' },
+      ]},
+      saison_ideale: { type: 'text', label: 'Saison idéale' },
+      duree: { type: 'text', required: true, label: 'Durée' },
+      meilleurs_horaires: { type: 'text', label: 'Meilleurs horaires' },
+      encadrement_guide: { type: 'boolean', label: 'Guide naturaliste' },
+      langues_guides: { type: 'multiselect', label: 'Langues du guide', conditionalOn: { field: 'encadrement_guide', value: true }, options: [
+        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
+        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['type_observation', 'duree', 'saison_ideale'], filterable: ['type_observation', 'encadrement_guide'] },
+  },
+
+  eco_tour_workshop: {
+    key: 'eco_tour_workshop',
+    label: 'Atelier éco',
+    category: 'eco_tour',
+    sections: [
+      { id: 'general', label: "L'atelier", fields: ['eco_custom_name', 'duree', 'niveau_offre', 'description_workshop'] },
+      { id: 'eco', label: 'Engagement', fields: ['pratiques_eco', 'materiaux_ecoresponsables'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+    ],
+    fields: {
+      eco_custom_name: { type: 'text', required: true, label: "Nom de l'atelier" },
+      duree: { type: 'text', required: true, label: 'Durée' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      description_workshop: { type: 'textarea', label: 'Description' },
+      pratiques_eco: { type: 'multiselect', label: 'Pratiques éco', options: [
+        { value: 'materiaux_naturels', label: 'Matériaux naturels' }, { value: 'zero_dechet', label: 'Zéro déchet' },
+        { value: 'recyclage', label: 'Recyclage / Upcycling' }, { value: 'local', label: 'Produits locaux' },
+      ]},
+      materiaux_ecoresponsables: { type: 'textarea', label: 'Matériaux éco-responsables utilisés' },
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['eco_custom_name', 'duree', 'niveau_offre', 'pratiques_eco'], filterable: ['niveau_offre', 'pratiques_eco'] },
+  },
 };
 
 export function getSchema(category: string, itemType: string): OfferTypeSchema | null {
