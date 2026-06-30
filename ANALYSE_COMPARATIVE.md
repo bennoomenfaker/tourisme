@@ -148,7 +148,83 @@ Par rapport au v2, le projet actuel manque :
 
 ---
 
-## 6. Structure de Données Actuelle vs V2
+## 6. Recommandations pour Enrichir le Formulaire Actuel
+
+### Stratégie : Extension Progressive via JSON (Conserver votre architecture)
+
+Votre approche (séparer les offres par type) est **supérieure** car elle permet :
+- Plusieurs offres de types différents (chambre A, chambre B, dortoir...)
+- Chaque offre indépendante avec ses prix/capacités
+- Pas de contraintes rigides entre offres
+
+### a) Enrichissement HÉBERGEMENT - Détails à Ajouter
+
+#### Pour `camping_space` (Espace tente) - Ajouter dans `details_json` :
+```json
+{
+  "tent_capacity": 4,
+  "surface_m2": 25,
+  "type_tente": "Safari"|"Bell"|"Yurt"|"Chalet",
+  "configuration_lit": "2 lits superposés + 1 coin cuisine",
+  "qualite_literie": true,
+  "linge_fourni": true,
+  "electricite": true,
+  "prise_electrique": true,
+  "sanitaires": "Privés"|"Partagés",
+  "distance_sanitaires_m": 50,
+  "experiences_incluses": ["Observation étoiles", "Randonnée nocturne"],
+  "saison_ouverture": "Printemps/Été"|"Toute l'année"
+}
+```
+
+#### Pour `room` (Chambre/Dortoir) - Enrichir :
+```json
+{
+  "room_sub_type": "shared",
+  "bed_count": 6,
+  "surface_m2": 45,
+  "etage": 1,
+  "vue": "Jardin"|"Piscine"|"Montagne",
+  "sdb_type": "Privé"|"Partagé",
+  "sdb_equipements": ["Douche", "WC", "Lavabo"],
+  "services_inclus": ["Wifi", "Climatisation", "Petit-déjeuner"],
+  "checkin_debut": "14:00",
+  "checkin_fin": "20:00",
+  "checkout": "11:00",
+  "couvre_feu": "22:00",
+  "silence_partir_de": "22:00"
+}
+```
+
+### b) Architecture Recommandée
+
+1. **Étape 1 : Définir le Onboarding par Projet-Type**
+   - Stocker dans Project ou une nouvelle table `project_capabilities`
+   - Champs généraux : capacités max, types disponibles, services généraux
+
+2. **Étape 2 : Dropdown Dynamique des Types**
+   - `accommodation` → "Chambre", "Dortoir", "Tente", "Suite"
+   - Chacun ouvre des champs spécifiques dans le formulaire
+
+3. **Étape 3 : Validation Conditionnelle**
+   - Si `electricite: true` dans onboarding → champ `prise_electrique_offre` requis
+   - Si `pmr: true` → champ `pmr_chambre` requis si pas PMR
+
+### c) Mapping des 7 Types d'Hébergement à Intégrer
+
+| Type Actuel | Type V2 | Champs à Ajouter |
+|-------------|---------|-----------------|
+| room (shared) | Dortoir | nb_lits_offre, type_lit, inclus, horaires |
+| room | Chambre Standard | nom_chambre, surface_m2, vue, sdb_equipements, formule_restauration |
+| room (suite) | Suite | nb_pieces, espaces_suite, privatisation_offre |
+| room (bungalow) | Bungalow | configuration_lits, vue, equipements_offre, animaux_offre |
+| camping_space | Tente Glamping | type_tente_offre, surface_m2, qualite_literie, sanitaires_offre |
+| camping_space | Camping Sauvage | emplacements, acces_eau, type_sanitaires, feu_camp_offre |
+| room (gîte/maison) | Gîte Rural | nb_chambres_gite, equipements_cuisine, table_hotes_offre |
+
+---
+
+## 7. Structure de Données Actuelle vs V2
 
 ### Actuel : OfferItem
 ```typescript
@@ -202,4 +278,70 @@ interface OfferItemV2 {
 | **Conditionnalité** | Limitée | Avancée (conditionalOn) |
 | **Complexité** | Faible | Élevée |
 
-**Conclusion** : Le projet actuel possède une bonne base technique (architecture modulaire avec OfferItem décomposé en prix/capacité/sessions), mais manque de la finesse fonctionnelle du v2. L'approche JSON actuelle permet une évolution progressive vers le modèle v2 sans refonte majeure.
+---
+
+## 8. Proposition d'Implémentation Progressive
+
+### Priorité 1 : Tente Glamping (manquant dans votre projet)
+```json
+// Dans offer-config.ts - Ajouter le type
+{ value: 'tente_glamping', label: 'Tente Glamping', icon: '⛺' }
+
+// Dans GuidedOfferWizard.tsx - Étape 3, après camping_space
+{currentItemType === 'tente_glamping' && (
+  <div className="space-y-3">
+    <select onChange={(e) => updateFirstItem('type_tente_offre', e.target.value)}>
+      <option value="">Type de tente</option>
+      <option value="Safari">Safari</option>
+      <option value="Bell">Bell</option>
+      <option value="Yurt">Yourte</option>
+      <option value="Chalet">Chalet</option>
+    </select>
+    <input type="number" placeholder="Surface m²" onChange={(e) => updateFirstItem('surface_m2', e.target.value)} />
+    <input type="number" placeholder="Capacité" onChange={(e) => updateFirstItem('capacite_offre', e.target.value)} />
+    <label><input type="checkbox" onChange={(e) => updateFirstItem('electricite', e.target.checked)} /> Électricité</label>
+  </div>
+)}
+```
+
+### Priorité 2 : Chambre avec Détails
+```json
+// Ajouts pour room type
+- surface_m2 (input number)
+- etage (input number)
+- vue (select: "Jardin", "Piscine", "Montagne", "Mer")
+- sdb_type (select: "Privé", "Partagé")
+- sdb_equipements (multiselect)
+- formule_restauration (select: "Aucun", "Petit-déj", "Demi-pension", "Pension complète")
+```
+
+### Priorité 3 : Horaires Check-in/out
+```json
+// Nouveau bloc dans les étapes
+checkin_debut: "14:00",
+checkin_fin: "20:00", 
+checkout: "11:00",
+couvre_feu: "22:00",
+silence_partir_de: "22:00"
+```
+
+### Priorité 4 : Équipements avec Multiselect
+- Pour tentes : équipements camping
+- Pour chambres : équipements chambre
+- Pour camping : sanitaires, accès eau, feu autorisé
+
+---
+
+## 9. Tableau des Champs Manquants Critiques
+
+| Catégorie | Sous-type | Champ | Priorité |
+|-----------|-----------|-------|----------|
+| Hébergement | Toutes | Horaires (checkin/checkout) | HAUTE |
+| Hébergement | Chambre | surface_m2, etage, vue, sdb_equipements | HAUTE |
+| Hébergement | Tente | type_tente, qualite_literie, sanitaires | HAUTE |
+| Hébergement | Toutes | formule_restauration | MOYENNE |
+| Restaurant | Tous | regimes_alimentaires | HAUTE |
+| Activités | Randonnée | fichier_gpx, denivele_positif, points_interet | MOYENNE |
+| Activités | Kayak | niveau_min, savoir_nager | MOYENNE |
+
+**Note** : Votre architecture actuelle avec création d'offres séparées est LA bonne approche. Le v2 regroupe trop de contraintes dans l'onboarding ce qui limite la flexibilité. Je recommande de garder votre système mais d'enrichir les champs via `details_json`.

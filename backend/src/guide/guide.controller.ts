@@ -4,6 +4,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { Public } from '../common/decorators/public.decorator';
 import { GuideService } from './guide.service';
+import { GuideSearchService } from './guide-search.service';
 import {
   CompleteGuideProfileDto,
   UpdateGuideSpecialtiesDto,
@@ -15,7 +16,10 @@ import {
 @Roles(Role.GUIDE)
 @Controller('guide')
 export class GuideController {
-  constructor(private readonly service: GuideService) {}
+  constructor(
+    private readonly service: GuideService,
+    private readonly searchService: GuideSearchService,
+  ) {}
 
   @Get('profile')
   getProfile(@Req() req: any) {
@@ -46,6 +50,30 @@ export class GuideController {
   @Get('public/search')
   searchGuides(@Query('q') q: string) {
     return this.service.searchGuides(q ?? '');
+  }
+
+  @Public() @Roles()
+  @Get('search')
+  advancedSearch(
+    @Query('date') date?: string,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('radius_km') radius_km?: string,
+    @Query('language') language?: string,
+    @Query('max_price') max_price?: string,
+    @Query('displacement_allowed') displacement_allowed?: string,
+    @Query('q') q?: string,
+  ) {
+    return this.searchService.search({
+      date,
+      lat: lat ? parseFloat(lat) : undefined,
+      lng: lng ? parseFloat(lng) : undefined,
+      radius_km: radius_km ? parseFloat(radius_km) : undefined,
+      language,
+      max_price: max_price ? parseFloat(max_price) : undefined,
+      displacement_allowed: displacement_allowed === 'true' ? true : undefined,
+      query: q,
+    });
   }
 
   @Public() @Roles()

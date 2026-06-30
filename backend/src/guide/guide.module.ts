@@ -7,6 +7,7 @@ import { GuideOffering } from './entities/guide-offering.entity';
 import { GuideOfferingAvailabilityRule } from './entities/guide-offering-availability-rule.entity';
 import { GuideService } from './guide.service';
 import { GuideOfferingService } from './guide-offering.service';
+import { GuideSearchService } from './guide-search.service';
 import { GuideController } from './guide.controller';
 import { GuideOfferingController } from './guide-offering.controller';
 import { GuideMongoService } from './guide-mongo.service';
@@ -21,8 +22,8 @@ import { GuideEngagement, GuideEngagementSchema } from './schemas/guide-engageme
       { name: GuideEngagement.name, schema: GuideEngagementSchema },
     ]),
   ],
-  providers: [GuideService, GuideOfferingService, GuideMongoService],
+  providers: [GuideService, GuideOfferingService, GuideSearchService, GuideMongoService],
   controllers: [GuideController, GuideOfferingController],
-  exports: [GuideService, GuideOfferingService, GuideMongoService],
+  exports: [GuideService, GuideOfferingService, GuideSearchService, GuideMongoService],
 })
 export class GuideModule {}
