@@ -92,6 +92,11 @@ type Offer = {
   cancellation_policy: string | null;
   sustainability_score: number | null;
   created_at: string;
+  project?: { id: string; name: string } | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  location_type?: string;
+  project_id?: string | null;
 };
 
 type Project = {
@@ -741,6 +746,16 @@ function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
           <span className={`px-3 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm shadow-sm ${isGuide ? "bg-primary/90 text-white" : "bg-blue-500/90 text-white"}`}>
             {isGuide ? "Guide certifié" : "Projet éco"}
           </span>
+          {!isGuide && offer.project?.name && (
+            <span className="bg-amber-500/90 text-white px-3 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm shadow-sm">
+              {offer.project.name}
+            </span>
+          )}
+          {offer.location_type === "mobile" && (
+            <span className="bg-purple-500/90 text-white px-3 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm shadow-sm">
+              🚐 Mobile
+            </span>
+          )}
         </div>
 
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">

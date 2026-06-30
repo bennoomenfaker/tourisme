@@ -145,6 +145,8 @@ export default function ExplorePage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [showPlaces, setShowPlaces] = useState(true);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [guides, setGuides] = useState<any[]>([]);
+  const [showGuides, setShowGuides] = useState(false);
 
   useEffect(() => {
     const cart = getGuestCart();
@@ -176,9 +178,10 @@ export default function ExplorePage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [offersData, circuitsData] = await Promise.all([
+      const [offersData, circuitsData, guidesData] = await Promise.all([
         apiFetch<any[]>("/offers").catch(() => []),
         apiFetch<any[]>("/circuits").catch(() => []),
+        apiFetch<any[]>("/guide/search").catch(() => []),
       ]);
       const enrichedOffers: OfferItem[] = [];
       for (const offer of offersData ?? []) {
@@ -199,6 +202,7 @@ export default function ExplorePage() {
         base_price: c.base_price ?? null, currency: c.currency ?? "TND", duration_days: c.duration_days ?? null,
         difficulty_level: c.difficulty_level ?? null, waypoints: c.waypoints ?? null,
       })));
+      setGuides(guidesData ?? []);
       setLoadingPlaces(true);
       apiFetch<Place[]>("/publications/places?limit=100").then(setPlaces).catch(() => {}).finally(() => setLoadingPlaces(false));
     } catch {} finally { setLoading(false); }
@@ -249,7 +253,22 @@ export default function ExplorePage() {
     ...(showOffers ? filteredOffers.filter((o) => o.latitude && o.longitude).map((o) => ({ lat: o.latitude!, lng: o.longitude!, label: o.name, type: "offer" as const, id: o.offer_id })) : []),
     ...(showCircuits ? filteredCircuits.filter((c) => c.lat && c.lng).map((c) => ({ lat: c.lat!, lng: c.lng!, label: c.title, type: "circuit" as const, id: c.id })) : []),
     ...(showPlaces ? filteredPlaces.filter((p) => p.latitude && p.longitude).map((p) => ({ lat: p.latitude!, lng: p.longitude!, label: p.title, type: "place" as const, id: p.id })) : []),
-  ], [filteredOffers, filteredCircuits, filteredPlaces, showOffers, showCircuits, showPlaces]);
+    ...(showGuides ? guides.flatMap((g: any) => {
+      return (g.offerings ?? []).filter((o: any) => o.lat && o.lng).map((o: any) => ({
+        lat: Number(o.lat), lng: Number(o.lng), label: g.full_name ?? g.name ?? "Guide", type: "guide" as const, id: g.user_id,
+      }));
+    }) : []),
+  ], [filteredOffers, filteredCircuits, filteredPlaces, showOffers, showCircuits, showPlaces, showGuides, guides]);
+
+  const radii = useMemo(() => {
+    if (!showGuides) return [];
+    return guides.flatMap((g: any) => {
+      return (g.offerings ?? []).filter((o: any) => o.lat && o.lng && o.radius_km).map((o: any) => ({
+        lat: Number(o.lat), lng: Number(o.lng), radiusKm: Number(o.radius_km),
+        color: "#f59e0b", label: `${g.full_name ?? "Guide"} — ${o.title ?? ""} (rayon ${o.radius_km}km)`,
+      }));
+    });
+  }, [showGuides, guides]);
 
   const polylines = useMemo(() => {
     return filteredCircuits
@@ -312,6 +331,13 @@ export default function ExplorePage() {
                 title="Afficher les lieux"
               >
                 {showPlaces ? <Eye size={14} /> : <EyeOff size={14} />} Lieux
+              </button>
+              <button
+                onClick={() => setShowGuides(!showGuides)}
+                className={`flex items-center gap-1 px-2.5 py-2 text-xs font-bold transition-colors ${showGuides ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-600"}`}
+                title="Afficher les guides"
+              >
+                {showGuides ? <Eye size={14} /> : <EyeOff size={14} />} Guides
               </button>
             </div>
             <a href="/cart" className="relative flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50">
@@ -384,15 +410,15 @@ export default function ExplorePage() {
               {loading ? (
                 <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
               ) : markers.length > 0 ? (
-                <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} polylines={polylines} layerVisibility={{ offers: showOffers, circuits: showCircuits, places: showPlaces }} />
+                <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} polylines={polylines} radii={radii} layerVisibility={{ offers: showOffers, circuits: showCircuits, places: showPlaces, guides: showGuides }} />
               ) : (
                 <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
               )}
             </div>
             {/* Cards */}
             <div className="lg:w-1/2 space-y-3">
-              <p className="text-xs text-slate-400 font-medium">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length) !== 1 ? "s" : ""}</p>
-              <ExploreCards offers={filteredOffers} circuits={filteredCircuits} places={filteredPlaces} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
+              <p className="text-xs text-slate-400 font-medium">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)) !== 1 ? "s" : ""}</p>
+              <ExploreCards offers={showOffers ? filteredOffers : []} circuits={showCircuits ? filteredCircuits : []} places={showPlaces ? filteredPlaces : []} guides={showGuides ? guides : []} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
             </div>
           </div>
         )}
@@ -402,7 +428,7 @@ export default function ExplorePage() {
             {loading ? (
               <div className="h-full bg-slate-100 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-300" size={32} /></div>
             ) : markers.length > 0 ? (
-              <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} polylines={polylines} layerVisibility={{ offers: showOffers, circuits: showCircuits, places: showPlaces }} />
+              <MapView lat={markers[0].lat} lng={markers[0].lng} markers={markers} height="100%" showHeatmap={showHeatmap} polylines={polylines} radii={radii} layerVisibility={{ offers: showOffers, circuits: showCircuits, places: showPlaces, guides: showGuides }} />
             ) : (
               <div className="h-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm">Aucune localisation</div>
             )}
@@ -411,8 +437,8 @@ export default function ExplorePage() {
 
         {viewMode === "grid" && (
           <div>
-            <p className="text-xs text-slate-400 font-medium mb-3">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length) !== 1 ? "s" : ""}</p>
-            <ExploreCards offers={filteredOffers} circuits={filteredCircuits} places={filteredPlaces} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
+            <p className="text-xs text-slate-400 font-medium mb-3">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)) !== 1 ? "s" : ""}</p>
+            <ExploreCards offers={showOffers ? filteredOffers : []} circuits={showCircuits ? filteredCircuits : []} places={showPlaces ? filteredPlaces : []} guides={showGuides ? guides : []} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
           </div>
         )}
       </div>
@@ -445,8 +471,8 @@ export default function ExplorePage() {
   );
 }
 
-function ExploreCards({ offers, circuits, places, cartIds, adding, onAdd, onSelect }: {
-  offers: OfferItem[]; circuits: Circuit[]; places: Place[]; cartIds: Set<string>; adding: string | null;
+function ExploreCards({ offers, circuits, places, guides, cartIds, adding, onAdd, onSelect }: {
+  offers: OfferItem[]; circuits: Circuit[]; places: Place[]; guides: any[]; cartIds: Set<string>; adding: string | null;
   onAdd: (type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) => void;
   onSelect: (item: OfferItem | Circuit | Place) => void;
 }) {
@@ -467,6 +493,11 @@ function ExploreCards({ offers, circuits, places, cartIds, adding, onAdd, onSele
           <PlaceCard place={place} />
         </a>
       ))}
+      {guides.map((guide: any) => (
+        <a key={guide.user_id} href={`/profile/guide/${guide.user_id}`} className="block bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-shadow">
+          <GuideCard guide={guide} />
+        </a>
+      ))}
       {offers.map((item) => (
         <div key={item.id} className="bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onSelect(item)}>
           <OfferCard item={item} cartIds={cartIds} adding={adding} onAdd={onAdd} />
@@ -477,6 +508,32 @@ function ExploreCards({ offers, circuits, places, cartIds, adding, onAdd, onSele
           <CircuitCard item={circuit} cartIds={cartIds} adding={adding} onAdd={onAdd} />
         </div>
       ))}
+    </div>
+  );
+}
+
+function GuideCard({ guide }: { guide: any }) {
+  const offeringCount = guide.offerings?.length ?? 0;
+  const minPrice = guide.offerings?.reduce?.((min: number, o: any) => o.price != null && (min === 0 || o.price < min) ? o.price : min, 0) ?? 0;
+  return (
+    <div className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-lg shrink-0">
+          {guide.photo ? <img src={guide.photo} alt="" className="w-10 h-10 rounded-xl object-cover" /> : <span className="text-amber-600 font-bold">G</span>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm text-slate-800 truncate">{guide.full_name ?? guide.name ?? "Guide"}</p>
+          {guide.zone && <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={9} /> {guide.zone}</p>}
+          <div className="flex items-center gap-2 mt-1">
+            {guide.guide_type && <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full font-medium">{guide.guide_type}</span>}
+            {guide.sustainability_score != null && <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full font-medium">🌿 {guide.sustainability_score}</span>}
+            {offeringCount > 0 && <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full font-medium">{offeringCount} prestation{offeringCount > 1 ? "s" : ""}</span>}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          {minPrice > 0 && <p className="text-sm font-black text-amber-600">{Number(minPrice).toLocaleString()} TND</p>}
+        </div>
+      </div>
     </div>
   );
 }

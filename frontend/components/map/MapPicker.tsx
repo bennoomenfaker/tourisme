@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 
 const markerIcon = L.icon({
@@ -60,10 +60,12 @@ async function searchPlace(query: string): Promise<{ lat: number; lng: number; d
 export default function MapPicker({
   lat,
   lng,
+  radiusKm,
   onPick,
 }: {
   lat: number | null;
   lng: number | null;
+  radiusKm?: number | null;
   onPick: (lat: number, lng: number, address: string) => void;
 }) {
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number } | null>(null);
@@ -136,6 +138,19 @@ export default function MapPicker({
           {flyTarget && <FlyTo lat={flyTarget.lat} lng={flyTarget.lng} />}
           {lat !== null && lng !== null && (
             <Marker position={[lat, lng]} icon={markerIcon} />
+          )}
+          {lat !== null && lng !== null && radiusKm && (
+            <Circle
+              center={[lat, lng]}
+              radius={radiusKm * 1000}
+              pathOptions={{
+                color: "#f59e0b",
+                fillColor: "#f59e0b",
+                fillOpacity: 0.1,
+                weight: 2,
+                dashArray: "6 4",
+              }}
+            />
           )}
         </MapContainer>
       </div>

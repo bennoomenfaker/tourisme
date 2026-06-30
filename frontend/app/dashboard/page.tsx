@@ -44,6 +44,7 @@ type Offer = {
   price: number | null;
   duration: string | null;
   offer_type: string | null;
+  location_type?: string;
   status: string;
   rejection_reason: string | null;
   project_id?: string | null;
@@ -485,7 +486,7 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ title?: string; price?: string }>({});
-  const [form, setForm] = useState({ title: "", offer_type: "", description: "", price: "", duration: "", region: "" });
+  const [form, setForm] = useState({ title: "", offer_type: "", description: "", price: "", duration: "", region: "", location_type: "fixed" });
 
   const inputClass = (hasErr: boolean) =>
     `w-full px-4 py-3 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 transition-all ${hasErr ? "bg-red-50 border border-red-400 focus:ring-red-300" : "bg-slate-50 border border-transparent focus:ring-primary"}`;
@@ -512,6 +513,7 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
           price: form.price ? Number(form.price) : undefined,
           duration: form.duration.trim() || undefined,
           region: form.region.trim() || undefined,
+          location_type: form.location_type,
         }),
       });
       onSuccess(created);
@@ -555,6 +557,24 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Type de localisation</label>
+            <div className="flex gap-2">
+              <button type="button"
+                onClick={() => setForm({ ...form, location_type: "fixed" })}
+                className={`flex-1 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${form.location_type === "fixed" ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                <span className="block">📍 Fixe</span>
+                <span className="block text-[10px] font-normal mt-0.5">Lieu précis (adresse GPS)</span>
+              </button>
+              <button type="button"
+                onClick={() => setForm({ ...form, location_type: "mobile" })}
+                className={`flex-1 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${form.location_type === "mobile" ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                <span className="block">🚐 Mobile</span>
+                <span className="block text-[10px] font-normal mt-0.5">Se déplace chez le voyageur</span>
+              </button>
             </div>
           </div>
 
@@ -608,7 +628,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ title?: string; price?: string }>({});
-  const [form, setForm] = useState({ title: "", offer_type: "", project_id: "", description: "", price: "", duration: "", region: "" });
+  const [form, setForm] = useState({ title: "", offer_type: "", project_id: "", description: "", price: "", duration: "", region: "", location_type: "fixed" });
 
   const inputClass = (hasErr: boolean) =>
     `w-full px-4 py-3 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 transition-all ${hasErr ? "bg-red-50 border border-red-400 focus:ring-red-300" : "bg-slate-50 border border-transparent focus:ring-primary"}`;
@@ -635,6 +655,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
           price: form.price ? Number(form.price) : undefined,
           duration: form.duration.trim() || undefined,
           region: form.region.trim() || undefined,
+          location_type: form.location_type,
         }),
       });
       onSuccess(created);
@@ -696,6 +717,24 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Type de localisation</label>
+            <div className="flex gap-2">
+              <button type="button"
+                onClick={() => setForm({ ...form, location_type: "fixed" })}
+                className={`flex-1 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${form.location_type === "fixed" ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                <span className="block">📍 Fixe</span>
+                <span className="block text-[10px] font-normal mt-0.5">Lieu précis (adresse GPS)</span>
+              </button>
+              <button type="button"
+                onClick={() => setForm({ ...form, location_type: "mobile" })}
+                className={`flex-1 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${form.location_type === "mobile" ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                <span className="block">🚐 Mobile</span>
+                <span className="block text-[10px] font-normal mt-0.5">Se déplace chez le voyageur</span>
+              </button>
             </div>
           </div>
 
@@ -1955,7 +1994,7 @@ export default function DashboardPage() {
     : role === "guide"
     ? [
         { label: "Tableau de bord", icon: "dashboard" },
-        { label: "Mes Offres", icon: "sell" },
+        { label: "Mes Prestations", icon: "badge" },
         { label: "Réservations", icon: "event_available" },
         { label: "Circuits", icon: "route" },
         { label: "Notifications", icon: "notifications" },
@@ -2073,7 +2112,7 @@ export default function DashboardPage() {
             </div>
             <nav className="flex-1 space-y-0.5">
               {navItems.map((item) => (
-                <button key={item.label} onClick={() => { setActiveItem(item.label); setSidebarOpen(false); }}
+                <button key={item.label} onClick={() => { setActiveItem(item.label); setSidebarOpen(false); if (item.label === "Mes Prestations") router.push("/dashboard/guide-offerings"); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${
                     activeItem === item.label
                       ? "bg-emerald-50 text-emerald-700 font-bold"
@@ -2140,7 +2179,7 @@ export default function DashboardPage() {
             </div>
             <nav className="flex-1 space-y-0.5">
               {navItems.map((item) => (
-                <button key={item.label} onClick={() => setActiveItem(item.label)}
+                <button key={item.label} onClick={() => { setActiveItem(item.label); if (item.label === "Mes Prestations") router.push("/dashboard/guide-offerings"); }}
                   title={!sidebarHovered ? item.label : undefined}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${
                     activeItem === item.label
@@ -2729,7 +2768,17 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {(role === "guide" || role === "project") && activeItem === "Mes Offres" && (
+            {role === "guide" && activeItem === "Mes Prestations" && (
+              <div>
+                <button onClick={() => router.push("/dashboard/guide-offerings")}
+                  className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-base">open_in_new</span>
+                  Gérer mes prestations de guide
+                </button>
+              </div>
+            )}
+
+            {role === "project" && activeItem === "Mes Offres" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold">Mes Offres</h3>
@@ -2834,6 +2883,11 @@ export default function DashboardPage() {
                             {offer.duration && (
                               <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
                                 <span className="material-symbols-outlined text-sm">schedule</span>{offer.duration}
+                              </span>
+                            )}
+                            {offer.location_type && (
+                              <span className="flex items-center gap-1 text-[10px] text-slate-400">
+                                {offer.location_type === "fixed" ? "📍" : "🚐"}
                               </span>
                             )}
                             <div className="ml-auto">
@@ -2952,12 +3006,8 @@ export default function DashboardPage() {
         <AddPublicationModal token={token} publication={editingPublication} onClose={() => setEditingPublication(null)}
           onSuccess={(p) => { setPublications((prev) => prev.map((pr) => pr.id === p.id ? p : pr)); setEditingPublication(null); }} />
       )}
-      {role === "guide" && showAddOffer && (
-        <GuidedOfferWizard token={token} userRole="guide" onClose={() => setShowAddOffer(false)}
-          onSuccess={(o) => { setOffers((prev) => [o, ...prev]); setShowAddOffer(false); }} />
-      )}
       {role === "project" && showAddOffer && (
-        <GuidedOfferWizard token={token} userRole="project" userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} onClose={() => setShowAddOffer(false)}
+        <GuidedOfferWizard token={token} userRole="project" userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} userProjects={profile.projects} onClose={() => setShowAddOffer(false)}
           onSuccess={(o) => { setOffers((prev) => [o, ...prev]); setShowAddOffer(false); }} />
       )}
       {role === "project" && showAddProject && (
@@ -2969,7 +3019,7 @@ export default function DashboardPage() {
           onSuccess={(p) => { setProfile((prev) => prev ? { ...prev, projects: prev.projects?.map((pr) => pr.id === p.id ? p : pr) } : prev); setEditingProject(null); }} />
       )}
       {editingOffer && (
-        <GuidedOfferWizard token={token} userRole={role} userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} onClose={() => setEditingOffer(null)}
+        <GuidedOfferWizard token={token} userRole={role} userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} userProjects={profile.projects} onClose={() => setEditingOffer(null)}
           onSuccess={(o) => { setOffers((prev) => prev.map((of) => of.id === o.id ? o : of)); setEditingOffer(null); }} editOffer={editingOffer} />
       )}
     </div>

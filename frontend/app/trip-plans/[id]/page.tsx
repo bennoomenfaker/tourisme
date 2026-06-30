@@ -1,12 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, Calendar, Plus, Trash2, MapPin, Clock,
-  Search, X, Loader2, Check, AlertCircle, Tag, Share2, Edit,
+  Search, X, Loader2, Check, AlertCircle, Tag, Share2, Edit, ChevronRight,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -459,7 +459,7 @@ export default function TripPlanDetailPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <h4 className="font-semibold text-slate-800">
-                              {item.offerItem?.name ?? item.circuit?.title ?? "Élément supprimé"}
+                              {item.offerItem?.name ?? item.circuit?.title ?? item.notes ?? "Élément supprimé"}
                             </h4>
                             {item.offerItem?.item_type && (
                               <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
@@ -516,7 +516,7 @@ export default function TripPlanDetailPage() {
                               )}
                             </div>
                           )}
-                          {item.notes && (
+                          {item.notes && (item.offerItem?.name || item.circuit?.title) && (
                             <p className="text-xs text-slate-500 mt-1 italic">{item.notes}</p>
                           )}
                           {item.offerItem?.prices && item.offerItem.prices.length > 0 && (
@@ -642,13 +642,13 @@ export default function TripPlanDetailPage() {
 }
 
 function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan: TripPlan; onClose: () => void; onAdded: () => void }) {
+  const [tab, setTab] = useState<"offers" | "guides">("offers");
   const [offers, setOffers] = useState<OfferListItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedOffer, setSelectedOffer] = useState<OfferFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
   const [dayNumber, setDayNumber] = useState(() => {
-    // Auto-suggest next day number
     const existingDays = (plan.items ?? [])
       .map((i) => i.day_number)
       .filter((d): d is number => d != null);
@@ -657,6 +657,12 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
   const [notes, setNotes] = useState("");
   const [mapLat, setMapLat] = useState<number | null>(null);
   const [mapLng, setMapLng] = useState<number | null>(null);
+
+  // Guide search state
+  const [guides, setGuides] = useState<any[]>([]);
+  const [searchingGuides, setSearchingGuides] = useState(false);
+  const [guideSearchQuery, setGuideSearchQuery] = useState("");
+  const [selectedGuide, setSelectedGuide] = useState<any | null>(null);
 
   useEffect(() => {
     apiFetch<OfferListItem[]>("/offers")
@@ -697,6 +703,18 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
     }
   };
 
+  async function handleGuideSearch() {
+    const q = guideSearchQuery.trim();
+    if (!q) return;
+    setSearchingGuides(true);
+    try {
+      const data = await apiFetch<any[]>(`/guide/search?q=${encodeURIComponent(q)}`);
+      setGuides(data ?? []);
+    } catch { setGuides([]); }
+    setSearchingGuides(false);
+    setSelectedGuide(null);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/30 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-lg mx-4 w-full max-w-lg mb-12">
@@ -706,6 +724,20 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
         </div>
 
         <div className="p-4">
+          {/* Tabs */}
+          {!selectedOffer && !selectedGuide && (
+            <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4">
+              <button onClick={() => setTab("offers")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${tab === "offers" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                🏪 Offres
+              </button>
+              <button onClick={() => setTab("guides")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${tab === "guides" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                🧑‍🏫 Guides
+              </button>
+            </div>
+          )}
+
           {selectedOffer ? (
             <div>
               <button onClick={() => setSelectedOffer(null)} className="text-sm text-primary hover:underline mb-3 flex items-center gap-1">
@@ -741,6 +773,9 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-slate-800">{item.name}</p>
+                          {item.description && (
+                            <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{item.description}</p>
+                          )}
                           <div className="flex flex-wrap gap-1 mt-1">
                             {item.item_type && <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{item.item_type}</span>}
                             {item.details_json?.room_sub_type && <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">{item.details_json.room_sub_type}</span>}
@@ -772,7 +807,59 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                 )}
               </div>
             </div>
-          ) : (
+          ) : selectedGuide ? (
+            <div>
+              <button onClick={() => setSelectedGuide(null)} className="text-sm text-primary hover:underline mb-3 flex items-center gap-1">
+                <ArrowLeft size={14} /> Retour aux guides
+              </button>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-lg">
+                  {selectedGuide.photo ? <img src={selectedGuide.photo} alt="" className="w-full h-full rounded-full object-cover" /> : "🧑‍🏫"}
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800">{selectedGuide.full_name}</h4>
+                  {selectedGuide.zone && <p className="text-xs text-slate-400">📍 {selectedGuide.zone}</p>}
+                  {selectedGuide.sustainability_score != null && (
+                    <p className="text-xs text-emerald-600">🌿 Score: {selectedGuide.sustainability_score}</p>
+                  )}
+                </div>
+              </div>
+              {selectedGuide.bio && <p className="text-xs text-slate-500 mb-3">{selectedGuide.bio}</p>}
+              <div className="flex gap-2 mb-4">
+                <a href={`/profile/guide/${selectedGuide.user_id}`}
+                  className="flex-1 text-center text-xs font-bold py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+                  Voir profil public
+                </a>
+                <button onClick={() => {
+                  const text = `Bonjour ${selectedGuide.full_name}, je suis intéressé par vos services de guide pour mon voyage.`;
+                  window.location.href = `/messagerie?share=${encodeURIComponent(text)}&userId=${selectedGuide.user_id}`;
+                }}
+                  className="flex-1 text-xs font-bold py-2 rounded-xl bg-primary text-white hover:bg-emerald-600">
+                  Contacter
+                </button>
+              </div>
+
+              <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Prestations</h5>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {(selectedGuide.offerings ?? []).map((o: any) => (
+                  <div key={o.id} className="border border-slate-100 rounded-xl p-3">
+                    <p className="font-medium text-sm text-slate-800">{o.title}</p>
+                    {o.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{o.description}</p>}
+                    <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-slate-500">
+                      <span className="font-bold text-primary">{Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
+                      {o.service_zone_type === "radius" && o.radius_km && <span>📏 Rayon {o.radius_km} km</span>}
+                      {o.service_zone_type === "all_tunisia" && <span>🌍 Toute la Tunisie</span>}
+                      {o.service_zone_type === "point" && <span>📍 Point fixe</span>}
+                      {o.languages?.length > 0 && <span>🗣️ {o.languages.join(", ")}</span>}
+                    </div>
+                  </div>
+                ))}
+                {(!selectedGuide.offerings || selectedGuide.offerings.length === 0) && (
+                  <p className="text-sm text-slate-400 text-center py-4">Aucune prestation disponible</p>
+                )}
+              </div>
+            </div>
+          ) : tab === "offers" ? (
             <div>
               <div className="relative mb-3">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -802,6 +889,61 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                     </button>
                   ))}
                   {filtered.length === 0 && <p className="text-sm text-slate-400 text-center py-4">Aucune offre trouvée</p>}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Rechercher un guide par nom..."
+                  value={guideSearchQuery}
+                  onChange={(e) => setGuideSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleGuideSearch(); }}
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                />
+                <button onClick={handleGuideSearch} disabled={searchingGuides}
+                  className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-emerald-600 disabled:opacity-50">
+                  {searchingGuides ? <Loader2 size={14} className="animate-spin" /> : "Chercher"}
+                </button>
+              </div>
+
+              {searchingGuides ? (
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />)}
+                </div>
+              ) : guides.length > 0 ? (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {guides.map((g) => (
+                    <button key={g.user_id} onClick={() => setSelectedGuide(g)}
+                      className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-sm shrink-0">
+                          {g.photo ? <img src={g.photo} alt="" className="w-full h-full rounded-full object-cover" /> : "🧑‍🏫"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-slate-800">{g.full_name}</p>
+                          <div className="flex flex-wrap gap-1.5 mt-0.5">
+                            {g.zone && <span className="text-[10px] text-slate-400">📍 {g.zone}</span>}
+                            {g.sustainability_score != null && (
+                              <span className="text-[10px] text-emerald-600">🌿 {g.sustainability_score}</span>
+                            )}
+                            <span className="text-[10px] text-amber-600">{(g.offerings ?? []).length} prestation(s)</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-slate-300 shrink-0" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : guideSearchQuery.trim() && !searchingGuides ? (
+                <p className="text-sm text-slate-400 text-center py-4">Aucun guide trouvé pour "{guideSearchQuery}"</p>
+              ) : (
+                <div className="text-center py-8">
+                  <span className="text-3xl mb-2 block">🧑‍🏫</span>
+                  <p className="text-sm text-slate-400">Cherchez un guide par nom pour voir ses prestations</p>
+                  <p className="text-xs text-slate-300 mt-1">Vous pourrez le contacter ou ajouter une note à votre plan</p>
                 </div>
               )}
             </div>

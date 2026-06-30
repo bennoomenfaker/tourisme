@@ -23,6 +23,7 @@ interface Props {
   userRole: string;
   userProjectId?: string;
   userProjectType?: string;
+  userProjects?: { id: string; name: string; project_type?: string[]; status?: string }[];
   onClose: () => void;
   onSuccess: (offer: any) => void;
   editOffer?: any;
@@ -131,7 +132,7 @@ function hasDifficulty(itemType: string): boolean {
   return ["randonnee", "trekking", "vtt", "escalade", "kayak", "speleologie"].includes(itemType);
 }
 
-export default function GuidedOfferWizard({ token, userRole, userProjectId, userProjectType, onClose, onSuccess, editOffer }: Props) {
+export default function GuidedOfferWizard({ token, userRole, userProjectId, userProjectType, userProjects, onClose, onSuccess, editOffer }: Props) {
   const isEdit = !!editOffer;
   const [step, setStep] = useState<number>(isEdit ? 2 : 1);
   const [loading, setLoading] = useState(false);
@@ -160,6 +161,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [meetingPoint, setMeetingPoint] = useState("");
   const [meetingLat, setMeetingLat] = useState<number | null>(null);
   const [meetingLng, setMeetingLng] = useState<number | null>(null);
+  const [locationType, setLocationType] = useState("fixed");
   const [confirmationMode, setConfirmationMode] = useState("automatic");
   const [minGroupSize, setMinGroupSize] = useState("");
   const [maxGroupSize, setMaxGroupSize] = useState("");
@@ -171,6 +173,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [cancellationDeadlineDays, setCancellationDeadlineDays] = useState("");
   const [items, setItems] = useState<OfferItemForm[]>([]);
   const [availabilityRules, setAvailabilityRules] = useState<AvailabilityRule[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(editOffer?.project_id || userProjectId || "");
 
   const normalizedCategory = category ? (OFFER_TYPE_MAP[category] ?? category) : '';
   const itemTypes = normalizedCategory ? (ITEM_TYPES_BY_CATEGORY[normalizedCategory] ?? []) : [];
@@ -203,6 +206,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     setLng(editOffer.longitude ?? null);
     setMeetingPoint(editOffer.meeting_point || "");
     setConfirmationMode(editOffer.confirmation_mode || "automatic");
+    setLocationType(editOffer.location_type || "fixed");
     setMinGroupSize(editOffer.min_group_size?.toString() || "");
     setMaxGroupSize(editOffer.max_group_size?.toString() || "");
     setMinAge(editOffer.min_age?.toString() || "");
@@ -396,6 +400,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         address: address.trim() || undefined,
         latitude: lat ?? undefined,
         longitude: lng ?? undefined,
+        location_type: locationType,
         meeting_point: meetingPoint.trim() || undefined,
         meeting_lat: meetingLat ?? undefined,
         meeting_lng: meetingLng ?? undefined,
@@ -410,6 +415,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
       let resultOffer;
       if (isEdit) {
+        offerData.project_id = selectedProjectId || null;
         await apiFetch<any>(`/offers/${editOffer.id}`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },
@@ -419,7 +425,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        offerData.project_id = userProjectId || undefined;
+        offerData.project_id = selectedProjectId || undefined;
         resultOffer = await apiFetch<any>("/offers", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -603,6 +609,18 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800">Informations générales</h3>
 
+              {userRole === "project" && userProjects && userProjects.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500">Projet *</label>
+                  <select className={inputClass} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+                    <option value="">Sélectionner un projet</option>
+                    {userProjects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500">Titre de l'offre *</label>
                 <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Eco Lodge Sahara, Randonnée Jbel Zaghouan..." />
@@ -636,6 +654,25 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                   <option value="automatic">Automatique (réservation instantanée)</option>
                   <option value="manual">Manuelle (je valide chaque réservation)</option>
                 </select>
+              </div>
+
+              {/* Location type */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500">Type de localisation</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setLocationType("fixed")}
+                    className={`flex-1 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${locationType === "fixed" ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                    <span className="block">📍 Fixe</span>
+                    <span className="block text-[10px] font-normal mt-0.5">Lieu précis</span>
+                  </button>
+                  <button type="button" onClick={() => setLocationType("mobile")}
+                    className={`flex-1 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${locationType === "mobile" ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                    <span className="block">🚐 Mobile</span>
+                    <span className="block text-[10px] font-normal mt-0.5">Se déplace</span>
+                  </button>
+                </div>
+                {locationType === "fixed" && <p className="text-[10px] text-slate-400">Vous définirez les coordonnées GPS à l'étape Carte</p>}
+                {locationType === "mobile" && <p className="text-[10px] text-slate-400">L'offre se déplace chez le voyageur (zone de service à définir)</p>}
               </div>
 
               {error && <p className="text-sm text-red-500 font-semibold">{error}</p>}

@@ -170,13 +170,17 @@ export class GuideService {
 
   async searchGuides(query: string) {
     const q = query.trim();
-    if (!q) return [];
-    return this.repo
+    const builder = this.repo
       .createQueryBuilder('g')
-      .where('LOWER(g.full_name) LIKE :q', { q: `%${q.toLowerCase()}%` })
       .select(['g.user_id', 'g.full_name', 'g.photo', 'g.zone', 'g.guide_type', 'g.sustainability_score'])
-      .limit(20)
-      .getMany();
+      .limit(20);
+    if (q) {
+      builder.where(
+        '(LOWER(g.full_name) LIKE :q OR LOWER(g.zone) LIKE :q)',
+        { q: `%${q.toLowerCase()}%` },
+      );
+    }
+    return builder.getMany();
   }
 
   private calculateCompletion(p: Partial<Guide>): number {

@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Calendar,
   Check, DollarSign, Info, Plus, Trash2, Edit, X, Share2, Copy, Heart, ShoppingCart,
-  AlertTriangle, Timer, Tag,
+  AlertTriangle, Timer, Tag, Search,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -38,6 +38,8 @@ interface CircuitProgramItem {
   duration_minutes: number | null;
   distance_km: number | null;
   transport_mode: string | null;
+  guide_id: string | null;
+  guide_name: string | null;
 }
 
 interface CircuitDay {
@@ -164,6 +166,13 @@ export default function CircuitDetailPage() {
   const [progDistance, setProgDistance] = useState("");
   const [progTransport, setProgTransport] = useState("");
   const [showProgEmojiPicker, setShowProgEmojiPicker] = useState(false);
+  const [showGuideSearch, setShowGuideSearch] = useState(false);
+  const [guideSearchQuery, setGuideSearchQuery] = useState("");
+  const [guideSearchResults, setGuideSearchResults] = useState<any[]>([]);
+  const [guideSearchLoading, setGuideSearchLoading] = useState(false);
+  const [progGuideId, setProgGuideId] = useState<string | null>(null);
+  const [progGuideName, setProgGuideName] = useState<string | null>(null);
+  const [progWithGuide, setProgWithGuide] = useState(false);
 
   const [showEditMap, setShowEditMap] = useState(false);
   const [showDayMap, setShowDayMap] = useState(false);
@@ -495,9 +504,12 @@ export default function CircuitDetailPage() {
           duration_minutes: progDuration ? parseInt(progDuration) : undefined,
           distance_km: progDistance ? parseFloat(progDistance) : undefined,
           transport_mode: progTransport || undefined,
+          guide_id: progWithGuide ? (progGuideId || null) : null,
+          guide_name: progWithGuide ? (progGuideName || null) : null,
         }),
       });
       setEditProgramItem(null);
+      setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false);
       loadCircuit();
     } catch (err: any) {
       setReserveError(err.message || "Erreur lors de la modification de l'activité");
@@ -532,11 +544,14 @@ export default function CircuitDetailPage() {
           duration_minutes: progDuration ? parseInt(progDuration) : undefined,
           distance_km: progDistance ? parseFloat(progDistance) : undefined,
           transport_mode: progTransport || undefined,
+          guide_id: progWithGuide ? (progGuideId || undefined) : undefined,
+          guide_name: progWithGuide ? (progGuideName || undefined) : undefined,
         }),
       });
       setShowAddProgram(null);
       setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd("");
       setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport("");
+      setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false);
       loadCircuit();
     } catch (err: any) {
       setReserveError(err.message || "Erreur lors de l'ajout du programme");
@@ -769,6 +784,7 @@ export default function CircuitDetailPage() {
                                   duration_minutes: item.duration_minutes,
                                   distance_km: item.distance_km,
                                   transport_mode: item.transport_mode,
+                                  guide_name: item.guide_name,
                                 }))}
                                 renderActions={
                                   isAuthor
@@ -783,7 +799,7 @@ export default function CircuitDetailPage() {
                                               <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0 mr-1">Requis</span>
                                             )}
                                             <button
-                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); }}
+                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); }}
                                               className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
                                             >
                                               <Edit size={11} />
@@ -1186,6 +1202,68 @@ export default function CircuitDetailPage() {
               </select>
             </div>
           </div>
+
+          {/* ─── Guide optionnel (inline) ──────────────── */}
+          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+            <input type="checkbox" checked={progWithGuide} onChange={(e) => { setProgWithGuide(e.target.checked); if (!e.target.checked) { setProgGuideId(null); setProgGuideName(null); } }} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+            <Search size={14} /> Cette activité nécessite un guide
+          </label>
+
+          {progWithGuide && (
+            <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+              {progGuideName ? (
+                <div className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-sm">person</span>
+                    <span className="text-sm font-medium text-slate-800">{progGuideName}</span>
+                  </div>
+                  <button onClick={() => { setProgGuideId(null); setProgGuideName(null); }} className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg">
+                    Retirer
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input value={guideSearchQuery} onChange={(e) => setGuideSearchQuery(e.target.value)}
+                    placeholder="Nom du guide, région..." className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <button onClick={async () => {
+                    if (!guideSearchQuery.trim()) return;
+                    setGuideSearchLoading(true);
+                    try {
+                      const res = await apiFetch<any[]>(`/guide/public/search?q=${encodeURIComponent(guideSearchQuery)}`);
+                      setGuideSearchResults(res);
+                    } catch { setGuideSearchResults([]); }
+                    setGuideSearchLoading(false);
+                  }} className="px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 flex items-center gap-1">
+                    <Search size={14} /> Chercher
+                  </button>
+                </div>
+              )}
+
+              {guideSearchLoading && <div className="flex justify-center py-2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" /></div>}
+
+              {!progGuideName && guideSearchResults.length === 0 && guideSearchQuery && !guideSearchLoading && (
+                <p className="text-sm text-slate-400 text-center py-2">Aucun guide trouvé</p>
+              )}
+
+              {!progGuideName && guideSearchResults.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {guideSearchResults.map((guide: any) => (
+                    <button key={guide.user_id} onClick={() => { setProgGuideId(guide.user_id); setProgGuideName(guide.full_name); setGuideSearchResults([]); setGuideSearchQuery(""); }}
+                      className="w-full flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-slate-200 hover:border-primary/50 text-left">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-primary text-xs">person</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{guide.full_name}</p>
+                        {guide.zone && <p className="text-xs text-slate-400">{guide.zone}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <button onClick={handleEditProgram} disabled={!progTitle} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
             Enregistrer
           </button>
@@ -1245,6 +1323,68 @@ export default function CircuitDetailPage() {
               </select>
             </div>
           </div>
+
+          {/* ─── Guide optionnel (inline) ──────────────── */}
+          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+            <input type="checkbox" checked={progWithGuide} onChange={(e) => { setProgWithGuide(e.target.checked); if (!e.target.checked) { setProgGuideId(null); setProgGuideName(null); } }} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+            <Search size={14} /> Cette activité nécessite un guide
+          </label>
+
+          {progWithGuide && (
+            <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+              {progGuideName ? (
+                <div className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-sm">person</span>
+                    <span className="text-sm font-medium text-slate-800">{progGuideName}</span>
+                  </div>
+                  <button onClick={() => { setProgGuideId(null); setProgGuideName(null); }} className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg">
+                    Retirer
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input value={guideSearchQuery} onChange={(e) => setGuideSearchQuery(e.target.value)}
+                    placeholder="Nom du guide, région..." className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <button onClick={async () => {
+                    if (!guideSearchQuery.trim()) return;
+                    setGuideSearchLoading(true);
+                    try {
+                      const res = await apiFetch<any[]>(`/guide/public/search?q=${encodeURIComponent(guideSearchQuery)}`);
+                      setGuideSearchResults(res);
+                    } catch { setGuideSearchResults([]); }
+                    setGuideSearchLoading(false);
+                  }} className="px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 flex items-center gap-1">
+                    <Search size={14} /> Chercher
+                  </button>
+                </div>
+              )}
+
+              {guideSearchLoading && <div className="flex justify-center py-2"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" /></div>}
+
+              {!progGuideName && guideSearchResults.length === 0 && guideSearchQuery && !guideSearchLoading && (
+                <p className="text-sm text-slate-400 text-center py-2">Aucun guide trouvé</p>
+              )}
+
+              {!progGuideName && guideSearchResults.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {guideSearchResults.map((guide: any) => (
+                    <button key={guide.user_id} onClick={() => { setProgGuideId(guide.user_id); setProgGuideName(guide.full_name); setGuideSearchResults([]); setGuideSearchQuery(""); }}
+                      className="w-full flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-slate-200 hover:border-primary/50 text-left">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-primary text-xs">person</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{guide.full_name}</p>
+                        {guide.zone && <p className="text-xs text-slate-400">{guide.zone}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <button onClick={() => handleAddProgram(showAddProgram!)} disabled={!progTitle} className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-50">
             Ajouter
           </button>

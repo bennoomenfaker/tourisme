@@ -79,7 +79,12 @@ interface Offer {
   cancellation_policy: string | null;
   sustainability_score: number | null;
   confirmation_mode: string;
+  location_type: string;
   status: string;
+  project_id: string | null;
+  project?: { id: string; name: string } | null;
+  author_id: string;
+  author_type: string;
   items: OfferItem[];
 }
 
@@ -298,6 +303,7 @@ export default function OfferDetailPage() {
 
             <div className="flex flex-wrap gap-3 text-sm text-slate-500 mb-4">
               {offer.region && <span className="flex items-center gap-1"><MapPin size={14} /> {offer.region}</span>}
+              {offer.project && <span className="flex items-center gap-1"><Tag size={14} /> {offer.project.name}</span>}
               {offer.duration && <span className="flex items-center gap-1"><Clock size={14} /> {offer.duration}</span>}
               {(offer.min_group_size || offer.max_group_size) && (
                 <span className="flex items-center gap-1">
@@ -308,6 +314,11 @@ export default function OfferDetailPage() {
                 </span>
               )}
               {offer.min_age && <span className="flex items-center gap-1"><Calendar size={14} /> Âge min. {offer.min_age} ans</span>}
+              {offer.location_type && (
+                <span className="flex items-center gap-1">
+                  {offer.location_type === "fixed" ? "📍" : "🚐"} {offer.location_type === "fixed" ? "Lieu fixe" : "Mobile"}
+                </span>
+              )}
             </div>
 
             {offer.description && (

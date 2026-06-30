@@ -37,311 +37,363 @@
 - **Champs offre** : nom_chambre, surface_m2, etage, vue, nb_couchages, sdb_type, sdb_equipements, formule_restauration, horaires
 - **Cross-validation** : ∈ type_lit_offre ∈ types_lits, ≤ nb_couchages ≤ capacite_max
 
-#### Chambre Supérieure
-- **Onboarding** : nb_chambres_sup, caracteristiques_distinctives, services_premium, petit_dej_inclus, pmr
-- **Champs offre** : nom_chambre, surface_m2, vue, caracteristiques_offre, services_offre, etc.
-- **Cross-validation** : ⊆ caracteristiques_offre ⊆ caracteristiques, ⊆ services_offre ⊆ services_premium
-
 #### Suite
 - **Onboarding** : nb_suites, surface_moyenne, espaces_distincts, services_inclus, privatisation
 - **Champs offre** : nom_suite, surface_m2, nb_pieces, espaces_suite, services_offre
 - **Cross-validation** : ⊆ espaces_suite ⊆ espaces_distincts
 
-#### Bungalow
-- **Onboarding** : nb_bungalows, capacite_par_bungalow, environnement, equipements, animaux_acceptes, pmr
-- **Champs offre** : nom_bungalow, surface_m2, vue, capacite_offre, configuration_lits, equipements_offre
-- **Cross-validation** : ≤ capacite_offre ≤ capacite_par_bungalow
-
 #### Tente Glamping
 - **Onboarding** : nb_tentes, types_tentes, environnement, saison_ouverture, sanitaires, electricite, restauration
 - **Champs offre** : nom_tente, type_tente_offre, surface_m2, capacite_offre, configuration_lit, qualite_literie, prise_electrique_offre, sanitaires_offre
-- **Cross-validation** : ∈ type_tente_offre ∈ types_tentes, ¬F prise_electrique_offre requiredIfFalse electricite
+- **Cross-validation** : ∈ type_tente_offre ∈ types_tentes
 
 ---
 
-## 3. Principales Différences de Détails
-
-### a) Séparation des Formulaires
-| Aspect | Projet Actuel | Éco-Tour v2 |
-|--------|--------------|-------------|
-| Sous-types hébergement | Gérés via room_sub_type dans un seul formulaire | Formulaires séparés par sous-type dédié |
-| Champs spécifiques | Stockés dans `details_json` | Champs explicites avec validation directe |
-
-### b) Onboarding Lié aux Activités
-Le v2 introduit un **onboarding spécifique par sous-type** avec des champs comme :
-- `nb_lits_total`, `capacite_max`, `types_lits` (limites globales)
-- `environnement`, `saison_ouverture`
-- `services_inclus`, `services_communs`
-- Ces valeurs **contraind les offres** via des règles de cross-validation
-
-### c) Cross-Validation (Validation Croisée)
-Le v2 implémente un système riche de contraintes :
-
-| Symbole | Règle | Exemple |
-|---------|-------|---------|
-| `∈` | Valeur doit être dans la liste | niveau_offre ∈ niveaux_diff |
-| `≤` | Doit être inférieur ou égal | nb_lits_offre ≤ nb_lits_total |
-| `⊆` | Sous-ensemble | equipements_offre ⊆ equipements |
-| `¬F ... requiredIfFalse` | Champ requis si onboarding = false | pmr_chambre requis si pmr=false |
-| `T ... requiredIfTrue` | Champ requis si onboarding = true | refuge_inclus requis si refuge_disponible=true |
-
-### d) Champs Manquants dans le Projet Actuel
-Par rapport au v2, le projet actuel manque :
-
-1. **Hébergement** :
-   - Horaires détaillés (checkin_debut, checkin_fin, checkout, couvre_feu, silence_partir_de)
-   - Vue, étage, surface m²
-   - Équipements SdB spécifiques
-   - Formule restauration détaillée
-   - Configuration des lits
-   - Qualité de la literie
-   - Distance aux sanitaires
-   - Menu bivouac (pour camping)
-
-2. **Champs transactionnels** :
-   - Prix par nuit / par personne / par groupe
-   - Caution, dépôt
-
-3. **Conditionnalité** :
-   - Les champs conditionnels selon onboarding (ex: "fichier_gpx si circuit=true")
-   - Logique `conditionalOn`
-
-4. **84 autres sous-types** :
-   - safari_desert, observation_etoiles, speleologie, visite_oasis
-   - circuit_montagne, tour_cotier
-   - randonnee, kayak_canoe, vtt, escalade, yoga, plongee, surf_windsurf
-   - poterie, bijoux_berberes, etc.
-   - Tous avec leurs propres champs onboarding et offres
-
----
-
-## 4. Points Forts du Projet Actuel
-
-### a) Flexibilité JSON
-- `details_json` permet d'ajouter des attributs sans migration DB
-- Adapté pour des évolutions rapides
-
-### b) Architecture Simple
-- Moins de complexité : Offer + OfferItem + Prices
-- Plus facile à maintenir
-
-### c) Pas de Cross-Validation Lourde
-- Pas de logique de contrainte complexe à gérer
-- Moins de validation côté frontend/backend
-
----
-
-## 5. Recommandations d'Alignement
-
-### Phase 1 : Ajout des Types Sous-Types Hébergement
-1. Créer une table `offer_sub_types` liée à `OfferItem`
-2. Ajouter les champs onboarding dans une nouvelle table `OfferOnboarding`
-3. Extension progressive via JSON fields
-
-### Phase 2 : Cross-Validation
-1. Implémenter les règles de validation dans le service
-2. Ajouter des champs conditionnels dans le wizard frontend
-
-### Phase 3 : Élargissement aux 87 Sous-Types
-1. Migrer ITEM_TYPES_BY_CATEGORY vers une structure dynamique
-2. Charger les formulaires depuis la configuration DB
-
----
-
-## 6. Recommandations pour Enrichir le Formulaire Actuel
-
-### Stratégie : Extension Progressive via JSON (Conserver votre architecture)
-
-Votre approche (séparer les offres par type) est **supérieure** car elle permet :
-- Plusieurs offres de types différents (chambre A, chambre B, dortoir...)
-- Chaque offre indépendante avec ses prix/capacités
-- Pas de contraintes rigides entre offres
-
-### a) Enrichissement HÉBERGEMENT - Détails à Ajouter
-
-#### Pour `camping_space` (Espace tente) - Ajouter dans `details_json` :
-```json
-{
-  "tent_capacity": 4,
-  "surface_m2": 25,
-  "type_tente": "Safari"|"Bell"|"Yurt"|"Chalet",
-  "configuration_lit": "2 lits superposés + 1 coin cuisine",
-  "qualite_literie": true,
-  "linge_fourni": true,
-  "electricite": true,
-  "prise_electrique": true,
-  "sanitaires": "Privés"|"Partagés",
-  "distance_sanitaires_m": 50,
-  "experiences_incluses": ["Observation étoiles", "Randonnée nocturne"],
-  "saison_ouverture": "Printemps/Été"|"Toute l'année"
-}
-```
-
-#### Pour `room` (Chambre/Dortoir) - Enrichir :
-```json
-{
-  "room_sub_type": "shared",
-  "bed_count": 6,
-  "surface_m2": 45,
-  "etage": 1,
-  "vue": "Jardin"|"Piscine"|"Montagne",
-  "sdb_type": "Privé"|"Partagé",
-  "sdb_equipements": ["Douche", "WC", "Lavabo"],
-  "services_inclus": ["Wifi", "Climatisation", "Petit-déjeuner"],
-  "checkin_debut": "14:00",
-  "checkin_fin": "20:00",
-  "checkout": "11:00",
-  "couvre_feu": "22:00",
-  "silence_partir_de": "22:00"
-}
-```
-
-### b) Architecture Recommandée
-
-1. **Étape 1 : Définir le Onboarding par Projet-Type**
-   - Stocker dans Project ou une nouvelle table `project_capabilities`
-   - Champs généraux : capacités max, types disponibles, services généraux
-
-2. **Étape 2 : Dropdown Dynamique des Types**
-   - `accommodation` → "Chambre", "Dortoir", "Tente", "Suite"
-   - Chacun ouvre des champs spécifiques dans le formulaire
-
-3. **Étape 3 : Validation Conditionnelle**
-   - Si `electricite: true` dans onboarding → champ `prise_electrique_offre` requis
-   - Si `pmr: true` → champ `pmr_chambre` requis si pas PMR
-
-### c) Mapping des 7 Types d'Hébergement à Intégrer
-
-| Type Actuel | Type V2 | Champs à Ajouter |
-|-------------|---------|-----------------|
-| room (shared) | Dortoir | nb_lits_offre, type_lit, inclus, horaires |
-| room | Chambre Standard | nom_chambre, surface_m2, vue, sdb_equipements, formule_restauration |
-| room (suite) | Suite | nb_pieces, espaces_suite, privatisation_offre |
-| room (bungalow) | Bungalow | configuration_lits, vue, equipements_offre, animaux_offre |
-| camping_space | Tente Glamping | type_tente_offre, surface_m2, qualite_literie, sanitaires_offre |
-| camping_space | Camping Sauvage | emplacements, acces_eau, type_sanitaires, feu_camp_offre |
-| room (gîte/maison) | Gîte Rural | nb_chambres_gite, equipements_cuisine, table_hotes_offre |
-
----
-
-## 7. Structure de Données Actuelle vs V2
-
-### Actuel : OfferItem
-```typescript
-// Structure plate
-interface OfferItem {
-  item_type: 'room' | 'bed' | 'camping_space' | ...;
-  details_json: {
-    room_sub_type?: string;
-    bed_count?: number;       // Seulement pour room
-    tent_capacity?: number;    // Seulement pour camping_space
-    difficulty_level?: string;
-    duration_hours?: number;
-  };
-}
-```
-
-### V2 : Offre Hiérarchisée
-```typescript
-// Structure détaillée
-interface OfferOnboarding {
-  // Déclaration des capacités/possibilités globales
-  nb_lits_total?: number;
-  capacite_max?: number;
-  types_lits?: string[];
-  ...
-}
-
-interface OfferItemV2 {
-  type: 'dortoir' | 'chambre_standard' | 'suite' | ...;
-  // Champs propres au type sélectionné
-  nb_lits_offre?: number;
-  type_lit?: string;
-  dortoir_genre?: string;
-  inclus?: string[];
-  checkin_debut?: string;
-  checkin_fin?: string;
-  ...
-}
-```
-
----
-
-## 7. Synthèse
+## 3. Synthèse des Différences
 
 | Critère | Projet Actuel | Éco-Tourism Platform v2 |
 |---------|--------------|------------------------|
 | **Granularité** | Simple (10 catégories) | Très détaillée (13 catégories, 87 sous-types) |
-| **Onboarding** | Questionnaire durabilité simple | Onboarding complet par sous-type avec contraintes |
-| **Validation** | Minimale | Rich cross-validation (∈, ≤, ⊆, ¬F, T) |
-| **Champs spécifiques** | Via JSON | Champs explicites typés |
-| **Conditionnalité** | Limitée | Avancée (conditionalOn) |
-| **Complexité** | Faible | Élevée |
+| **Onboarding** | Questionnaire durabilité | Questionnaire par sous-type avec contraintes |
+| **Validation** | Minimale | Rich cross-validation |
+| **Champs spécifiques** | Via JSON | Champs explicites |
+| **Architecture** | ✅ Offres indépendantes | ❌ Onboarding contraint les offres |
 
 ---
 
-## 8. Proposition d'Implémentation Progressive
+## 4. Analyse de l'Architecture (CONFIRMÉE PAR L'UTILISATEUR)
 
-### Priorité 1 : Tente Glamping (manquant dans votre projet)
-```json
-// Dans offer-config.ts - Ajouter le type
-{ value: 'tente_glamping', label: 'Tente Glamping', icon: '⛺' }
+### 4.1 Pourquoi le v2 est trop rigide
 
-// Dans GuidedOfferWizard.tsx - Étape 3, après camping_space
-{currentItemType === 'tente_glamping' && (
-  <div className="space-y-3">
-    <select onChange={(e) => updateFirstItem('type_tente_offre', e.target.value)}>
-      <option value="">Type de tente</option>
-      <option value="Safari">Safari</option>
-      <option value="Bell">Bell</option>
-      <option value="Yurt">Yourte</option>
-      <option value="Chalet">Chalet</option>
-    </select>
-    <input type="number" placeholder="Surface m²" onChange={(e) => updateFirstItem('surface_m2', e.target.value)} />
-    <input type="number" placeholder="Capacité" onChange={(e) => updateFirstItem('capacite_offre', e.target.value)} />
-    <label><input type="checkbox" onChange={(e) => updateFirstItem('electricite', e.target.checked)} /> Électricité</label>
-  </div>
-)}
+Le v2 mélange **deux concepts** :
+1. **Gestion de l'établissement** (onboarding/capacité globale)
+2. **Vente d'une offre**
+
+C'est une erreur de conception.
+
+### 4.2 Pourquoi votre architecture est supérieure
+
+```
+Propriétaire
+     ↓
+Projet (ex: Camping Beni Mtir)
+     ↓
+Offres indépendantes :
+  • Cabane 1
+  • Cabane 2
+  • Chambre familiale
+  • Dortoir
+  • Restaurant
+  • Kayak
+  • Randonnée
 ```
 
-### Priorité 2 : Chambre avec Détails
-```json
-// Ajouts pour room type
-- surface_m2 (input number)
-- etage (input number)
-- vue (select: "Jardin", "Piscine", "Montagne", "Mer")
-- sdb_type (select: "Privé", "Partagé")
-- sdb_equipements (multiselect)
-- formule_restauration (select: "Aucun", "Petit-déj", "Demi-pension", "Pension complète")
+Même pattern que Airbnb/Booking/GetYourGuide/Viator.
+
+### 4.3 Le vrai problème : Formulaires pas assez riches
+
+Aujourd'hui :
+```
+Cabane
+Capacité
+Prix
 ```
 
-### Priorité 3 : Horaires Check-in/out
-```json
-// Nouveau bloc dans les étapes
-checkin_debut: "14:00",
-checkin_fin: "20:00", 
-checkout: "11:00",
-couvre_feu: "22:00",
-silence_partir_de: "22:00"
+Demain :
 ```
-
-### Priorité 4 : Équipements avec Multiselect
-- Pour tentes : équipements camping
-- Pour chambres : équipements chambre
-- Pour camping : sanitaires, accès eau, feu autorisé
+Surface, nombre lits, type lits, étage, vue
+SdB (privée/partagée, douche, WC)
+Services (wifi, clim, terrasse, barbecue)
+Horaires (checkin, checkout, couvre-feu)
+```
 
 ---
 
-## 9. Tableau des Champs Manquants Critiques
+## 5. RECOMMANDATIONS (À AJOUTER À VOTRE PROJET)
 
-| Catégorie | Sous-type | Champ | Priorité |
-|-----------|-----------|-------|----------|
-| Hébergement | Toutes | Horaires (checkin/checkout) | HAUTE |
-| Hébergement | Chambre | surface_m2, etage, vue, sdb_equipements | HAUTE |
-| Hébergement | Tente | type_tente, qualite_literie, sanitaires | HAUTE |
-| Hébergement | Toutes | formule_restauration | MOYENNE |
-| Restaurant | Tous | regimes_alimentaires | HAUTE |
-| Activités | Randonnée | fichier_gpx, denivele_positif, points_interet | MOYENNE |
-| Activités | Kayak | niveau_min, savoir_nager | MOYENNE |
+### 5.1 Architecture à GARDER
 
-**Note** : Votre architecture actuelle avec création d'offres séparées est LA bonne approche. Le v2 regroupe trop de contraintes dans l'onboarding ce qui limite la flexibilité. Je recommande de garder votre système mais d'enrichir les champs via `details_json`.
+✅ Offer + OfferItem + details_json
+✅ Offres indépendantes avec prix/capacités séparés
+
+### 5.2 Éléments À AJOUTER
+
+#### Étape "Sous-Type" dans le Wizard
+Après la catégorie, choisir :
+- **Hébergement** → Chambre | Dortoir | Suite | Bungalow | Tente | Gîte
+- **Restaurant** → Restaurant traditionnel | Food truck | Table d'hôtes
+- **Activités** → Randonnée | Kayak | Yoga | Escalade...
+
+#### Moteur de Formulaires Dynamique
+```typescript
+// offer-schema.ts
+const FORM_SCHEMA = {
+  accommodation: {
+    chambre: ['surface_m2', 'vue', 'etage', 'bed_count', 'sdb_equipements', 'checkin_debut', 'checkin_fin', 'checkout'],
+    dortoir: ['nb_lits_offre', 'type_lit', 'inclus', 'checkin_debut', 'checkin_fin', 'checkout', 'silence_partir_de'],
+    tente: ['type_tente_offre', 'surface_m2', 'capacite_offre', 'qualite_literie', 'electricite', 'sanitaires_offre'],
+  }
+};
+```
+
+---
+
+## 6. CHAMPS MANQUANTS À AJOUTER (Prioritaire)
+
+### Hébergement - Toutes les Offres
+| Champ | Description | Type JSON | Priorité |
+|-------|-------------|-----------|----------|
+| surface_m2 | Surface en mètres carrés | number | HAUTE |
+| checkin_debut | Heure check-in min | string (time) | HAUTE |
+| checkin_fin | Heure check-in max | string (time) | HAUTE |
+| checkout | Heure check-out | string (time) | HAUTE |
+
+### Hébergement - Chambre
+| Champ | Description | Priorité |
+|-------|-------------|----------|
+| vue | Jardin/Piscine/Mer/Montagne | HAUTE |
+| etage | Numéro étage | MOYENNE |
+| sdb_type | Privé/Partagé | HAUTE |
+| sdb_equipements | Douche, WC, Lavabo... | HAUTE |
+| formule_restauration | Petit-déj/Demi-pension | MOYENNE |
+| pmr_chambre | Accessible PMR | HAUTE |
+
+### Hébergement - Tente
+| Champ | Description | Priorité |
+|-------|-------------|----------|
+| type_tente_offre | Safari/Bell/Yurt/Chalet | HAUTE |
+| qualite_literie | Standard/Premium/Luxe | HAUTE |
+| electricite | Électricité dispo | HAUTE |
+| prise_electrique_offre | Prises incluses | CONDITIONNEL |
+| sanitaires_offre | Privés/Partagés | HAUTE |
+| distance_sanitaires_m | Distance aux sanitaires | CONDITIONNEL |
+
+### Restaurant
+| Champ | Description | Priorité |
+|-------|-------------|----------|
+| regimes_offre | Végétarien/Vegan/Halal/Sans gluten | HAUTE |
+| nb_couverts_offre | Capacité totale | HAUTE |
+| type_menu | Type de menu | HAUTE |
+
+### Activités - Randonnée
+| Champ | Description | Priorité |
+|-------|-------------|----------|
+| distance_km | Distance parcours | HAUTE |
+| denivele_positif | Dénivelé (m) | HAUTE |
+| fichier_gpx | Tracé GPS | MOYENNE |
+| point_depart | Lieu départ | HAUTE |
+| point_arrivee | Lieu arrivée | MOYENNE |
+| altitude_max | Altitude max (m) | MOYENNE |
+
+### Activités - Kayak
+| Champ | Description | Priorité |
+|-------|-------------|----------|
+| type_embarcation_offre | Type embarcation | HAUTE |
+| niveau_min | Niveau requis | HAUTE |
+| savoir_nager | Savoir nager obligatoire | HAUTE |
+
+---
+
+## 7. PLAN D'ACTION IMMÉDIAT
+
+### Phase 1 : Infrastructure (1 jour)
+- [ ] Créer `offer-schema.ts` avec les définitions de champs
+- [ ] Ajouter mapping `ACCOMMODATION_SUB_TYPES` dans `offer-config.ts`
+- [ ] Modifier wizard : étape "Sous-type" après catégorie
+
+### Phase 2 : Hébergement (3 jours)
+- [ ] Formulaire Chambre enrichi (surface, vue, SdB, horaires)
+- [ ] Formulaire Dortoir enrichi (nb_lits, types lits, horaires)
+- [ ] Formulaire Tente Glamping enrichi (type, literie, électricité, sanitaires)
+
+### Phase 3 : Restauration & Activités (4 jours)
+- [ ] Formulaire Restaurant enrichi (régimes, capacité)
+- [ ] Formulaire Randonnée enrichi (distance, denivelé, GPX)
+- [ ] Formulaire Kayak enrichi (niveau, savoir nager)
+
+### Phase 4 : Validation & Tests
+- [ ] Tests fonctionnels sur chaque type
+- [ ] Validation des champs conditionnels
+
+---
+
+## 8. CONCLUSION
+
+Votre architecture est **LA bonne approche**. Le v2 est plus détaillé mais plus rigide.
+
+**Stratégie gagnante (Version 1) :**
+1. ✅ Garder Offer + OfferItem + details_json
+2. ✅ Ajouter les champs manquants via schéma dynamique
+3. ✅ Implémenter les champs conditionnels
+4. ✅ Sectionner le formulaire (Informations → Équipements → Horaires → Tarifs)
+5. ✅ Tout configurer dans `offer-schema.ts` pour modifications sans code
+
+---
+
+## 9. ANALYSE APPROFONDIE (Validation 85-90%)
+
+### 9.1 Points validés à 100%
+
+| Point | Statut |
+|-------|--------|
+| Architecture Projet → Offres | ✅ Validé |
+| Offres indépendantes avec prix/capacités | ✅ Validé |
+| Moteur de formulaires dynamique | ✅ Validé |
+
+### 9.2 Points à améliorer (Modèle hybride SQL + JSON)
+
+Actuellement votre modèle utilise `details_json` pour tout. 
+
+**Recommandation** : Séparer les champs courants (SQL) des spécifiques (JSON)
+
+```typescript
+// Champs communs - SQL (déjà dans Offer/OfferItem)
+title
+description
+price
+capacity
+location
+availability
+images
+
+// Champs spécifiques - details_json
+// Cabane : surface, vue, type_lit...
+// Randonnée : distance_km, denivele_positif...
+// Restaurant : regimes, halal, terrasse...
+```
+
+### 9.3 Hiérarchisation recommandée
+
+```
+Catégorie
+   ↓
+   Hébergement
+Famille
+   ↓
+   Cabane
+Type
+   ↓
+   Cabane familiale
+Variation
+   ↓
+   Cabane Luxe
+```
+
+Permet d'ajouter des types sans casser la structure existante.
+
+---
+
+## 10. CHAMPS SUPPLÉMENTAIRES IDENTIFIÉS
+
+### 10.1 Randonnée (enrichissement)
+| Champ | Description |
+|-------|-------------|
+| durée_moyenne | Durée estimée |
+| altitude_min | Altitude minimum |
+| denivele_negatif | Dénivelé négatif |
+| type_terrain | Type de terrain |
+| periode_ideale | Période idéale |
+| meteo_conseillée | Météo conseillée |
+| equipement_obligatoire | Équipement obligatoire |
+| equipement_fourni | Équipement fourni |
+| enfants_autorises | Enfants autorisés |
+| animaux_autorises | Animaux autorisés |
+| pause_dejeuner | Pause déjeuner incluse |
+| points_eau | Points d'eau sur parcours |
+| toilettes | Toilettes disponibles |
+| accessibilite_pmr | Accessibilité PMR |
+| point_rendez_vous | Point de rendez-vous |
+
+### 10.2 Kayak (enrichissement)
+| Champ | Description |
+|-------|-------------|
+| riviere | Nom de la rivière |
+| barrage | Barrage |
+| lac | Lac |
+| mer | Mer |
+| courant | Courant fort/faible |
+| profondeur | Profondeur moyenne |
+| guide_obligatoire | Guide obligatoire |
+| assurance | Assurance incluse |
+| meteo_minimale | Météo minimale requise |
+| equipement_fourni | Équipement fourni |
+| type_embarcation | Simple/Double |
+
+### 10.3 Restaurant (enrichissement)
+| Champ | Description |
+|-------|-------------|
+| horaires_ouverture | Horaires d'ouverture |
+| jours_ouverture | Jours d'ouverture |
+| reservation_obligatoire | Réservation obligatoire |
+| capacite_interieure | Capacité intérieure |
+| capacite_exterieure | Capacité extérieure |
+| parking | Parking disponible |
+| paiement_cb | Paiement CB |
+| paiement_especes | Paiement espèces |
+| allergenes | Allergènes gérés |
+
+### 10.4 Disponibilité (moteur unique)
+Toutes les offres utilisent le même système :
+- Calendrier
+- Jours récurrents
+- Périodes de fermeture
+- Exceptions
+
+### 10.5 Tarification (moteur unique)
+- Prix fixe / par personne / par groupe
+- Horaires (par heure / demi-journée / journée / nuit)
+- Saisonnalité
+- Suppléments week-end / jours fériés
+- Réductions enfant / groupe
+
+### 10.6 Équipements (composant réutilisable)
+Catégories + icônes + recherche + multiselect.
+
+---
+
+## 11. PLAN D'ACTION OPTIMISÉ
+
+### Phase 1 : Modèle hybride SQL + JSON
+- [ ] Identifier champs communs à déplacer en SQL
+- [ ] Garder details_json pour les spécifiques
+
+### Phase 2 : Moteur de métadonnées
+Créer `offer-schema.ts` qui décrit :
+- [ ] Sections à afficher
+- [ ] Champs avec validations
+- [ ] Dépendances entre champs
+- [ ] Filtres de recherche
+- [ ] Colonnes d'affichage
+- [ ] SEO
+
+### Phase 3 : Composants réutilisables
+- [ ] Disponibilité (calendrier partagé)
+- [ ] Tarification (moteur partagé)
+- [ ] Équipements (multiselect avec icônes)
+
+### Phase 4 : Sections métier
+Le wizard propose :
+1. Informations
+2. Localisation
+3. Parcours (activités)
+4. Difficulté
+5. Capacité
+6. Disponibilités
+7. Tarifs
+8. Photos
+9. Conditions
+10. Aperçu
+
+Seules les sections pertinentes s'affichent selon le type.
+
+---
+
+## 12. ÉVALUATION GLOBALE
+
+| Critère | Note | Commentaire |
+|---------|------|-------------|
+| Architecture métier | 10/10 | Projet → Offres, Guide → Offres de guidage |
+| Organisation des données | 9,5/10 | Passer à SQL + JSON hybride |
+| Richesse des formulaires | 6/10 → 10/10 | Avec moteur de schémas dynamique |
+| Réutilisabilité | 7/10 → 10/10 | Avec composants partagés |
+| Extensibilité | 8/10 → 10/10 | Un nouveau schéma = nouveau type fonctionnel |

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import HeatmapLayer from "@/components/map/HeatmapLayer";
 
@@ -26,11 +26,26 @@ const placeIcon = L.divIcon({
   iconAnchor: [14, 14],
 });
 
+const guideIcon = L.divIcon({
+  className: "",
+  html: `<div style="background:#f59e0b;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🧑‍🏫</div>`,
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+});
+
+interface MarkerRadius {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  color?: string;
+  label?: string;
+}
+
 interface MarkerData {
   lat: number;
   lng: number;
   label: string;
-  type?: "offer" | "circuit" | "place";
+  type?: "offer" | "circuit" | "place" | "guide";
   id?: string;
 }
 
@@ -42,14 +57,21 @@ interface MapViewProps {
   height?: string;
   showHeatmap?: boolean;
   polylines?: [number, number][][];
-  layerVisibility?: { offers: boolean; circuits: boolean; places: boolean };
+  radii?: MarkerRadius[];
+  layerVisibility?: { offers: boolean; circuits: boolean; places: boolean; guides?: boolean };
 }
 
-function Recenter({ lat, lng }: { lat: number; lng: number }) {
+function Recenter({ lat, lng, markers }: { lat: number; lng: number; markers?: MarkerData[] }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lng], 13);
-  }, [lat, lng, map]);
+    const valid = markers?.filter((m) => m.lat && m.lng) ?? [];
+    if (valid.length > 1) {
+      const bounds = L.latLngBounds(valid.map((m) => [m.lat, m.lng]));
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+    } else {
+      map.setView([lat, lng], valid.length === 1 ? 10 : 7);
+    }
+  }, [lat, lng, markers, map]);
   return null;
 }
 
@@ -70,14 +92,22 @@ function MapLegend() {
         <span className="text-slate-600">Lieu</span>
       </div>
       <div className="flex items-center gap-2">
+        <span className="w-3 h-3 rounded-full bg-amber-500 flex items-center justify-center text-[8px] text-white">🧑</span>
+        <span className="text-slate-600">Guide</span>
+      </div>
+      <div className="flex items-center gap-2">
         <span className="w-5 h-0.5 bg-emerald-500" style={{ borderTop: "2px dashed #13ec49" }} />
         <span className="text-slate-600">Itinéraire</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="w-3 h-3 rounded-full border-2 border-dashed border-amber-400 bg-amber-50" />
+        <span className="text-slate-600">Zone service</span>
       </div>
     </div>
   );
 }
 
-export default function MapView({ lat, lng, markers, className, height = "220px", showHeatmap = false, polylines, layerVisibility }: MapViewProps) {
+export default function MapView({ lat, lng, markers, className, height = "220px", showHeatmap = false, polylines, radii, layerVisibility }: MapViewProps) {
   const [cssReady, setCssReady] = useState(false);
 
   useEffect(() => {
@@ -97,10 +127,12 @@ export default function MapView({ lat, lng, markers, className, height = "220px"
   const showOffers = layerVisibility?.offers ?? true;
   const showCircuits = layerVisibility?.circuits ?? true;
   const showPlaces = layerVisibility?.places ?? true;
+  const showGuides = layerVisibility?.guides ?? true;
 
   const filteredMarkers = (markers ?? []).filter((m) => {
     if (m.type === "circuit") return showCircuits;
     if (m.type === "place") return showPlaces;
+    if (m.type === "guide") return showGuides;
     return showOffers;
   });
 
@@ -114,8 +146,8 @@ export default function MapView({ lat, lng, markers, className, height = "220px"
     <div className="relative w-full" style={{ height }}>
       <MapContainer
         key={mapKey}
-        center={[lat, lng]}
-        zoom={markers && markers.length > 1 ? 11 : 13}
+        center={[33.8, 9.5]}
+        zoom={7}
         scrollWheelZoom={true}
         style={{ height: "100%", width: "100%", borderRadius: "1rem" }}
         zoomControl={true}
@@ -127,6 +159,24 @@ export default function MapView({ lat, lng, markers, className, height = "220px"
         />
         {showHeatmap && <HeatmapLayer />}
 
+        {/* Radius circles */}
+        {radii?.map((r, i) => (
+          <Circle
+            key={`radius-${i}`}
+            center={[r.lat, r.lng]}
+            radius={r.radiusKm * 1000}
+            pathOptions={{
+              color: r.color ?? "#8b5cf6",
+              fillColor: r.color ?? "#8b5cf6",
+              fillOpacity: 0.1,
+              weight: 2,
+              dashArray: "6 4",
+            }}
+          >
+            {r.label && <Popup>{r.label}</Popup>}
+          </Circle>
+        ))}
+
         {/* Polylines */}
         {polylines?.map((points, i) => (
           <Polyline key={`poly-${i}`} positions={points} pathOptions={{ color: "#13ec49", weight: 3, dashArray: "8 6" }} />
@@ -137,7 +187,7 @@ export default function MapView({ lat, lng, markers, className, height = "220px"
           <Marker
             key={`${m.lat}-${m.lng}-${i}`}
             position={[m.lat, m.lng]}
-            icon={m.type === "circuit" ? circuitIcon : m.type === "place" ? placeIcon : defaultIcon}
+            icon={m.type === "circuit" ? circuitIcon : m.type === "place" ? placeIcon : m.type === "guide" ? guideIcon : defaultIcon}
           >
             {m.label && (
               <Popup>
@@ -145,7 +195,7 @@ export default function MapView({ lat, lng, markers, className, height = "220px"
                   <p className="font-bold text-slate-800 mb-1">{m.label}</p>
                   {m.id && (
                     <a
-                      href={m.type === "circuit" ? `/circuits/${m.id}` : m.type === "place" ? `/places/${m.id}` : `/offers/${m.id}`}
+                      href={m.type === "circuit" ? `/circuits/${m.id}` : m.type === "place" ? `/places/${m.id}` : m.type === "guide" ? `/profile/guide/${m.id}` : `/offers/${m.id}`}
                       className="text-[11px] font-semibold text-primary hover:underline"
                     >
                       Voir détails →
@@ -156,7 +206,7 @@ export default function MapView({ lat, lng, markers, className, height = "220px"
             )}
           </Marker>
         ))}
-        <Recenter lat={lat} lng={lng} />
+        <Recenter lat={lat} lng={lng} markers={filteredMarkers} />
       </MapContainer>
 
       {/* Legend */}

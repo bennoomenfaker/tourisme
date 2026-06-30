@@ -13,14 +13,23 @@ interface MapDay {
   location_name: string | null;
 }
 
+interface MapRadius {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  color?: string;
+  label?: string;
+}
+
 interface CircuitMapProps {
   circuitLat: number | null;
   circuitLng: number | null;
   days: MapDay[];
+  radii?: MapRadius[];
   className?: string;
 }
 
-export default function CircuitMap({ circuitLat, circuitLng, days, className = "" }: CircuitMapProps) {
+export default function CircuitMap({ circuitLat, circuitLng, days, radii, className = "" }: CircuitMapProps) {
   const locatedDays = days.filter((d) => d.lat != null && d.lng != null);
   const hasCircuitLocation = circuitLat != null && circuitLng != null;
   const hasAnyLocation = hasCircuitLocation || locatedDays.length > 0;
@@ -35,7 +44,7 @@ export default function CircuitMap({ circuitLat, circuitLng, days, className = "
 
   return (
     <div className={`rounded-2xl overflow-hidden border border-slate-200 ${className}`}>
-      <MapInner circuitLat={circuitLat} circuitLng={circuitLng} days={days} />
+      <MapInner circuitLat={circuitLat} circuitLng={circuitLng} days={days} radii={radii} />
     </div>
   );
 }

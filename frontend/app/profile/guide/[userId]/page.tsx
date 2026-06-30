@@ -51,7 +51,7 @@ type GuideProfile = {
   languages_spoken: string[] | null;
   years_experience: number | null;
   sustainability_score: number | null;
-  offers: Offer[];
+  offerings: Offer[];
 };
 
 type Offer = {
@@ -72,6 +72,11 @@ type Offer = {
   min_age: number | null;
   cancellation_policy: string | null;
   sustainability_score: number | null;
+  radius_km: number | null;
+  service_zone_type: string | null;
+  displacement_allowed: boolean;
+  displacement_max_km: number | null;
+  pricing_unit: string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -477,14 +482,14 @@ export default function PublicGuideProfile() {
               <div className="px-6 py-5 border-b border-slate-100">
                 <h2 className="text-base font-extrabold text-slate-800">Offres</h2>
                 <p className="text-xs text-slate-400 font-medium mt-0.5">
-                  {profile.offers.length === 0 ? "Aucune offre publiée" : `${profile.offers.length} offre${profile.offers.length > 1 ? "s" : ""}`}
+                  {profile.offerings?.length === 0 ? "Aucune offre publiée" : `${profile.offerings?.length ?? 0} offre${(profile.offerings?.length ?? 0) > 1 ? "s" : ""}`}
                 </p>
               </div>
-              {profile.offers.length === 0 ? (
+              {!profile.offerings || profile.offerings.length === 0 ? (
                 <div className="py-16 text-center"><Leaf size={40} className="text-slate-200 mx-auto mb-3" /><p className="text-slate-400 font-semibold text-sm">Aucune offre pour l'instant.</p></div>
               ) : (
                 <div className="p-4 space-y-4">
-                  {profile.offers.map((o) => (
+                  {profile.offerings.map((o) => (
                     <div key={o.id} ref={(el) => { offerRefs.current[o.id] = el; }}
                       className={`bg-white rounded-3xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow ${highlightedOfferId === o.id ? "border-primary ring-2 ring-primary ring-offset-2" : "border-slate-100"}`}>
                       <OfferCard offer={o} onClick={() => { setSelectedOffer(o); setSliderIdx(0); }} />
@@ -564,11 +569,26 @@ export default function PublicGuideProfile() {
                 {selectedOffer.offer_type && <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100">{OFFER_TYPE_LABELS[selectedOffer.offer_type] ?? selectedOffer.offer_type}</span>}
                 <h2 className="text-xl font-extrabold text-slate-800 leading-snug">{selectedOffer.title}</h2>
                 <div className="flex flex-wrap gap-3">
-                  {selectedOffer.price !== null && <span className="text-sm font-black text-primary">💰 {selectedOffer.price} DT</span>}
+                  {selectedOffer.price !== null && <span className="text-sm font-black text-primary">💰 {selectedOffer.price} TND/{selectedOffer.pricing_unit ?? "h"}</span>}
                   {selectedOffer.duration && <span className="flex items-center gap-1 text-sm font-semibold text-slate-500"><Clock size={13} />{selectedOffer.duration}</span>}
                   {selectedOffer.region && <span className="flex items-center gap-1 text-sm font-semibold text-slate-500"><MapPin size={13} className="text-primary" />{selectedOffer.region}</span>}
                   {(selectedOffer.min_group_size || selectedOffer.max_group_size) && <span className="flex items-center gap-1 text-sm font-semibold text-slate-500"><Users size={13} className="text-primary" />{selectedOffer.min_group_size ?? 1}–{selectedOffer.max_group_size ?? "∞"} pers.</span>}
                   {selectedOffer.min_age && <span className="text-sm font-semibold text-slate-500">Dès {selectedOffer.min_age} ans</span>}
+                  {selectedOffer.radius_km != null && (
+                    <span className="flex items-center gap-1 text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">
+                      📍 Rayon {selectedOffer.radius_km} km
+                    </span>
+                  )}
+                  {selectedOffer.displacement_allowed && selectedOffer.displacement_max_km != null && (
+                    <span className="flex items-center gap-1 text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">
+                      🚗 Déplacement max {selectedOffer.displacement_max_km} km
+                    </span>
+                  )}
+                  {selectedOffer.service_zone_type && (
+                    <span className="flex items-center gap-1 text-sm font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
+                      {selectedOffer.service_zone_type === "point" ? "📍" : selectedOffer.service_zone_type === "zone" ? "🗺️" : "🌍"} {selectedOffer.service_zone_type === "point" ? "Point fixe" : selectedOffer.service_zone_type === "zone" ? "Zone" : "Région"}
+                    </span>
+                  )}
                 </div>
                 {selectedOffer.description && <div><p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Description</p><p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{selectedOffer.description}</p></div>}
                 {selectedOffer.inclusions && <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100"><p className="text-[11px] font-black uppercase tracking-widest text-emerald-700 mb-1.5">✅ Inclusions</p><p className="text-sm text-slate-700 leading-relaxed">{selectedOffer.inclusions}</p></div>}
@@ -586,6 +606,19 @@ export default function PublicGuideProfile() {
                     <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${selectedOffer.sustainability_score}%` }} /></div>
                   </div>
                 )}
+                <div className="flex gap-2 pt-2">
+                  <a href={`/profile/guide/${profile?.user_id}`}
+                    className="flex-1 text-center text-xs font-bold py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+                    Voir profil public
+                  </a>
+                  <button onClick={() => {
+                    const text = `Bonjour ${profile?.full_name ?? ""}, je suis intéressé par votre prestation "${selectedOffer.title}". Pouvez-vous me donner plus d'informations ?`;
+                    window.location.href = `/messagerie?share=${encodeURIComponent(text)}&userId=${profile?.user_id}`;
+                  }}
+                    className="flex-1 text-xs font-bold py-2.5 rounded-xl bg-primary text-white hover:bg-emerald-600">
+                    Contacter
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle } from "react-leaflet";
 import L from "leaflet";
 
 interface MapDay {
@@ -12,13 +12,22 @@ interface MapDay {
   location_name: string | null;
 }
 
+interface MapRadius {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  color?: string;
+  label?: string;
+}
+
 interface CircuitMapInnerProps {
   circuitLat: number | null;
   circuitLng: number | null;
   days: MapDay[];
+  radii?: MapRadius[];
 }
 
-export default function CircuitMapInner({ circuitLat, circuitLng, days }: CircuitMapInnerProps) {
+export default function CircuitMapInner({ circuitLat, circuitLng, days, radii }: CircuitMapInnerProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -94,6 +103,27 @@ export default function CircuitMapInner({ circuitLat, circuitLng, days }: Circui
           </Popup>
         </Marker>
       ))}
+
+      {/* Radius circles (guide zones, mobile offers) */}
+      {radii?.map((r, i) => {
+        const meters = r.radiusKm * 1000;
+        return (
+          <Circle
+            key={`radius-${i}`}
+            center={[r.lat, r.lng]}
+            radius={meters}
+            pathOptions={{
+              color: r.color ?? "#8b5cf6",
+              fillColor: r.color ?? "#8b5cf6",
+              fillOpacity: 0.1,
+              weight: 2,
+              dashArray: "6 4",
+            }}
+          >
+            {r.label && <Popup>{r.label}</Popup>}
+          </Circle>
+        );
+      })}
 
       {locatedDays.length > 1 && (
         <Polyline

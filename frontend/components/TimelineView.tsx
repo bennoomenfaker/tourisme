@@ -13,6 +13,7 @@ type TimelineEntryData = {
   duration_minutes?: number | null;
   distance_km?: number | null;
   transport_mode?: string | null;
+  guide_name?: string | null;
 };
 
 export default function TimelineView({ entries, renderActions }: { entries: TimelineEntryData[]; renderActions?: (entry: TimelineEntryData, index: number) => React.ReactNode }) {
@@ -61,6 +62,11 @@ export default function TimelineView({ entries, renderActions }: { entries: Time
                   </div>
                   <p className="text-sm font-bold text-slate-800">{entry.title}</p>
                   {entry.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{entry.description}</p>}
+                  {entry.guide_name && (
+                    <p className="text-xs text-primary font-semibold mt-1 flex items-center gap-1">
+                      <span>🧑‍🏫</span> Guide: {entry.guide_name}
+                    </p>
+                  )}
                 </div>
                 {renderActions && (
                   <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">

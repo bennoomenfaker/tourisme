@@ -115,7 +115,7 @@ export class OfferService {
   async findByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { author_id: authorId },
-      relations: ['items', 'items.prices'],
+      relations: ['items', 'items.prices', 'project'],
       order: { created_at: 'DESC' },
     });
   }
@@ -139,7 +139,7 @@ export class OfferService {
     const offers = await this.repo.find({
       where,
       order: { created_at: 'DESC' },
-      relations: ['items', 'items.prices'],
+      relations: ['items', 'items.prices', 'project'],
     });
 
     await this.redis.set(cacheKey, offers);
@@ -153,7 +153,7 @@ export class OfferService {
 
     const offer = await this.repo.findOne({
       where: { id },
-      relations: ['items', 'items.prices', 'items.sessions', 'items.capacity', 'category'],
+      relations: ['items', 'items.prices', 'items.sessions', 'items.capacity', 'category', 'project'],
     });
     if (!offer) throw new NotFoundException('Offre introuvable.');
 

@@ -1667,10 +1667,10 @@ export default function GuideProfilePage() {
                 </div>
               </div>
               <div className="mt-6 md:mt-0 flex flex-row flex-wrap justify-center sm:justify-end gap-3 self-center md:self-end">
-                <button onClick={openModal}
+                <a href="/dashboard/guide-offerings"
                   className="bg-primary hover:bg-primary/90 active:scale-95 text-white font-bold px-5 py-3 rounded-2xl inline-flex items-center gap-2 hover:shadow-lg transition-all shadow-sm text-sm">
-                  <Plus size={18} strokeWidth={2.5} /><span>Publier une offre</span>
-                </button>
+                  <Plus size={18} strokeWidth={2.5} /><span>Gérer mes prestations</span>
+                </a>
                 <button onClick={openEditProfile}
                   className="border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold px-5 py-3 rounded-2xl inline-flex items-center gap-2 hover:shadow-sm active:scale-95 transition-all text-sm">
                   <Edit3 size={16} /><span>Modifier le profil</span>
@@ -1806,11 +1806,11 @@ export default function GuideProfilePage() {
                       <span className="material-symbols-outlined text-primary text-3xl">hiking</span>
                     </div>
                     <p className="text-slate-800 font-extrabold text-base mb-1">Aucune offre publiée</p>
-                    <p className="text-slate-400 text-sm mb-5">Publiez votre première expérience guidée.</p>
-                    <button onClick={openModal}
+                    <p className="text-slate-400 text-sm mb-5">Créez vos prestations de guide.</p>
+                    <a href="/dashboard/guide-offerings"
                       className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-2xl text-sm font-bold hover:bg-primary/90 shadow-sm">
-                      <Plus size={16} />Publier une offre
-                    </button>
+                      <Plus size={16} />Créer une prestation
+                    </a>
                   </div>
                 ) : (
                   offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
@@ -1855,7 +1855,7 @@ export default function GuideProfilePage() {
               <div className="space-y-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-extrabold text-slate-800">Offres disponibles ({offers.length})</h3>
-                  <button onClick={openModal} className="text-primary hover:text-primary/80 text-xs font-extrabold flex items-center gap-1">+ Publier une offre</button>
+                  <a href="/dashboard/guide-offerings" className="text-primary hover:text-primary/80 text-xs font-extrabold flex items-center gap-1">+ Gérer mes prestations</a>
                 </div>
                 {offers.length === 0 ? (
                   <div className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-12 text-center">
