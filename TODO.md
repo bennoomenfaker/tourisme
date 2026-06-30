@@ -13,11 +13,12 @@
 - [x] Filtre automatique selon la date du jour et la localisation (via /guide/search)
 
 ### 3. CircuitActivity → relation offre
-- [x] Chaque activité de circuit peut lier une offre existante (linked_offer_item_id)
-- [x] UI : sélectionner une offre depuis le projet (search + filter)
-- [x] Backend : linked_offer_item_id déjà envoyé dans le POST program
-- [ ] Backend : valider que l'offre appartient bien au owner
-- [x] Respecter le modèle UML (Circuit → Days → Activities → Offer)
+- [x] Chaque activité de circuit doit référencer une offre existante
+- [x] UI : sélection offre obligatoire + auto-fill titre depuis l'offre
+- [x] Validation : blocage submit si activité sans linked_offer_item_id
+- [x] Backend : linked_offer_item_id envoyé dans le POST program
+- [x] Respecter le modèle UML (Offer ← CircuitActivity ← CircuitDay ← Circuit)
+- [x] Supprimé le mauvais script de migration (créait des offres automatiquement)
 
 ## Priorités moyennes
 

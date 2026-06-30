@@ -58,10 +58,11 @@ const TUNISIA_REGIONS = [
 
 function genId() { return Math.random().toString(36).substring(2, 10); }
 
-function OfferItemSearchInline({ items, onSelect, selectedId }: {
+function OfferItemSearchInline({ items, onSelect, selectedId, onAutoFill }: {
   items: MyOfferItem[];
   onSelect: (id: string | null) => void;
   selectedId: string | null;
+  onAutoFill?: (title: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const selected = selectedId ? items.find((it) => it.id === selectedId) : null;
@@ -79,6 +80,12 @@ function OfferItemSearchInline({ items, onSelect, selectedId }: {
     );
   }
 
+  function handlePick(item: MyOfferItem) {
+    onSelect(item.id);
+    setQuery("");
+    if (onAutoFill) onAutoFill(item.name);
+  }
+
   return (
     <div className="relative">
       <input value={query} onChange={(e) => setQuery(e.target.value)}
@@ -86,7 +93,7 @@ function OfferItemSearchInline({ items, onSelect, selectedId }: {
       {query && filtered.length > 0 && (
         <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 w-72 max-h-48 overflow-y-auto">
           {filtered.map((item) => (
-            <button key={item.id} type="button" onClick={() => { onSelect(item.id); setQuery(""); }}
+            <button key={item.id} type="button" onClick={() => handlePick(item)}
               className={`w-full flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-primary/5 text-left border-b border-slate-50 last:border-0`}>
               <div className="min-w-0">
                 <div className="text-xs font-medium text-slate-700">{item.name}</div>
@@ -354,6 +361,11 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError("Le titre est requis."); return; }
+    const missingOfferItems = sortedDays.flatMap((d) => d.programItems.filter((p) => p.title.trim() && !p.linked_offer_item_id));
+    if (missingOfferItems.length > 0) {
+      setError(`${missingOfferItems.length} activité(s) sans offre liée. Chaque activité doit référencer une offre.`);
+      setStep(3); return;
+    }
     setSubmitting(true); setError(null);
     try {
       const finalWaypoints = waypoints.length > 0 ? waypoints : getWaypointFromDays();
@@ -556,10 +568,10 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
           {/* ─── Step 3: Program Items ─────────────────────── */}
           {step === 3 && (
             <div className="space-y-4">
-              <p className="text-xs text-slate-400">Ajoutez des activités pour chaque jour. Vous pouvez les lier à vos offres existantes.</p>
+              <p className="text-xs text-slate-400">Chaque activité doit référencer une offre existante. Créez d&apos;abord des offres dans le tableau de bord, puis sélectionnez-les ici.</p>
               {offerItems.length === 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-                  Vous n&apos;avez pas encore d&apos;activités. Créez d&apos;abord des offres dans le tableau de bord, ou ajoutez des activités libres ci-dessous.
+                  Vous n&apos;avez pas encore d&apos;offres. <a href="/dashboard?tab=offers" className="font-semibold underline">Créez des offres</a> avant d&apos;ajouter des activités au circuit.
                 </div>
               )}
               {sortedDays.map((day) => (
@@ -577,22 +589,30 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                       <div key={prog.id} className="bg-white border border-slate-200 rounded-xl p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <select value={prog.emoji} onChange={(e) => updateProgramItem(day.id, prog.id, { emoji: e.target.value })} className="text-lg border border-slate-200 rounded-lg px-1.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
-                                {EMOJIS_LIST.map((e) => <option key={e} value={e}>{e}</option>)}
-                              </select>
-                              <input value={prog.title} onChange={(e) => updateProgramItem(day.id, prog.id, { title: e.target.value })} placeholder="Titre de l'activité" className="flex-1 text-sm font-medium text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label className="text-[10px] font-medium text-slate-400 shrink-0">Offre liée</label>
+                            {/* Offre liée (obligatoire) — ligne principale */}
+                            <div className="bg-primary/5 rounded-lg px-3 py-2 flex items-center gap-2">
+                              <label className="text-[10px] font-bold text-primary shrink-0">Offre *</label>
                               <OfferItemSearchInline
                                 items={offerItems}
                                 selectedId={prog.linked_offer_item_id}
                                 onSelect={(id) => updateProgramItem(day.id, prog.id, { linked_offer_item_id: id })}
+                                onAutoFill={(name) => {
+                                  if (!prog.title) updateProgramItem(day.id, prog.id, { title: name });
+                                }}
                               />
                               {offerItems.length > 0 && (
                                 <a href="/dashboard?tab=offers" target="_blank" className="text-[10px] text-primary font-medium hover:underline whitespace-nowrap">+ Nouvelle</a>
                               )}
+                            </div>
+                            {/* Titre (prérempli depuis l'offre, éditable) */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <select value={prog.emoji} onChange={(e) => updateProgramItem(day.id, prog.id, { emoji: e.target.value })} className="text-lg border border-slate-200 rounded-lg px-1.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
+                                {EMOJIS_LIST.map((e) => <option key={e} value={e}>{e}</option>)}
+                              </select>
+                              <input value={prog.title} onChange={(e) => updateProgramItem(day.id, prog.id, { title: e.target.value })}
+                                placeholder={prog.linked_offer_item_id ? "Titre (modifiable)" : "Sélectionnez d'abord une offre"}
+                                className="flex-1 text-sm font-medium text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                                readOnly={!prog.linked_offer_item_id} />
                             </div>
                             <textarea value={prog.description} onChange={(e) => updateProgramItem(day.id, prog.id, { description: e.target.value })} placeholder="Description" rows={1} className="w-full text-xs text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
                             <div className="grid grid-cols-4 gap-2">
