@@ -12,6 +12,8 @@ import {
   OFFER_CATEGORIES, PROJECT_TYPE_OFFERS, GUIDE_ALLOWED_OFFERS,
   CATEGORY_FORM_FIELDS, ITEM_TYPES_BY_CATEGORY, ROOM_SUB_TYPES, PRICING_UNITS,
 } from "@/lib/offer-config";
+import { getSchema, type SchemaField } from "@/lib/offer-schema";
+import { needsLocation, canHaveGuide, guideRequirement } from "@/lib/offer-rules";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   ssr: false,
@@ -51,7 +53,10 @@ interface OfferItemForm {
   duration_hours: string;
   distance_km: string;
   activity_custom_name: string;
+  details_json: Record<string, any>;
   prices: { id?: string; label: string; price: string; currency: string; pricing_unit: string; is_default: boolean }[];
+  guide_id?: string;
+  guide_enabled?: boolean;
 }
 
 const ACTIVITY_GROUPS: Record<string, { label: string; types: { value: string; label: string }[] }[]> = {
@@ -236,6 +241,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         duration_hours: it.details_json?.duration_hours?.toString() || "",
         distance_km: it.details_json?.distance_km?.toString() || "",
         activity_custom_name: it.details_json?.activity_custom_name || "",
+        details_json: it.details_json || {},
+        guide_enabled: !!it.details_json?.guide_id || canHaveGuide(normalizedCategory, it.item_type),
+        guide_id: it.details_json?.guide_id || "",
         prices: it.prices?.length
           ? it.prices.map((p: any) => ({ id: p.id, label: p.label || "", price: p.price?.toString() || "", currency: p.currency || "TND", pricing_unit: p.pricing_unit || "per_person", is_default: p.is_default ?? false }))
           : [{ label: "Plein tarif", price: "", currency: "TND", pricing_unit: "per_person", is_default: true }],
@@ -258,10 +266,11 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   useEffect(() => {
     if (category && items.length === 0 && !isEdit) {
       const autoName = itemTypes[0]?.label ?? "";
+      const firstType = itemTypes[0]?.value ?? "";
       setItems([{
         name: autoName,
         description: "",
-        item_type: itemTypes[0]?.value ?? "",
+        item_type: firstType,
         room_sub_type: "",
         bed_count: "",
         tent_capacity: "",
@@ -269,6 +278,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         duration_hours: "",
         distance_km: "",
         activity_custom_name: "",
+        details_json: {},
+        guide_enabled: canHaveGuide(normalizedCategory, firstType),
+        guide_id: "",
         prices: [{ label: "Plein tarif", price: "", currency: "TND", pricing_unit: "per_person", is_default: true }],
       }]);
     }
@@ -290,6 +302,11 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     updateFirstItem("name", autoName);
     if (value !== "other") updateFirstItem("activity_custom_name", "");
     if (!hasDifficulty(value)) updateFirstItem("difficulty_level", "");
+    updateFirstItem("details_json", {});
+    updateFirstItem("guide_enabled", canHaveGuide(normalizedCategory, value));
+    const req = guideRequirement(normalizedCategory, value);
+    if (req === 'required') updateFirstItem("guide_enabled", true);
+    if (req === 'none') updateFirstItem("guide_enabled", false);
   }
 
   async function handleGenerateSessions() {
@@ -329,7 +346,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   function buildDetailsJson(): Record<string, any> | undefined {
     const item = items[0];
     if (!item) return undefined;
-    const details: Record<string, any> = {};
+    const details: Record<string, any> = { ...item.details_json };
 
     if (isAccommodation) {
       if (item.item_type === 'room') {
@@ -352,6 +369,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
       if (activeRule?.start_date) details.event_start = activeRule.start_date;
       if (activeRule?.end_date) details.event_end = activeRule.end_date;
     }
+
+    if (item.guide_id) details.guide_id = item.guide_id;
 
     return Object.keys(details).length > 0 ? details : undefined;
   }
@@ -549,6 +568,134 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         {PRICING_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
       </select>
     );
+  }
+
+  const currentSchema = currentItemType ? getSchema(normalizedCategory, currentItemType) : null;
+
+  function handleSchemaField(field: string, value: any) {
+    const updated = [...items];
+    (updated[0] as any).details_json = { ...(updated[0] as any).details_json, [field]: value };
+    setItems(updated);
+  }
+
+  function getSchemaField(field: string): any {
+    return items[0]?.details_json?.[field] ?? "";
+  }
+
+  function renderSchemaField(fieldName: string, fieldDef: SchemaField) {
+    const val = getSchemaField(fieldName);
+    if (fieldDef.conditionalOn) {
+      const parentVal = getSchemaField(fieldDef.conditionalOn.field);
+      if (parentVal !== fieldDef.conditionalOn.value && (fieldDef.conditionalOn.value !== true || !parentVal)) return null;
+    }
+    const label = <label className="text-xs font-bold text-slate-500">{fieldDef.label}{fieldDef.required ? " *" : ""}</label>;
+    const baseCls = `${inputClass} ${fieldDef.type === "boolean" ? "" : ""}`;
+
+    if (fieldDef.type === "boolean") {
+      return (
+        <div key={fieldName} className="flex items-center gap-2 py-1">
+          <input type="checkbox" id={`sf-${fieldName}`} className="w-4 h-4 rounded border-slate-300 text-primary" checked={!!val}
+            onChange={(e) => handleSchemaField(fieldName, e.target.checked)} />
+          <label htmlFor={`sf-${fieldName}`} className="text-xs font-medium text-slate-700">{fieldDef.label}</label>
+        </div>
+      );
+    }
+
+    if (fieldDef.type === "select") {
+      return (
+        <div key={fieldName} className="space-y-1">
+          {label}
+          <select className={baseCls} value={val} onChange={(e) => handleSchemaField(fieldName, e.target.value)}>
+            <option value="">Sélectionner...</option>
+            {fieldDef.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      );
+    }
+
+    if (fieldDef.type === "multiselect") {
+      const selected: string[] = Array.isArray(val) ? val : [];
+      return (
+        <div key={fieldName} className="space-y-1">
+          {label}
+          <div className="flex flex-wrap gap-1.5">
+            {fieldDef.options?.map((o) => {
+              const active = selected.includes(o.value);
+              return (
+                <button key={o.value} type="button" onClick={() => {
+                  const next = active ? selected.filter((v) => v !== o.value) : [...selected, o.value];
+                  handleSchemaField(fieldName, next);
+                }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border-2 transition-all ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-100 text-slate-500 hover:border-primary/30"}`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    if (fieldDef.type === "textarea") {
+      return (
+        <div key={fieldName} className="space-y-1">
+          {label}
+          <textarea className={`${baseCls} resize-none`} rows={3} value={val} onChange={(e) => handleSchemaField(fieldName, e.target.value)}
+            placeholder={fieldDef.placeholder ?? ""} />
+        </div>
+      );
+    }
+
+    return (
+      <div key={fieldName} className="space-y-1">
+        {label}
+        <input type={fieldDef.type === "number" ? "number" : "text"} min={fieldDef.min} max={fieldDef.max} step="any"
+          className={baseCls} value={val} onChange={(e) => handleSchemaField(fieldName, e.target.type === "number" ? Number(e.target.value) : e.target.value)}
+          placeholder={fieldDef.placeholder ?? ""} />
+      </div>
+    );
+  }
+
+  function renderGuideSection() {
+    const item = items[0];
+    if (!item?.guide_enabled) return null;
+    const req = guideRequirement(normalizedCategory, item.item_type);
+    const required = req === 'required';
+    return (
+      <div className="space-y-2 p-3 bg-amber-50 rounded-2xl border border-amber-100">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🧑‍🏫</span>
+          <span className="text-xs font-bold text-slate-600">Guide {required ? "requis" : "optionnel"}</span>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-slate-500">ID du guide</label>
+          <input className={`${inputClass} text-xs`} value={item.guide_id ?? ""}
+            onChange={(e) => { const u = [...items]; u[0].guide_id = e.target.value; setItems(u); }}
+            placeholder="Entrer l'ID du guide ou chercher..." />
+        </div>
+      </div>
+    );
+  }
+
+  function renderSchemaSections() {
+    if (!currentSchema) return null;
+    return currentSchema.sections.map((section) => {
+      const visibleFields = section.fields.filter((f) => currentSchema.fields[f]);
+      if (visibleFields.length === 0) return null;
+      if (section.conditionalOn) {
+        const parentVal = getSchemaField(section.conditionalOn.field);
+        if (parentVal !== section.conditionalOn.value && (section.conditionalOn.value !== true || !parentVal)) return null;
+      }
+      return (
+        <div key={section.id} className="space-y-2">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{section.label}</p>
+          <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 space-y-3">
+            {visibleFields.map((f) => renderSchemaField(f, currentSchema.fields[f]!))}
+          </div>
+        </div>
+      );
+    });
   }
 
   return (
@@ -811,6 +958,12 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                   </div>
                 </>
               )}
+
+              {/* Schema fields (détails spécifiques) */}
+              {currentItemType && currentSchema && renderSchemaSections()}
+
+              {/* Guide selection */}
+              {currentItemType && renderGuideSection()}
 
               {/* Item description */}
               <div className="space-y-1.5">

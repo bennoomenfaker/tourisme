@@ -13,6 +13,7 @@
 - Phase 8 : Circuits
 
 ## Terminé
-- [x] Phase 1 : Créer offer-schema.ts (8 schémas : chambre, dortoir, tente, rando, kayak, VTT, yoga, poterie, cuisine, transport, visite guidée, restaurant)
+- [x] Phase 1 : Créer offer-schema.ts (12 schémas : chambre, dortoir, tente, rando, kayak, VTT, yoga, poterie, cuisine, transport, visite guidée, restaurant)
 - [x] Phase 1 : Créer offer-rules.ts (needsLocation, canHaveGuide, guideRequirement, hasDifficulty, etc.)
+- [x] Phase 4 : Intégrer offer-schema.ts dans GuidedOfferWizard (renderSchemaSections, renderSchemaField, renderGuideSection, schemaValues → details_json)
 - [x] Docs : ROADMAP_OFFRES.md + TODO_PROGRESS.md
