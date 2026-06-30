@@ -1,5 +1,5 @@
 export interface SchemaField {
-  type: 'text' | 'number' | 'select' | 'multiselect' | 'boolean' | 'time' | 'file' | 'textarea';
+  type: 'text' | 'number' | 'select' | 'multiselect' | 'boolean' | 'time' | 'file' | 'textarea' | 'hierarchy';
   required?: boolean;
   label: string;
   placeholder?: string;
@@ -8,6 +8,7 @@ export interface SchemaField {
   min?: number;
   max?: number;
   unit?: string;
+  taxonomy?: string;
 }
 
 export interface SchemaSection {
@@ -68,21 +69,12 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'wc', label: 'WC' }, { value: 'lavabo', label: 'Lavabo' },
         { value: 'seche_cheveux', label: 'Sèche-cheveux' },
       ]},
-      equipements_chambre: { type: 'multiselect', label: 'Équipements chambre', options: [
-        { value: 'wifi', label: 'WiFi' }, { value: 'clim', label: 'Climatisation' },
-        { value: 'chauffage', label: 'Chauffage' }, { value: 'tv', label: 'TV' },
-        { value: 'coffre', label: 'Coffre-fort' }, { value: 'mini_bar', label: 'Mini-bar' },
-        { value: 'terrasse', label: 'Terrasse' }, { value: 'bureau', label: 'Bureau' },
-      ]},
+      equipements_chambre: { type: 'hierarchy', label: 'Équipements chambre', taxonomy: 'equipment_accommodation' },
       formule_restauration: { type: 'select', label: 'Formule restauration', options: [
         { value: 'sans', label: 'Sans restauration' }, { value: 'petit_dej', label: 'Petit-déjeuner' },
         { value: 'demi_pension', label: 'Demi-pension' }, { value: 'pension_complete', label: 'Pension complète' },
       ]},
-      inclus: { type: 'multiselect', label: 'Inclus dans le prix', options: [
-        { value: 'linge', label: 'Linge de lit' }, { value: 'serviettes', label: 'Serviettes' },
-        { value: 'menage', label: 'Ménage' }, { value: 'petit_dej', label: 'Petit-déjeuner' },
-        { value: 'parking', label: 'Parking' },
-      ]},
+      inclus: { type: 'hierarchy', label: 'Inclus dans le prix', taxonomy: 'inclus' },
       checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
       checkin_fin: { type: 'time', label: 'Check-in jusqu\'à' },
       checkout: { type: 'time', required: true, label: 'Check-out avant' },
@@ -115,10 +107,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       checkout: { type: 'time', required: true, label: 'Check-out avant' },
       couvre_feu: { type: 'time', label: 'Couvre-feu' },
       silence_partir_de: { type: 'time', label: 'Silence à partir de' },
-      inclus: { type: 'multiselect', label: 'Inclus dans le prix', options: [
-        { value: 'linge', label: 'Linge de lit' }, { value: 'casier', label: 'Casier' },
-        { value: 'petit_dej', label: 'Petit-déjeuner' }, { value: 'wifi', label: 'WiFi' },
-      ]},
+      inclus: { type: 'hierarchy', label: 'Inclus dans le prix', taxonomy: 'inclus' },
     },
     display: { cardFields: ['nb_lits_offre', 'type_lit', 'dortoir_genre'], filterable: ['dortoir_genre'] },
   },
@@ -197,11 +186,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'wc', label: 'WC' }, { value: 'double_lavabo', label: 'Double lavabo' },
         { value: 'seche_cheveux', label: 'Sèche-cheveux' },
       ]},
-      services_offre: { type: 'multiselect', label: 'Services premium', options: [
-        { value: 'petit_dej', label: 'Petit-déjeuner en chambre' }, { value: 'menage', label: 'Ménage quotidien' },
-        { value: 'coffre', label: 'Coffre-fort' }, { value: 'mini_bar', label: 'Mini-bar' },
-        { value: 'room_service', label: 'Room service' }, { value: 'conciergerie', label: 'Conciergerie' },
-      ]},
+      services_offre: { type: 'hierarchy', label: 'Services premium', taxonomy: 'services_offre' },
       inclus: { type: 'multiselect', label: 'Inclus', options: [
         { value: 'linge', label: 'Linge de lit' }, { value: 'serviettes', label: 'Serviettes' },
         { value: 'petit_dej', label: 'Petit-déjeuner' }, { value: 'parking', label: 'Parking' },
@@ -240,12 +225,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'prive', label: 'Privée' }, { value: 'partage', label: 'Partagée' },
         { value: 'exterieure', label: 'Extérieure (douche solaire)' },
       ]},
-      equipements_offre: { type: 'multiselect', label: 'Équipements', options: [
-        { value: 'clim', label: 'Climatisation' }, { value: 'ventilateur', label: 'Ventilateur' },
-        { value: 'moustiquaire', label: 'Moustiquaire' }, { value: 'terrasse', label: 'Terrasse' },
-        { value: 'barbecue', label: 'Barbecue' }, { value: 'wifi', label: 'WiFi' },
-        { value: 'cuisine', label: 'Coin cuisine' }, { value: 'refrigirateur', label: 'Réfrigérateur' },
-      ]},
+      equipements_offre: { type: 'hierarchy', label: 'Équipements', taxonomy: 'equipment_accommodation' },
       animaux_offre: { type: 'boolean', label: 'Animaux acceptés' },
       inclus: { type: 'multiselect', label: 'Inclus', options: [
         { value: 'linge', label: 'Linge de lit' }, { value: 'serviettes', label: 'Serviettes' },
@@ -291,12 +271,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'ecolabel', label: 'Ecolabel' }, { value: 'green_key', label: 'Green Key' },
         { value: 'biosphere', label: 'Biosphere' }, { value: 'local', label: 'Label local' },
       ]},
-      eco_equipements: { type: 'multiselect', label: 'Éco-équipements', options: [
-        { value: 'compost', label: 'Compost' }, { value: 'recup_eau', label: 'Récupération eau pluie' },
-        { value: 'chauffe_eau_solaire', label: 'Chauffe-eau solaire' },
-        { value: 'ampoules_led', label: 'Ampoules LED' }, { value: 'douche_economie', label: 'Douche économique' },
-        { value: 'toilettes_compost', label: 'Toilettes à compost' },
-      ]},
+      eco_equipements: { type: 'hierarchy', label: 'Éco-équipements', taxonomy: 'equipment_accommodation' },
       experiences_eco: { type: 'multiselect', label: 'Expériences éco incluses', options: [
         { value: 'visite_ferme', label: 'Visite de la ferme' }, { value: 'atelier_bio', label: 'Atelier bio' },
         { value: 'randonnee', label: 'Randonnée nature' }, { value: 'degustation', label: 'Dégustation produits locaux' },

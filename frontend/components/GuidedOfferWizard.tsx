@@ -14,6 +14,8 @@ import {
 } from "@/lib/offer-config";
 import { getSchema, type SchemaField } from "@/lib/offer-schema";
 import { needsLocation, canHaveGuide, guideRequirement } from "@/lib/offer-rules";
+import { getTaxonomy } from "@/lib/offer-taxonomy";
+import HierarchicalSelect from "@/components/HierarchicalSelect";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   ssr: false,
@@ -644,6 +646,21 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
               );
             })}
           </div>
+        </div>
+      );
+    }
+
+    if (fieldDef.type === "hierarchy") {
+      const selected: string[] = Array.isArray(val) ? val : [];
+      const nodes = getTaxonomy(fieldDef.taxonomy as any);
+      return (
+        <div key={fieldName} className="space-y-1">
+          <HierarchicalSelect
+            nodes={nodes}
+            selected={selected}
+            onChange={(next) => handleSchemaField(fieldName, next)}
+            label={fieldDef.label}
+          />
         </div>
       );
     }
