@@ -13,17 +13,19 @@
 - [x] Filtre automatique selon la date du jour et la localisation (via /guide/search)
 
 ### 3. CircuitActivity → relation offre
-- [ ] Chaque activité de circuit doit lier une offre existante
-- [ ] UI : sélectionner une offre depuis le projet
-- [ ] Backend : valider et stocker la relation
-- [ ] Respecter le modèle UML (Circuit → Days → Activities → Offer)
+- [x] Chaque activité de circuit peut lier une offre existante (linked_offer_item_id)
+- [x] UI : sélectionner une offre depuis le projet (search + filter)
+- [x] Backend : linked_offer_item_id déjà envoyé dans le POST program
+- [ ] Backend : valider que l'offre appartient bien au owner
+- [x] Respecter le modèle UML (Circuit → Days → Activities → Offer)
 
 ## Priorités moyennes
 
 ### 4. Offre → projet obligatoire
-- [ ] Supprimer création offre hors projet
-- [ ] API : `POST /projects/{id}/offers` seulement
-- [ ] Nettoyer les écrans/boutons/API obsolètes
+- [x] Validation backend (déjà en place - offer.service.ts ligne 57-61)
+- [x] Message "Créez un projet" quand userProjects est vide
+- [x] Validation frontend (selectedProjectId requis avant submit)
+- [x] Bouton "Créer un projet" dans le message d'alerte
 
 ### 5. Localisation : héritée vs propre
 - [ ] Offres fixes (hébergement, resto, etc.) → héritent du projet

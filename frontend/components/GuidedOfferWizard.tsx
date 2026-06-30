@@ -414,6 +414,10 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   async function handleSubmit() {
     if (!title.trim()) { setError("Le titre est obligatoire."); return; }
     if (!category) { setError("Choisissez une catégorie."); return; }
+    if (userRole === "project" && !selectedProjectId) {
+      setError("Veuillez sélectionner un projet.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -454,7 +458,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        offerData.project_id = selectedProjectId || undefined;
+        offerData.project_id = selectedProjectId;
         resultOffer = await apiFetch<any>("/offers", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -793,15 +797,22 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800">Informations générales</h3>
 
-              {userRole === "project" && userProjects && userProjects.length > 0 && (
+              {userRole === "project" && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500">Projet *</label>
-                  <select className={inputClass} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-                    <option value="">Sélectionner un projet</option>
-                    {userProjects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  {userProjects && userProjects.length > 0 ? (
+                    <select className={inputClass} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+                      <option value="">Sélectionner un projet</option>
+                      {userProjects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-2">
+                      <p>Vous devez d&apos;abord créer un projet pour pouvoir créer des offres.</p>
+                      <a href="/dashboard" className="inline-block bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-700 text-xs">Créer un projet</a>
+                    </div>
+                  )}
                 </div>
               )}
 
