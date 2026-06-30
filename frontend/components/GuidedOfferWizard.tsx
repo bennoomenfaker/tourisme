@@ -550,16 +550,26 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     }
   }
 
+  function getSkippedSteps(): number[] {
+    const skipped: number[] = [];
+    if (!needsLocation(normalizedCategory, currentItemType)) skipped.push(7);
+    return skipped;
+  }
+
   function goNext() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setError("");
-    setStep(Math.min(step + 1, TOTAL_STEPS));
+    let next = step + 1;
+    while (getSkippedSteps().includes(next)) next++;
+    setStep(Math.min(next, TOTAL_STEPS));
   }
 
   function goBack() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setError("");
-    setStep(Math.max(step - 1, isEdit ? 2 : 1));
+    let prev = step - 1;
+    while (getSkippedSteps().includes(prev)) prev--;
+    setStep(Math.max(prev, isEdit ? 2 : 1));
   }
 
   function renderPriceUnitSelect(value: string, onChange: (v: string) => void) {
@@ -712,7 +722,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
             )}
             <div>
               <h2 className="text-lg font-extrabold text-slate-900">{isEdit ? "Modifier l'offre" : "Nouvelle offre"}</h2>
-              <p className="text-xs text-slate-400">Étape {isEdit ? step - 1 : step}/{isEdit ? TOTAL_STEPS - 1 : TOTAL_STEPS} — {STEP_LABELS[step]}</p>
+              <p className="text-xs text-slate-400">{STEP_LABELS[step]}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400"><X size={18} /></button>
@@ -721,7 +731,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         {/* Progress */}
         <div className="px-6 pt-4">
           <div className="flex gap-2">
-            {(isEdit ? [2,3,4,5,6,7,8,9] : [1,2,3,4,5,6,7,8,9]).map((s) => (
+            {(isEdit ? [2,3,4,5,6,7,8,9] : [1,2,3,4,5,6,7,8,9]).filter((s) => !getSkippedSteps().includes(s)).map((s) => (
               <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-slate-100"}`} />
             ))}
           </div>
@@ -783,16 +793,25 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 <textarea className={`${inputClass} resize-none`} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Décrivez l'expérience en détail..." />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Région</label>
-                  <input className={inputClass} value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Djerba, Tozeur, Tunis..." />
+              {needsLocation(normalizedCategory, "") ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500">Région *</label>
+                    <input className={inputClass} value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Djerba, Tozeur, Tunis..." />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500">Adresse</label>
+                    <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète" />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Adresse</label>
-                  <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète" />
+              ) : (
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <MapPin size={14} className="text-slate-400 shrink-0" />
+                    Localisation héritée du projet — non requise
+                  </p>
                 </div>
-              </div>
+              )}
 
               {/* Confirmation mode - moved here compact */}
               <div className="space-y-1.5">
@@ -1167,36 +1186,45 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
             </div>
           )}
 
-          {/* STEP 7: Map (always visible) */}
+          {/* STEP 7: Map (conditional) */}
           {step === 7 && (
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800">Localisation</h3>
-              <p className="text-xs text-slate-400">Placez votre offre sur la carte</p>
 
-              <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <MapPicker
-                  lat={lat ?? 33.8869}
-                  lng={lng ?? 9.5375}
-                  onPick={(la, ln) => { setLat(la); setLng(ln); }}
-                />
-              </div>
-
-              {hasMeetingPoint && (
-                <div className="space-y-3 border-t border-slate-100 pt-4">
-                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                    <MapPin size={14} /> Point de rendez-vous
-                  </h4>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500">Lieu de rendez-vous</label>
-                    <input className={inputClass} value={meetingPoint} onChange={(e) => setMeetingPoint(e.target.value)} placeholder="Ex: Devant l'hôtel, place centrale..." />
-                  </div>
+              {needsLocation(normalizedCategory, currentItemType) ? (
+                <>
+                  <p className="text-xs text-slate-400">Placez votre offre sur la carte</p>
                   <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <MapPicker
-                      lat={meetingLat ?? lat ?? 33.8869}
-                      lng={meetingLng ?? lng ?? 9.5375}
-                      onPick={(la, ln) => { setMeetingLat(la); setMeetingLng(ln); }}
+                      lat={lat ?? 33.8869}
+                      lng={lng ?? 9.5375}
+                      onPick={(la, ln) => { setLat(la); setLng(ln); }}
                     />
                   </div>
+                  {hasMeetingPoint && (
+                    <div className="space-y-3 border-t border-slate-100 pt-4">
+                      <h4 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <MapPin size={14} /> Point de rendez-vous
+                      </h4>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500">Lieu de rendez-vous</label>
+                        <input className={inputClass} value={meetingPoint} onChange={(e) => setMeetingPoint(e.target.value)} placeholder="Ex: Devant l'hôtel, place centrale..." />
+                      </div>
+                      <div className="overflow-hidden rounded-2xl border border-slate-200">
+                        <MapPicker
+                          lat={meetingLat ?? lat ?? 33.8869}
+                          lng={meetingLng ?? lng ?? 9.5375}
+                          onPick={(la, ln) => { setMeetingLat(la); setMeetingLng(ln); }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 text-center">
+                  <MapPin size={32} className="mx-auto text-slate-300 mb-2" />
+                  <p className="text-sm font-medium text-slate-600">Localisation héritée du projet</p>
+                  <p className="text-xs text-slate-400 mt-1">Les coordonnées GPS du projet seront utilisées</p>
                 </div>
               )}
 
