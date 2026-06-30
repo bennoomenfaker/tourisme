@@ -58,36 +58,80 @@ const TUNISIA_REGIONS = [
 
 function genId() { return Math.random().toString(36).substring(2, 10); }
 
-function GuideSearchInline({ onSelect }: { onSelect: (id: string, name: string) => void }) {
+function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
+  onSelect: (id: string, name: string) => void;
+  dayDate?: string;
+  dayLat?: number | null;
+  dayLng?: number | null;
+  dayLocation?: string;
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  async function search() {
-    if (!query.trim()) return;
-    setLoading(true);
+  async function doSearch(q: string, immediate?: boolean) {
+    if (!q.trim()) { setResults([]); setHasSearched(false); return; }
+    setLoading(true); setHasSearched(true);
     try {
-      const res = await apiFetch<any[]>(`/guide/public/search?q=${encodeURIComponent(query)}`);
-      setResults(res);
+      const params = new URLSearchParams();
+      params.set("q", q.trim());
+      if (dayDate) params.set("date", dayDate);
+      if (dayLat != null && dayLng != null) {
+        params.set("lat", String(dayLat));
+        params.set("lng", String(dayLng));
+      }
+      const res = await apiFetch<any[]>(`/guide/search?${params.toString()}`);
+      setResults(res || []);
     } catch { setResults([]); }
     setLoading(false);
   }
 
+  function handleChange(val: string) {
+    setQuery(val);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => doSearch(val), 300);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); doSearch(query, true); }
+  }
+
   return (
     <div className="flex items-center gap-1">
-      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un guide..."
-        className="w-32 text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
-      <button type="button" onClick={search} className="p-1 text-primary hover:bg-primary/10 rounded-lg">
+      <input value={query} onChange={(e) => handleChange(e.target.value)} onKeyDown={handleKeyDown}
+        placeholder="Chercher un guide..." className="w-36 text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
+      <button type="button" onClick={() => doSearch(query, true)} className="p-1 text-primary hover:bg-primary/10 rounded-lg">
         <Search size={14} />
       </button>
       {loading && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />}
+      {!loading && hasSearched && results.length === 0 && (
+        <span className="text-[10px] text-slate-400">Aucun guide disponible</span>
+      )}
       {results.length > 0 && (
-        <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 w-56">
+        <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 w-72 max-h-64 overflow-y-auto">
           {results.map((g: any) => (
             <button key={g.user_id} type="button" onClick={() => { onSelect(g.user_id, g.full_name); setResults([]); setQuery(""); }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-primary/5 text-left">
-              <span className="text-xs font-medium text-slate-700">{g.full_name}</span>
-              {g.zone && <span className="text-[10px] text-slate-400">{g.zone}</span>}
+              className="w-full flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-primary/5 text-left border-b border-slate-50 last:border-0">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-[10px] font-bold text-primary">{g.full_name?.charAt(0) || "G"}</span>
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-slate-700">{g.full_name}</div>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {g.zone && <span className="text-[10px] text-slate-400 bg-slate-50 rounded px-1">{g.zone}</span>}
+                  {g.offerings?.[0]?.languages && (
+                    <span className="text-[10px] text-slate-400">{g.offerings[0].languages}</span>
+                  )}
+                  {g.offerings?.[0]?.price != null && (
+                    <span className="text-[10px] font-medium text-primary">{Number(g.offerings[0].price).toLocaleString()} TND</span>
+                  )}
+                  {g.offerings?.[0]?.radius_km && (
+                    <span className="text-[10px] text-slate-400">Rayon {g.offerings[0].radius_km}km</span>
+                  )}
+                </div>
+              </div>
             </button>
           ))}
         </div>
@@ -537,6 +581,10 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                                 <div className="relative">
                                   <GuideSearchInline
                                     onSelect={(id, name) => updateProgramItem(day.id, prog.id, { guide_id: id, guide_name: name })}
+                                    dayDate={day.date || undefined}
+                                    dayLat={day.lat}
+                                    dayLng={day.lng}
+                                    dayLocation={day.location_name}
                                   />
                                 </div>
                               )}
