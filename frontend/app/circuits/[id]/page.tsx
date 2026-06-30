@@ -16,6 +16,8 @@ import ImageUploader from "@/components/ImageUploader";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TimelineView from "@/components/TimelineView";
+import OfferItemSearchInline from "@/components/OfferItemSearchInline";
+import type { MyOfferItem } from "@/components/OfferItemSearchInline";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   ssr: false,
@@ -40,6 +42,7 @@ interface CircuitProgramItem {
   transport_mode: string | null;
   guide_id: string | null;
   guide_name: string | null;
+  linked_offer_item_id: string | null;
 }
 
 interface CircuitDay {
@@ -67,6 +70,7 @@ interface CircuitOption {
 interface CircuitDetails {
   id: string;
   author_id: string;
+  project_id: string | null;
   title: string;
   description: string | null;
   base_price: number | null;
@@ -165,6 +169,8 @@ export default function CircuitDetailPage() {
   const [progDuration, setProgDuration] = useState("");
   const [progDistance, setProgDistance] = useState("");
   const [progTransport, setProgTransport] = useState("");
+  const [progLinkedOfferItemId, setProgLinkedOfferItemId] = useState<string | null>(null);
+  const [progOfferItems, setProgOfferItems] = useState<MyOfferItem[]>([]);
   const [showProgEmojiPicker, setShowProgEmojiPicker] = useState(false);
   const [showGuideSearch, setShowGuideSearch] = useState(false);
   const [guideSearchQuery, setGuideSearchQuery] = useState("");
@@ -214,6 +220,11 @@ export default function CircuitDetailPage() {
     if (t && id) {
       apiFetch<any>(`/favorites/check/circuit/${id}`, { headers: { Authorization: `Bearer ${t}` } })
         .then((res) => setIsFavorite(res?.isFavorite ?? false))
+        .catch(() => {});
+    }
+    if (t) {
+      apiFetch<MyOfferItem[]>("/offers/items/mine", { headers: { Authorization: `Bearer ${t}` } })
+        .then((items) => setProgOfferItems(Array.isArray(items) ? items : []))
         .catch(() => {});
     }
   }, [id]);
@@ -506,10 +517,12 @@ export default function CircuitDetailPage() {
           transport_mode: progTransport || undefined,
           guide_id: progWithGuide ? (progGuideId || null) : null,
           guide_name: progWithGuide ? (progGuideName || null) : null,
+          linked_offer_item_id: progLinkedOfferItemId || null,
         }),
       });
       setEditProgramItem(null);
       setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false);
+      setProgLinkedOfferItemId(null);
       loadCircuit();
     } catch (err: any) {
       setReserveError(err.message || "Erreur lors de la modification de l'activité");
@@ -546,12 +559,14 @@ export default function CircuitDetailPage() {
           transport_mode: progTransport || undefined,
           guide_id: progWithGuide ? (progGuideId || undefined) : undefined,
           guide_name: progWithGuide ? (progGuideName || undefined) : undefined,
+          linked_offer_item_id: progLinkedOfferItemId || undefined,
         }),
       });
       setShowAddProgram(null);
       setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd("");
       setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport("");
       setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false);
+      setProgLinkedOfferItemId(null);
       loadCircuit();
     } catch (err: any) {
       setReserveError(err.message || "Erreur lors de l'ajout du programme");
@@ -799,7 +814,7 @@ export default function CircuitDetailPage() {
                                               <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0 mr-1">Requis</span>
                                             )}
                                             <button
-                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); }}
+                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); }}
                                               className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
                                             >
                                               <Edit size={11} />
@@ -821,7 +836,7 @@ export default function CircuitDetailPage() {
                           {isAuthor && (
                             <div className="mt-2 flex items-center gap-2 flex-wrap">
                               <button
-                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport(""); }}
+                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport(""); setProgLinkedOfferItemId(null); }}
                                 className="text-xs text-primary hover:text-primary flex items-center gap-1"
                               >
                                 <Plus size={12} /> Ajouter une activité
@@ -1150,7 +1165,7 @@ export default function CircuitDetailPage() {
       </Modal>
 
       {/* ─── Modal Modifier Activité ────────────────────── */}
-      <Modal open={!!editProgramItem} onClose={() => setEditProgramItem(null)} title="Modifier l'activité">
+      <Modal open={!!editProgramItem} onClose={() => { setEditProgramItem(null); setProgLinkedOfferItemId(null); }} title="Modifier l'activité">
         <div className="p-6 space-y-3">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -1173,6 +1188,24 @@ export default function CircuitDetailPage() {
             </div>
             <input value={progTitle} onChange={(e) => setProgTitle(e.target.value)} placeholder="Titre (ex: Randonnée)" className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" />
           </div>
+
+          {/* ─── Offer link ──────────────────────────────── */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Offre associée</label>
+            <OfferItemSearchInline
+              items={progOfferItems}
+              selectedId={progLinkedOfferItemId}
+              onSelect={(id) => setProgLinkedOfferItemId(id)}
+              onAutoFill={(title) => setProgTitle(title)}
+            />
+            {progOfferItems.length === 0 && (
+              <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1">Aucune offre trouvée. Créez d'abord des offres dans votre projet.</p>
+            )}
+            {!progLinkedOfferItemId && (
+              <p className="text-[10px] text-slate-400">Sélectionnez une offre existante pour lier cette activité à un produit réservable.</p>
+            )}
+          </div>
+
           <textarea value={progDesc} onChange={(e) => setProgDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1271,7 +1304,7 @@ export default function CircuitDetailPage() {
       </Modal>
 
       {/* ─── Modal Ajouter Activité ────────────────────── */}
-      <Modal open={!!showAddProgram} onClose={() => setShowAddProgram(null)} title="Ajouter une activité">
+      <Modal open={!!showAddProgram} onClose={() => { setShowAddProgram(null); setProgLinkedOfferItemId(null); }} title="Ajouter une activité">
         <div className="p-6 space-y-3">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -1294,6 +1327,24 @@ export default function CircuitDetailPage() {
             </div>
             <input value={progTitle} onChange={(e) => setProgTitle(e.target.value)} placeholder="Titre (ex: Randonnée)" className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" />
           </div>
+
+          {/* ─── Offer link ──────────────────────────────── */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Offre associée</label>
+            <OfferItemSearchInline
+              items={progOfferItems}
+              selectedId={progLinkedOfferItemId}
+              onSelect={(id) => setProgLinkedOfferItemId(id)}
+              onAutoFill={(title) => setProgTitle(title)}
+            />
+            {progOfferItems.length === 0 && (
+              <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1">Aucune offre trouvée. Créez d'abord des offres dans votre projet.</p>
+            )}
+            {!progLinkedOfferItemId && (
+              <p className="text-[10px] text-slate-400">Sélectionnez une offre existante pour lier cette activité à un produit réservable.</p>
+            )}
+          </div>
+
           <textarea value={progDesc} onChange={(e) => setProgDesc(e.target.value)} placeholder="Description" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" rows={2} />
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
 import ImageUploader from "@/components/ImageUploader";
+import OfferItemSearchInline from "@/components/OfferItemSearchInline";
+import type { MyOfferItem } from "@/components/OfferItemSearchInline";
 import { Search, ArrowLeft, ArrowRight, X, Plus, Trash2, Check, MapPin, Clock, Calendar, DollarSign, Users, Info, Loader2 } from "lucide-react";
 
 const PolylineDrawer = dynamic(() => import("@/components/map/PolylineDrawer"), { ssr: false, loading: () => <div className="h-[300px] bg-slate-100 animate-pulse rounded-xl" /> });
@@ -33,10 +35,6 @@ interface OptionForm {
   is_included: boolean; is_required: boolean;
 }
 
-interface MyOfferItem {
-  id: string; name: string; item_type: string | null; offer_id: string; offer_title: string;
-}
-
 const EMOJIS_LIST = ["📍", "🚐", "🥾", "🛶", "🏛️", "🍽️", "🏕️", "🌅", "📸", "🎒", "🚲", "🐪", "🦅", "🌿", "🏊", "🧗", "🎶", "🎨", "🛒", "⛺", "🚗", "🐴", "🚌", "✈️", "🚣"];
 
 const TRANSPORTS_LIST = [{ value: "", label: "Aucun" }, { value: "Van", label: "🚐 Van" }, { value: "À pied", label: "🥾 À pied" }, { value: "Vélo", label: "🚲 Vélo" }, { value: "Chameau", label: "🐪 Chameau" }, { value: "Voiture", label: "🚗 Voiture" }, { value: "Kayak", label: "🛶 Kayak" }, { value: "Cheval", label: "🐴 Cheval" }, { value: "Bus", label: "🚌 Bus" }, { value: "Vol", label: "✈️ Vol" }, { value: "Barque", label: "🚣 Barque" }];
@@ -57,63 +55,6 @@ const TUNISIA_REGIONS = [
 ];
 
 function genId() { return Math.random().toString(36).substring(2, 10); }
-
-function OfferItemSearchInline({ items, onSelect, selectedId, onAutoFill }: {
-  items: MyOfferItem[];
-  onSelect: (id: string | null) => void;
-  selectedId: string | null;
-  onAutoFill?: (title: string) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const selected = selectedId ? items.find((it) => it.id === selectedId) : null;
-  const filtered = query.trim()
-    ? items.filter((it) => it.name.toLowerCase().includes(query.toLowerCase()) || it.offer_title.toLowerCase().includes(query.toLowerCase()) || it.item_type?.toLowerCase().includes(query.toLowerCase()))
-    : [];
-
-  if (selected && !query) {
-    return (
-      <div className="flex items-center gap-1.5 bg-primary/5 rounded-lg px-2 py-1">
-        <span className="text-[11px] font-medium text-primary">{selected.name}</span>
-        <span className="text-[10px] text-slate-400">({selected.item_type || "—"})</span>
-        <button type="button" onClick={() => onSelect(null)} className="text-red-400 hover:text-red-600 p-0.5"><X size={12} /></button>
-      </div>
-    );
-  }
-
-  function handlePick(item: MyOfferItem) {
-    onSelect(item.id);
-    setQuery("");
-    if (onAutoFill) onAutoFill(item.name);
-  }
-
-  return (
-    <div className="relative">
-      <input value={query} onChange={(e) => setQuery(e.target.value)}
-        placeholder="Chercher une offre..." className="w-36 text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
-      {query && filtered.length > 0 && (
-        <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 w-72 max-h-48 overflow-y-auto">
-          {filtered.map((item) => (
-            <button key={item.id} type="button" onClick={() => handlePick(item)}
-              className={`w-full flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-primary/5 text-left border-b border-slate-50 last:border-0`}>
-              <div className="min-w-0">
-                <div className="text-xs font-medium text-slate-700">{item.name}</div>
-                <div className="flex flex-wrap gap-1 mt-0.5">
-                  <span className="text-[10px] text-slate-400 bg-slate-50 rounded px-1">{item.item_type || "—"}</span>
-                  <span className="text-[10px] text-slate-400">via {item.offer_title}</span>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-      {query && filtered.length === 0 && (
-        <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-2 w-72">
-          <p className="text-[11px] text-slate-400">Aucune offre trouvée</p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
   onSelect: (id: string, name: string) => void;

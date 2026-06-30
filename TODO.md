@@ -4,7 +4,7 @@
 
 ### 1. Détail offre : afficher sous-types + alimenter DB
 - [x] Afficher les sous-types (TV, douche, lavabo, etc.) dans la page détail offre
-- [ ] Backfill les offres existantes avec les nouveaux champs
+- [x] Backfill les offres existantes (script seed:backfill-details-json → `details_json = '{}'`)
 - [x] Ajouter UI pour éditer/saisir les sous-types (déjà fait via GuidedOfferWizard)
 
 ### 2. Circuit : améliorer sélection guide
@@ -29,9 +29,10 @@
 - [x] Bouton "Créer un projet" dans le message d'alerte
 
 ### 5. Localisation : héritée vs propre
-- [ ] Offres fixes (hébergement, resto, etc.) → héritent du projet
-- [ ] Offres mobiles (kayak, randonnée, etc.) → propre localisation
-- [ ] UI : masquer/afficher champs selon type
+- [x] Offres fixes (hébergement, resto, etc.) → héritent du projet
+- [x] Offres mobiles (kayak, randonnée, etc.) → propre localisation
+- [x] UI : masquer/afficher champs selon type
+- [ ] TODO mineur : Step 2 utilise `needsLocation(cat, "")` → devrait attendre le Step 3 pour les `itemType` spécifiques (product sans localisation dans eco_tour)
 
 ### 6. Refactor Guide → GuideOffering
 - [ ] Guide vend sa disponibilité (pas des activités)
