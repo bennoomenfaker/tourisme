@@ -78,6 +78,9 @@ export const ITEM_TYPES_BY_CATEGORY: Record<string, { value: string; label: stri
     { value: 'room', label: 'Chambre' },
     { value: 'bed', label: 'Lit (dortoir)' },
     { value: 'camping_space', label: 'Espace tente' },
+    { value: 'suite', label: 'Suite' },
+    { value: 'bungalow', label: 'Bungalow' },
+    { value: 'ecolodge', label: 'Éco-lodge' },
   ],
   activity: [
     { value: 'activity', label: 'Activité' },

@@ -165,6 +165,154 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     display: { cardFields: ['type_tente_offre', 'capacite_offre', 'surface_m2'], filterable: ['type_tente_offre', 'sanitaires_offre', 'electricite'] },
   },
 
+  accommodation_suite: {
+    key: 'accommodation_suite',
+    label: 'Suite',
+    category: 'accommodation',
+    sections: [
+      { id: 'general', label: 'Informations', fields: ['surface_m2', 'vue', 'nb_pieces'] },
+      { id: 'spaces', label: 'Espaces', fields: ['espaces_suite', 'privatisation_offre'] },
+      { id: 'bathroom', label: 'Salle de bain', fields: ['sdb_type', 'sdb_equipements'] },
+      { id: 'services', label: 'Services', fields: ['services_offre', 'inclus'] },
+      { id: 'schedule', label: 'Horaires', fields: ['checkin_debut', 'checkout'] },
+    ],
+    fields: {
+      surface_m2: { type: 'number', label: 'Surface (m²)', unit: 'm²' },
+      vue: { type: 'select', label: 'Vue', options: [
+        { value: 'jardin', label: 'Jardin' }, { value: 'piscine', label: 'Piscine' },
+        { value: 'mer', label: 'Mer' }, { value: 'montagne', label: 'Montagne' },
+      ]},
+      nb_pieces: { type: 'number', label: 'Nombre de pièces', min: 1 },
+      espaces_suite: { type: 'multiselect', label: 'Espaces distincts', options: [
+        { value: 'salon', label: 'Salon' }, { value: 'coin_the', label: "Coin thé" },
+        { value: 'terrasse', label: 'Terrasse privative' }, { value: 'jardin_prive', label: 'Jardin privé' },
+        { value: 'balcon', label: 'Balcon' }, { value: 'cuisinette', label: 'Cuisinette' },
+      ]},
+      privatisation_offre: { type: 'boolean', label: 'Privatisation possible' },
+      sdb_type: { type: 'select', label: 'Type de salle de bain', options: [
+        { value: 'prive', label: 'Privée' }, { value: 'partage', label: 'Partagée' },
+      ]},
+      sdb_equipements: { type: 'multiselect', label: 'Équipements SdB', conditionalOn: { field: 'sdb_type', value: 'prive' }, options: [
+        { value: 'douche', label: 'Douche' }, { value: 'baignoire', label: 'Baignoire' },
+        { value: 'wc', label: 'WC' }, { value: 'double_lavabo', label: 'Double lavabo' },
+        { value: 'seche_cheveux', label: 'Sèche-cheveux' },
+      ]},
+      services_offre: { type: 'multiselect', label: 'Services premium', options: [
+        { value: 'petit_dej', label: 'Petit-déjeuner en chambre' }, { value: 'menage', label: 'Ménage quotidien' },
+        { value: 'coffre', label: 'Coffre-fort' }, { value: 'mini_bar', label: 'Mini-bar' },
+        { value: 'room_service', label: 'Room service' }, { value: 'conciergerie', label: 'Conciergerie' },
+      ]},
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'linge', label: 'Linge de lit' }, { value: 'serviettes', label: 'Serviettes' },
+        { value: 'petit_dej', label: 'Petit-déjeuner' }, { value: 'parking', label: 'Parking' },
+        { value: 'wifi', label: 'WiFi' },
+      ]},
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant' },
+    },
+    display: { cardFields: ['surface_m2', 'nb_pieces', 'vue'], filterable: ['vue', 'privatisation_offre', 'services_offre'] },
+  },
+
+  accommodation_bungalow: {
+    key: 'accommodation_bungalow',
+    label: 'Bungalow',
+    category: 'accommodation',
+    sections: [
+      { id: 'general', label: 'Informations', fields: ['surface_m2', 'vue', 'capacite_offre', 'configuration_lits'] },
+      { id: 'bathroom', label: 'Salle de bain', fields: ['sdb_type', 'equipements_offre'] },
+      { id: 'options', label: 'Options', fields: ['animaux_offre', 'inclus'] },
+      { id: 'schedule', label: 'Horaires', fields: ['checkin_debut', 'checkout'] },
+    ],
+    fields: {
+      surface_m2: { type: 'number', label: 'Surface (m²)', unit: 'm²' },
+      vue: { type: 'select', label: 'Vue', options: [
+        { value: 'jardin', label: 'Jardin' }, { value: 'mer', label: 'Mer' },
+        { value: 'montagne', label: 'Montagne' }, { value: 'piscine', label: 'Piscine' },
+        { value: 'nature', label: 'Nature' },
+      ]},
+      capacite_offre: { type: 'number', required: true, label: 'Capacité (personnes)', min: 1, max: 10 },
+      configuration_lits: { type: 'select', label: 'Configuration des lits', options: [
+        { value: '1_double', label: '1 lit double' }, { value: '2_simples', label: '2 lits simples' },
+        { value: 'double_superpose', label: 'Lit double + superposé' },
+        { value: 'familiale', label: 'Familiale (plusieurs lits)' },
+      ]},
+      sdb_type: { type: 'select', label: 'Salle de bain', options: [
+        { value: 'prive', label: 'Privée' }, { value: 'partage', label: 'Partagée' },
+        { value: 'exterieure', label: 'Extérieure (douche solaire)' },
+      ]},
+      equipements_offre: { type: 'multiselect', label: 'Équipements', options: [
+        { value: 'clim', label: 'Climatisation' }, { value: 'ventilateur', label: 'Ventilateur' },
+        { value: 'moustiquaire', label: 'Moustiquaire' }, { value: 'terrasse', label: 'Terrasse' },
+        { value: 'barbecue', label: 'Barbecue' }, { value: 'wifi', label: 'WiFi' },
+        { value: 'cuisine', label: 'Coin cuisine' }, { value: 'refrigirateur', label: 'Réfrigérateur' },
+      ]},
+      animaux_offre: { type: 'boolean', label: 'Animaux acceptés' },
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'linge', label: 'Linge de lit' }, { value: 'serviettes', label: 'Serviettes' },
+        { value: 'petit_dej', label: 'Petit-déjeuner' }, { value: 'parking', label: 'Parking' },
+      ]},
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant' },
+    },
+    display: { cardFields: ['capacite_offre', 'surface_m2', 'vue'], filterable: ['sdb_type', 'animaux_offre', 'equipements_offre'] },
+  },
+
+  accommodation_ecolodge: {
+    key: 'accommodation_ecolodge',
+    label: 'Éco-lodge',
+    category: 'accommodation',
+    sections: [
+      { id: 'general', label: "L'unité", fields: ['type_unite', 'surface_m2', 'capacite_offre', 'description_unique'] },
+      { id: 'eco', label: 'Éco-construction', fields: ['materiaux', 'source_energie', 'certifications'] },
+      { id: 'equipment', label: 'Équipements', fields: ['eco_equipements', 'experiences_eco'] },
+      { id: 'restauration', label: 'Restauration', fields: ['restauration_offre'] },
+      { id: 'schedule', label: 'Horaires', fields: ['checkin_debut', 'checkout'] },
+    ],
+    fields: {
+      type_unite: { type: 'select', label: "Type d'unité", options: [
+        { value: 'cabane', label: 'Cabane' }, { value: 'bungalow', label: 'Bungalow' },
+        { value: 'suite', label: 'Suite' }, { value: 'tente', label: 'Tente lodge' },
+        { value: 'dome', label: 'Dôme' }, { value: 'yourte', label: 'Yourte' },
+      ]},
+      surface_m2: { type: 'number', label: 'Surface (m²)', unit: 'm²' },
+      capacite_offre: { type: 'number', required: true, label: 'Capacité (personnes)', min: 1, max: 10 },
+      description_unique: { type: 'textarea', label: 'Ce qui rend unique' },
+      materiaux: { type: 'multiselect', label: 'Matériaux de construction', options: [
+        { value: 'bois_local', label: 'Bois local' }, { value: 'pierre', label: 'Pierre' },
+        { value: 'terre', label: 'Terre / Pisé' }, { value: 'paille', label: 'Paille' },
+        { value: 'brique', label: 'Brique de terre cuite' }, { value: 'recuperation', label: 'Matériaux de récupération' },
+        { value: 'toit_vegetal', label: 'Toit végétal' },
+      ]},
+      source_energie: { type: 'multiselect', label: "Source d'énergie", options: [
+        { value: 'solaire', label: 'Solaire' }, { value: 'eolien', label: 'Éolien' },
+        { value: 'reseau', label: 'Réseau électrique' }, { value: 'gaz', label: 'Gaz' },
+      ]},
+      certifications: { type: 'multiselect', label: 'Certifications éco', options: [
+        { value: 'ecolabel', label: 'Ecolabel' }, { value: 'green_key', label: 'Green Key' },
+        { value: 'biosphere', label: 'Biosphere' }, { value: 'local', label: 'Label local' },
+      ]},
+      eco_equipements: { type: 'multiselect', label: 'Éco-équipements', options: [
+        { value: 'compost', label: 'Compost' }, { value: 'recup_eau', label: 'Récupération eau pluie' },
+        { value: 'chauffe_eau_solaire', label: 'Chauffe-eau solaire' },
+        { value: 'ampoules_led', label: 'Ampoules LED' }, { value: 'douche_economie', label: 'Douche économique' },
+        { value: 'toilettes_compost', label: 'Toilettes à compost' },
+      ]},
+      experiences_eco: { type: 'multiselect', label: 'Expériences éco incluses', options: [
+        { value: 'visite_ferme', label: 'Visite de la ferme' }, { value: 'atelier_bio', label: 'Atelier bio' },
+        { value: 'randonnee', label: 'Randonnée nature' }, { value: 'degustation', label: 'Dégustation produits locaux' },
+        { value: 'observation', label: 'Observation faune' },
+      ]},
+      restauration_offre: { type: 'select', label: 'Formule restauration', options: [
+        { value: 'sans', label: 'Sans restauration' }, { value: 'petit_dej', label: 'Petit-déjeuner' },
+        { value: 'demi_pension', label: 'Demi-pension' }, { value: 'pension', label: 'Pension complète' },
+        { value: 'table_hotes', label: 'Table d\'hôtes' },
+      ]},
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant' },
+    },
+    display: { cardFields: ['type_unite', 'capacite_offre', 'surface_m2'], filterable: ['type_unite', 'materiaux', 'certifications', 'restauration_offre'] },
+  },
+
   // ───────── ACTIVITÉS ─────────
 
   activity_randonnee: {
@@ -329,6 +477,266 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     display: { cardFields: ['style_offre', 'cadre_offre', 'duree_seance', 'niveau_offre'], filterable: ['style_offre', 'niveau_offre', 'cadre_offre'] },
   },
 
+  activity_escalade: {
+    key: 'activity_escalade',
+    label: 'Escalade',
+    category: 'activity',
+    sections: [
+      { id: 'site', label: "Site d'escalade", fields: ['nom_site', 'type_site', 'hauteur_max', 'nb_voies', 'cotation_max'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'encadrement_guide', 'age_minimum', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['equipement_fourni', 'inclus'] },
+    ],
+    fields: {
+      nom_site: { type: 'text', required: true, label: "Nom du site d'escalade" },
+      type_site: { type: 'select', required: true, label: "Type de site", options: [
+        { value: 'falaise', label: 'Falaise naturelle' }, { value: 'bloc', label: 'Bloc' },
+        { value: 'via_ferrata', label: 'Via ferrata' }, { value: 'mur', label: "Mur d'escalade" },
+        { value: 'deep_water', label: 'Deep water solo' },
+      ]},
+      hauteur_max: { type: 'number', label: 'Hauteur maximale (m)', unit: 'm' },
+      nb_voies: { type: 'number', label: 'Nombre de voies', min: 1 },
+      cotation_max: { type: 'text', label: 'Cotation maximale' },
+      niveau_offre: { type: 'select', required: true, label: 'Niveau requis', options: [
+        { value: 'initiation', label: 'Initiation' }, { value: 'debutant', label: 'Débutant' },
+        { value: 'intermediaire', label: 'Intermédiaire' }, { value: 'confirme', label: 'Confirmé' },
+        { value: 'expert', label: 'Expert' },
+      ]},
+      encadrement_guide: { type: 'boolean', label: 'Encadrement par moniteur' },
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'baudrier', label: 'Baudrier' }, { value: 'corde', label: 'Cordes' },
+        { value: 'casque', label: 'Casque' }, { value: 'mousquetons', label: 'Mousquetons' },
+        { value: 'chaussons', label: "Chaussons d'escalade" }, { value: 'magnesium', label: 'Magnésie' },
+      ]},
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'moniteur', label: 'Moniteur diplômé' }, { value: 'assurance', label: 'Assurance' },
+        { value: 'transport', label: 'Transport' },
+      ]},
+    },
+    display: { cardFields: ['nom_site', 'type_site', 'hauteur_max', 'niveau_offre'], filterable: ['niveau_offre', 'type_site', 'encadrement_guide'] },
+  },
+
+  activity_equitation: {
+    key: 'activity_equitation',
+    label: 'Équitation',
+    category: 'activity',
+    sections: [
+      { id: 'ride', label: 'Balade', fields: ['type_balade', 'duree', 'distance_km', 'type_terrain'] },
+      { id: 'horse', label: 'Monture', fields: ['type_monture', 'poids_max'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'encadrement_guide', 'age_minimum', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['equipement_fourni', 'inclus'] },
+    ],
+    fields: {
+      type_balade: { type: 'select', required: true, label: "Type de balade", options: [
+        { value: 'promenade', label: 'Promenade' }, { value: 'randonnee', label: 'Randonnée' },
+        { value: 'trek', label: 'Trek équestre' }, { value: 'initiation', label: "Séance d'initiation" },
+        { value: 'voltige', label: 'Voltige' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée' },
+      distance_km: { type: 'number', label: 'Distance (km)', unit: 'km' },
+      type_terrain: { type: 'select', label: 'Terrain', options: [
+        { value: 'plage', label: 'Plage' }, { value: 'foret', label: 'Forêt' },
+        { value: 'montagne', label: 'Montagne' }, { value: 'desert', label: 'Désert' },
+        { value: 'manege', label: 'Manège' },
+      ]},
+      type_monture: { type: 'select', label: "Type de monture", options: [
+        { value: 'cheval', label: 'Cheval' }, { value: 'poney', label: 'Poney' },
+        { value: 'dromadaire', label: 'Dromadaire' }, { value: 'ane', label: 'Âne' },
+      ]},
+      poids_max: { type: 'number', label: 'Poids max cavalier (kg)', unit: 'kg' },
+      niveau_offre: { type: 'select', required: true, label: 'Niveau requis', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'confirme', label: 'Confirmé' },
+      ]},
+      encadrement_guide: { type: 'boolean', label: 'Encadrement par un guide' },
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'casque', label: 'Casque' }, { value: 'bombe', label: "Bombe d'équitation" },
+        { value: 'bottes', label: 'Bottes' }, { value: 'gilet', label: 'Gilet de protection' },
+      ]},
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'guide', label: 'Guide équestre' }, { value: 'assurance', label: 'Assurance' },
+        { value: 'initiation', label: "Séance d'initiation" },
+      ]},
+    },
+    display: { cardFields: ['type_balade', 'duree', 'niveau_offre', 'type_monture'], filterable: ['niveau_offre', 'type_balade', 'type_terrain', 'type_monture'] },
+  },
+
+  activity_observation: {
+    key: 'activity_observation',
+    label: 'Observation',
+    category: 'activity',
+    sections: [
+      { id: 'type', label: "Type d'observation", fields: ['type_observation', 'saison_ideale', 'duree', 'meilleurs_horaires'] },
+      { id: 'level', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'guide', label: 'Guide', fields: ['encadrement_guide', 'inclus'] },
+    ],
+    fields: {
+      type_observation: { type: 'select', required: true, label: "Type d'observation", options: [
+        { value: 'faune', label: 'Faune sauvage' }, { value: 'flore', label: 'Flore' },
+        { value: 'oiseaux', label: 'Observation ornithologique' }, { value: 'etoiles', label: 'Astronomie' },
+        { value: 'paysages', label: 'Paysages' },
+      ]},
+      saison_ideale: { type: 'text', label: 'Saison idéale', placeholder: 'Printemps / Automne' },
+      duree: { type: 'text', required: true, label: 'Durée' },
+      meilleurs_horaires: { type: 'text', label: 'Meilleurs horaires', placeholder: 'Aube / Crépuscule' },
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      encadrement_guide: { type: 'boolean', label: 'Guide naturaliste' },
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'guide', label: 'Guide naturaliste' }, { value: 'jumelles', label: 'Jumelles' },
+        { value: 'longue_vue', label: 'Longue-vue' }, { value: 'transport', label: 'Transport' },
+      ]},
+    },
+    display: { cardFields: ['type_observation', 'duree', 'saison_ideale'], filterable: ['type_observation', 'encadrement_guide'] },
+  },
+
+  activity_meditation: {
+    key: 'activity_meditation',
+    label: 'Méditation',
+    category: 'activity',
+    sections: [
+      { id: 'session', label: 'Session', fields: ['type_meditation', 'cadre_offre', 'duree_seance', 'niveau_offre'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['accessoires'] },
+    ],
+    fields: {
+      type_meditation: { type: 'select', required: true, label: 'Type de méditation', options: [
+        { value: 'pleine_conscience', label: 'Pleine conscience' }, { value: 'guidee', label: 'Guidée' },
+        { value: 'transcendantale', label: 'Transcendantale' }, { value: 'zen', label: 'Zen (Zazen)' },
+        { value: 'vipassana', label: 'Vipassana' }, { value: 'marche', label: 'Marche méditative' },
+      ]},
+      cadre_offre: { type: 'select', label: 'Cadre', options: [
+        { value: 'interieur', label: 'Intérieur' }, { value: 'exterieur', label: 'Extérieur' },
+        { value: 'jardin', label: 'Jardin' }, { value: 'plage', label: 'Plage' },
+        { value: 'foret', label: 'Forêt' },
+      ]},
+      duree_seance: { type: 'text', required: true, label: 'Durée par séance' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'avance', label: 'Avancé' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      accessoires: { type: 'multiselect', label: 'Accessoires fournis', options: [
+        { value: 'coussin', label: 'Coussin de méditation' }, { value: 'tapis', label: 'Tapis' },
+        { value: 'couverture', label: 'Couverture' }, { value: 'bol_tibetain', label: 'Bol tibétain' },
+      ]},
+    },
+    display: { cardFields: ['type_meditation', 'cadre_offre', 'duree_seance', 'niveau_offre'], filterable: ['type_meditation', 'niveau_offre', 'cadre_offre'] },
+  },
+
+  activity_photographie: {
+    key: 'activity_photographie',
+    label: 'Photographie',
+    category: 'activity',
+    sections: [
+      { id: 'type', label: "Type d'atelier", fields: ['type_photo', 'niveau_offre', 'duree'] },
+      { id: 'theme', label: 'Thème', fields: ['theme_photo', 'points_interet'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['materiel_fourni', 'inclus'] },
+    ],
+    fields: {
+      type_photo: { type: 'select', required: true, label: "Type d'atelier", options: [
+        { value: 'initiation', label: "Initiation photographie" }, { value: 'balade', label: 'Balade photo' },
+        { value: 'stage', label: 'Stage' }, { value: 'night', label: 'Photo nocturne' },
+        { value: 'macro', label: 'Macro' }, { value: 'paysage', label: 'Paysage' },
+        { value: 'faune', label: 'Photo animalière' },
+      ]},
+      niveau_offre: { type: 'select', label: 'Niveau requis', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'avance', label: 'Avancé' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée' },
+      theme_photo: { type: 'multiselect', label: 'Thèmes abordés', options: [
+        { value: 'nature', label: 'Nature' }, { value: 'faune', label: 'Faune' },
+        { value: 'portrait', label: 'Portrait' }, { value: 'paysage', label: 'Paysage' },
+        { value: 'architecture', label: 'Architecture' }, { value: 'macro', label: 'Macro' },
+        { value: 'nocturne', label: 'Nocturne' }, { value: 'street', label: 'Street photo' },
+      ]},
+      points_interet: { type: 'textarea', label: "Points d'intérêt / lieux" },
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      materiel_fourni: { type: 'multiselect', label: 'Matériel fourni', options: [
+        { value: 'boitier', label: 'Boîtier reflex/miroir' }, { value: 'objectif', label: 'Objectifs' },
+        { value: 'trepied', label: 'Trépied' }, { value: 'filtres', label: 'Filtres' },
+      ]},
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'guide', label: 'Guide photographe' }, { value: 'edition', label: 'Post-traitement' },
+        { value: 'impression', label: "Tirage d'une photo" },
+      ]},
+    },
+    display: { cardFields: ['type_photo', 'duree', 'niveau_offre', 'theme_photo'], filterable: ['niveau_offre', 'type_photo', 'theme_photo'] },
+  },
+
+  activity_guided_tour: {
+    key: 'activity_guided_tour',
+    label: 'Visite guidée',
+    category: 'activity',
+    sections: [
+      { id: 'tour', label: 'Visite', fields: ['type_visite', 'duree', 'distance_marche', 'themes_visite'] },
+      { id: 'guide', label: 'Guide', fields: ['langues_guides', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['points_interet', 'inclus'] },
+    ],
+    fields: {
+      type_visite: { type: 'select', required: true, label: 'Type de visite', options: [
+        { value: 'historique', label: 'Historique' }, { value: 'culturelle', label: 'Culturelle' },
+        { value: 'nature', label: 'Nature' }, { value: 'gastronomique', label: 'Gastronomique' },
+        { value: 'nocturne', label: 'Nocturne' }, { value: 'thematique', label: 'Thématique' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée' },
+      distance_marche: { type: 'number', label: 'Distance à pied (km)', unit: 'km' },
+      themes_visite: { type: 'multiselect', label: "Thèmes de la visite", options: [
+        { value: 'patrimoine', label: 'Patrimoine' }, { value: 'architecture', label: 'Architecture' },
+        { value: 'artisanat', label: 'Artisanat' }, { value: 'cuisine', label: 'Cuisine locale' },
+        { value: 'histoire', label: 'Histoire' }, { value: 'nature', label: 'Nature' },
+        { value: 'oiseaux', label: 'Observation oiseaux' },
+        { value: 'photographie', label: 'Photographie' },
+      ]},
+      langues_guides: { type: 'multiselect', required: true, label: "Langues du guide", options: [
+        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
+        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
+        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
+      ]},
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      points_interet: { type: 'textarea', label: "Points d'intérêt" },
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'guide', label: 'Guide conférencier' }, { value: 'entree', label: "Billets d'entrée" },
+        { value: 'degustation', label: 'Dégustation' },
+      ]},
+    },
+    display: { cardFields: ['type_visite', 'duree', 'themes_visite'], filterable: ['type_visite', 'langues_guides', 'themes_visite'] },
+  },
+
+  activity_other: {
+    key: 'activity_other',
+    label: 'Autre activité',
+    category: 'activity',
+    sections: [
+      { id: 'general', label: 'Informations', fields: ['activity_custom_name', 'duree', 'description_activity', 'niveau_offre'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['equipement_fourni', 'inclus'] },
+    ],
+    fields: {
+      activity_custom_name: { type: 'text', required: true, label: "Nom de l'activité" },
+      duree: { type: 'text', required: true, label: 'Durée' },
+      description_activity: { type: 'textarea', label: 'Description / déroulement' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      equipement_fourni: { type: 'textarea', label: 'Équipement fourni' },
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'guide', label: 'Guide' }, { value: 'assurance', label: 'Assurance' },
+        { value: 'equipement', label: 'Équipement' },
+      ]},
+    },
+    display: { cardFields: ['activity_custom_name', 'duree', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
   // ───────── RESTAURATION ─────────
 
   restaurant_menu: {
@@ -438,6 +846,171 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       ]},
     },
     display: { cardFields: ['nb_recettes', 'duree_heures', 'niveau_offre', 'plats_prepares'], filterable: ['niveau_offre', 'enfants_acceptes'] },
+  },
+
+  workshop_tissage: {
+    key: 'workshop_tissage',
+    label: 'Tissage',
+    category: 'workshop',
+    sections: [
+      { id: 'general', label: "L'atelier", fields: ['technique_proposee', 'duree_heures', 'niveau_offre', 'cycle_complet'] },
+      { id: 'materials', label: 'Matériel', fields: ['type_metier', 'materiaux_inclus', 'nb_participants_max'] },
+    ],
+    fields: {
+      technique_proposee: { type: 'select', required: true, label: 'Technique', options: [
+        { value: 'tapis', label: 'Tissage de tapis' }, { value: 'kilim', label: 'Kilim' },
+        { value: 'margoum', label: 'Margoum (broderie berbère)' },
+        { value: 'tissage_traditionnel', label: 'Tissage traditionnel' },
+        { value: 'teinture', label: "Teinture naturelle + tissage" },
+      ]},
+      duree_heures: { type: 'number', required: true, label: 'Durée (heures)', unit: 'h', min: 1 },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'avance', label: 'Avancé' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      cycle_complet: { type: 'boolean', label: 'Atelier en plusieurs sessions' },
+      type_metier: { type: 'select', label: "Type de métier à tisser", options: [
+        { value: 'vertical', label: 'Métier vertical' }, { value: 'horizontal', label: 'Métier horizontal' },
+        { value: 'cadre', label: 'Cadre de tissage' },
+      ]},
+      materiaux_inclus: { type: 'multiselect', label: 'Matériaux inclus', options: [
+        { value: 'laine', label: 'Laine' }, { value: 'coton', label: 'Coton' },
+        { value: 'soie', label: 'Soie' }, { value: 'alfa', label: 'Alfa (fibre naturelle)' },
+        { value: 'teintures', label: 'Teintures naturelles' },
+      ]},
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+    },
+    display: { cardFields: ['technique_proposee', 'duree_heures', 'niveau_offre'], filterable: ['technique_proposee', 'niveau_offre', 'cycle_complet'] },
+  },
+
+  workshop_musique: {
+    key: 'workshop_musique',
+    label: 'Musique',
+    category: 'workshop',
+    sections: [
+      { id: 'general', label: 'Atelier musical', fields: ['instrument_enseigne', 'style_musical', 'duree_heures', 'niveau_offre'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['instrument_fourni', 'inclus'] },
+    ],
+    fields: {
+      instrument_enseigne: { type: 'select', required: true, label: 'Instrument enseigné', options: [
+        { value: 'darbouka', label: 'Darbouka' }, { value: 'oud', label: 'Oud' },
+        { value: 'violon', label: 'Violon' }, { value: 'nei', label: 'Neï (flûte)' },
+        { value: 'percussions', label: 'Percussions' }, { value: 'chant', label: 'Chant' },
+      ]},
+      style_musical: { type: 'multiselect', label: 'Styles musicaux', options: [
+        { value: 'traditionnel', label: 'Traditionnel' }, { value: 'soufi', label: 'Soufi' },
+        { value: 'malouf', label: 'Malouf' }, { value: 'stambeli', label: 'Stambeli' },
+        { value: 'moderne', label: 'Moderne' },
+      ]},
+      duree_heures: { type: 'number', required: true, label: 'Durée (heures)', unit: 'h', min: 1 },
+      niveau_offre: { type: 'select', label: 'Niveau requis', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'avance', label: 'Avancé' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      instrument_fourni: { type: 'boolean', label: 'Instrument fourni' },
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'instrument', label: 'Instrument' }, { value: 'partition', label: 'Partitions' },
+        { value: 'enregistrement', label: "Enregistrement audio" },
+      ]},
+    },
+    display: { cardFields: ['instrument_enseigne', 'duree_heures', 'niveau_offre'], filterable: ['niveau_offre', 'instrument_enseigne', 'style_musical'] },
+  },
+
+  workshop_other: {
+    key: 'workshop_other',
+    label: 'Autre atelier',
+    category: 'workshop',
+    sections: [
+      { id: 'general', label: "L'atelier", fields: ['workshop_custom_name', 'duree_heures', 'niveau_offre', 'description_workshop'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['materiel_fourni', 'inclus'] },
+    ],
+    fields: {
+      workshop_custom_name: { type: 'text', required: true, label: "Nom de l'atelier" },
+      duree_heures: { type: 'number', required: true, label: 'Durée (heures)', unit: 'h', min: 1 },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'avance', label: 'Avancé' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      description_workshop: { type: 'textarea', label: 'Description / déroulement' },
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      materiel_fourni: { type: 'text', label: 'Matériel fourni' },
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'materiel', label: 'Matériel' }, { value: 'gouter', label: 'Goûter' },
+      ]},
+    },
+    display: { cardFields: ['workshop_custom_name', 'duree_heures', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
+  // ───────── ÉQUIPEMENT RENTAL ─────────
+
+  equipment_rental_equipment: {
+    key: 'equipment_rental_equipment',
+    label: 'Location équipement',
+    category: 'equipment_rental',
+    sections: [
+      { id: 'item', label: 'Équipement', fields: ['type_equipement', 'marque_modele', 'quantite_disponible_offre', 'etat_offre'] },
+      { id: 'conditions', label: 'Conditions', fields: ['livraison_offre', 'caution_offre', 'age_minimum', 'conditions_utilisation'] },
+    ],
+    fields: {
+      type_equipement: { type: 'select', required: true, label: "Type d'équipement", options: [
+        { value: 'velo', label: 'Vélo' }, { value: 'vtt', label: 'VTT' },
+        { value: 'kayak', label: 'Kayak' }, { value: 'canoe', label: 'Canoë' },
+        { value: 'paddle', label: 'Paddle' }, { value: 'tente', label: 'Tente' },
+        { value: 'sac_couchage', label: 'Sac de couchage' }, { value: 'matelas', label: 'Matelas' },
+        { value: 'equipement_escalade', label: "Équipement d'escalade" },
+        { value: 'combinaison', label: 'Combinaison' }, { value: 'autre', label: 'Autre' },
+      ]},
+      marque_modele: { type: 'text', label: 'Marque / Modèle' },
+      quantite_disponible_offre: { type: 'number', required: true, label: 'Quantité disponible', min: 1 },
+      etat_offre: { type: 'select', label: 'État', options: [
+        { value: 'neuf', label: 'Neuf' }, { value: 'tres_bon', label: 'Très bon état' },
+        { value: 'bon', label: 'Bon état' }, { value: 'usage', label: "D'occasion" },
+      ]},
+      livraison_offre: { type: 'boolean', label: 'Livraison possible' },
+      caution_offre: { type: 'number', label: 'Montant de la caution (DT)', unit: 'DT' },
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      conditions_utilisation: { type: 'textarea', label: "Conditions d'utilisation" },
+    },
+    display: { cardFields: ['type_equipement', 'quantite_disponible_offre', 'etat_offre'], filterable: ['type_equipement', 'etat_offre', 'livraison_offre'] },
+  },
+
+  // ───────── GUIDE SERVICE ─────────
+
+  guide_service_hiking: {
+    key: 'guide_service_hiking',
+    label: 'Guide randonnée',
+    category: 'guide_service',
+    sections: [
+      { id: 'general', label: 'Prestation', fields: ['zone_offre', 'duree', 'type_parcours_prefere', 'niveau_offre'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'languages', label: 'Langues', fields: ['langues'] },
+    ],
+    fields: {
+      zone_offre: { type: 'text', required: true, label: 'Zone couverte' },
+      duree: { type: 'text', required: true, label: 'Durée' },
+      type_parcours_prefere: { type: 'multiselect', label: 'Types de parcours préférés', options: [
+        { value: 'montagne', label: 'Montagne' }, { value: 'foret', label: 'Forêt' },
+        { value: 'desert', label: 'Désert' }, { value: 'cote', label: 'Côte' },
+        { value: 'oasis', label: 'Oasis' }, { value: 'ville', label: 'Urbain' },
+      ]},
+      niveau_offre: { type: 'select', label: 'Niveau proposé', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' }, { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
+      langues: { type: 'multiselect', required: true, label: 'Langues parlées', options: [
+        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
+        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
+        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
+      ]},
+    },
+    display: { cardFields: ['zone_offre', 'duree', 'niveau_offre'], filterable: ['niveau_offre', 'type_parcours_prefere', 'langues'] },
   },
 
   // ───────── TRANSPORT ─────────
