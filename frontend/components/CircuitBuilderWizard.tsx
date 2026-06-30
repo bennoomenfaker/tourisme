@@ -58,6 +58,56 @@ const TUNISIA_REGIONS = [
 
 function genId() { return Math.random().toString(36).substring(2, 10); }
 
+function OfferItemSearchInline({ items, onSelect, selectedId }: {
+  items: MyOfferItem[];
+  onSelect: (id: string | null) => void;
+  selectedId: string | null;
+}) {
+  const [query, setQuery] = useState("");
+  const selected = selectedId ? items.find((it) => it.id === selectedId) : null;
+  const filtered = query.trim()
+    ? items.filter((it) => it.name.toLowerCase().includes(query.toLowerCase()) || it.offer_title.toLowerCase().includes(query.toLowerCase()) || it.item_type?.toLowerCase().includes(query.toLowerCase()))
+    : [];
+
+  if (selected && !query) {
+    return (
+      <div className="flex items-center gap-1.5 bg-primary/5 rounded-lg px-2 py-1">
+        <span className="text-[11px] font-medium text-primary">{selected.name}</span>
+        <span className="text-[10px] text-slate-400">({selected.item_type || "—"})</span>
+        <button type="button" onClick={() => onSelect(null)} className="text-red-400 hover:text-red-600 p-0.5"><X size={12} /></button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <input value={query} onChange={(e) => setQuery(e.target.value)}
+        placeholder="Chercher une offre..." className="w-36 text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
+      {query && filtered.length > 0 && (
+        <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 w-72 max-h-48 overflow-y-auto">
+          {filtered.map((item) => (
+            <button key={item.id} type="button" onClick={() => { onSelect(item.id); setQuery(""); }}
+              className={`w-full flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-primary/5 text-left border-b border-slate-50 last:border-0`}>
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-slate-700">{item.name}</div>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  <span className="text-[10px] text-slate-400 bg-slate-50 rounded px-1">{item.item_type || "—"}</span>
+                  <span className="text-[10px] text-slate-400">via {item.offer_title}</span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {query && filtered.length === 0 && (
+        <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-2 w-72">
+          <p className="text-[11px] text-slate-400">Aucune offre trouvée</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
   onSelect: (id: string, name: string) => void;
   dayDate?: string;
@@ -527,17 +577,19 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                       <div key={prog.id} className="bg-white border border-slate-200 rounded-xl p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <select value={prog.emoji} onChange={(e) => updateProgramItem(day.id, prog.id, { emoji: e.target.value })} className="text-lg border border-slate-200 rounded-lg px-1.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
                                 {EMOJIS_LIST.map((e) => <option key={e} value={e}>{e}</option>)}
                               </select>
                               <input value={prog.title} onChange={(e) => updateProgramItem(day.id, prog.id, { title: e.target.value })} placeholder="Titre de l'activité" className="flex-1 text-sm font-medium text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" />
-                              <select value={prog.linked_offer_item_id ?? ""} onChange={(e) => updateProgramItem(day.id, prog.id, { linked_offer_item_id: e.target.value || null })} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
-                                <option value="">Sans offre liée</option>
-                                {offerItems.map((item) => (
-                                  <option key={item.id} value={item.id}>{item.name}</option>
-                                ))}
-                              </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-medium text-slate-400 shrink-0">Offre liée</label>
+                              <OfferItemSearchInline
+                                items={offerItems}
+                                selectedId={prog.linked_offer_item_id}
+                                onSelect={(id) => updateProgramItem(day.id, prog.id, { linked_offer_item_id: id })}
+                              />
                               {offerItems.length > 0 && (
                                 <a href="/dashboard?tab=offers" target="_blank" className="text-[10px] text-primary font-medium hover:underline whitespace-nowrap">+ Nouvelle</a>
                               )}
