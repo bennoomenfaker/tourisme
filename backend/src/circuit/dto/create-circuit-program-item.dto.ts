@@ -52,4 +52,12 @@ export class CreateCircuitProgramItemDto {
   @IsOptional()
   @IsString()
   transport_mode?: string;
+
+  @IsOptional()
+  @IsUUID()
+  guide_id?: string;
+
+  @IsOptional()
+  @IsString()
+  guide_name?: string;
 }

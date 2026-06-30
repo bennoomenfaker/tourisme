@@ -3,23 +3,26 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { Guide } from './entities/guide.entity';
-import { Offer } from '../offer/entities/offer.entity';
+import { GuideOffering } from './entities/guide-offering.entity';
+import { GuideOfferingAvailabilityRule } from './entities/guide-offering-availability-rule.entity';
 import { GuideService } from './guide.service';
+import { GuideOfferingService } from './guide-offering.service';
 import { GuideController } from './guide.controller';
+import { GuideOfferingController } from './guide-offering.controller';
 import { GuideMongoService } from './guide-mongo.service';
 import { GuideSkills, GuideSkillsSchema } from './schemas/guide-skills.schema';
 import { GuideEngagement, GuideEngagementSchema } from './schemas/guide-engagement.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Guide, Offer]),
+    TypeOrmModule.forFeature([Guide, GuideOffering, GuideOfferingAvailabilityRule]),
     MongooseModule.forFeature([
       { name: GuideSkills.name, schema: GuideSkillsSchema },
       { name: GuideEngagement.name, schema: GuideEngagementSchema },
     ]),
   ],
-  providers: [GuideService, GuideMongoService],
-  controllers: [GuideController],
-  exports: [GuideService, GuideMongoService],
+  providers: [GuideService, GuideOfferingService, GuideMongoService],
+  controllers: [GuideController, GuideOfferingController],
+  exports: [GuideService, GuideOfferingService, GuideMongoService],
 })
 export class GuideModule {}

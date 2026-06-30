@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Guide } from './entities/guide.entity';
-import { Offer } from '../offer/entities/offer.entity';
+import { GuideOffering } from './entities/guide-offering.entity';
 import {
   CompleteGuideProfileDto,
   UpdateGuideSpecialtiesDto,
@@ -15,8 +15,8 @@ export class GuideService {
   constructor(
     @InjectRepository(Guide)
     private readonly repo: Repository<Guide>,
-    @InjectRepository(Offer)
-    private readonly offerRepo: Repository<Offer>,
+    @InjectRepository(GuideOffering)
+    private readonly offeringRepo: Repository<GuideOffering>,
     private readonly mongoService: GuideMongoService,
   ) {}
 
@@ -147,8 +147,8 @@ export class GuideService {
   async getPublicProfile(guideId: string) {
     const profile = await this.repo.findOne({ where: { user_id: guideId } });
     if (!profile) throw new NotFoundException('Profil introuvable.');
-    const offers = await this.offerRepo.find({
-      where: { author_id: guideId, author_type: 'guide', status: 'approved' },
+    const offerings = await this.offeringRepo.find({
+      where: { guide_id: guideId },
       order: { created_at: 'DESC' },
     });
     return {
@@ -164,7 +164,7 @@ export class GuideService {
       languages_spoken: profile.languages_spoken,
       years_experience: profile.years_experience,
       sustainability_score: profile.sustainability_score,
-      offers,
+      offerings,
     };
   }
 

@@ -84,6 +84,9 @@ export class Offer {
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
   meeting_lat!: number | null;
 
+  @Column({ type: 'varchar', default: 'fixed' })
+  location_type!: string;
+
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
   meeting_lng!: number | null;
 

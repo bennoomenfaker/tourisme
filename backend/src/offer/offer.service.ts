@@ -54,13 +54,31 @@ export class OfferService {
   // ─── Offer CRUD ────────────────────────────────────────
 
   async create(authorId: string, authorType: string, dto: CreateOfferDto, initialStatus: string = 'pending'): Promise<Offer> {
+    if (authorType === 'project_owner') {
+      if (!dto.project_id) {
+        throw new BadRequestException('Les offres doivent être liées à un projet.');
+      }
+    }
+
+    let projectLat: number | null = null;
+    let projectLng: number | null = null;
+    let projectRegion: string | null = null;
+    let projectAddress: string | null = null;
+
     if (dto.project_id) {
       const project = await this.projectRepo.findOne({ where: { id: dto.project_id } });
       if (!project) throw new NotFoundException('Projet introuvable.');
       if (project.status !== 'active') {
         throw new BadRequestException('Impossible de lier une offre à un projet non encore validé par l\'administrateur.');
       }
+      projectLat = project.lat;
+      projectLng = project.lng;
+      projectRegion = project.region;
+      projectAddress = project.address;
     }
+
+    const locationType = dto.location_type ?? 'fixed';
+    const isFixed = locationType === 'fixed';
 
     const offer = this.repo.create({
       author_id: authorId,
@@ -73,10 +91,10 @@ export class OfferService {
       category: dto.category_id ? ({ id: dto.category_id } as OfferCategory) : null,
       images: dto.images?.length ? dto.images : null,
       inclusions: dto.inclusions ?? null,
-      region: dto.region ?? null,
-      address: dto.address ?? null,
-      latitude: dto.latitude ?? null,
-      longitude: dto.longitude ?? null,
+      region: isFixed ? projectRegion : (dto.region ?? null),
+      address: isFixed ? projectAddress : (dto.address ?? null),
+      latitude: isFixed ? projectLat : (dto.latitude ?? null),
+      longitude: isFixed ? projectLng : (dto.longitude ?? null),
       meeting_point: dto.meeting_point ?? null,
       meeting_lat: dto.meeting_lat ?? null,
       meeting_lng: dto.meeting_lng ?? null,
@@ -86,6 +104,7 @@ export class OfferService {
       cancellation_policy: dto.cancellation_policy ?? null,
       confirmation_mode: dto.confirmation_mode ?? 'automatic',
       project_id: dto.project_id ?? null,
+      location_type: locationType,
       status: initialStatus,
     });
     const saved = await this.repo.save(offer);
@@ -174,6 +193,7 @@ export class OfferService {
     if (dto.cancellation_policy !== undefined) offer.cancellation_policy = dto.cancellation_policy;
     if (dto.confirmation_mode !== undefined) offer.confirmation_mode = dto.confirmation_mode;
     if (dto.status !== undefined) offer.status = dto.status;
+    if (dto.location_type !== undefined) offer.location_type = dto.location_type;
 
     await this.repo.save(offer);
     await this.invalidateOfferCache();

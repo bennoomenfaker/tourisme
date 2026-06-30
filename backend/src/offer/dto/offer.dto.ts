@@ -95,10 +95,17 @@ export class CreateOfferDto {
   @IsString()
   confirmation_mode?: string;
 
-  // Seulement pour project_owner
   @IsOptional()
   @IsUUID()
   project_id?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  location_type?: string;
 }
 
 export class OfferSustainabilityDto {
@@ -205,6 +212,10 @@ export class UpdateOfferDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  location_type?: string;
 }
 
 // ─── OfferItem DTOs ──────────────────────────────────────

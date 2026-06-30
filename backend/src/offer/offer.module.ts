@@ -10,7 +10,6 @@ import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Project } from '../project-owner/entities/project.entity';
 import { OfferService } from './offer.service';
 import { OfferController } from './offer.controller';
-import { GuideModule } from '../guide/guide.module';
 import { ProjectOwnerModule } from '../project-owner/project-owner.module';
 
 @Module({
@@ -25,7 +24,6 @@ import { ProjectOwnerModule } from '../project-owner/project-owner.module';
       OfferItemSession,
       Project,
     ]),
-    GuideModule,
     ProjectOwnerModule,
   ],
   providers: [OfferService],

@@ -255,6 +255,8 @@ export class CircuitService {
       duration_minutes: dto.duration_minutes ?? null,
       distance_km: dto.distance_km ?? null,
       transport_mode: dto.transport_mode ?? null,
+      guide_id: dto.guide_id ?? null,
+      guide_name: dto.guide_name ?? null,
     });
     return this.programItemRepo.save(item);
   }
@@ -277,6 +279,8 @@ export class CircuitService {
     if (dto.duration_minutes !== undefined) item.duration_minutes = dto.duration_minutes ?? null;
     if (dto.distance_km !== undefined) item.distance_km = dto.distance_km ?? null;
     if (dto.transport_mode !== undefined) item.transport_mode = dto.transport_mode ?? null;
+    if (dto.guide_id !== undefined) item.guide_id = dto.guide_id ?? null;
+    if (dto.guide_name !== undefined) item.guide_name = dto.guide_name ?? null;
     return this.programItemRepo.save(item);
   }
 

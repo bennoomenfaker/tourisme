@@ -42,6 +42,9 @@ export class TripPlanItem {
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  guide_id!: string | null;
+
   @CreateDateColumn()
   created_at!: Date;
 }

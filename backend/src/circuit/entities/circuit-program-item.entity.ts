@@ -62,6 +62,12 @@ export class CircuitProgramItem {
   @Column({ type: 'varchar', length: 30, nullable: true })
   transport_mode!: string | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  guide_id!: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  guide_name!: string | null;
+
   @CreateDateColumn()
   created_at!: Date;
 }
