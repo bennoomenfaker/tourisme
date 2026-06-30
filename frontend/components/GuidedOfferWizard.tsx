@@ -156,7 +156,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
       ? PROJECT_TYPE_OFFERS[normalizedProjectType]
       : OFFER_CATEGORIES.map(c => c.value);
 
-  const availableCategories = OFFER_CATEGORIES.filter(c => allowedCategories.includes(c.value));
+  const availableCategories = OFFER_CATEGORIES.filter(c => allowedCategories.includes(c.value) && c.value !== 'circuit');
 
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");

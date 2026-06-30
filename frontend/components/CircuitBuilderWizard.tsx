@@ -25,6 +25,7 @@ interface ProgramItemForm {
   id: string; title: string; description: string; start_time: string; end_time: string;
   is_included: boolean; is_required: boolean; linked_offer_item_id: string | null;
   emoji: string; duration_minutes: string; distance_km: string; transport_mode: string;
+  guide_id: string | null; guide_name: string;
 }
 
 interface OptionForm {
@@ -56,6 +57,44 @@ const TUNISIA_REGIONS = [
 ];
 
 function genId() { return Math.random().toString(36).substring(2, 10); }
+
+function GuideSearchInline({ onSelect }: { onSelect: (id: string, name: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  async function search() {
+    if (!query.trim()) return;
+    setLoading(true);
+    try {
+      const res = await apiFetch<any[]>(`/guide/public/search?q=${encodeURIComponent(query)}`);
+      setResults(res);
+    } catch { setResults([]); }
+    setLoading(false);
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un guide..."
+        className="w-32 text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
+      <button type="button" onClick={search} className="p-1 text-primary hover:bg-primary/10 rounded-lg">
+        <Search size={14} />
+      </button>
+      {loading && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />}
+      {results.length > 0 && (
+        <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1 w-56">
+          {results.map((g: any) => (
+            <button key={g.user_id} type="button" onClick={() => { onSelect(g.user_id, g.full_name); setResults([]); setQuery(""); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-primary/5 text-left">
+              <span className="text-xs font-medium text-slate-700">{g.full_name}</span>
+              {g.zone && <span className="text-[10px] text-slate-400">{g.zone}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 async function searchPlace(query: string): Promise<{ lat: number; lng: number; display_name: string } | null> {
   try {
@@ -189,7 +228,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   }
 
   function addProgramItem(dayId: string) {
-    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null, emoji: "📍", duration_minutes: "", distance_km: "", transport_mode: "" }] }));
+    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null, emoji: "📍", duration_minutes: "", distance_km: "", transport_mode: "", guide_id: null, guide_name: "" }] }));
   }
 
   function removeProgramItem(dayId: string, itemId: string) {
@@ -252,7 +291,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
           if (!prog.title.trim()) continue;
           await apiFetch(`/circuits/${circuitId}/days/${createdDay.id}/program`, {
             method: "POST", headers: { Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ title: prog.title.trim(), description: prog.description || undefined, start_time: prog.start_time || undefined, end_time: prog.end_time || undefined, is_included: prog.is_included, is_required: prog.is_required, linked_offer_item_id: prog.linked_offer_item_id || undefined, emoji: prog.emoji || undefined, duration_minutes: prog.duration_minutes ? Number(prog.duration_minutes) : undefined, distance_km: prog.distance_km ? Number(prog.distance_km) : undefined, transport_mode: prog.transport_mode || undefined }),
+            body: JSON.stringify({ title: prog.title.trim(), description: prog.description || undefined, start_time: prog.start_time || undefined, end_time: prog.end_time || undefined, is_included: prog.is_included, is_required: prog.is_required, linked_offer_item_id: prog.linked_offer_item_id || undefined, emoji: prog.emoji || undefined, duration_minutes: prog.duration_minutes ? Number(prog.duration_minutes) : undefined, distance_km: prog.distance_km ? Number(prog.distance_km) : undefined, transport_mode: prog.transport_mode || undefined, guide_id: prog.guide_id || undefined }),
           });
         }
       }
@@ -485,6 +524,22 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                                   <option key={t.value} value={t.value}>{t.label}</option>
                                 ))}
                               </select>
+                            </div>
+                            {/* Guide search per activity */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-medium text-slate-400 shrink-0">Guide</label>
+                              {prog.guide_id ? (
+                                <div className="flex items-center gap-1.5 bg-primary/5 rounded-lg px-2 py-1">
+                                  <span className="text-[11px] font-medium text-primary">{prog.guide_name}</span>
+                                  <button type="button" onClick={() => updateProgramItem(day.id, prog.id, { guide_id: null, guide_name: "" })} className="text-red-400 hover:text-red-600 p-0.5"><X size={12} /></button>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <GuideSearchInline
+                                    onSelect={(id, name) => updateProgramItem(day.id, prog.id, { guide_id: id, guide_name: name })}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                           <button type="button" onClick={() => removeProgramItem(day.id, prog.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0 mt-1"><Trash2 size={14} /></button>
