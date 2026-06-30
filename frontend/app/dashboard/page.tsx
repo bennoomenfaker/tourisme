@@ -2789,7 +2789,7 @@ export default function DashboardPage() {
                       className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                     >
                       <option value="">Tous les types</option>
-                      {(role === "guide" ? GUIDE_OFFER_TYPES : PROJ_OFFER_TYPES).map((t) => (
+                      {PROJ_OFFER_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
@@ -2814,7 +2814,7 @@ export default function DashboardPage() {
                     {offers
                       .filter((offer) => !offerTypeFilter || offer.offer_type === offerTypeFilter)
                       .map((offer) => {
-                      const offerTypes = role === "guide" ? GUIDE_OFFER_TYPES : PROJ_OFFER_TYPES;
+                      const offerTypes = PROJ_OFFER_TYPES;
                       const typeLabel = offerTypes.find((t) => t.value === offer.offer_type)?.label;
                       return (
                         <div key={offer.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex flex-col gap-3">

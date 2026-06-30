@@ -27,7 +27,7 @@ interface Props {
   userRole: string;
   userProjectId?: string;
   userProjectType?: string;
-  userProjects?: { id: string; name: string; project_type?: string[]; status?: string }[];
+  userProjects?: { id: string; name: string; project_type?: string[] | null; status?: string }[];
   onClose: () => void;
   onSuccess: (offer: any) => void;
   editOffer?: any;

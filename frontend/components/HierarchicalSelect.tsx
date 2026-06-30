@@ -80,8 +80,8 @@ export default function HierarchicalSelect({ nodes, selected, onChange, label, p
       );
     }
 
-    const leafTotal = getLeafCount(node.children);
-    const leafSelected = getSelectedLeafCount(node.children);
+    const leafTotal = getLeafCount(node.children ?? []);
+    const leafSelected = getSelectedLeafCount(node.children ?? []);
 
     return (
       <div key={node.value}>
@@ -101,7 +101,7 @@ export default function HierarchicalSelect({ nodes, selected, onChange, label, p
         </button>
         {isExpanded && (
           <div className="ml-0">
-            {node.children.map((child) => renderNode(child, depth + 1))}
+            {node.children?.map((child) => renderNode(child, depth + 1))}
           </div>
         )}
       </div>
