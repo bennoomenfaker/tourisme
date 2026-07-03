@@ -458,7 +458,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
       let resultOffer;
       if (isEdit) {
-        offerData.project_id = selectedProjectId || null;
+        if (selectedProjectId) offerData.project_id = selectedProjectId;
         await apiFetch<any>(`/offers/${editOffer.id}`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },
@@ -468,7 +468,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        offerData.project_id = selectedProjectId;
+        if (selectedProjectId) offerData.project_id = selectedProjectId;
         resultOffer = await apiFetch<any>("/offers", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
