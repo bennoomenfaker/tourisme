@@ -49,12 +49,12 @@ DECLARE
   v_cat_other       UUID := 'cba60e4a-b070-426a-a7ba-0969b662bc69';
 
   -- Projects
-  v_proj1  UUID := 'a1000000-0001-0000-0000-000000000001';
-  v_proj2  UUID := 'a1000000-0001-0000-0000-000000000002';
-  v_proj3  UUID := 'a1000000-0001-0000-0000-000000000003';
-  v_proj4  UUID := 'a1000000-0001-0000-0000-000000000004';
-  v_proj5  UUID := 'a1000000-0001-0000-0000-000000000005';
-  v_proj6  UUID := 'a1000000-0001-0000-0000-000000000006';
+  v_proj1  UUID := 'b1a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+  v_proj2  UUID := 'b2a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5e';
+  v_proj3  UUID := 'b3a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5f';
+  v_proj4  UUID := 'b4a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c60';
+  v_proj5  UUID := 'b5a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c61';
+  v_proj6  UUID := 'b6a2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c62';
 
   -- Offers
   v_off1  UUID := 'b1000000-0001-0000-0000-000000000001';
