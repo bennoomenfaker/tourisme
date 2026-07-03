@@ -8,12 +8,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { Booking } from './entities/booking.entity';
 import { BookingParticipant } from './entities/booking-participant.entity';
-import { CreateBookingDto } from './dto/create-booking.dto';
+import { CreateBookingDto, CreateGuideBookingDto } from './dto/create-booking.dto';
 import { User } from '../users/entities/user.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { OfferItem } from '../offer/entities/offer-item.entity';
 import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
 import { OfferItemCapacity } from '../offer/entities/offer-item-capacity.entity';
+import { GuideOffering } from '../guide/entities/guide-offering.entity';
+import { GuideOfferingSession } from '../guide/entities/guide-offering-session.entity';
 import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
@@ -31,6 +33,10 @@ export class BookingService {
     private readonly offerItemRepo: Repository<OfferItem>,
     @InjectRepository(OfferItemCapacity)
     private readonly capacityRepo: Repository<OfferItemCapacity>,
+    @InjectRepository(GuideOffering)
+    private readonly guideOfferingRepo: Repository<GuideOffering>,
+    @InjectRepository(GuideOfferingSession)
+    private readonly guideSessionRepo: Repository<GuideOfferingSession>,
     private readonly notificationService: NotificationService,
   ) {}
 
@@ -217,7 +223,7 @@ export class BookingService {
   async findById(id: string): Promise<Booking> {
     const booking = await this.bookingRepo.findOne({
       where: { id },
-      relations: ['offer', 'offerItem', 'session', 'participants', 'traveler'],
+      relations: ['offer', 'offerItem', 'session', 'guideOffering', 'guideOfferingSession', 'participants', 'traveler'],
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
     return booking;
@@ -284,24 +290,25 @@ export class BookingService {
     ).catch(() => {});
 
     // Notifier le provider
-    const offer = await this.offerRepo.findOne({ where: { id: booking.offer.id } });
-    if (offer?.author_id && offer.author_id !== travelerId) {
-      this.notificationService.create(
-        offer.author_id,
-        'booking_cancelled',
-        'Réservation annulée',
-        `La réservation ${saved.booking_ref} pour "${offer.title}" a été annulée par le voyageur.${reason ? ` Motif : ${reason}` : ''}`,
-        `/dashboard/incoming`,
-      ).catch(() => {});
+    if (booking.offer) {
+      const offer = await this.offerRepo.findOne({ where: { id: booking.offer.id } });
+      if (offer?.author_id && offer.author_id !== travelerId) {
+        this.notificationService.create(
+          offer.author_id,
+          'booking_cancelled',
+          'Réservation annulée',
+          `La réservation ${saved.booking_ref} pour "${offer.title}" a été annulée par le voyageur.${reason ? ` Motif : ${reason}` : ''}`,
+          `/dashboard/incoming`,
+        ).catch(() => {});
+      }
     }
-
     return saved;
   }
 
   /** Confirme une réservation (par le provider, mode manual) */
   async confirm(id: string, providerId: string): Promise<Booking> {
     const booking = await this.findById(id);
-    const offer = await this.offerRepo.findOne({ where: { id: booking.offer.id } });
+    const offer = booking.offer ? await this.offerRepo.findOne({ where: { id: booking.offer.id } }) : null;
     if (!offer || offer.author_id !== providerId) {
       throw new ForbiddenException('Vous ne pouvez confirmer que les réservations de vos propres offres');
     }
@@ -325,9 +332,11 @@ export class BookingService {
     return this.bookingRepo
       .createQueryBuilder('booking')
       .leftJoinAndSelect('booking.offer', 'offer')
+      .leftJoinAndSelect('booking.guideOffering', 'guideOffering')
       .leftJoinAndSelect('booking.traveler', 'traveler')
       .leftJoinAndSelect('booking.participants', 'participants')
       .where('offer.author_id = :authorId', { authorId })
+      .orWhere('guideOffering.guide_id = :authorId', { authorId })
       .orderBy('booking.created_at', 'DESC')
       .getMany();
   }
@@ -394,7 +403,7 @@ export class BookingService {
       }
     } else if (updatedBooking.offer?.price) {
       totalPrice = Number(updatedBooking.offer.price) * totalCount;
-    } else {
+    } else if (updatedBooking.offer) {
       // Offre avec items : somme des prix par defaut
       const allItems = await this.offerItemRepo.find({
         where: { offer: { id: updatedBooking.offer.id } },
@@ -413,5 +422,82 @@ export class BookingService {
     await this.bookingRepo.save(updatedBooking);
 
     return this.findById(bookingId);
+  }
+
+  // ── Guide Offering Booking ──────────────────────────────────────
+
+  async createGuideBooking(
+    travelerId: string,
+    dto: CreateGuideBookingDto,
+  ): Promise<Booking> {
+    const offering = await this.guideOfferingRepo.findOne({
+      where: { id: dto.guide_offering_id },
+      relations: ['guide'],
+    });
+    if (!offering) throw new NotFoundException('Prestation guide introuvable');
+    if (offering.status !== 'active') throw new BadRequestException('Cette prestation n\'est pas active');
+
+    const session = await this.guideSessionRepo.findOne({
+      where: { id: dto.guide_offering_session_id, guideOffering: { id: dto.guide_offering_id } },
+    });
+    if (!session) throw new NotFoundException('Session introuvable');
+    if (session.status === 'cancelled') throw new BadRequestException('Cette session est annulée');
+    const sessionCapacity = session.remaining_capacity ?? session.total_capacity ?? 0;
+    if (sessionCapacity <= 0) throw new BadRequestException('Cette session est complète');
+
+    const participantCount = dto.participants?.length ?? 0;
+    if (participantCount > sessionCapacity) {
+      throw new BadRequestException(
+        `Capacité insuffisante : ${sessionCapacity} place(s) restante(s)`,
+      );
+    }
+
+    const total_price = participantCount * Number(offering.price);
+
+    const bookingRef = 'BK-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const booking = this.bookingRepo.create({
+      booking_ref: bookingRef,
+      traveler: { id: travelerId } as any,
+      guideOffering: offering,
+      guideOfferingSession: session,
+      total_price,
+      currency: dto.currency ?? 'TND',
+      special_requests: dto.special_requests ?? null,
+      status: offering.confirmation_mode === 'automatic' ? 'confirmed' : 'pending',
+      confirmation_mode: offering.confirmation_mode,
+    });
+
+    const saved = await this.bookingRepo.save(booking);
+
+    if (dto.participants?.length) {
+      const participants = dto.participants.map((p, i) =>
+        this.participantRepo.create({
+          booking: saved,
+          full_name: p.full_name,
+          age: p.age ?? null,
+          document_type: p.document_type ?? null,
+          document_number: p.document_number ?? null,
+          is_group_leader: i === 0 ? true : (p.is_group_leader ?? false),
+        }),
+      );
+      await this.participantRepo.save(participants);
+    }
+
+    session.remaining_capacity = sessionCapacity - participantCount;
+    if (session.remaining_capacity <= 0) session.status = 'full';
+    await this.guideSessionRepo.save(session);
+
+    try {
+      await this.notificationService.create(
+        offering.guide.user_id,
+        'guide_booking',
+        'Nouvelle réservation guide',
+        `Réservation ${bookingRef} pour ${participantCount > 0 ? participantCount + ' participant(s)' : '1 voyageur'} le ${session.date.toLocaleDateString('fr-FR')}`,
+        `/dashboard/bookings/${saved.id}`,
+      );
+    } catch { }
+
+    return this.findById(saved.id);
   }
 }

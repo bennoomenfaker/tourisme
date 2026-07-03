@@ -434,9 +434,9 @@ function AddPublicationModal({ onClose, onSuccess, token, publication }: {
                     Cliquez sur la carte pour placer le lieu
                   </label>
                   <div className="overflow-hidden rounded-xl">
-                    <MapPicker lat={form.lat} lng={form.lng} onPick={(lat, lng) => setForm({ ...form, lat, lng })} />
-                  </div>
-                  {form.lat !== null && <p className="text-xs text-slate-400 font-medium">📍 {form.lat.toFixed(5)}, {form.lng?.toFixed(5)}</p>}
+                    <MapPicker lat={form.lat ?? 36.8065} lng={form.lng ?? 10.1815} onPick={(lat, lng) => setForm({ ...form, lat: Number(lat), lng: Number(lng) })} />
+                   </div>
+                   {form.lat != null && <p className="text-xs text-slate-400 font-medium">📍 {Number(form.lat).toFixed(5)}, {Number(form.lng ?? 0).toFixed(5)}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -3006,7 +3006,7 @@ export default function DashboardPage() {
         <AddPublicationModal token={token} publication={editingPublication} onClose={() => setEditingPublication(null)}
           onSuccess={(p) => { setPublications((prev) => prev.map((pr) => pr.id === p.id ? p : pr)); setEditingPublication(null); }} />
       )}
-      {role === "project" && showAddOffer && (
+      {role === "project" && showAddOffer && profile && (
         <GuidedOfferWizard token={token} userRole="project" userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} userProjects={profile.projects} onClose={() => setShowAddOffer(false)}
           onSuccess={(o) => { setOffers((prev) => [o, ...prev]); setShowAddOffer(false); }} />
       )}

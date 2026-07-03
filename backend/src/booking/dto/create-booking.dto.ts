@@ -41,6 +41,30 @@ export class ParticipantDto {
 /**
  * Création d'une réservation
  */
+export class CreateGuideBookingDto {
+  @IsUUID()
+  @IsNotEmpty()
+  guide_offering_id!: string;
+
+  @IsUUID()
+  @IsNotEmpty()
+  guide_offering_session_id!: string;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  special_requests?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ParticipantDto)
+  participants?: ParticipantDto[];
+}
+
 export class CreateBookingDto {
   @IsUUID()
   @IsNotEmpty()

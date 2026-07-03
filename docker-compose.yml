@@ -43,11 +43,12 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
+    ports:
+      - "27017:27017"
     volumes:
       - tourisme_mongodata:/data/db
     networks:
       - tourisme_net
-    # port 27017 is NOT exposed to the host (internal only)
 
   # ── NestJS API ─────────────────────────────────────────────────────────────
   api:

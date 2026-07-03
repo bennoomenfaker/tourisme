@@ -5,6 +5,8 @@ import { TripPlanItem } from './entities/trip-plan-item.entity';
 import { Booking } from '../booking/entities/booking.entity';
 import { BookingParticipant } from '../booking/entities/booking-participant.entity';
 import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
+import { GuideOffering } from '../guide/entities/guide-offering.entity';
+import { GuideOfferingSession } from '../guide/entities/guide-offering-session.entity';
 import { TripPlanService } from './trip-plan.service';
 import { TripPlanController } from './trip-plan.controller';
 import { NotificationModule } from '../notification/notification.module';
@@ -15,7 +17,7 @@ import { CircuitReservation } from '../circuit/entities/circuit-reservation.enti
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TripPlan, TripPlanItem, Booking, BookingParticipant, OfferItemSession, Offer, Circuit, CircuitReservation]),
+    TypeOrmModule.forFeature([TripPlan, TripPlanItem, Booking, BookingParticipant, OfferItemSession, GuideOffering, GuideOfferingSession, Offer, Circuit, CircuitReservation]),
     NotificationModule,
     EcoTravelerModule,
   ],

@@ -23,6 +23,12 @@ export class AddTripPlanItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  guide_offering_id?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsInt()
   @Min(1)
   day_number?: number;

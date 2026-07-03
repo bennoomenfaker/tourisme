@@ -1,19 +1,28 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { Public } from '../common/decorators/public.decorator';
 import { GuideOfferingService } from './guide-offering.service';
+import { BookingService } from '../booking/booking.service';
+import { CreateGuideBookingDto } from '../booking/dto/create-booking.dto';
 import {
   CreateGuideOfferingDto,
   UpdateGuideOfferingDto,
   CreateGuideOfferingAvailabilityRuleDto,
+  CreateGuideOfferingBlockDto,
+  CreateGuideOfferingPriceDto,
+  CreateGuideOfferingSessionDto,
+  GenerateSessionsDto,
 } from './dto/guide-offering.dto';
 
 @ApiTags('Guide Offerings')
 @Controller('guide-offerings')
 export class GuideOfferingController {
-  constructor(private readonly service: GuideOfferingService) {}
+  constructor(
+    private readonly service: GuideOfferingService,
+    private readonly bookingService: BookingService,
+  ) {}
 
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
@@ -73,5 +82,88 @@ export class GuideOfferingController {
   @Delete('availability/:ruleId')
   removeAvailabilityRule(@Param('ruleId') ruleId: string) {
     return this.service.removeAvailabilityRule(ruleId);
+  }
+
+  // ─── Sessions ───────────────────────────────────────
+
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE)
+  @Post(':id/availability/generate')
+  generateSessions(@Param('id') id: string, @Body() dto: GenerateSessionsDto) {
+    return this.service.generateSessions(id, dto.days_ahead ?? 90);
+  }
+
+  @Public()
+  @Get(':id/sessions')
+  findSessions(@Param('id') id: string) {
+    return this.service.findSessions(id);
+  }
+
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE)
+  @Post(':id/sessions')
+  createSession(@Param('id') id: string, @Body() dto: CreateGuideOfferingSessionDto) {
+    return this.service.createSession(id, dto);
+  }
+
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE)
+  @Delete(':id/sessions/:sessionId')
+  removeSession(@Req() req: any, @Param('id') id: string, @Param('sessionId') sessionId: string) {
+    return this.service.removeSession(id, sessionId, req.user.sub);
+  }
+
+  // ─── Booking ────────────────────────────────────────
+
+  @ApiBearerAuth('bearer')
+  @Post(':id/sessions/:sessionId/book')
+  book(@Req() req: any, @Param('id') id: string, @Param('sessionId') sessionId: string, @Body() dto: CreateGuideBookingDto) {
+    dto.guide_offering_id = id;
+    dto.guide_offering_session_id = sessionId;
+    return this.bookingService.createGuideBooking(req.user.sub, dto);
+  }
+
+  // ─── Blocks ─────────────────────────────────────────
+
+  @Public()
+  @Get(':id/blocks')
+  findBlocks(@Param('id') id: string) {
+    return this.service.findBlocks(id);
+  }
+
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE)
+  @Post(':id/blocks')
+  createBlock(@Param('id') id: string, @Body() dto: CreateGuideOfferingBlockDto) {
+    return this.service.createBlock(id, dto);
+  }
+
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE)
+  @Delete('blocks/:blockId')
+  removeBlock(@Param('blockId') blockId: string) {
+    return this.service.removeBlock(blockId);
+  }
+
+  // ─── Prices ─────────────────────────────────────────
+
+  @Public()
+  @Get(':id/prices')
+  findPrices(@Param('id') id: string) {
+    return this.service.findPrices(id);
+  }
+
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE)
+  @Post(':id/prices')
+  createPrice(@Param('id') id: string, @Body() dto: CreateGuideOfferingPriceDto) {
+    return this.service.createPrice(id, dto);
+  }
+
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE)
+  @Delete('prices/:priceId')
+  removePrice(@Param('priceId') priceId: string) {
+    return this.service.removePrice(priceId);
   }
 }

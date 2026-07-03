@@ -8,3 +8,11 @@ session-res*.md
 audit.md
 session-ses_1265.md
 README_DONNEES_AJOUTEES.md
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+*.log
+.next/
+dist/
+build/
+.turbo/

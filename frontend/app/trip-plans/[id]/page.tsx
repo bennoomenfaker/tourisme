@@ -663,6 +663,7 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
   const [searchingGuides, setSearchingGuides] = useState(false);
   const [guideSearchQuery, setGuideSearchQuery] = useState("");
   const [selectedGuide, setSelectedGuide] = useState<any | null>(null);
+  const [addingGuideOffering, setAddingGuideOffering] = useState<string | null>(null);
 
   useEffect(() => {
     apiFetch<OfferListItem[]>("/offers")
@@ -713,6 +714,26 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
     } catch { setGuides([]); }
     setSearchingGuides(false);
     setSelectedGuide(null);
+  }
+
+  async function handleAddGuideOffering(offeringId: string) {
+    setAddingGuideOffering(offeringId);
+    try {
+      await apiFetch(`/trip-plans/${planId}/items`, {
+        method: "POST",
+        body: JSON.stringify({
+          guide_offering_id: offeringId,
+          day_number: dayNumber ? parseInt(dayNumber) : undefined,
+          notes: notes.trim() || undefined,
+        }),
+      });
+      onAdded();
+      onClose();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setAddingGuideOffering(null);
+    }
   }
 
   return (
@@ -839,18 +860,31 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                 </button>
               </div>
 
+              <div className="flex items-center gap-2 mb-3">
+                <input type="number" placeholder="Jour (optionnel)" value={dayNumber} onChange={(e) => setDayNumber(e.target.value)} className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                <input type="text" placeholder="Note" value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+              </div>
               <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Prestations</h5>
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {(selectedGuide.offerings ?? []).map((o: any) => (
                   <div key={o.id} className="border border-slate-100 rounded-xl p-3">
-                    <p className="font-medium text-sm text-slate-800">{o.title}</p>
-                    {o.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{o.description}</p>}
-                    <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-slate-500">
-                      <span className="font-bold text-primary">{Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
-                      {o.service_zone_type === "radius" && o.radius_km && <span>📏 Rayon {o.radius_km} km</span>}
-                      {o.service_zone_type === "all_tunisia" && <span>🌍 Toute la Tunisie</span>}
-                      {o.service_zone_type === "point" && <span>📍 Point fixe</span>}
-                      {o.languages?.length > 0 && <span>🗣️ {o.languages.join(", ")}</span>}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-slate-800">{o.title}</p>
+                        {o.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{o.description}</p>}
+                        <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-slate-500">
+                          <span className="font-bold text-primary">{Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
+                          {o.service_zone_type === "radius" && o.radius_km && <span>📏 Rayon {o.radius_km} km</span>}
+                          {o.service_zone_type === "all_tunisia" && <span>🌍 Toute la Tunisie</span>}
+                          {o.service_zone_type === "point" && <span>📍 Point fixe</span>}
+                          {o.languages?.length > 0 && <span>🗣️ {o.languages.join(", ")}</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => handleAddGuideOffering(o.id)} disabled={addingGuideOffering === o.id}
+                        className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 disabled:opacity-50 flex items-center gap-1">
+                        {addingGuideOffering === o.id ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                        Ajouter
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1037,6 +1071,9 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
         return sum + unitPrice;
       }
     }
+    if ((item as any).guideOffering?.price) {
+      return sum + Number((item as any).guideOffering.price) * participants.length;
+    }
     return sum;
   }, 0) ?? 0;
 
@@ -1117,6 +1154,9 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
                             price = unitPrice;
                           }
                         }
+                      } else if ((item as any).guideOffering?.price) {
+                        label = (item as any).guideOffering.title;
+                        price = Number((item as any).guideOffering.price) * participants.length;
                       }
                       if (!price) return null;
                       return (

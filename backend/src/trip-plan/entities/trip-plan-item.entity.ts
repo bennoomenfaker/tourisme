@@ -9,6 +9,8 @@ import {
 import { TripPlan } from './trip-plan.entity';
 import { OfferItem } from '../../offer/entities/offer-item.entity';
 import { Circuit } from '../../circuit/entities/circuit.entity';
+import { GuideOffering } from '../../guide/entities/guide-offering.entity';
+import { GuideOfferingSession } from '../../guide/entities/guide-offering-session.entity';
 
 @Entity('trip_plan_items')
 export class TripPlanItem {
@@ -26,6 +28,14 @@ export class TripPlanItem {
   @ManyToOne(() => Circuit, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'circuit_id' })
   circuit!: Circuit | null;
+
+  @ManyToOne(() => GuideOffering, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'guide_offering_id' })
+  guideOffering!: GuideOffering | null;
+
+  @ManyToOne(() => GuideOfferingSession, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'guide_offering_session_id' })
+  guideOfferingSession!: GuideOfferingSession | null;
 
   @Column({ type: 'int', nullable: true })
   day_number!: number | null;

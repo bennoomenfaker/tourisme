@@ -35,12 +35,17 @@ export default function NewOfferPage() {
       return;
     }
     setToken(tkn);
+    let role = "";
     try {
       const parsed = JSON.parse(storedUser);
-      setUserRole(parsed.role || "");
+      role = parsed.role || "";
+      setUserRole(role);
     } catch { /* ignore */ }
 
-    apiFetch<any>("/profile", {
+    const apiPath = role === "eco_traveler" ? "/eco-traveler/profile"
+      : role === "guide" ? "/guide/profile"
+      : "/project-owner/profile";
+    apiFetch<any>(apiPath, {
       headers: { Authorization: `Bearer ${tkn}` },
     })
       .then(setProfile)

@@ -1,7 +1,19 @@
-const ITEMS_WITHOUT_LOCATION = new Set([
+export const ITEMS_WITHOUT_LOCATION = new Set([
   'room', 'bed', 'camping_space', 'dormitory', 'suite', 'bungalow', 'tent',
   'dish', 'menu', 'product',
 ]);
+
+/**
+ * Une catégorie a-t-elle des itemTypes qui n'ont pas besoin de localisation ?
+ * Utile pour le Step 2 du wizard : si oui, on attend le Step 3 (itemType choisi)
+ * avant d'afficher les champs de localisation.
+ */
+export function hasItemTypesWithoutLocation(category: string, itemTypeValues: string[]): boolean {
+  if (category === 'accommodation') return true;
+  if (category === 'restaurant') return true;
+  if (category === 'craft') return true;
+  return itemTypeValues.some(v => ITEMS_WITHOUT_LOCATION.has(v));
+}
 
 const ITEMS_WITH_GUIDE = new Set([
   'hiking', 'randonnee', 'kayak', 'vtt', 'escalade', 'equitation',

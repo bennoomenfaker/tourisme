@@ -18,7 +18,7 @@ ON CONFLICT (id) DO NOTHING;
 -- 2. NOUVELLE OFFRE (kayak de mer)
 -- ============================================================================
 INSERT INTO offers (id, author_id, author_type, project_id, category_id, title, description, price, duration, offer_type, images, inclusions, region, address, latitude, longitude, meeting_point, meeting_lat, meeting_lng, min_group_size, max_group_size, min_age, cancellation_policy, sustainability_score, confirmation_mode, status) VALUES
-  ('55000000-0001-0000-0000-000000000012', '92a3ba7f-6bb3-4a57-bbb8-c70ff253a15e', 'project_owner', '55000000-0001-0000-0000-000000000008', 'f8509a3c-747f-475b-b4a0-40a32c765bfb', 'Kayak de Mer Korba', 'Excursion en kayak de mer le long de la côte de Korba. Observation dauphins et tortues marines. Snorkeling dans les zones protégées.', 45.00, '3h', 'activite', NULL, 'Kayak, gilet, pagaie, guide, équipement snorkeling', 'Korba', 'Avenue de la Plage, Korba', 36.7570, 10.7250, 'Plage de Korba', 36.7570, 10.7250, 2, 12, 8, 'Annulation gratuite 48h avant', 88, 'automatic', 'approved')
+  ('55000000-0001-0000-0000-000000000012', '92a3ba7f-6bb3-4a57-bbb8-c70ff253a15e', 'project_owner', '55000000-0001-0000-0000-000000000008', '21a655e0-de08-4b62-b0da-7c5337fd93be', 'Kayak de Mer Korba', 'Excursion en kayak de mer le long de la côte de Korba. Observation dauphins et tortues marines. Snorkeling dans les zones protégées.', 45.00, '3h', 'activite', NULL, 'Kayak, gilet, pagaie, guide, équipement snorkeling', 'Korba', 'Avenue de la Plage, Korba', 36.7570, 10.7250, 'Plage de Korba', 36.7570, 10.7250, 2, 12, 8, 'Annulation gratuite 48h avant', 88, 'automatic', 'approved')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================

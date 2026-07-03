@@ -10,6 +10,9 @@ import {
 } from 'typeorm';
 import { Guide } from './guide.entity';
 import { GuideOfferingAvailabilityRule } from './guide-offering-availability-rule.entity';
+import { GuideOfferingSession } from './guide-offering-session.entity';
+import { GuideOfferingBlock } from './guide-offering-block.entity';
+import { GuideOfferingPrice } from './guide-offering-price.entity';
 
 @Entity('guide_offerings')
 export class GuideOffering {
@@ -74,6 +77,9 @@ export class GuideOffering {
   @Column({ default: 'pending' })
   status!: string;
 
+  @Column({ type: 'varchar', default: 'manual' })
+  confirmation_mode!: string;
+
   @CreateDateColumn()
   created_at!: Date;
 
@@ -82,4 +88,13 @@ export class GuideOffering {
 
   @OneToMany(() => GuideOfferingAvailabilityRule, (r) => r.guideOffering)
   availabilityRules!: GuideOfferingAvailabilityRule[];
+
+  @OneToMany(() => GuideOfferingSession, (s) => s.guideOffering)
+  sessions!: GuideOfferingSession[];
+
+  @OneToMany(() => GuideOfferingBlock, (b) => b.guideOffering)
+  blocks!: GuideOfferingBlock[];
+
+  @OneToMany(() => GuideOfferingPrice, (p) => p.guideOffering)
+  prices!: GuideOfferingPrice[];
 }

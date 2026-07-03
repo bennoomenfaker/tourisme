@@ -67,7 +67,7 @@ export default function FeaturedExperiences() {
             <ExperienceCard
               key={offer.id}
               id={offer.id}
-              image={offer.images?.[0] ?? "/placeholder.jpg"}
+              image={offer.images?.[0] ?? "/placeholder.svg"}
               location={offer.region ?? "Tunisie"}
               title={offer.title}
               rating={4.5 + Math.random() * 0.5}

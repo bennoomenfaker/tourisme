@@ -76,7 +76,7 @@ export default function DestinationsSection() {
               <div className="relative aspect-video overflow-hidden">
                 <div
                   className="absolute inset-0 bg-cover bg-center group-hover:scale-110 transition-transform duration-500"
-                  style={{ backgroundImage: `url('${circuit.images?.[0] ?? "/placeholder.jpg"}')` }}
+                  style={{ backgroundImage: `url('${circuit.images?.[0] ?? "/placeholder.svg"}')` }}
                 />
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-extrabold text-primary shadow-sm flex items-center gap-1">
                   <MapPin size={12} /> {circuit.region ?? "Tunisie"}

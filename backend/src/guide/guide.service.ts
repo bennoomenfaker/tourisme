@@ -149,6 +149,7 @@ export class GuideService {
     if (!profile) throw new NotFoundException('Profil introuvable.');
     const offerings = await this.offeringRepo.find({
       where: { guide_id: guideId },
+      relations: ['sessions'],
       order: { created_at: 'DESC' },
     });
     return {

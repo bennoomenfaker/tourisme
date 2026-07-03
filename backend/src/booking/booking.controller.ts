@@ -12,7 +12,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { BookingService } from './booking.service';
-import { CreateBookingDto } from './dto/create-booking.dto';
+import { CreateBookingDto, CreateGuideBookingDto } from './dto/create-booking.dto';
 import { AddParticipantsDto } from './dto/add-participants.dto';
 import { Public } from '../common/decorators/public.decorator';
 
@@ -29,6 +29,16 @@ export class BookingController {
   @Post()
   async create(@Req() req: any, @Body() dto: CreateBookingDto) {
     return this.service.create(req.user.sub, dto);
+  }
+
+  /**
+   * Crée une réservation pour une prestation guide
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ECO_TRAVELER)
+  @Post('guide')
+  async createGuideBooking(@Req() req: any, @Body() dto: CreateGuideBookingDto) {
+    return this.service.createGuideBooking(req.user.sub, dto);
   }
 
   /**
@@ -61,7 +71,8 @@ export class BookingController {
     const userId = req.user.sub;
     const isTraveler = booking.traveler.id === userId;
     const isProvider = booking.offer?.author_id === userId;
-    if (!isTraveler && !isProvider && req.user.role !== 'admin') {
+    const isGuideProvider = booking.guideOffering?.guide_id === userId;
+    if (!isTraveler && !isProvider && !isGuideProvider && req.user.role !== 'admin') {
       throw new ForbiddenException('Vous ne pouvez consulter que vos propres réservations');
     }
     return booking;

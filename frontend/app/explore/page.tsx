@@ -147,13 +147,39 @@ export default function ExplorePage() {
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [guides, setGuides] = useState<any[]>([]);
   const [showGuides, setShowGuides] = useState(false);
+  const [guideSearchQuery, setGuideSearchQuery] = useState("");
+  const [guideLanguage, setGuideLanguage] = useState("");
+  const [guideMaxPrice, setGuideMaxPrice] = useState("");
+  const [guideDate, setGuideDate] = useState("");
+  const [loadingGuides, setLoadingGuides] = useState(false);
+
+  async function fetchGuides() {
+    setLoadingGuides(true);
+    try {
+      const params = new URLSearchParams();
+      if (guideSearchQuery.trim()) params.set("q", guideSearchQuery.trim());
+      if (guideLanguage.trim()) params.set("language", guideLanguage.trim());
+      if (guideMaxPrice.trim()) { const v = parseFloat(guideMaxPrice); if (!isNaN(v)) params.set("max_price", String(v)); }
+      if (guideDate) params.set("date", guideDate);
+      const qs = params.toString();
+      const data = await apiFetch<any[]>(`/guide/search${qs ? `?${qs}` : ""}`);
+      setGuides(data ?? []);
+    } catch { setGuides([]); }
+    finally { setLoadingGuides(false); }
+  }
 
   useEffect(() => {
     const cart = getGuestCart();
     setCartCount(cart.length);
     setCartIds(new Set(cart.map((i: any) => `${i.type}:${i.ref_id}`)));
     loadData();
+    fetchGuides();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchGuides(), 300);
+    return () => clearTimeout(timer);
+  }, [guideSearchQuery, guideLanguage, guideMaxPrice, guideDate]);
 
   async function addToCart(type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) {
     if (!isValidUUID(id)) return;
@@ -178,10 +204,9 @@ export default function ExplorePage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [offersData, circuitsData, guidesData] = await Promise.all([
+      const [offersData, circuitsData] = await Promise.all([
         apiFetch<any[]>("/offers").catch(() => []),
         apiFetch<any[]>("/circuits").catch(() => []),
-        apiFetch<any[]>("/guide/search").catch(() => []),
       ]);
       const enrichedOffers: OfferItem[] = [];
       for (const offer of offersData ?? []) {
@@ -202,7 +227,6 @@ export default function ExplorePage() {
         base_price: c.base_price ?? null, currency: c.currency ?? "TND", duration_days: c.duration_days ?? null,
         difficulty_level: c.difficulty_level ?? null, waypoints: c.waypoints ?? null,
       })));
-      setGuides(guidesData ?? []);
       setLoadingPlaces(true);
       apiFetch<Place[]>("/publications/places?limit=100").then(setPlaces).catch(() => {}).finally(() => setLoadingPlaces(false));
     } catch {} finally { setLoading(false); }
@@ -282,7 +306,7 @@ export default function ExplorePage() {
       .filter((pts) => pts.length > 1);
   }, [filteredCircuits]);
 
-  const hasActiveFilters = typeFilter !== "all" || priceRange > 0;
+  const hasActiveFilters = typeFilter !== "all" || priceRange > 0 || guideSearchQuery.trim() !== "" || guideLanguage.trim() !== "" || guideMaxPrice.trim() !== "" || guideDate !== "";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -337,7 +361,7 @@ export default function ExplorePage() {
                 className={`flex items-center gap-1 px-2.5 py-2 text-xs font-bold transition-colors ${showGuides ? "bg-white shadow-sm text-primary" : "text-slate-400 hover:text-slate-600"}`}
                 title="Afficher les guides"
               >
-                {showGuides ? <Eye size={14} /> : <EyeOff size={14} />} Guides
+                {loadingGuides ? <Loader2 size={12} className="animate-spin" /> : showGuides ? <Eye size={14} /> : <EyeOff size={14} />} Guides
               </button>
             </div>
             <a href="/cart" className="relative flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50">
@@ -348,18 +372,28 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      {/* Search + Filters */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm" placeholder="Rechercher une activité, un lieu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            </div>
-            <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-bold transition-colors ${showFilters || hasActiveFilters ? "bg-primary text-white border-primary" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
-              <SlidersHorizontal size={14} />
-              Filtres
-              {hasActiveFilters && <span className="w-4 h-4 bg-white text-primary text-[9px] rounded-full flex items-center justify-center">!</span>}
+          {/* Search + Filters */}
+          <div className="bg-white border-b border-slate-100 px-4 py-3">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm" placeholder="Rechercher une activité, un lieu..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                </div>
+                <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-bold transition-colors ${showFilters || hasActiveFilters ? "bg-primary text-white border-primary" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
+                  <SlidersHorizontal size={14} />
+                  Filtres
+                  {hasActiveFilters && <span className="w-4 h-4 bg-white text-primary text-[9px] rounded-full flex items-center justify-center">!</span>}
+                </button>
+              </div>
+
+          {/* Layer toggles (mobile) */}
+          <div className="flex sm:hidden items-center gap-1.5 mt-2">
+            <button onClick={() => setShowOffers(!showOffers)} className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${showOffers ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-400"}`}>📦 Offres</button>
+            <button onClick={() => setShowCircuits(!showCircuits)} className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${showCircuits ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-400"}`}>🗺️ Circuits</button>
+            <button onClick={() => setShowPlaces(!showPlaces)} className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${showPlaces ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-400"}`}>📍 Lieux</button>
+            <button onClick={() => setShowGuides(!showGuides)} className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${showGuides ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-400"}`}>
+              {loadingGuides ? <Loader2 size={10} className="animate-spin inline" /> : "🧑‍🏫"} Guides
             </button>
           </div>
 
@@ -367,20 +401,23 @@ export default function ExplorePage() {
           {showFilters && (
             <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase">Type</span>
+                <span className="text-xs font-bold text-slate-500 uppercase">Filtres</span>
                 {hasActiveFilters && (
-                  <button onClick={() => { setTypeFilter("all"); setPriceRange(0); }} className="text-[10px] text-primary font-medium hover:underline">Réinitialiser</button>
+                  <button onClick={() => { setTypeFilter("all"); setPriceRange(0); setGuideSearchQuery(""); setGuideLanguage(""); setGuideMaxPrice(""); setGuideDate(""); }} className="text-[10px] text-primary font-medium hover:underline">Réinitialiser tout</button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {TYPE_FILTERS.map((t) => (
-                  <button key={t.value} onClick={() => setTypeFilter(t.value)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${typeFilter === t.value ? "bg-primary text-white" : "bg-white text-slate-600 border border-slate-200 hover:border-primary/30"}`}>
-                    <span>{t.icon}</span> {t.label}
-                  </button>
-                ))}
+              <div>
+                <span className="text-xs font-bold text-slate-500 uppercase block mb-1.5">Type</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {TYPE_FILTERS.map((t) => (
+                    <button key={t.value} onClick={() => setTypeFilter(t.value)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${typeFilter === t.value ? "bg-primary text-white" : "bg-white text-slate-600 border border-slate-200 hover:border-primary/30"}`}>
+                      <span>{t.icon}</span> {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
-                <span className="text-xs font-bold text-slate-500 uppercase block mb-1.5">Prix</span>
+                <span className="text-xs font-bold text-slate-500 uppercase block mb-1.5">Prix (offres & circuits)</span>
                 <div className="flex flex-wrap gap-1.5">
                   {PRICE_RANGES.map((p, i) => (
                     <button key={i} onClick={() => setPriceRange(i)} className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${priceRange === i ? "bg-primary text-white" : "bg-white text-slate-600 border border-slate-200 hover:border-primary/30"}`}>
@@ -389,6 +426,35 @@ export default function ExplorePage() {
                   ))}
                 </div>
               </div>
+
+              {showGuides && (
+                <div className="border-t border-slate-200 pt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase">Filtres guides</span>
+                    {(guideSearchQuery || guideLanguage || guideMaxPrice || guideDate) && (
+                      <button onClick={() => { setGuideSearchQuery(""); setGuideLanguage(""); setGuideMaxPrice(""); setGuideDate(""); }} className="text-[10px] text-primary font-medium hover:underline">Réinitialiser</button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400">Nom du guide</label>
+                      <input className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs" placeholder="Rechercher un guide..." value={guideSearchQuery} onChange={(e) => setGuideSearchQuery(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400">Langue</label>
+                      <input className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs" placeholder="Français, Anglais..." value={guideLanguage} onChange={(e) => setGuideLanguage(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400">Prix max (TND)</label>
+                      <input type="number" min="0" className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs" placeholder="Ex: 200" value={guideMaxPrice} onChange={(e) => setGuideMaxPrice(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400">Disponibilité</label>
+                      <input type="date" className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs" value={guideDate} onChange={(e) => setGuideDate(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -417,7 +483,7 @@ export default function ExplorePage() {
             </div>
             {/* Cards */}
             <div className="lg:w-1/2 space-y-3">
-              <p className="text-xs text-slate-400 font-medium">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)) !== 1 ? "s" : ""}</p>
+              <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)) !== 1 ? "s" : ""}{loadingGuides && <Loader2 size={10} className="animate-spin" />}</p>
               <ExploreCards offers={showOffers ? filteredOffers : []} circuits={showCircuits ? filteredCircuits : []} places={showPlaces ? filteredPlaces : []} guides={showGuides ? guides : []} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
             </div>
           </div>
@@ -437,7 +503,7 @@ export default function ExplorePage() {
 
         {viewMode === "grid" && (
           <div>
-            <p className="text-xs text-slate-400 font-medium mb-3">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)) !== 1 ? "s" : ""}</p>
+            <p className="text-xs text-slate-400 font-medium mb-3 flex items-center gap-1.5">{filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)} résultat{(filteredOffers.length + filteredCircuits.length + filteredPlaces.length + (showGuides ? guides.length : 0)) !== 1 ? "s" : ""}{loadingGuides && <Loader2 size={10} className="animate-spin" />}</p>
             <ExploreCards offers={showOffers ? filteredOffers : []} circuits={showCircuits ? filteredCircuits : []} places={showPlaces ? filteredPlaces : []} guides={showGuides ? guides : []} cartIds={cartIds} adding={adding} onAdd={addToCart} onSelect={setSelectedItem} />
           </div>
         )}
@@ -476,7 +542,7 @@ function ExploreCards({ offers, circuits, places, guides, cartIds, adding, onAdd
   onAdd: (type: "offer_item" | "circuit", id: string, name?: string, unitPrice?: number | null, currency?: string) => void;
   onSelect: (item: OfferItem | Circuit | Place) => void;
 }) {
-  if (!offers.length && !circuits.length && !places.length) {
+  if (!offers.length && !circuits.length && !places.length && !guides.length) {
     return (
       <div className="text-center py-16 text-slate-400">
         <Search size={40} className="mx-auto mb-3 opacity-30" />
@@ -515,6 +581,7 @@ function ExploreCards({ offers, circuits, places, guides, cartIds, adding, onAdd
 function GuideCard({ guide }: { guide: any }) {
   const offeringCount = guide.offerings?.length ?? 0;
   const minPrice = guide.offerings?.reduce?.((min: number, o: any) => o.price != null && (min === 0 || o.price < min) ? o.price : min, 0) ?? 0;
+  const languages = guide.offerings?.[0]?.languages ?? guide.languages_spoken ?? [];
   return (
     <div className="p-4">
       <div className="flex items-start gap-3">
@@ -524,10 +591,13 @@ function GuideCard({ guide }: { guide: any }) {
         <div className="flex-1 min-w-0">
           <p className="font-bold text-sm text-slate-800 truncate">{guide.full_name ?? guide.name ?? "Guide"}</p>
           {guide.zone && <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={9} /> {guide.zone}</p>}
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             {guide.guide_type && <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full font-medium">{guide.guide_type}</span>}
             {guide.sustainability_score != null && <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full font-medium">🌿 {guide.sustainability_score}</span>}
             {offeringCount > 0 && <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full font-medium">{offeringCount} prestation{offeringCount > 1 ? "s" : ""}</span>}
+            {languages.length > 0 && (typeof languages === 'string' ? [languages] : languages).slice(0, 3).map((lang: string, i: number) => (
+              <span key={i} className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">{lang}</span>
+            ))}
           </div>
         </div>
         <div className="text-right shrink-0">

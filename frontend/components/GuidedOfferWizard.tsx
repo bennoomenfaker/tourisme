@@ -13,7 +13,7 @@ import {
   CATEGORY_FORM_FIELDS, ITEM_TYPES_BY_CATEGORY, ROOM_SUB_TYPES, PRICING_UNITS,
 } from "@/lib/offer-config";
 import { getSchema, type SchemaField } from "@/lib/offer-schema";
-import { needsLocation, canHaveGuide, guideRequirement } from "@/lib/offer-rules";
+import { needsLocation, canHaveGuide, guideRequirement, hasItemTypesWithoutLocation } from "@/lib/offer-rules";
 import { getTaxonomy } from "@/lib/offer-taxonomy";
 import HierarchicalSelect from "@/components/HierarchicalSelect";
 
@@ -182,6 +182,16 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [items, setItems] = useState<OfferItemForm[]>([]);
   const [availabilityRules, setAvailabilityRules] = useState<AvailabilityRule[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(editOffer?.project_id || userProjectId || "");
+  const [fetchedProjects, setFetchedProjects] = useState(userProjects ?? []);
+  const projects = userProjects ?? fetchedProjects;
+
+  useEffect(() => {
+    if (userRole === "project" && (!userProjects || userProjects.length === 0) && token) {
+      apiFetch<any[]>("/project-owner/projects", { headers: { Authorization: `Bearer ${token}` } })
+        .then((data) => setFetchedProjects(Array.isArray(data) ? data : []))
+        .catch(() => {});
+    }
+  }, [userRole, userProjects, token]);
 
   const normalizedCategory = category ? (OFFER_TYPE_MAP[category] ?? category) : '';
   const itemTypes = normalizedCategory ? (ITEM_TYPES_BY_CATEGORY[normalizedCategory] ?? []) : [];
@@ -800,10 +810,10 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
               {userRole === "project" && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500">Projet *</label>
-                  {userProjects && userProjects.length > 0 ? (
+                  {projects && projects.length > 0 ? (
                     <select className={inputClass} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
                       <option value="">Sélectionner un projet</option>
-                      {userProjects.map((p) => (
+                      {projects.map((p) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
@@ -831,7 +841,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 <textarea className={`${inputClass} resize-none`} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Décrivez l'expérience en détail..." />
               </div>
 
-              {needsLocation(normalizedCategory, "") ? (
+              {!hasItemTypesWithoutLocation(normalizedCategory, itemTypes.map(it => it.value)) ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500">Région *</label>
@@ -841,6 +851,13 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                     <label className="text-xs font-bold text-slate-500">Adresse</label>
                     <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète" />
                   </div>
+                </div>
+              ) : needsLocation(normalizedCategory, "") ? (
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <Info size={14} className="text-slate-400 shrink-0" />
+                    La localisation sera définie à l'étape suivante selon le type d'élément choisi
+                  </p>
                 </div>
               ) : (
                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">

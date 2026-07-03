@@ -185,7 +185,14 @@ function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
             </div>
           )}
         </div>
-        <div className="flex items-center justify-end border-t border-slate-50 pt-4 mt-3">
+        <div className="flex items-center justify-between border-t border-slate-50 pt-4 mt-3">
+          <div>
+            {(offer as any).sessions?.length > 0 && (
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
+                {(offer as any).sessions.filter((s: any) => s.status !== "cancelled" && s.remaining_capacity > 0).length} session(s) disponible(s)
+              </span>
+            )}
+          </div>
           <span className="text-primary font-extrabold text-xs inline-flex items-center gap-1">
             Voir les détails <ArrowRight size={14} strokeWidth={2.5} />
           </span>
@@ -227,6 +234,10 @@ export default function PublicGuideProfile() {
   const [myConnectionIds, setMyConnectionIds] = useState<Set<string>>(new Set());
   const [viewerId, setViewerId] = useState("");
   const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [bookingSessionId, setBookingSessionId] = useState<string | null>(null);
+  const [bookingParticipants, setBookingParticipants] = useState(1);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingDone, setBookingDone] = useState(false);
 
   useEffect(() => {
     const tkn = localStorage.getItem("access_token") || "";
@@ -606,18 +617,84 @@ export default function PublicGuideProfile() {
                     <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${selectedOffer.sustainability_score}%` }} /></div>
                   </div>
                 )}
-                <div className="flex gap-2 pt-2">
-                  <a href={`/profile/guide/${profile?.user_id}`}
-                    className="flex-1 text-center text-xs font-bold py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
-                    Voir profil public
-                  </a>
-                  <button onClick={() => {
-                    const text = `Bonjour ${profile?.full_name ?? ""}, je suis intéressé par votre prestation "${selectedOffer.title}". Pouvez-vous me donner plus d'informations ?`;
-                    window.location.href = `/messagerie?share=${encodeURIComponent(text)}&userId=${profile?.user_id}`;
-                  }}
-                    className="flex-1 text-xs font-bold py-2.5 rounded-xl bg-primary text-white hover:bg-emerald-600">
-                    Contacter
-                  </button>
+                <div className="pt-2 space-y-3">
+                  {bookingDone ? (
+                    <div className="text-center py-4">
+                      <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3"><Check size={20} className="text-primary" /></div>
+                      <p className="text-sm font-extrabold text-slate-800 mb-1">Réservation envoyée</p>
+                      <p className="text-xs text-slate-500">Le guide vous confirmera la disponibilité.</p>
+                      <button onClick={() => setSelectedOffer(null)} className="mt-3 w-full py-2.5 bg-primary text-slate-900 font-extrabold rounded-2xl text-xs">Fermer</button>
+                    </div>
+                  ) : userRole === "eco_traveler" && (selectedOffer as any).sessions?.length > 0 ? (
+                    <>
+                      <div>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Choisissez une session</p>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                          {(selectedOffer as any).sessions.filter((s: any) => s.status !== "cancelled" && s.remaining_capacity > 0).map((s: any) => (
+                            <button key={s.id} onClick={() => setBookingSessionId(s.id)}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-left transition-all ${bookingSessionId === s.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-slate-200 hover:border-slate-300"}`}>
+                              <div>
+                                <span className="text-sm font-bold text-slate-800">{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                                <span className="text-xs text-slate-400 ml-2">{s.start_time?.slice(0, 5)}-{s.end_time?.slice(0, 5)}</span>
+                              </div>
+                              <span className="text-[11px] font-bold text-emerald-600">{s.remaining_capacity} place{s.remaining_capacity > 1 ? "s" : ""}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {bookingSessionId && (
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Participants</p>
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => setBookingParticipants(Math.max(1, bookingParticipants - 1))}
+                                className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold text-sm">-</button>
+                              <span className="w-8 text-center font-extrabold text-sm">{bookingParticipants}</span>
+                              <button onClick={() => setBookingParticipants(Math.min(10, bookingParticipants + 1))}
+                                className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 font-bold text-sm">+</button>
+                            </div>
+                          </div>
+                          <button onClick={async () => {
+                            setBookingLoading(true);
+                            try {
+                              await apiFetch(`/guide-offerings/${selectedOffer.id}/sessions/${bookingSessionId}/book`, {
+                                method: "POST",
+                                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                                body: JSON.stringify({ participants: [{ full_name: "Moi" }].concat(Array(bookingParticipants - 1).fill(null).map((_, i) => ({ full_name: `Participant ${i + 2}` }))) }),
+                              });
+                              setBookingDone(true);
+                            } catch (e: any) { alert(e.message ?? "Erreur lors de la réservation"); }
+                            finally { setBookingLoading(false); }
+                          }} disabled={bookingLoading}
+                            className="self-end px-5 py-2.5 bg-primary text-slate-900 font-extrabold rounded-2xl text-xs hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                            {bookingLoading ? <span className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" /> : null}
+                            Réserver
+                          </button>
+                        </div>
+                      )}
+                      <button onClick={() => {
+                        const text = `Bonjour ${profile?.full_name ?? ""}, je suis intéressé par votre prestation "${selectedOffer.title}". Pouvez-vous me donner plus d'informations ?`;
+                        window.location.href = `/messagerie?share=${encodeURIComponent(text)}&userId=${profile?.user_id}`;
+                      }}
+                        className="w-full text-xs font-bold py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+                        Contacter le guide
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex gap-2">
+                      <a href={`/profile/guide/${profile?.user_id}`}
+                        className="flex-1 text-center text-xs font-bold py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+                        Voir profil public
+                      </a>
+                      <button onClick={() => {
+                        const text = `Bonjour ${profile?.full_name ?? ""}, je suis intéressé par votre prestation "${selectedOffer.title}". Pouvez-vous me donner plus d'informations ?`;
+                        window.location.href = `/messagerie?share=${encodeURIComponent(text)}&userId=${profile?.user_id}`;
+                      }}
+                        className="flex-1 text-xs font-bold py-2.5 rounded-xl bg-primary text-white hover:bg-emerald-600">
+                        Contacter
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

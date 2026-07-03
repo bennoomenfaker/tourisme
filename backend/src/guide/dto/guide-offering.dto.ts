@@ -162,6 +162,76 @@ export class UpdateGuideOfferingDto {
   status?: string;
 }
 
+export class GenerateSessionsDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  days_ahead?: number;
+}
+
+export class CreateGuideOfferingSessionDto {
+  @Type(() => Date)
+  date!: Date;
+
+  @IsString()
+  start_time!: string;
+
+  @IsString()
+  end_time!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  total_capacity?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price_override?: number;
+}
+
+export class CreateGuideOfferingBlockDto {
+  @Type(() => Date)
+  start_date!: Date;
+
+  @Type(() => Date)
+  end_date!: Date;
+
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class CreateGuideOfferingPriceDto {
+  @IsString()
+  @IsNotEmpty()
+  label!: string;
+
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  min_quantity?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  max_quantity?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_default?: boolean;
+}
+
 export class CreateGuideOfferingAvailabilityRuleDto {
   @IsString()
   @IsNotEmpty()

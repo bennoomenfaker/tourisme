@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
-import { Plus, Trash2, Edit, MapPin, DollarSign, Users, Globe, Compass, X, Check, Loader2 } from "lucide-react";
+import { Plus, Trash2, Edit, MapPin, DollarSign, Users, Globe, Compass, X, Check, Loader2, Calendar, Clock, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import Modal from "@/components/ui/Modal";
 
@@ -256,6 +256,116 @@ function OfferingForm({ token, offering, onClose, onSuccess }: {
   );
 }
 
+interface GuideSession {
+  id: string;
+  guide_offering_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  total_capacity: number | null;
+  remaining_capacity: number | null;
+  price_override: number | null;
+  status: string;
+  created_at: string;
+}
+
+function SessionPanel({ token, offeringId }: { token: string; offeringId: string }) {
+  const [sessions, setSessions] = useState<GuideSession[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const loadSessions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch<GuideSession[]>(`/guide-offerings/${offeringId}/sessions`);
+      setSessions(data ?? []);
+    } catch { setSessions([]); }
+    finally { setLoading(false); }
+  }, [offeringId]);
+
+  useEffect(() => { loadSessions(); }, [loadSessions]);
+
+  async function handleGenerate() {
+    setGenerating(true);
+    try {
+      const data = await apiFetch<GuideSession[]>(`/guide-offerings/${offeringId}/availability/generate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ days_ahead: 90 }),
+      });
+      setSessions(data ?? []);
+    } catch (err: any) { alert(err.message || "Erreur lors de la génération"); }
+    finally { setGenerating(false); }
+  }
+
+  async function handleDeleteSession(sessionId: string) {
+    if (!confirm("Supprimer cette session ?")) return;
+    try {
+      await apiFetch(`/guide-offerings/${offeringId}/sessions/${sessionId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch { alert("Erreur lors de la suppression"); }
+  }
+
+  const grouped = sessions.reduce<Record<string, GuideSession[]>>((acc, s) => {
+    const key = s.date;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(s);
+    return acc;
+  }, {});
+
+  return (
+    <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-500 uppercase">Sessions ({sessions.length})</span>
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-50"
+        >
+          {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+          Générer les sessions
+        </button>
+      </div>
+      {loading ? (
+        <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-slate-400" /></div>
+      ) : sessions.length === 0 ? (
+        <p className="text-xs text-slate-400 text-center py-4">Aucune session. Créez des règles de disponibilité puis générez les sessions.</p>
+      ) : (
+        <div className="space-y-2 max-h-80 overflow-y-auto">
+          {Object.entries(grouped).map(([date, daySessions]) => (
+            <div key={date}>
+              <p className="text-[11px] font-bold text-slate-500 mb-1">
+                {new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </p>
+              <div className="space-y-1">
+                {daySessions.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="flex items-center gap-1 text-slate-700 font-medium"><Clock size={11} /> {s.start_time} - {s.end_time}</span>
+                      {s.total_capacity != null && <span className="text-slate-400">Capacité: {s.remaining_capacity ?? s.total_capacity}/{s.total_capacity}</span>}
+                      {s.price_override != null && <span className="text-amber-600 font-medium">{Number(s.price_override).toLocaleString()} TND</span>}
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        s.status === "available" ? "bg-emerald-100 text-emerald-700" :
+                        s.status === "full" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
+                      }`}>{s.status}</span>
+                    </div>
+                    <button onClick={() => handleDeleteSession(s.id)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GuideOfferingsPage() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
@@ -264,6 +374,7 @@ export default function GuideOfferingsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingOffering, setEditingOffering] = useState<GuideOffering | undefined>(undefined);
   const [myId, setMyId] = useState<string | null>(null);
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const t = localStorage.getItem("access_token");
@@ -336,39 +447,50 @@ export default function GuideOfferingsPage() {
         ) : (
           <div className="space-y-3">
             {offerings.map((o) => (
-              <div key={o.id} className="bg-white rounded-2xl border border-slate-100 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-slate-800">{o.title}</h3>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${o.status === "active" ? "bg-emerald-100 text-emerald-700" : o.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
-                        {o.status === "active" ? "Active" : o.status === "rejected" ? "Refusée" : "En attente"}
-                      </span>
+              <div key={o.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-slate-800">{o.title}</h3>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${o.status === "active" ? "bg-emerald-100 text-emerald-700" : o.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
+                          {o.status === "active" ? "Active" : o.status === "rejected" ? "Refusée" : "En attente"}
+                        </span>
+                      </div>
+                      {o.description && <p className="text-sm text-slate-500 mb-3 line-clamp-2">{o.description}</p>}
+                      <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                        <span className="flex items-center gap-1"><DollarSign size={12} /> {Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
+                        {o.min_travelers && <span className="flex items-center gap-1"><Users size={12} /> {o.min_travelers}-{o.max_travelers ?? "∞"} pers.</span>}
+                        {o.languages && o.languages.length > 0 && <span className="flex items-center gap-1"><Globe size={12} /> {o.languages.join(", ")}</span>}
+                        <span className="flex items-center gap-1">
+                          <MapPin size={12} />
+                          {o.service_zone_type === "point" && "Point fixe"}
+                          {o.service_zone_type === "radius" && `Rayon ${o.radius_km ?? "?"} km`}
+                          {o.service_zone_type === "governorate" && `Gouvernorat ${o.zone_governorate ?? ""}`}
+                          {o.service_zone_type === "municipality" && `${o.zone_municipality ?? ""}, ${o.zone_governorate ?? ""}`}
+                        </span>
+                        {o.displacement_allowed && <span className="text-emerald-600">Déplacement possible ({o.displacement_max_km ?? "?"} km)</span>}
+                      </div>
                     </div>
-                    {o.description && <p className="text-sm text-slate-500 mb-3 line-clamp-2">{o.description}</p>}
-                    <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                      <span className="flex items-center gap-1"><DollarSign size={12} /> {Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
-                      {o.min_travelers && <span className="flex items-center gap-1"><Users size={12} /> {o.min_travelers}-{o.max_travelers ?? "∞"} pers.</span>}
-                      {o.languages && o.languages.length > 0 && <span className="flex items-center gap-1"><Globe size={12} /> {o.languages.join(", ")}</span>}
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} />
-                        {o.service_zone_type === "point" && "Point fixe"}
-                        {o.service_zone_type === "radius" && `Rayon ${o.radius_km ?? "?"} km`}
-                        {o.service_zone_type === "governorate" && `Gouvernorat ${o.zone_governorate ?? ""}`}
-                        {o.service_zone_type === "municipality" && `${o.zone_municipality ?? ""}, ${o.zone_governorate ?? ""}`}
-                      </span>
-                      {o.displacement_allowed && <span className="text-emerald-600">Déplacement possible ({o.displacement_max_km ?? "?"} km)</span>}
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => setExpandedSessions((prev) => { const next = new Set(prev); if (next.has(o.id)) next.delete(o.id); else next.add(o.id); return next; })}
+                        className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-colors">
+                        <Calendar size={14} />
+                      </button>
+                      <button onClick={() => handleEdit(o)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors">
+                        <Edit size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(o.id)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => handleEdit(o)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors">
-                      <Edit size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(o.id)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors">
-                      <Trash2 size={14} />
-                    </button>
                   </div>
                 </div>
+                {expandedSessions.has(o.id) && (
+                  <div className="px-5 pb-5">
+                    <SessionPanel token={token!} offeringId={o.id} />
+                  </div>
+                )}
               </div>
             ))}
           </div>

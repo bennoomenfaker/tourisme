@@ -37,16 +37,16 @@ DECLARE
 
   -- ── UUIDs générés pour les entités seedées ──
   -- Offer Categories (vrais IDs de la table offer_categories)
-  v_cat_eco_tour    UUID := '450c9c0b-5a94-4372-8f84-6c548eb4ebce';
-  v_cat_accom       UUID := 'a327acf4-6d42-4d5d-8ebc-8dfdc02c75de';
-  v_cat_activity    UUID := 'f8509a3c-747f-475b-b4a0-40a32c765bfb';
-  v_cat_restaurant  UUID := '4269fcff-40fe-478e-9214-17b2fcb01415';
-  v_cat_craft       UUID := 'd8835649-c729-4625-9f46-820cc02a9d72';
-  v_cat_workshop    UUID := '45dce784-1fdf-4619-9424-c04be2f62cdd';
-  v_cat_transfer    UUID := '1a75c8ad-47b6-4661-87b1-eb5afdb3e397';
-  v_cat_sejour      UUID := '339fb32c-58c0-4979-9bbf-e093a178ef57';
-  v_cat_circuit     UUID := '74b459cf-8c7a-496e-941d-5f0cdd7356db';
-  v_cat_other       UUID := 'cba60e4a-b070-426a-a7ba-0969b662bc69';
+  v_cat_eco_tour    UUID := '8a9f65cd-b3fe-43d7-a98d-1870e5f68b65';
+  v_cat_accom       UUID := 'e52ace62-a074-45e6-b3ee-b462aee4b03f';
+  v_cat_activity    UUID := '21a655e0-de08-4b62-b0da-7c5337fd93be';
+  v_cat_restaurant  UUID := '9bd16abf-aa62-41f6-a04e-f98c47239705';
+  v_cat_craft       UUID := '04137263-fdbc-468c-8f6b-a7c9b1cc6ae8';
+  v_cat_workshop    UUID := '00c21f9c-37ac-4a75-9950-eee33b8a90e7';
+  v_cat_transfer    UUID := 'f3b4967a-c5fd-4df1-8dfb-598afb941cb9';
+  v_cat_sejour      UUID := '4c50bfe4-dc54-4b5d-bfa9-308c31c8b356';
+  v_cat_circuit     UUID := '98bed090-080f-447f-b24b-19d4ca794c04';
+  v_cat_other       UUID := '23e7deba-3e18-4e89-900d-3662cf8634d0';
 
   -- Projects
   v_proj1  UUID := 'a1000000-0001-0000-0000-000000000001';
@@ -139,10 +139,6 @@ DECLARE
   v_cday13 UUID := '12000000-0001-0000-0000-000000000013';
   v_cday14 UUID := '12000000-0001-0000-0000-000000000014';
   v_cday15 UUID := '12000000-0001-0000-0000-000000000015';
-  v_cday16 UUID := '12000000-0001-0000-0000-000000000016';
-  v_cday17 UUID := '12000000-0001-0000-0000-000000000017';
-  v_cday18 UUID := '12000000-0001-0000-0000-000000000018';
-  v_cday19 UUID := '12000000-0001-0000-0000-000000000019';
 
   -- Circuit Program Items
   v_cprog1  UUID := '13000000-0001-0000-0000-000000000001';
@@ -157,14 +153,6 @@ DECLARE
   v_cprog10 UUID := '13000000-0001-0000-0000-000000000010';
   v_cprog11 UUID := '13000000-0001-0000-0000-000000000011';
   v_cprog12 UUID := '13000000-0001-0000-0000-000000000012';
-  v_cprog13 UUID := '13000000-0001-0000-0000-000000000013';
-  v_cprog14 UUID := '13000000-0001-0000-0000-000000000014';
-  v_cprog15 UUID := '13000000-0001-0000-0000-000000000015';
-  v_cprog16 UUID := '13000000-0001-0000-0000-000000000016';
-  v_cprog17 UUID := '13000000-0001-0000-0000-000000000017';
-  v_cprog18 UUID := '13000000-0001-0000-0000-000000000018';
-  v_cprog19 UUID := '13000000-0001-0000-0000-000000000019';
-  v_cprog20 UUID := '13000000-0001-0000-0000-000000000020';
 
   -- Circuit Options
   v_copt1  UUID := '14000000-0001-0000-0000-000000000001';
@@ -391,48 +379,42 @@ INSERT INTO circuits (id, author_id, author_type, project_id, title, description
     '2026-08-01', '2026-08-04', 4, 3, 'Sud Tunisien', 680.00, 'TND', 15, 'manual',
     'Transport 4x4, hébergement, repas, guide francophone, dromadaire',
     'Vols internationaux, assurance voyage, pourboires',
-    33.4608, 8.9858, 'Douz, Kébili', 'approved',
-    ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80', 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&q=80']),
+    33.4608, 8.9858, 'Douz, Kébili', 'approved', NULL),
 
   (v_cir2, v_guide2_id, 'guide',         NULL,    'Djerba Authentique : Culture et Mer',
     'Circuit de 3 jours à Djerba hors des sentiers battus. Médina, Guellala, plages secrètes, pêche traditionnelle et cuisine djerbienne.',
     '2026-07-15', '2026-07-17', 3, 2, 'Djerba', 420.00, 'TND', 12, 'automatic',
     'Hébergement menzel traditionnel, repas, transferts, guide locale',
     'Billet de ferry, achats personnels',
-    33.8750, 10.8570, 'Houmt Souk, Djerba', 'approved',
-    ARRAY['https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80', 'https://images.unsplash.com/photo-1548018560-c7196e4f220b?w=800&q=80']),
+    33.8750, 10.8570, 'Houmt Souk, Djerba', 'approved', NULL),
 
   (v_cir3, v_guide1_id, 'guide',         NULL,    'Trek Kroumirie : Forêts et Cascades',
     'Trekking de 3 jours dans les forêts de la Kroumirie. Cascades de Beni Mtir, sources thermales d''Ain Draham, villages de montagne.',
     '2026-09-10', '2026-09-12', 3, 2, 'Ain Draham', 380.00, 'TND', 12, 'manual',
     'Hébergement éco-lodge, repas bio, guide de montagne, matériel trek',
     'Transport jusqu''à Ain Draham, assurance',
-    36.7837, 8.6865, 'Ain Draham, Jendouba', 'approved',
-    ARRAY['https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80', 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=800&q=80']),
+    36.7837, 8.6865, 'Ain Draham, Jendouba', 'approved', NULL),
 
   (v_cir4, v_owner1_id, 'project_owner', v_proj3, 'Oasis et Chott el Jerid : La Route des Dattes',
-    'Circuit de 3 jours autour de Tozeur. Balade en calèche dans l''oasis, traversée du Chott el Jerid, gorges de Midès.',
-    '2026-10-01', '2026-10-03', 3, 2, 'Tozeur', 350.00, 'TND', 20, 'automatic',
+    'Circuit de 2 jours autour de Tozeur. Balade en calèche dans l''oasis, traversée du Chott el Jerid, village de montagne de Tamerza.',
+    '2026-10-01', '2026-10-02', 2, 1, 'Tozeur', 280.00, 'TND', 20, 'automatic',
     'Transport, hébergement dar, repas oasis, calèche',
     'Boissons, souvenirs',
-    33.9197, 8.1335, 'Tozeur', 'approved',
-    ARRAY['https://images.unsplash.com/photo-1548018560-c7196e4f220b?w=800&q=80', 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80', 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80']),
+    33.9197, 8.1335, 'Tozeur', 'approved', NULL),
 
   (v_cir5, v_guide1_id, 'guide',         NULL,    'Les Ksour de Tataouine et Chenini',
-    'Circuit de 3 jours à la découverte des greniers fortifiés berbères (ksour), du village perché de Chenini et de Gharb el Kebbar.',
-    '2026-08-20', '2026-08-22', 3, 2, 'Tataouine', 280.00, 'TND', 15, 'automatic',
+    'Circuit de 2 jours à la découverte des greniers fortifiés berbères (ksour) et du village perché de Chenini. Architecture troglodyte unique.',
+    '2026-08-20', '2026-08-21', 2, 1, 'Tataouine', 220.00, 'TND', 15, 'automatic',
     'Transport, hébergement chez l''habitant, repas, guide',
     'Assurance, pourboires',
-    32.9296, 10.4518, 'Tataouine', 'approved',
-    ARRAY['https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&q=80', 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80']),
+    32.9296, 10.4518, 'Tataouine', 'approved', NULL),
 
   (v_cir6, v_guide2_id, 'guide',         NULL,    'Île de Kerkennah : Nature et Traditions',
-    'Séjour de 3 jours sur les îles Kerkennah. Pêche à la charfia, flamants roses, coucher de soleil, cuisine insulaire.',
-    '2026-07-25', '2026-07-27', 3, 2, 'Kerkennah', 320.00, 'TND', 10, 'manual',
+    'Séjour de 2 jours sur les îles Kerkennah. Pêche à la charfia, flamants roses, coucher de soleil, cuisine insulaire.',
+    '2026-07-25', '2026-07-26', 2, 1, 'Kerkennah', 250.00, 'TND', 10, 'manual',
     'Ferry, hébergement, repas, kayak, guide naturaliste',
     'Transport jusqu''à Sfax, achats personnels',
-    34.7100, 11.1400, 'Kerkennah, Sfax', 'approved',
-    ARRAY['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80', 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80', 'https://images.unsplash.com/photo-1548018560-c7196e4f220b?w=800&q=80'])
+    34.7100, 11.1400, 'Kerkennah, Sfax', 'approved', NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -455,20 +437,16 @@ INSERT INTO circuit_days (id, circuit_id, day_number, date, title, description, 
   (v_cday9,  v_cir3, 2, '2026-09-11', 'Cascades de Beni Mtir',                  'Randonnée vers le lac et les cascades de Beni Mtir. Baignade et déjeuner au bord de l''eau.',                            36.7500, 8.7300,  'Beni Mtir'),
   (v_cday10, v_cir3, 3, '2026-09-12', 'Sources Thermales & Village Berbère',     'Visite des sources chaudes naturelles et d''un village de montagne. Retour.',                                              36.7600, 8.7000,  'Hammam Bourguiba'),
 
-  -- Circuit 4 : Route des Dattes (3 jours)
+  -- Circuit 4 : Route des Dattes (2 jours)
   (v_cday11, v_cir4, 1, '2026-10-01', 'Oasis de Tozeur en Calèche',             'Balade en calèche dans l''oasis (200 000 palmiers), visite de la ferme bio, dégustation de dattes.',                      33.9197, 8.1335,  'Tozeur'),
-  (v_cday12, v_cir4, 2, '2026-10-02', 'Chott el Jerid & Tamerza',               'Traversée du plus grand lac salé d''Afrique. Cascades de Tamerza.',                                               34.0750, 7.9350,  'Chott el Jerid'),
-  (v_cday16, v_cir4, 3, '2026-10-03', 'Gorges de Midès & Nefta',                'Excursion aux gorges spectaculaires de Midès et visite de Nefta, la ville sainte.',                               34.1000, 7.9000,  'Midès'),
+  (v_cday12, v_cir4, 2, '2026-10-02', 'Chott el Jerid & Tamerza',               'Traversée du plus grand lac salé d''Afrique. Cascades de Tamerza. Retour.',                                               34.0750, 7.9350,  'Chott el Jerid'),
 
-  -- Circuit 5 : Ksour (3 jours)
+  -- Circuit 5 : Ksour (2 jours)
   (v_cday13, v_cir5, 1, '2026-08-20', 'Ksour Fortifiés',                         'Visite de Ksar Ouled Soltane, Ksar Hadada et Ksar Joumaa. Déjeuner traditionnel.',                                      32.9296, 10.4518, 'Tataouine'),
-  (v_cday14, v_cir5, 2, '2026-08-21', 'Village Perché de Chenini',               'Ascension du village troglodytique de Chenini. Mosquée des Sept Dormants.',                                     33.0200, 10.2700, 'Chenini'),
-  (v_cday17, v_cir5, 3, '2026-08-22', 'Gharb el Kebbar & Retour',               'Découverte du grenier fortifié de Gharb el Kebbar et du village de Smâren. Retour.',                            32.9500, 10.3500, 'Gharb el Kebbar'),
+  (v_cday14, v_cir5, 2, '2026-08-21', 'Village Perché de Chenini',               'Ascension du village troglodytique de Chenini. Mosquée des Sept Dormants. Retour.',                                     33.0200, 10.2700, 'Chenini'),
 
-  -- Circuit 6 : Kerkennah (3 jours)
-  (v_cday15, v_cir6, 1, '2026-07-25', 'Ferry & Découverte de l''Archipel',        'Traversée en ferry depuis Sfax. Installation, tour de l''île à vélo, baignade.',                                         34.7100, 11.1400, 'Kerkennah'),
-  (v_cday18, v_cir6, 2, '2026-07-26', 'Pêche à la Charfia & Flamants Roses',     'Matinée de pêche traditionnelle à la charfia. Observation des flamants roses dans la lagune de Guellala.',             34.7200, 11.1500, 'Guellala'),
-  (v_cday19, v_cir6, 3, '2026-07-27', 'Coucher de Soleil & Gastronomie',          'Coucher de soleil depuis le phare de Kerkennah. Dîner de fruits de mer frais et cuisine insulaire traditionnelle.',    34.7000, 11.1300, 'El Alia')
+  -- Circuit 6 : Kerkennah (2 jours)
+  (v_cday15, v_cir6, 1, '2026-07-25', 'Ferry & Découverte de l''Archipel',        'Traversée en ferry depuis Sfax. Installation, tour de l''île à vélo, baignade.',                                         34.7100, 11.1400, 'Kerkennah')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
@@ -495,23 +473,7 @@ INSERT INTO circuit_program_items (id, circuit_day_id, title, description, start
 
   -- Jour 1 Route des Dattes
   (v_cprog11, v_cday11, 'Calèche dans l''Oasis de Tozeur',           'Balade de 2h en calèche à travers la plus grande oasis du pays.',                        '09:00', '11:00', true, true),
-  (v_cprog12, v_cday11, 'Dégustation de Dattes et Huile d''Olive',    'Visite de la ferme bio, dégustation de 7 variétés de dattes et d''huile d''olive.',       '11:30', '13:00', true, true),
-
-  -- Jour 3 Route des Dattes
-  (v_cprog13, v_cday16, 'Gorges de Midès',                            'Excursion au sentier des gorges spectaculaires. Vue panoramique sur la frontière algérienne.', '08:00', '10:00', true, true),
-  (v_cprog14, v_cday16, 'Visite de Nefta',                            'Découverte de la ville sainte, mosquées, souks et palmeraie.',                              '10:30', '12:30', true, true),
-
-  -- Jour 3 Ksour
-  (v_cprog15, v_cday17, 'Gharb el Kebbar',                           'Visite du grenier fortifié le plus préservé de la région. Histoire et architecture berbère.', '09:00', '11:00', true, true),
-  (v_cprog16, v_cday17, 'Village de Smâren',                         'Promenade dans le village perché. Artisanat local et panorama sur les oliveraies.',          '11:30', '13:00', true, true),
-
-  -- Jour 2 Kerkennah
-  (v_cprog17, v_cday18, 'Pêche à la Charfia',                        'Participation à la pêche traditionnelle aux filets fixes. Dégustation du poisson pêché.',     '07:00', '11:00', true, true),
-  (v_cprog18, v_cday18, 'Observation des Flamants Roses',             'Balade en bateau dans la lagune de Guellala. Observation de la faune sauvage.',               '14:00', '16:00', true, false),
-
-  -- Jour 3 Kerkennah
-  (v_cprog19, v_cday19, 'Phare de Kerkennah',                        'Montée au phare pour le coucher de soleil. Panorama à 360° sur l''archipel.',                 '17:00', '18:30', true, true),
-  (v_cprog20, v_cday19, 'Dîner de Fruits de Mer',                    'Repas gastronomique avec les spécialités insulaires : poisson, poulpe, crustacés.',           '19:00', '21:00', true, true)
+  (v_cprog12, v_cday11, 'Dégustation de Dattes et Huile d''Olive',    'Visite de la ferme bio, dégustation de 7 variétés de dattes et d''huile d''olive.',       '11:30', '13:00', true, true)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================

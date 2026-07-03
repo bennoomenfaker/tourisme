@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Guide } from './entities/guide.entity';
 import { GuideOffering } from './entities/guide-offering.entity';
 import { GuideOfferingAvailabilityRule } from './entities/guide-offering-availability-rule.entity';
+import { GuideOfferingSession } from './entities/guide-offering-session.entity';
 
 @Injectable()
 export class GuideSearchService {
@@ -14,6 +15,8 @@ export class GuideSearchService {
     private readonly offeringRepo: Repository<GuideOffering>,
     @InjectRepository(GuideOfferingAvailabilityRule)
     private readonly ruleRepo: Repository<GuideOfferingAvailabilityRule>,
+    @InjectRepository(GuideOfferingSession)
+    private readonly sessionRepo: Repository<GuideOfferingSession>,
   ) {}
 
   async search(params: {
@@ -26,36 +29,75 @@ export class GuideSearchService {
     min_capacity?: number;
     displacement_allowed?: boolean;
     query?: string;
+    min_rating?: number;
   }) {
-    const qb = this.guideRepo.createQueryBuilder('guide')
+    // 1. Filtrage guide (status + query)
+    const guideQb = this.guideRepo.createQueryBuilder('guide')
       .where('guide.status = :status', { status: 'active' });
 
     if (params.query) {
-      qb.andWhere('LOWER(guide.full_name) LIKE :q', { q: `%${params.query.toLowerCase()}%` });
+      guideQb.andWhere('LOWER(guide.full_name) LIKE :q', { q: `%${params.query.toLowerCase()}%` });
     }
 
-    const guides = await qb.getMany();
+    if (params.min_rating !== undefined) {
+      guideQb.andWhere('guide.sustainability_score >= :minRating', { minRating: params.min_rating });
+    }
+
+    const guides = await guideQb.getMany();
+    if (!guides.length) return [];
     const guideIds = guides.map((g) => g.user_id);
 
-    if (!guideIds.length) return [];
-
-    const offeringsQb = this.offeringRepo.createQueryBuilder('offering')
-      .where('offering.guide_id IN (:...guideIds)', { guideIds });
+    // 2. Filtrage offres
+    const offQb = this.offeringRepo.createQueryBuilder('offering')
+      .where('offering.guide_id IN (:...guideIds)', { guideIds })
+      .andWhere('offering.status = :active', { active: 'active' });
 
     if (params.max_price !== undefined) {
-      offeringsQb.andWhere('offering.price <= :maxPrice', { maxPrice: params.max_price });
+      offQb.andWhere('offering.price <= :maxPrice', { maxPrice: params.max_price });
     }
-
     if (params.language) {
-      offeringsQb.andWhere('offering.languages LIKE :lang', { lang: `%${params.language}%` });
+      offQb.andWhere('offering.languages LIKE :lang', { lang: `%${params.language}%` });
     }
-
     if (params.displacement_allowed !== undefined) {
-      offeringsQb.andWhere('offering.displacement_allowed = :disp', { disp: params.displacement_allowed });
+      offQb.andWhere('offering.displacement_allowed = :disp', { disp: params.displacement_allowed });
     }
 
-    const offerings = await offeringsQb.getMany();
+    // 3. Filtrage spatial en SQL (haversine)
+    if (params.lat !== undefined && params.lng !== undefined) {
+      const lat = params.lat;
+      const lng = params.lng;
+      const radius = params.radius_km ?? 50;
+      offQb.andWhere(
+        `(
+          offering.service_zone_type = 'all_tunisia'
+          OR (
+            offering.lat IS NOT NULL AND offering.lng IS NOT NULL AND offering.radius_km IS NOT NULL
+            AND (
+              6371 * acos(
+                cos(radians(:lat)) * cos(radians(offering.lat))
+                * cos(radians(offering.lng) - radians(:lng))
+                + sin(radians(:lat)) * sin(radians(offering.lat))
+              )
+            ) <= offering.radius_km
+          )
+          OR (
+            offering.displacement_allowed = true
+            AND offering.displacement_max_km IS NOT NULL
+            AND offering.lat IS NOT NULL AND offering.lng IS NOT NULL
+            AND (
+              6371 * acos(
+                cos(radians(:lat)) * cos(radians(offering.lat))
+                * cos(radians(offering.lng) - radians(:lng))
+                + sin(radians(:lat)) * sin(radians(offering.lat))
+              )
+            ) <= offering.displacement_max_km
+          )
+        )`,
+        { lat, lng },
+      );
+    }
 
+    const offerings = await offQb.getMany();
     if (!offerings.length) return [];
 
     const offeringMap = new Map<string, GuideOffering[]>();
@@ -66,28 +108,27 @@ export class GuideSearchService {
 
     const matchedGuideIds = new Set(offerings.map((o) => o.guide_id));
 
-    if (params.lat !== undefined && params.lng !== undefined) {
-      for (const offering of offerings) {
-        if (offering.service_zone_type === 'all_tunisia') continue;
-        if (offering.lat !== null && offering.lng !== null && offering.radius_km !== null) {
-          const distance = this.haversine(
-            params.lat, params.lng,
-            Number(offering.lat), Number(offering.lng),
-          );
-          if (distance <= Number(offering.radius_km)) continue;
-          if (offering.displacement_allowed && offering.displacement_max_km !== null && distance <= Number(offering.displacement_max_km)) continue;
-          matchedGuideIds.delete(offering.guide_id);
-        }
-      }
-    }
-
+    // 4. Vérification disponibilité par date — via les sessions
     if (params.date) {
       const targetDate = new Date(params.date);
-      const targetDay = targetDate.getDay();
 
       for (const offering of offerings) {
         if (!matchedGuideIds.has(offering.guide_id)) continue;
 
+        // Chercher une session existante pour cette date
+        const session = await this.sessionRepo.findOne({
+          where: {
+            guideOffering: { id: offering.id },
+            date: targetDate,
+            status: 'available',
+          },
+        });
+
+        if (session && session.remaining_capacity !== null && session.remaining_capacity > 0) {
+          continue; // disponible via session
+        }
+
+        // Sinon vérifier les règles de disponibilité
         const rules = await this.ruleRepo.find({
           where: {
             guideOffering: { id: offering.id },
@@ -95,6 +136,7 @@ export class GuideSearchService {
           },
         });
 
+        const targetDay = targetDate.getDay();
         const isAvailable = rules.some((rule) => {
           if (rule.availability_type === 'on_demand') return true;
           if (rule.availability_type === 'date_range' || rule.availability_type === 'weekly') {
@@ -117,18 +159,5 @@ export class GuideSearchService {
       ...g,
       offerings: offeringMap.get(g.user_id) || [],
     }));
-  }
-
-  private haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
-    const R = 6371;
-    const dLat = this.toRad(lat2 - lat1);
-    const dLng = this.toRad(lng2 - lng1);
-    const a = Math.sin(dLat / 2) ** 2 +
-      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  private toRad(deg: number): number {
-    return (deg * Math.PI) / 180;
   }
 }
