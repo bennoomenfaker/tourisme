@@ -38,7 +38,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 -- 5. MISE À JOUR DES IMAGES POUR LES NOUVELLES OFFRES
 -- ============================================================================
-UPDATE offers SET images = '["/images/kayak-korba.jpg", "/images/mer-korba.jpg"]' WHERE id = '55000000-0001-0000-0000-000000000012';
-UPDATE circuits SET images = '["/images/circuit-velo-hammamet.jpg", "/images/velo-electrique.jpg"]' WHERE id = '55000000-0001-0000-0000-000000000020';
+UPDATE offers SET images = '{"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80","https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80"}' WHERE id = '55000000-0001-0000-0000-000000000012';
+UPDATE circuits SET images = '{"https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80","https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80"}' WHERE id = '55000000-0001-0000-0000-000000000020';
 
 COMMIT;

@@ -19,17 +19,19 @@ type TimelineEntryData = {
 export default function TimelineView({ entries, renderActions }: { entries: TimelineEntryData[]; renderActions?: (entry: TimelineEntryData, index: number) => React.ReactNode }) {
   if (entries.length === 0) return null;
 
-  const totalDuration = entries.reduce((s, e) => s + (e.duration_minutes ?? 0), 0);
-  const totalDistance = entries.reduce((s, e) => s + (e.distance_km ?? 0), 0);
+  const totalDuration = entries.reduce((s, e) => s + Number(e.duration_minutes ?? 0), 0);
+  const totalDistance = entries.reduce((s, e) => s + Number(e.distance_km ?? 0), 0);
+  const safeDuration = isNaN(totalDuration) ? 0 : totalDuration;
+  const safeDistance = isNaN(totalDistance) ? 0 : totalDistance;
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-4 text-xs text-slate-500 font-semibold">
-        {totalDuration > 0 && (
-          <span className="flex items-center gap-1"><Clock size={12} /> {totalDuration >= 60 ? `${Math.floor(totalDuration / 60)}h${totalDuration % 60}` : `${totalDuration}min`}</span>
+        {safeDuration > 0 && (
+          <span className="flex items-center gap-1"><Clock size={12} /> {safeDuration >= 60 ? `${Math.floor(safeDuration / 60)}h${safeDuration % 60}` : `${safeDuration}min`}</span>
         )}
-        {totalDistance > 0 && (
-          <span className="flex items-center gap-1"><MapPin size={12} /> {totalDistance.toFixed(1)} km</span>
+        {safeDistance > 0 && (
+          <span className="flex items-center gap-1"><MapPin size={12} /> {safeDistance.toFixed(1)} km</span>
         )}
         <span className="text-slate-300">·</span>
         <span>{entries.length} étapes</span>

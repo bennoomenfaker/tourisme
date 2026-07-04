@@ -1,8 +1,10 @@
 import {
   IsArray,
+  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -88,6 +90,10 @@ export class CreateCircuitDto {
   lng?: number;
 
   @IsOptional()
+  @IsString()
+  cover_image?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   images?: string[];
@@ -103,4 +109,25 @@ export class CreateCircuitDto {
   @IsOptional()
   @IsString()
   waypoints?: string;
+
+  @IsOptional()
+  @IsObject()
+  availability?: {
+    mode?: string;
+    specific_dates?: string[];
+    weekdays?: number[];
+    avail_start?: string;
+    avail_end?: string;
+    saisons?: string[];
+    heure_debut?: string;
+    heure_fin?: string;
+    delai_reponse?: string;
+  };
+
+  @IsOptional()
+  @IsObject()
+  hebergement?: {
+    inclus: boolean;
+    type?: 'same' | 'per_day';
+  };
 }

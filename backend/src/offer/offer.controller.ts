@@ -88,6 +88,26 @@ export class OfferController {
     return this.service.findByProject(projectId);
   }
 
+  /** Recherche publique d'offres filtrée par catégorie, géolocalisation (pour services externes circuits) */
+  @Public()
+  @Get('public')
+  async findPublic(
+    @Query('category') category?: string,
+    @Query('exclude_author') excludeAuthor?: string,
+    @Query('region') region?: string,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('radius_km') radiusKm?: string,
+    @Query('item_type') itemType?: string,
+  ) {
+    return this.service.findPublic(category, excludeAuthor, region, {
+      lat: lat ? Number(lat) : undefined,
+      lng: lng ? Number(lng) : undefined,
+      radiusKm: radiusKm ? Number(radiusKm) : undefined,
+      itemType,
+    });
+  }
+
   /** Lieux populaires pour la heatmap */
   @Public()
   @Get('popular-locations')

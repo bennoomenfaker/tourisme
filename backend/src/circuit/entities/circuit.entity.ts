@@ -99,11 +99,33 @@ export class Circuit {
   @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  cover_image!: string | null;
+
   @Column({ type: 'simple-array', nullable: true })
   images!: string[] | null;
 
   @Column({ type: 'text', nullable: true })
   waypoints!: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  availability!: {
+    mode?: string;
+    specific_dates?: string[];
+    weekdays?: number[];
+    avail_start?: string;
+    avail_end?: string;
+    saisons?: string[];
+    heure_debut?: string;
+    heure_fin?: string;
+    delai_reponse?: string;
+  } | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  hebergement!: {
+    inclus: boolean;
+    type?: 'same' | 'per_day';
+  } | null;
 
   @CreateDateColumn()
   created_at!: Date;

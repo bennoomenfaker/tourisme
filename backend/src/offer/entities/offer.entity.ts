@@ -105,6 +105,18 @@ export class Offer {
   @Column({ type: 'int', nullable: true })
   sustainability_score!: number | null;
 
+  // Pourcentage d'acompte (0-100%)
+  @Column({ type: 'int', nullable: true, default: 0 })
+  deposit_percentage!: number | null;
+
+  // Délai de préparation (artisanat, fabrication)
+  @Column({ type: 'int', nullable: true })
+  production_delay_days!: number | null;
+
+  // Mode d'exécution : 'instant_stock' | 'scheduled' | 'recurring' | 'on_request' | 'mixed'
+  @Column({ type: 'varchar', nullable: true })
+  fulfillment_mode!: string | null;
+
   // 'automatic' = confirmation instantanée, 'manual' = le provider valide
   @Column({ type: 'varchar', default: 'automatic' })
   confirmation_mode!: string;

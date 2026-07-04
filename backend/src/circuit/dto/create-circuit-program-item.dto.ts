@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
 
 export class CreateCircuitProgramItemDto {
   @IsString()
@@ -60,4 +60,52 @@ export class CreateCircuitProgramItemDto {
   @IsOptional()
   @IsString()
   guide_name?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  subtypes?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  price?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[];
+
+  @IsOptional()
+  @IsObject()
+  unit_details?: Record<string, any>;
+
+  @IsOptional()
+  @IsObject()
+  fields?: Record<string, any>;
+
+  @IsOptional()
+  @IsObject()
+  external_reference?: {
+    provider_name?: string;
+    phone?: string;
+    address?: string;
+    url?: string;
+    estimated_price?: number;
+    currency?: string;
+    notes?: string;
+    type?: 'hebergement' | 'restaurant' | 'activite' | 'transport';
+  };
+
+  @IsOptional()
+  @IsBoolean()
+  is_external_reference?: boolean;
+
+  @IsOptional()
+  @IsString()
+  external_provider_name?: string;
 }

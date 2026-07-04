@@ -1,7 +1,7 @@
 # TODO & Progression — Tourisme Platform
 
 > Dernière mise à jour : 3 juillet 2026  
-> Version : **v2.0** — Plateforme complète avec circuits, guides, réservations
+> Version : **v2.1** — Plateforme complète avec circuits, guides, réservations + fix images
 
 ---
 

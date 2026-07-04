@@ -1301,6 +1301,119 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     },
     display: { cardFields: ['eco_custom_name', 'duree', 'niveau_offre', 'pratiques_eco'], filterable: ['niveau_offre', 'pratiques_eco'] },
   },
+
+  // ───────── CIRCUIT (inspiré Maram) ─────────
+
+  circuit_nature: {
+    key: 'circuit_nature',
+    label: 'Circuit nature',
+    category: 'circuit',
+    sections: [
+      { id: 'general', label: 'Informations', fields: ['circuit_nom', 'circuit_duree_jours', 'circuit_difficulte', 'circuit_periode', 'circuit_langues'] },
+      { id: 'programme', label: 'Programme détaillé', fields: ['programme_jours'] },
+      { id: 'hebergement', label: 'Hébergement', fields: ['refuge_inclus', 'type_hebergement_circuit', 'nuit_etoile', 'unit_details'] },
+      { id: 'logistics', label: 'Logistique', fields: ['point_depart', 'point_arrivee', 'transport_inclus', 'equipement_fourni_circuit'] },
+    ],
+    fields: {
+      circuit_nom: { type: 'text', required: true, label: "Nom du circuit" },
+      circuit_duree_jours: { type: 'number', required: true, label: 'Durée (jours)', min: 1, max: 30 },
+      circuit_difficulte: { type: 'select', required: true, label: 'Difficulté', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' }, { value: 'expert', label: 'Expert' },
+      ]},
+      circuit_periode: { type: 'multiselect', label: 'Période recommandée', options: [
+        { value: 'printemps', label: 'Printemps' }, { value: 'ete', label: 'Été' },
+        { value: 'automne', label: 'Automne' }, { value: 'hiver', label: 'Hiver' },
+      ]},
+      circuit_langues: { type: 'multiselect', label: 'Langues', options: [
+        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
+        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
+        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
+      ]},
+      programme_jours: { type: 'textarea', label: 'Programme jour par jour', placeholder: 'Jour 1 : Arrivée et installation...\nJour 2 : Randonnée guidée...' },
+      refuge_inclus: { type: 'boolean', label: 'Nuit en refuge incluse' },
+      type_hebergement_circuit: { type: 'select', label: "Type d'hébergement", options: [
+        { value: 'refuge', label: 'Refuge' }, { value: 'tente', label: 'Tente / Bivouac' },
+        { value: 'gite', label: "Gîte d'étape" }, { value: 'ecolodge', label: 'Éco-lodge' },
+        { value: 'chez_habitant', label: "Chez l'habitant" }, { value: 'mixte', label: 'Mixte' },
+      ]},
+      nuit_etoile: { type: 'boolean', label: 'Nuit à la belle étoile possible' },
+      unit_details: { type: 'textarea', label: "Détail des unités", placeholder: 'Ex: 2 tentes 2 places, 1 refuge 6 pers...' },
+      point_depart: { type: 'text', label: 'Point de départ' },
+      point_arrivee: { type: 'text', label: "Point d'arrivée" },
+      transport_inclus: { type: 'boolean', label: 'Transport inclus' },
+      equipement_fourni_circuit: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'tente', label: 'Tente' }, { value: 'sac_couchage', label: 'Sac de couchage' },
+        { value: 'matelas', label: 'Matelas' }, { value: 'rechaud', label: 'Réchaud' },
+        { value: 'gourde', label: "Gourde d'eau" }, { value: 'baton_marche', label: 'Bâtons de marche' },
+      ]},
+    },
+    display: { cardFields: ['circuit_nom', 'circuit_duree_jours', 'circuit_difficulte'], filterable: ['circuit_difficulte', 'circuit_periode', 'type_hebergement_circuit', 'refuge_inclus'] },
+  },
+
+  circuit_culturel: {
+    key: 'circuit_culturel',
+    label: 'Circuit culturel',
+    category: 'circuit',
+    sections: [
+      { id: 'general', label: 'Informations', fields: ['circuit_nom', 'circuit_duree_jours', 'themes_visite', 'circuit_langues'] },
+      { id: 'programme', label: 'Programme', fields: ['programme_jours'] },
+      { id: 'hebergement', label: 'Hébergement', fields: ['type_hebergement_circuit', 'refuge_inclus'] },
+    ],
+    fields: {
+      circuit_nom: { type: 'text', required: true, label: "Nom du circuit" },
+      circuit_duree_jours: { type: 'number', required: true, label: 'Durée (jours)', min: 1, max: 30 },
+      themes_visite: { type: 'multiselect', label: 'Thèmes', options: [
+        { value: 'histoire', label: 'Histoire' }, { value: 'architecture', label: 'Architecture' },
+        { value: 'artisanat', label: 'Artisanat' }, { value: 'gastronomie', label: 'Gastronomie' },
+        { value: 'musique', label: 'Musique' }, { value: 'patrimoine', label: 'Patrimoine' },
+      ]},
+      circuit_langues: { type: 'multiselect', label: 'Langues', options: [
+        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
+        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
+        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
+      ]},
+      programme_jours: { type: 'textarea', label: 'Programme jour par jour', placeholder: 'Jour 1 : Visite de la médina...' },
+      type_hebergement_circuit: { type: 'select', label: "Type d'hébergement", conditionalOn: { field: 'refuge_inclus', value: true }, options: [
+        { value: 'hotel', label: 'Hôtel' }, { value: 'riad', label: 'Riad / Dar' },
+        { value: 'ecolodge', label: 'Éco-lodge' }, { value: 'chez_habitant', label: "Chez l'habitant" },
+      ]},
+      refuge_inclus: { type: 'boolean', label: 'Hébergement inclus' },
+    },
+    display: { cardFields: ['circuit_nom', 'circuit_duree_jours', 'themes_visite'], filterable: ['themes_visite', 'refuge_inclus'] },
+  },
+
+  transport_service: {
+    key: 'transport_service',
+    label: 'Service transport',
+    category: 'transport',
+    sections: [
+      { id: 'route', label: 'Trajet', fields: ['type_vehicule', 'point_depart', 'point_arrivee', 'duree_trajet', 'distance_trajet_km'] },
+      { id: 'capacity', label: 'Capacité', fields: ['nb_places', 'bagages_autorises'] },
+      { id: 'options', label: 'Options', fields: ['aller_retour', 'arrets_intermediaires', 'inclus'] },
+    ],
+    fields: {
+      type_vehicule: { type: 'select', required: true, label: 'Type de véhicule', options: [
+        { value: '4x4', label: '4x4' }, { value: 'minibus', label: 'Minibus' },
+        { value: 'bus', label: 'Bus' }, { value: 'van', label: 'Van' },
+        { value: 'bateau', label: 'Bateau' }, { value: 'cheval', label: 'Cheval / Calèche' },
+        { value: 'dromadaire', label: 'Dromadaire' },
+      ]},
+      point_depart: { type: 'text', required: true, label: 'Point de départ' },
+      point_arrivee: { type: 'text', required: true, label: "Point d'arrivée" },
+      duree_trajet: { type: 'text', required: true, label: 'Durée estimée', placeholder: '2h / 1 journée' },
+      distance_trajet_km: { type: 'number', label: 'Distance (km)', unit: 'km' },
+      nb_places: { type: 'number', required: true, label: 'Nombre de places', min: 1 },
+      bagages_autorises: { type: 'boolean', label: 'Bagages autorisés' },
+      aller_retour: { type: 'boolean', label: 'Aller-retour' },
+      arrets_intermediaires: { type: 'text', label: "Arrêts intermédiaires" },
+      inclus: { type: 'multiselect', label: 'Inclus', options: [
+        { value: 'chauffeur', label: 'Chauffeur' }, { value: 'guide', label: 'Guide accompagnateur' },
+        { value: 'assurance', label: 'Assurance voyage' }, { value: 'rafraichissements', label: 'Rafraîchissements' },
+      ]},
+    },
+    display: { cardFields: ['type_vehicule', 'duree_trajet', 'nb_places'], filterable: ['type_vehicule', 'aller_retour'] },
+  },
 };
 
 export function getSchema(category: string, itemType: string): OfferTypeSchema | null {

@@ -148,93 +148,93 @@ INSERT INTO offer_item_sessions (id, offer_item_id, date, start_time, end_time, 
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
--- 5. UPDATE OFFER IMAGES WITH LOCAL IMAGES
+-- 5. UPDATE OFFER IMAGES WITH REAL UNSPLASH IMAGES
 -- ============================================================================
-UPDATE offers SET images = ARRAY['/images/artisanat5.jpeg', '/images/artisanat7.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1590595906931-81f04f0ccebb?w=800&q=80'
   WHERE id = 'f16e1dee-4290-44ff-9161-b9aedb2059a0';  -- Atelier Poterie Djerba
 
-UPDATE offers SET images = ARRAY['/images/artisanat-vase.jpeg', '/images/artisanat1.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1590595906931-81f04f0ccebb?w=800&q=80'
   WHERE id = '55000000-0001-0000-0000-000000000014';  -- Atelier Poterie Traditionnelle
 
-UPDATE offers SET images = ARRAY['/images/artisanat-poterie.jpeg', '/images/artisanat-zarbiya.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1590595906931-81f04f0ccebb?w=800&q=80'
   WHERE id = '91a8a549-70f4-4571-9f95-96a31ec5c042';  -- Atelier poterie de Guellala
 
-UPDATE offers SET images = ARRAY['/images/tente.jpeg', '/images/tente-mer.jpeg', '/images/picine.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80,https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800&q=80,https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80'
   WHERE id = '5db6c295-e655-452b-a758-22697e3a1f90';  -- Camping Vert Djerba
 
-UPDATE offers SET images = ARRAY['/images/matmata.jpeg', '/images/matmata1.jpeg', '/images/hebergement-prive.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=800&q=80,https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80,https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80'
   WHERE id = '55000000-0001-0000-0000-000000000015';  -- Chambre Troglodyte Matmata
 
-UPDATE offers SET images = ARRAY['/images/bicycle-montagne.jpeg', '/images/rando-montagne.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80,https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'
   WHERE id = '55000000-0001-0000-0000-000000000013';  -- Circuit Vélo Éco Hammamet
 
-UPDATE offers SET images = ARRAY['/images/couscous.jpeg', '/images/food.jpeg', '/images/food-sahara.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80,https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80,https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=800&q=80'
   WHERE id = 'cf04faaf-b5f4-4200-ad68-2015deda136b';  -- Cours de Cuisine Djerbienne
 
-UPDATE offers SET images = ARRAY['/images/dortoir.jpeg', '/images/dortoir1.jpeg', '/images/dortoir2.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80,https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80,https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80'
   WHERE id = '609a5dc8-2b00-4880-a336-44ca4a7c9ca6';  -- Dar El Jadid - Eco-lodge Djerba
 
-UPDATE offers SET images = ARRAY['/images/sahara.jpeg', '/images/camel-sahara.jpeg', '/images/tente-nuit-montagne.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80,https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&q=80'
   WHERE id = 'a09c3481-ca93-4ae6-9b5b-90bb5a7d4e1b';  -- Eco Lodge Sahara
 
-UPDATE offers SET images = ARRAY['/images/kayak.jpeg', '/images/paddle-kayak.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80'
   WHERE id = 'e5feb3b8-1c3d-4f59-91b5-42a9742e8a4d';  -- Kayak côtier Djerba
 
-UPDATE offers SET images = ARRAY['/images/kayak.jpeg', '/images/paddle-kayak.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80'
   WHERE id = '55000000-0001-0000-0000-000000000012';  -- Kayak de Mer Korba
 
-UPDATE offers SET images = ARRAY['/images/tente-nuit-montagne.jpeg', '/images/sahara.jpeg', '/images/camel-sahara.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80,https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&q=80'
   WHERE id = 'b37d6761-c98c-452d-b5a8-1076c9dac33d';  -- Nuit sous les Étoiles
 
-UPDATE offers SET images = ARRAY['/images/quad-sahara.jpeg', '/images/sahara.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1569383746724-6f1b882b8f46?w=800&q=80,https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80'
   WHERE id = 'c4b8ad00-9ee5-48cf-ae94-2eb03c5965b3';  -- Quad dans le Sahara
 
-UPDATE offers SET images = ARRAY['/images/rando-montagne.jpeg', '/images/bicycle-montagne.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80,https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80'
   WHERE id = 'a643b504-0360-432f-837b-2c0ce034867a';  -- Rando Côtière Djerba
 
-UPDATE offers SET images = ARRAY['/images/matmata.jpeg', '/images/matmata1.jpeg', '/images/rando-montagne.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=800&q=80,https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80,https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80'
   WHERE id = 'ba16f8a9-5654-4a24-a462-3874acb54f9d';  -- Randonnée Matmata & Soumat
 
-UPDATE offers SET images = ARRAY['/images/sahara.jpeg', '/images/camel-sahara.jpeg', '/images/food-sahara.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80,https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80'
   WHERE id = '83db1931-581d-44e4-b303-c72d48aefa93';  -- Safari désert Tozeur
 
-UPDATE offers SET images = ARRAY['/images/hebergement-prive.jpeg', '/images/sahara.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80,https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80'
   WHERE id = '980fae77-3b9d-4694-9bf1-e10b6674d9c5';  -- Séjour Luxe Désert
 
-UPDATE offers SET images = ARRAY['/images/dortoir1.jpeg', '/images/montagne.jpeg', '/images/rando-montagne.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80,https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80'
   WHERE id = 'fad430ba-e36c-4606-9d54-768693fa644a';  -- Séjour éco-lodge 3 jours
 
-UPDATE offers SET images = ARRAY['/images/artisanat4.jpeg', '/images/kayak.jpeg', '/images/artisanat1.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80,https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80'
   WHERE id = '689e885e-21bd-44cc-8066-d97a11af50ef';  -- Tour de l'île de Djerba
 
-UPDATE offers SET images = ARRAY['/images/kayak.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80'
   WHERE id = '57265bf7-87db-4e71-b30f-740922497f65';  -- actv kayak
 
-UPDATE offers SET images = ARRAY['/images/dortoir.jpeg', '/images/dortoir1.jpeg']
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80,https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80'
   WHERE id = '7f721ade-5fda-482c-a732-130ba6bcd464';  -- herbegement
 
 -- ============================================================================
--- 6. UPDATE CIRCUIT IMAGES WITH LOCAL IMAGES
+-- 6. UPDATE CIRCUIT IMAGES WITH REAL UNSPLASH IMAGES
 -- ============================================================================
-UPDATE circuits SET images = ARRAY['/images/sahara.jpeg', '/images/camel-sahara.jpeg', '/images/tente-nuit-montagne.jpeg', '/images/food-sahara.jpeg']
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80,https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&q=80,https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80'
   WHERE id = 'fa77f9d8-1a7e-409e-be72-77db416d583b';  -- Aventure Sahara & Désert 5 jours
 
-UPDATE circuits SET images = ARRAY['/images/kayak.jpeg', '/images/paddle-kayak.jpeg', '/images/artisanat4.jpeg']
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80,https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80'
   WHERE id = 'a3dc5401-503f-4233-ab4a-dc65679938e9';  -- Djerba Éco-Trek
 
-UPDATE circuits SET images = ARRAY['/images/artisanat1.jpeg', '/images/artisanat4.jpeg', '/images/couscous.jpeg', '/images/matmata.jpeg']
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80,https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=800&q=80'
   WHERE id = '6286037d-107f-45ab-bedf-cf08c4adfe55';  -- Découverte de Djerba 4 jours
 
-UPDATE circuits SET images = ARRAY['/images/artisanat2.jpeg', '/images/artisanat-zarbiya.jpeg']
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1590595906931-81f04f0ccebb?w=800&q=80'
   WHERE id = '6131c1d2-89f7-4994-ba54-2abab31feac8';  -- Kairouan & Sousse Culturel
 
-UPDATE circuits SET images = ARRAY['/images/sahara.jpeg', '/images/tente.jpeg', '/images/camel-sahara.jpeg', '/images/food-sahara.jpeg']
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80,https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80'
   WHERE id = '2e3040ed-a410-4827-a8e2-c5a52cfa9a7d';  -- Sahara Authentique 4 jours
 
-UPDATE circuits SET images = ARRAY['/images/hebergement-prive.jpeg', '/images/sahara.jpeg', '/images/camel-sahara.jpeg']
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80,https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80'
   WHERE id = 'ddf645f5-8aa6-4753-8a93-b46fa6e12b61';  -- Sahara Luxe VIP
 
-UPDATE circuits SET images = ARRAY['/images/matmata.jpeg', '/images/matmata1.jpeg', '/images/artisanat1.jpeg']
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=800&q=80,https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80,https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80'
   WHERE id = 'e76a73d9-db05-4e02-bcc6-10e8edf5defd';  -- circuit 1
 
 DO $$

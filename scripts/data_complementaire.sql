@@ -81,11 +81,11 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 -- 11. MISE À JOUR DES IMAGES
 -- ============================================================================
-UPDATE offers SET images = '["/images/velo-eco-hammamet.jpg", "/images/forêt-hammamet.jpg"]' WHERE id = '55000000-0001-0000-0000-000000000013';
-UPDATE offers SET images = '["/images/atelier-poterie.jpg", "/images/artisant-traditionnel.jpg"]' WHERE id = '55000000-0001-0000-0000-000000000014';
-UPDATE offers SET images = '["/images/chambre-troglodyte-matmata.jpg", "/images/matmata-vue.jpg"]' WHERE id = '55000000-0001-0000-0000-000000000015';
+UPDATE offers SET images = '{"https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80","https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80"}' WHERE id = '55000000-0001-0000-0000-000000000013';
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1590595906931-81f04f0ccebb?w=800&q=80' WHERE id = '55000000-0001-0000-0000-000000000014';
+UPDATE offers SET images = 'https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=800&q=80,https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80' WHERE id = '55000000-0001-0000-0000-000000000015';
 
-UPDATE circuits SET images = '["/images/vtt-hammamet.jpg", "/images/collines-korbous.jpg"]' WHERE id = '55000000-0001-0000-0000-000000000021';
-UPDATE circuits SET images = '["/images/artisans-hammamet.jpg", "/images/ceramique-nabeul.jpg"]' WHERE id = '55000000-0001-0000-0000-000000000022';
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80,https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80' WHERE id = '55000000-0001-0000-0000-000000000021';
+UPDATE circuits SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1590595906931-81f04f0ccebb?w=800&q=80' WHERE id = '55000000-0001-0000-0000-000000000022';
 
 COMMIT;

@@ -28,6 +28,52 @@ const PROG_EMOJIS = ["📍", "🚐", "🥾", "🛶", "🏛️", "🍽️", "🏕
 
 const PROG_TRANSPORTS = ["", "🚐 Van", "🥾 À pied", "🚲 Vélo", "🐪 Chameau", "🚗 Voiture", "🛶 Kayak", "🐴 Cheval", "🚌 Bus", "✈️ Vol", "🚣 Barque"];
 
+const PROG_CATEGORIES = [
+  { value: "hebergement", label: "🏨 Hébergement" },
+  { value: "activite", label: "🥾 Activité" },
+  { value: "restauration", label: "🍽️ Restauration" },
+  { value: "transport", label: "🚌 Transport" },
+  { value: "workshop", label: "🎨 Atelier" },
+];
+
+const PROG_SUBTYPES: Record<string, { value: string; label: string }[]> = {
+  activite: [
+    { value: "randonnee", label: "🥾 Randonnée" },
+    { value: "kayak", label: "🛶 Kayak" },
+    { value: "velo", label: "🚲 Vélo" },
+    { value: "visite", label: "🏛️ Visite culturelle" },
+    { value: "plage", label: "🏖️ Plage / Baignade" },
+    { value: "observation", label: "🦅 Observation nature" },
+    { value: "quad", label: "🏎️ Quad / 4x4" },
+    { value: "plongee", label: "🤿 Plongée" },
+    { value: "equitation", label: "🐴 Équitation" },
+  ],
+  restauration: [
+    { value: "petit_dejeuner", label: "🥐 Petit-déjeuner" },
+    { value: "dejeuner", label: "🍱 Déjeuner" },
+    { value: "diner", label: "🍷 Dîner" },
+    { value: "degustation", label: "🧀 Dégustation" },
+  ],
+  hebergement: [
+    { value: "hotel", label: "🏨 Hôtel" },
+    { value: "ecolodge", label: "🌿 Écolodge" },
+    { value: "camping", label: "⛺ Camping" },
+    { value: "gite", label: "🏡 Gîte / Maison d'hôte" },
+  ],
+  transport: [
+    { value: "van", label: "🚐 Van privé" },
+    { value: "bus", label: "🚌 Bus" },
+    { value: "bateau", label: "⛵ Bateau" },
+    { value: "vol", label: "✈️ Vol" },
+  ],
+  workshop: [
+    { value: "cuisine", label: "👨‍🍳 Cuisine" },
+    { value: "artisanat", label: "🎨 Artisanat" },
+    { value: "yoga", label: "🧘 Yoga / Bien-être" },
+    { value: "musique", label: "🎵 Musique / Danse" },
+  ],
+};
+
 interface CircuitProgramItem {
   id: string;
   title: string;
@@ -43,6 +89,14 @@ interface CircuitProgramItem {
   guide_id: string | null;
   guide_name: string | null;
   linked_offer_item_id: string | null;
+  category: string | null;
+  subtypes: string[] | null;
+  price: number | null;
+  photos: string[] | null;
+  fields: Record<string, any> | null;
+  unit_details: Record<string, any> | null;
+  external_reference: Record<string, any> | null;
+  is_external_reference: boolean;
 }
 
 interface CircuitDay {
@@ -91,6 +145,7 @@ interface CircuitDetails {
   status: string;
   currency: string;
   images: string[] | null;
+  cover_image: string | null;
   days: CircuitDay[];
   options: CircuitOption[];
 }
@@ -125,6 +180,7 @@ export default function CircuitDetailPage() {
   const [editLng, setEditLng] = useState<number | null>(null);
   const [editAddress, setEditAddress] = useState("");
   const [editImages, setEditImages] = useState<string[]>([]);
+  const [editCoverImage, setEditCoverImage] = useState("");
   const [editInclusions, setEditInclusions] = useState("");
   const [editExclusions, setEditExclusions] = useState("");
   const [editConfirmationMode, setEditConfirmationMode] = useState("automatic");
@@ -179,6 +235,11 @@ export default function CircuitDetailPage() {
   const [progGuideId, setProgGuideId] = useState<string | null>(null);
   const [progGuideName, setProgGuideName] = useState<string | null>(null);
   const [progWithGuide, setProgWithGuide] = useState(false);
+
+  const [progCategory, setProgCategory] = useState("activite");
+  const [progSubtypes, setProgSubtypes] = useState<string[]>([]);
+  const [progPrice, setProgPrice] = useState("");
+  const [progPhotos, setProgPhotos] = useState<string[]>([]);
 
   const [showEditMap, setShowEditMap] = useState(false);
   const [showDayMap, setShowDayMap] = useState(false);
@@ -288,6 +349,7 @@ export default function CircuitDetailPage() {
   const canReserve = user?.role === "eco_traveler";
   const effectivePrice = circuit?.base_price ?? 0;
   const availableOptions = circuit?.options?.filter((o) => o.status === "active" && !o.is_included) ?? [];
+  const totalDistance = circuit?.days?.reduce((sum, d) => sum + (d.programItems?.reduce((s, p) => s + (Number(p.distance_km) || 0), 0) || 0), 0) || 0;
 
   function handleOptionToggle(optionId: string, optionType: string) {
     if (optionType === "multiple_choice") {
@@ -387,6 +449,7 @@ export default function CircuitDetailPage() {
     if (editLng !== null) body.lng = editLng;
     if (editAddress) body.address = editAddress;
     if (editImages.length > 0) body.images = editImages;
+    if (editCoverImage) body.cover_image = editCoverImage;
     if (editInclusions) body.inclusions = editInclusions;
     if (editExclusions) body.exclusions = editExclusions;
     if (editConfirmationMode) body.confirmation_mode = editConfirmationMode;
@@ -518,6 +581,10 @@ export default function CircuitDetailPage() {
           guide_id: progWithGuide ? (progGuideId || null) : null,
           guide_name: progWithGuide ? (progGuideName || null) : null,
           linked_offer_item_id: progLinkedOfferItemId || null,
+          category: progCategory || undefined,
+          subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
+          price: progPrice ? parseFloat(progPrice) : undefined,
+          photos: progPhotos.length > 0 ? progPhotos : undefined,
         }),
       });
       setEditProgramItem(null);
@@ -560,6 +627,10 @@ export default function CircuitDetailPage() {
           guide_id: progWithGuide ? (progGuideId || undefined) : undefined,
           guide_name: progWithGuide ? (progGuideName || undefined) : undefined,
           linked_offer_item_id: progLinkedOfferItemId || undefined,
+          category: progCategory || undefined,
+          subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
+          price: progPrice ? parseFloat(progPrice) : undefined,
+          photos: progPhotos.length > 0 ? progPhotos : undefined,
         }),
       });
       setShowAddProgram(null);
@@ -567,6 +638,7 @@ export default function CircuitDetailPage() {
       setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport("");
       setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false);
       setProgLinkedOfferItemId(null);
+      setProgCategory("activite"); setProgSubtypes([]); setProgPrice(""); setProgPhotos([]);
       loadCircuit();
     } catch (err: any) {
       setReserveError(err.message || "Erreur lors de l'ajout du programme");
@@ -610,23 +682,28 @@ export default function CircuitDetailPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          {circuit.images && circuit.images.length > 0 ? (
+          {(() => {
+            const allImages = circuit.cover_image
+              ? [circuit.cover_image, ...(circuit.images || [])]
+              : (circuit.images || []);
+            if (allImages.length === 0) return null;
+            return (
             <div className="relative h-64 bg-slate-900">
-              <img src={circuit.images[galleryIdx]} alt={circuit.title} className="w-full h-full object-cover" />
+              <img src={allImages[galleryIdx]} alt={circuit.title} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-              {circuit.images.length > 1 && (
+              {allImages.length > 1 && (
                 <>
-                  <button onClick={() => setGalleryIdx((i) => (i - 1 + circuit.images!.length) % circuit.images!.length)} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70"><ArrowLeft size={18} /></button>
-                  <button onClick={() => setGalleryIdx((i) => (i + 1) % circuit.images!.length)} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70"><ArrowLeft size={18} className="rotate-180" /></button>
+                  <button onClick={() => setGalleryIdx((i) => (i - 1 + allImages.length) % allImages.length)} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70"><ArrowLeft size={18} /></button>
+                  <button onClick={() => setGalleryIdx((i) => (i + 1) % allImages.length)} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70"><ArrowLeft size={18} className="rotate-180" /></button>
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                    {circuit.images.map((_, i) => (
+                    {allImages.map((_, i) => (
                       <button key={i} onClick={() => setGalleryIdx(i)} className={`w-2 h-2 rounded-full transition-all ${i === galleryIdx ? "bg-white scale-125" : "bg-white/50"}`} />
                     ))}
                   </div>
                 </>
               )}
-            </div>
-          ) : (
+            </div>);
+          })() || (
             <div className="h-48 bg-gradient-to-br from-emerald-100 to-teal-200 flex items-center justify-center">
               <Leaf size={48} className="text-emerald-400 opacity-50" />
             </div>
@@ -645,7 +722,7 @@ export default function CircuitDetailPage() {
 
             {isAuthor && (
               <div className="flex flex-wrap gap-2 mb-4">
-                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setEditInclusions(circuit.inclusions ?? ""); setEditExclusions(circuit.exclusions ?? ""); setEditConfirmationMode(circuit.confirmation_mode ?? "automatic"); setEditDifficultyLevel(circuit.difficulty_level ?? "moderate"); setEditBookingDeadlineDays(String(circuit.booking_deadline_days ?? "")); setEditCurrency(circuit.currency ?? "TND"); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
+                <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setEditCoverImage(circuit.cover_image ?? ""); setEditInclusions(circuit.inclusions ?? ""); setEditExclusions(circuit.exclusions ?? ""); setEditConfirmationMode(circuit.confirmation_mode ?? "automatic"); setEditDifficultyLevel(circuit.difficulty_level ?? "moderate"); setEditBookingDeadlineDays(String(circuit.booking_deadline_days ?? "")); setEditCurrency(circuit.currency ?? "TND"); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
                   <Edit size={14} /> Modifier
                 </button>
                 <button onClick={() => setShowAddDay(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-primary border border-emerald-200 hover:bg-emerald-100">
@@ -714,8 +791,8 @@ export default function CircuitDetailPage() {
               <p className="text-slate-600 leading-relaxed mb-4 whitespace-pre-line">{circuit.description}</p>
             )}
 
-            {/* ─── Dates & Délais ───────────────────────────── */}
-            {(circuit.start_date || circuit.end_date || circuit.booking_deadline_days !== null) && (
+            {/* ─── Dates, Distance & Délais ────────────────── */}
+            {(circuit.start_date || circuit.end_date || circuit.booking_deadline_days !== null || totalDistance > 0) && (
               <div className="bg-blue-50 rounded-xl p-3 mb-4 text-sm space-y-1.5">
                 {circuit.start_date && circuit.end_date && (
                   <div className="flex items-center gap-1.5 text-blue-700">
@@ -724,7 +801,14 @@ export default function CircuitDetailPage() {
                       Du {new Date(circuit.start_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                       {" au "}
                       {new Date(circuit.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                      {circuit.duration_days ? ` (${circuit.duration_days}j)` : ""}
                     </span>
+                  </div>
+                )}
+                {totalDistance > 0 && (
+                  <div className="flex items-center gap-1.5 text-blue-700">
+                    <MapPin size={14} />
+                    <span>Distance totale du circuit : ~{totalDistance.toFixed(1)} km</span>
                   </div>
                 )}
                 {circuit.booking_deadline_days !== null && (
@@ -814,7 +898,7 @@ export default function CircuitDetailPage() {
                                               <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0 mr-1">Requis</span>
                                             )}
                                             <button
-                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); }}
+                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); setProgCategory(item.category ?? "activite"); setProgSubtypes(item.subtypes ?? []); setProgPrice(item.price?.toString() ?? ""); setProgPhotos(item.photos ?? []); }}
                                               className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
                                             >
                                               <Edit size={11} />
@@ -1029,11 +1113,11 @@ export default function CircuitDetailPage() {
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Début</label>
-              <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+              <input type="date" value={editStartDate} onChange={(e) => { setEditStartDate(e.target.value); if (e.target.value && editEndDate) { const diff = Math.ceil((new Date(editEndDate).getTime() - new Date(e.target.value).getTime()) / (1000*60*60*24)) + 1; if (diff > 0) setEditDays(String(diff)); } }} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Fin</label>
-              <input type="date" value={editEndDate} onChange={(e) => setEditEndDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+              <input type="date" value={editEndDate} onChange={(e) => { setEditEndDate(e.target.value); if (editStartDate && e.target.value) { const diff = Math.ceil((new Date(e.target.value).getTime() - new Date(editStartDate).getTime()) / (1000*60*60*24)) + 1; if (diff > 0) setEditDays(String(diff)); } }} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Délai réservation</label>
@@ -1066,6 +1150,12 @@ export default function CircuitDetailPage() {
           <textarea value={editInclusions} onChange={(e) => setEditInclusions(e.target.value)} placeholder="Inclus (ex: Transport, hébergement, guide...)" rows={2} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
           <textarea value={editExclusions} onChange={(e) => setEditExclusions(e.target.value)} placeholder="Non inclus (ex: Repas du soir...)" rows={2} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
           <ImageUploader images={editImages} onChange={setEditImages} maxImages={5} label="Images du circuit" />
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Image de couverture (optionnelle)</label>
+            <input value={editCoverImage} onChange={(e) => setEditCoverImage(e.target.value)}
+              placeholder="https://images.unsplash.com/photo-..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -1236,6 +1326,48 @@ export default function CircuitDetailPage() {
             </div>
           </div>
 
+          {/* ─── Catégorie, sous-types, prix, photos ──────── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Catégorie</label>
+              <select value={progCategory} onChange={(e) => { setProgCategory(e.target.value); setProgSubtypes([]); }} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                {PROG_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Prix (optionnel)</label>
+              <input type="number" min={0} step="0.01" value={progPrice} onChange={(e) => setProgPrice(e.target.value)} placeholder="ex: 25" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+
+          {PROG_SUBTYPES[progCategory] && PROG_SUBTYPES[progCategory].length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Sous-types</label>
+              <div className="flex flex-wrap gap-1.5">
+                {PROG_SUBTYPES[progCategory].map((st) => (
+                  <button key={st.value} type="button" onClick={() => {
+                    setProgSubtypes((prev) => prev.includes(st.value) ? prev.filter((v) => v !== st.value) : [...prev, st.value]);
+                  }} className={`text-xs px-2.5 py-1 rounded-full border transition-all ${progSubtypes.includes(st.value) ? "bg-primary/10 border-primary text-primary" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Photos (URLs, optionnel)</label>
+            <input value={progPhotos[0] || ""} onChange={(e) => setProgPhotos(e.target.value ? [e.target.value] : [])} placeholder="https://..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            {progPhotos.length > 0 && progPhotos[0] && (
+              <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
+                <img src={progPhotos[0]} alt="" className="w-full h-full object-cover" />
+                <button onClick={() => setProgPhotos([])} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px]">✕</button>
+              </div>
+            )}
+          </div>
+
           {/* ─── Guide optionnel (inline) ──────────────── */}
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
             <input type="checkbox" checked={progWithGuide} onChange={(e) => { setProgWithGuide(e.target.checked); if (!e.target.checked) { setProgGuideId(null); setProgGuideName(null); } }} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
@@ -1373,6 +1505,48 @@ export default function CircuitDetailPage() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* ─── Catégorie, sous-types, prix, photos ──────── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Catégorie</label>
+              <select value={progCategory} onChange={(e) => { setProgCategory(e.target.value); setProgSubtypes([]); }} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                {PROG_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Prix (optionnel)</label>
+              <input type="number" min={0} step="0.01" value={progPrice} onChange={(e) => setProgPrice(e.target.value)} placeholder="ex: 25" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+
+          {PROG_SUBTYPES[progCategory] && PROG_SUBTYPES[progCategory].length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Sous-types</label>
+              <div className="flex flex-wrap gap-1.5">
+                {PROG_SUBTYPES[progCategory].map((st) => (
+                  <button key={st.value} type="button" onClick={() => {
+                    setProgSubtypes((prev) => prev.includes(st.value) ? prev.filter((v) => v !== st.value) : [...prev, st.value]);
+                  }} className={`text-xs px-2.5 py-1 rounded-full border transition-all ${progSubtypes.includes(st.value) ? "bg-primary/10 border-primary text-primary" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-500">Photos (URLs, optionnel)</label>
+            <input value={progPhotos[0] || ""} onChange={(e) => setProgPhotos(e.target.value ? [e.target.value] : [])} placeholder="https://..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            {progPhotos.length > 0 && progPhotos[0] && (
+              <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
+                <img src={progPhotos[0]} alt="" className="w-full h-full object-cover" />
+                <button onClick={() => setProgPhotos([])} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px]">✕</button>
+              </div>
+            )}
           </div>
 
           {/* ─── Guide optionnel (inline) ──────────────── */}

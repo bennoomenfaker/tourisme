@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Offer } from './entities/offer.entity';
 import { OfferCategory } from './entities/offer-category.entity';
 import { OfferItem } from './entities/offer-item.entity';
@@ -103,6 +103,9 @@ export class OfferService {
       min_age: dto.min_age ?? null,
       cancellation_policy: dto.cancellation_policy ?? null,
       confirmation_mode: dto.confirmation_mode ?? 'automatic',
+      deposit_percentage: dto.deposit_percentage ?? 0,
+      production_delay_days: dto.production_delay_days ?? null,
+      fulfillment_mode: dto.fulfillment_mode ?? null,
       project_id: dto.project_id ?? null,
       location_type: locationType,
       status: initialStatus,
@@ -125,6 +128,38 @@ export class OfferService {
       where: { author_id: authorId, status: 'approved' },
       order: { created_at: 'DESC' },
     });
+  }
+
+  async findPublic(
+    category?: string,
+    excludeAuthor?: string,
+    region?: string,
+    geo?: { lat?: number; lng?: number; radiusKm?: number; itemType?: string },
+  ): Promise<Offer[]> {
+    const qb = this.repo.createQueryBuilder('offer')
+      .leftJoinAndSelect('offer.items', 'items')
+      .leftJoinAndSelect('items.prices', 'prices')
+      .leftJoinAndSelect('offer.project', 'project')
+      .where('offer.status = :status', { status: 'approved' });
+
+    if (category) qb.andWhere('offer.offer_type = :category', { category });
+    if (excludeAuthor) qb.andWhere('offer.author_id != :ex', { ex: excludeAuthor });
+    if (region) qb.andWhere('offer.region = :region', { region });
+    if (geo?.itemType) qb.andWhere('items.item_type = :itemType', { itemType: geo.itemType });
+
+    if (geo?.lat !== undefined && geo?.lng !== undefined && geo?.radiusKm !== undefined) {
+      const radiusMeters = geo.radiusKm * 1000;
+      qb.andWhere(
+        `ST_DWithin(
+          ST_MakePoint(offer.longitude, offer.latitude)::geography,
+          ST_MakePoint(:lng, :lat)::geography,
+          :radius
+        )`,
+        { lng: geo.lng, lat: geo.lat, radius: radiusMeters },
+      );
+    }
+
+    return qb.orderBy('offer.created_at', 'DESC').getMany();
   }
 
   async findAllPublic(region?: string): Promise<Offer[]> {
@@ -194,6 +229,9 @@ export class OfferService {
     if (dto.confirmation_mode !== undefined) offer.confirmation_mode = dto.confirmation_mode;
     if (dto.status !== undefined) offer.status = dto.status;
     if (dto.location_type !== undefined) offer.location_type = dto.location_type;
+    if (dto.deposit_percentage !== undefined) offer.deposit_percentage = dto.deposit_percentage;
+    if (dto.production_delay_days !== undefined) offer.production_delay_days = dto.production_delay_days;
+    if (dto.fulfillment_mode !== undefined) offer.fulfillment_mode = dto.fulfillment_mode;
 
     await this.repo.save(offer);
     await this.invalidateOfferCache();

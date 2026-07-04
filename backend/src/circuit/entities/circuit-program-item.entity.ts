@@ -68,6 +68,48 @@ export class CircuitProgramItem {
   @Column({ type: 'varchar', nullable: true })
   guide_name!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  category!: string | null;
+  // 'hebergement' | 'activite' | 'restauration' | 'transport' | 'workshop' | etc.
+
+  @Column({ type: 'simple-array', nullable: true })
+  subtypes!: string[] | null;
+  // Sous-types ex: ['randonnee', 'observation'] provenant de OFFER_DETAIL_FIELDS
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  price!: number | null;
+  // Prix individuel pour cette activité
+
+  @Column({ type: 'simple-array', nullable: true })
+  photos!: string[] | null;
+  // Photos spécifiques à cette activité
+
+  @Column({ type: 'jsonb', nullable: true })
+  unit_details!: Record<string, any> | null;
+  // { nb_unites, details par entité } pour les sous-types avec unités
+
+  @Column({ type: 'jsonb', nullable: true })
+  fields!: Record<string, any> | null;
+  // Champs dynamiques spécifiques au sous-type (issus de OFFER_DETAIL_FIELDS)
+
+  @Column({ type: 'jsonb', nullable: true })
+  external_reference!: {
+    provider_name?: string;
+    phone?: string;
+    address?: string;
+    url?: string;
+    estimated_price?: number;
+    currency?: string;
+    notes?: string;
+    type?: 'hebergement' | 'restaurant' | 'activite' | 'transport';
+  } | null;
+
+  @Column({ type: 'boolean', default: false })
+  is_external_reference!: boolean;
+
+  @Column({ type: 'varchar', nullable: true })
+  external_provider_name!: string | null;
+
   @CreateDateColumn()
   created_at!: Date;
 }

@@ -207,35 +207,35 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- ============================================================================
-  -- 9. IMAGES POUR OFFRES ET CIRCUITS (URLs d''exemples)
+  -- 9. IMAGES POUR OFFRES ET CIRCUITS (URLs Unsplash réelles)
   -- ============================================================================
-  -- Mise à jour des offres avec des images
-  UPDATE offers SET images = '["/images/kayak-korba.jpg", "/images/snorkeling-korba.jpg"]' WHERE id = v_off13;
-  UPDATE offers SET images = '["/images/snorkeling-eco.jpg", "/images/tortue-marine.jpg"]' WHERE id = v_off14;
-  UPDATE offers SET images = '["/images/velo-eco-hammamet.jpg", "/images/forêt-hammamet.jpg"]' WHERE id = v_off15;
-  UPDATE offers SET images = '["/images/vtt-korbous.jpg", "/images/panorama-hammamet.jpg"]' WHERE id = v_off16;
-  UPDATE offers SET images = '["/images/atelier-cuir.jpg", "/images/maroquinerie-tunisienne.jpg"]' WHERE id = v_off17;
-  UPDATE offers SET images = '["/images/chambre-troglodyte-matmata.jpg", "/images/matmata-vue.jpg"]' WHERE id = v_off18;
-  UPDATE offers SET images = '["/images/plongee-libre-korba.jpg", "/images/mer-korba.jpg"]' WHERE id = v_off19;
+  -- Mise à jour des offres avec des images Unsplash (format simple-array: url1,url2)
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80' WHERE id = v_off13;
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80' WHERE id = v_off14;
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80,https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80' WHERE id = v_off15;
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80,https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80' WHERE id = v_off16;
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80,https://images.unsplash.com/photo-1590595906931-81f04f0ccebb?w=800&q=80' WHERE id = v_off17;
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=800&q=80,https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80' WHERE id = v_off18;
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80' WHERE id = v_off19;
 
-  -- Mise à jour des circuits avec des images
-  UPDATE circuits SET images = '["/images/circuit-velo-hammamet.jpg", "/images/velo-electrique.jpg"]' WHERE id = v_cir7_id;
-  UPDATE circuits SET images = '["/images/carthage-ruines.jpg", "/images/medina-hammamet.jpg"]' WHERE id = v_cir8_id;
-  UPDATE circuits SET images = '["/images/korba-plage.jpg", "/images/cap-bon.jpg"]' WHERE id = v_cir9_id;
+  -- Mise à jour des circuits avec des images Unsplash
+  UPDATE circuits SET images = 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&q=80,https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80' WHERE id = v_cir7_id;
+  UPDATE circuits SET images = 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800&q=80,https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80' WHERE id = v_cir8_id;
+  UPDATE circuits SET images = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80' WHERE id = v_cir9_id;
 
   -- ============================================================================
-  -- 10. MISE À JOUR DES DONNÉES EXISTANTES (ajout d''images supplémentaires)
+  -- 10. MISE À JOUR DES DONNÉES EXISTANTES (ajout d''images Unsplash)
   -- ============================================================================
-  UPDATE offers SET images = '["/images/bungalow-kroumirie.jpg", "/images/foret-kroumirie.jpg"]' WHERE id = 'b1000000-0001-0000-0000-000000000001';
-  UPDATE offers SET images = '["/images/chambre-matmata.jpg", "/images/village-matmata.jpg"]' WHERE id = 'b1000000-0001-0000-0000-000000000002';
-  UPDATE offers SET images = '["/images/randonnee-zaghouan.jpg", "/images/djebel-zaghouan.jpg"]' WHERE id = 'b1000000-0001-0000-0000-000000000004';
-  UPDATE offers SET images = '["/images/plongee-djerba.jpg", "/images/faune-marine.jpg"]' WHERE id = 'b1000000-0001-0000-0000-000000000006';
-  UPDATE offers SET images = '["/images/kayak-kerkennah.jpg", "/images/mangrove.jpg"]' WHERE id = 'b1000000-0001-0000-0000-000000000007';
-  UPDATE offers SET images = '["/images/bivouac-sahara.jpg", "/images/douz-dunes.jpg"]' WHERE id = 'b1000000-0001-0000-0000-000000000012';
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80,https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80' WHERE id = 'b1000000-0001-0000-0000-000000000001';
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=800&q=80,https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80' WHERE id = 'b1000000-0001-0000-0000-000000000002';
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80,https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80' WHERE id = 'b1000000-0001-0000-0000-000000000004';
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80' WHERE id = 'b1000000-0001-0000-0000-000000000006';
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80,https://images.unsplash.com/photo-1530053969600-caed2596d242?w=800&q=80' WHERE id = 'b1000000-0001-0000-0000-000000000007';
+  UPDATE offers SET images = 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80' WHERE id = 'b1000000-0001-0000-0000-000000000012';
 
-  UPDATE circuits SET images = '["/images/sahara-douz.jpg", "/images/tozeur-oasis.jpg"]' WHERE id = '11000000-0001-0000-0000-000000000001';
-  UPDATE circuits SET images = '["/images/djerba-plage.jpg", "/images/guellala-poterie.jpg"]' WHERE id = '11000000-0001-0000-0000-000000000002';
-  UPDATE circuits SET images = '["/images/kroumirie-foret.jpg", "/images/cascades-beni-mtir.jpg"]' WHERE id = '11000000-0001-0000-0000-000000000003';
+  UPDATE circuits SET images = 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800&q=80,https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80' WHERE id = '11000000-0001-0000-0000-000000000001';
+  UPDATE circuits SET images = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80,https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80' WHERE id = '11000000-0001-0000-0000-000000000002';
+  UPDATE circuits SET images = 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80,https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80' WHERE id = '11000000-0001-0000-0000-000000000003';
 
 END $$;
 

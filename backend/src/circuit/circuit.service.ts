@@ -65,7 +65,10 @@ export class CircuitService {
       lng: dto.lng ?? null,
       address: dto.address ?? null,
       project_id: dto.project_id ?? null,
+      cover_image: dto.cover_image ?? null,
       images: dto.images?.length ? dto.images : null,
+      availability: dto.availability ?? null,
+      hebergement: dto.hebergement ?? null,
       status: 'pending',
     });
     const saved = await this.circuitRepo.save(circuit);
@@ -134,7 +137,10 @@ export class CircuitService {
     if (dto.address !== undefined) circuit.address = dto.address ?? null;
     if (dto.project_id !== undefined) circuit.project_id = dto.project_id ?? null;
     if (dto.images !== undefined) circuit.images = dto.images?.length ? dto.images : null;
+    if (dto.cover_image !== undefined) circuit.cover_image = dto.cover_image ?? null;
     if (dto.waypoints !== undefined) circuit.waypoints = dto.waypoints ?? null;
+    if (dto.availability !== undefined) circuit.availability = dto.availability ?? null;
+    if (dto.hebergement !== undefined) circuit.hebergement = dto.hebergement ?? null;
     const saved = await this.circuitRepo.save(circuit);
     await this.invalidateCircuitCache();
     return saved;
@@ -257,6 +263,15 @@ export class CircuitService {
       transport_mode: dto.transport_mode ?? null,
       guide_id: dto.guide_id ?? null,
       guide_name: dto.guide_name ?? null,
+      category: dto.category ?? null,
+      subtypes: dto.subtypes?.length ? dto.subtypes : null,
+      price: dto.price ?? null,
+      photos: dto.photos?.length ? dto.photos : null,
+      unit_details: dto.unit_details ?? null,
+      fields: dto.fields ?? null,
+      external_reference: dto.external_reference ?? null,
+      is_external_reference: dto.is_external_reference ?? false,
+      external_provider_name: dto.external_provider_name ?? null,
     });
     return this.programItemRepo.save(item);
   }
@@ -281,6 +296,15 @@ export class CircuitService {
     if (dto.transport_mode !== undefined) item.transport_mode = dto.transport_mode ?? null;
     if (dto.guide_id !== undefined) item.guide_id = dto.guide_id ?? null;
     if (dto.guide_name !== undefined) item.guide_name = dto.guide_name ?? null;
+    if (dto.category !== undefined) item.category = dto.category ?? null;
+    if (dto.subtypes !== undefined) item.subtypes = dto.subtypes?.length ? dto.subtypes : null;
+    if (dto.price !== undefined) item.price = dto.price ?? null;
+    if (dto.photos !== undefined) item.photos = dto.photos?.length ? dto.photos : null;
+    if (dto.unit_details !== undefined) item.unit_details = dto.unit_details ?? null;
+    if (dto.fields !== undefined) item.fields = dto.fields ?? null;
+    if (dto.external_reference !== undefined) item.external_reference = dto.external_reference ?? null;
+    if (dto.is_external_reference !== undefined) item.is_external_reference = dto.is_external_reference;
+    if (dto.external_provider_name !== undefined) item.external_provider_name = dto.external_provider_name ?? null;
     return this.programItemRepo.save(item);
   }
 

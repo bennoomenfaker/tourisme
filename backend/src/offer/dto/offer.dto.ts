@@ -106,6 +106,23 @@ export class CreateOfferDto {
   @IsOptional()
   @IsString()
   location_type?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  deposit_percentage?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  production_delay_days?: number;
+
+  @IsOptional()
+  @IsString()
+  fulfillment_mode?: string;
 }
 
 export class OfferSustainabilityDto {
@@ -216,6 +233,23 @@ export class UpdateOfferDto {
   @IsOptional()
   @IsString()
   location_type?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  deposit_percentage?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  production_delay_days?: number;
+
+  @IsOptional()
+  @IsString()
+  fulfillment_mode?: string;
 }
 
 // ─── OfferItem DTOs ──────────────────────────────────────

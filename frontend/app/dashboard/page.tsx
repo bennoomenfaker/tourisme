@@ -1875,7 +1875,13 @@ export default function DashboardPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role | null>(null);
   const [profile, setProfile] = useState<AnyProfile | null>(null);
-  const [activeItem, setActiveItem] = useState("Tableau de bord");
+  const [activeItem, setActiveItem] = useState(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) return decodeURIComponent(hash);
+    }
+    return "Tableau de bord";
+  });
   const [showScoreDetail, setShowScoreDetail] = useState(false);
   const [token, setToken] = useState("");
   const [publications, setPublications] = useState<Publication[]>([]);
@@ -1941,6 +1947,25 @@ export default function DashboardPage() {
     init();
   }, [router]);
 
+  // Sync active tab to URL hash for refresh persistence
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "");
+      if (hash !== activeItem) {
+        window.location.hash = encodeURIComponent(activeItem);
+      }
+    }
+  }, [activeItem]);
+
+  // Listen for hash changes (back/forward)
+  useEffect(() => {
+    function onHashChange() {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) setActiveItem(decodeURIComponent(hash));
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
   useEffect(() => {
     if (!token) return;
     apiFetch<number>("/notifications/unread", { headers: { Authorization: `Bearer ${token}` } })
@@ -2793,7 +2818,7 @@ export default function DashboardPage() {
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
-                    <button onClick={() => router.push("/offers/new")}
+                    <button onClick={() => setShowAddOffer(true)}
                       className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
                       <span className="material-symbols-outlined text-base">add</span>Ajouter une offre
                     </button>
@@ -2805,7 +2830,7 @@ export default function DashboardPage() {
                     <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">sell</span>
                     <p className="font-bold text-slate-500">Aucune offre publiée</p>
                     <p className="text-sm text-slate-400 mt-1">Créez votre première offre pour la rendre visible sur votre profil.</p>
-                    <button onClick={() => router.push("/offers/new")} className="mt-4 px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
+                    <button onClick={() => setShowAddOffer(true)} className="mt-4 px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
                       Créer une offre
                     </button>
                   </div>
@@ -2813,19 +2838,29 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
                     {offers
                       .filter((offer) => !offerTypeFilter || offer.offer_type === offerTypeFilter)
+                      .sort((a, b) => {
+                        const order = ["pending", "draft", "active", "approved", "rejected"];
+                        return order.indexOf(a.status) - order.indexOf(b.status);
+                      })
                       .map((offer) => {
                       const offerTypes = PROJ_OFFER_TYPES;
                       const typeLabel = offerTypes.find((t) => t.value === offer.offer_type)?.label;
                       return (
-                        <div key={offer.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex flex-col gap-3">
+                        <div key={offer.id} className={`bg-white rounded-2xl border-2 p-5 flex flex-col gap-3 transition-all hover:shadow-md ${
+                          offer.status === "active" || offer.status === "approved" ? "border-emerald-100" :
+                          offer.status === "rejected" ? "border-red-100" : "border-amber-100"
+                        }`}>
                           <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
                               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                                 <span className="material-symbols-outlined text-primary text-lg">sell</span>
                               </div>
-                              <div>
-                                <p className="font-extrabold text-slate-900 leading-tight">{offer.title}</p>
-                                {typeLabel && <p className="text-xs font-bold text-primary mt-0.5">{typeLabel}</p>}
+                              <div className="min-w-0">
+                                <p className="font-extrabold text-slate-900 leading-tight truncate">{offer.title}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  {typeLabel && <p className="text-xs font-bold text-primary">{typeLabel}</p>}
+                                  <StatusBadge status={offer.status} reason={offer.rejection_reason} />
+                                </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
@@ -2890,9 +2925,6 @@ export default function DashboardPage() {
                                 {offer.location_type === "fixed" ? "📍" : "🚐"}
                               </span>
                             )}
-                            <div className="ml-auto">
-                              <StatusBadge status={offer.status} reason={offer.rejection_reason} />
-                            </div>
                           </div>
                         </div>
                       );

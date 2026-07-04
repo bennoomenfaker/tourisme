@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Leaf, MapPin, ShoppingCart, User, Menu, X, LayoutDashboard, Route, Compass, MessageCircle } from "lucide-react";
+import { Bell, Leaf, MapPin, ShoppingCart, User, Menu, X, LayoutDashboard, Route, Compass, MessageCircle, Star } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 type AppNavbarProps = {
@@ -56,12 +56,14 @@ export default function AppNavbar({ title }: AppNavbarProps) {
             <LayoutDashboard size={14} className="mr-1.5" /> Tableau de bord
           </Link>
 
-          <Link
-            href="/circuits"
-            className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
-          >
-            <Route size={14} className="mr-1.5" /> Circuits
-          </Link>
+          {user?.role !== 'guide' && (
+            <Link
+              href="/circuits"
+              className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
+            >
+              <Route size={14} className="mr-1.5" /> Circuits
+            </Link>
+          )}
 
           <Link
             href="/explore"
@@ -75,6 +77,13 @@ export default function AppNavbar({ title }: AppNavbarProps) {
             className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
           >
             <MapPin size={14} className="mr-1.5" /> Lieux
+          </Link>
+
+          <Link
+            href="/guide/search"
+            className="hidden lg:flex text-sm font-semibold text-slate-600 hover:text-primary transition-colors px-3 py-1.5"
+          >
+            <Star size={14} className="mr-1.5" /> Guides
           </Link>
 
           {user && (
@@ -133,9 +142,14 @@ export default function AppNavbar({ title }: AppNavbarProps) {
           <Link href="/places" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
             <MapPin size={16} className="text-slate-400" /> Lieux
           </Link>
-          <Link href="/circuits" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-            <Route size={16} className="text-slate-400" /> Circuits
+          <Link href="/guide/search" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <Star size={16} className="text-slate-400" /> Guides
           </Link>
+          {user?.role !== 'guide' && (
+            <Link href="/circuits" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+              <Route size={16} className="text-slate-400" /> Circuits
+            </Link>
+          )}
           <Link href="/eco-projects" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
             <Leaf size={16} className="text-slate-400" /> Projets Éco
           </Link>

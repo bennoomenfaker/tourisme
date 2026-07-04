@@ -176,6 +176,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [minAge, setMinAge] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [inclusions, setInclusions] = useState("");
+  const [depositPercentage, setDepositPercentage] = useState("");
+  const [productionDelayDays, setProductionDelayDays] = useState("");
+  const [fulfillmentMode, setFulfillmentMode] = useState("");
   const [cancellationPolicy, setCancellationPolicy] = useState("");
   const [bookingDeadlineDays, setBookingDeadlineDays] = useState("");
   const [cancellationDeadlineDays, setCancellationDeadlineDays] = useState("");
@@ -234,6 +237,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     setImages(editOffer.images || []);
     setInclusions(editOffer.inclusions || "");
     setCancellationPolicy(editOffer.cancellation_policy || "");
+    setDepositPercentage(editOffer.deposit_percentage?.toString() || "");
+    setProductionDelayDays(editOffer.production_delay_days?.toString() || "");
+    setFulfillmentMode(editOffer.fulfillment_mode || "");
 
     if (editOffer.items?.[0]) {
       setBookingDeadlineDays(editOffer.items[0].booking_deadline_days?.toString() || "");
@@ -454,6 +460,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         images: images.length > 0 ? images : undefined,
         inclusions: inclusions.trim() || undefined,
         cancellation_policy: cancellationPolicy.trim() || undefined,
+        deposit_percentage: depositPercentage ? Number(depositPercentage) : undefined,
+        production_delay_days: productionDelayDays ? Number(productionDelayDays) : undefined,
+        fulfillment_mode: fulfillmentMode || undefined,
       };
 
       let resultOffer;
@@ -1089,6 +1098,25 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 </div>
               ))}
 
+              {/* Dépôt / Acompte */}
+              <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💰</span>
+                  <span className="text-xs font-bold text-slate-600">Acompte / Dépôt de garantie</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="range" min="0" max="100" value={depositPercentage || "0"}
+                    onChange={(e) => setDepositPercentage(e.target.value)}
+                    className="flex-1 accent-primary h-2 rounded-full" />
+                  <span className="text-sm font-bold text-primary min-w-[3ch]">{depositPercentage || "0"}%</span>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  {depositPercentage === "0" || !depositPercentage
+                    ? "Aucun acompte — paiement complet à la réservation"
+                    : `L'éco-voyageur devra verser ${depositPercentage}% d'acompte pour confirmer`}
+                </p>
+              </div>
+
               <button onClick={addItemPrice} className="w-full py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs font-bold text-slate-400 hover:border-primary/30 hover:text-primary transition-all flex items-center justify-center gap-1">
                 <Plus size={14} /> Ajouter un tarif (enfant, étudiant, groupe...)
               </button>
@@ -1217,6 +1245,19 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 <textarea className={`${inputClass} resize-none`} value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={2} placeholder="Remboursable 48h avant..." />
               </div>
 
+              {/* Mode d'exécution */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500">Mode d&apos;exécution</label>
+                <select className={inputClass} value={fulfillmentMode} onChange={(e) => setFulfillmentMode(e.target.value)}>
+                  <option value="">Standard (réservation + créneau)</option>
+                  <option value="instant_stock">Stock instantané (disponible tout de suite)</option>
+                  <option value="scheduled">Planifié (date fixe à l&apos;avance)</option>
+                  <option value="recurring">Récurrent (tous les jours/semaines)</option>
+                  <option value="on_request">Sur demande (le prestataire confirme)</option>
+                </select>
+                <p className="text-[10px] text-slate-400">Comment cette offre est-elle exécutée ?</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500">Délai réservation (jours)</label>
@@ -1229,6 +1270,15 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                   <p className="text-[10px] text-slate-400">Jours minimum avant la session pour annuler</p>
                 </div>
               </div>
+
+              {/* Délai de production (artisanat uniquement) */}
+              {normalizedCategory === 'craft' || normalizedCategory === 'workshop' ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500">Délai de production (jours)</label>
+                  <input type="number" min="0" className={`${inputClass} w-32`} value={productionDelayDays} onChange={(e) => setProductionDelayDays(e.target.value)} placeholder="Ex: 3" />
+                  <p className="text-[10px] text-slate-400">Temps nécessaire pour fabriquer/préparer l&apos;article</p>
+                </div>
+              ) : null}
 
               {error && <p className="text-sm text-red-500 font-semibold">{error}</p>}
 
