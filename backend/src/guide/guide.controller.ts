@@ -62,6 +62,7 @@ export class GuideController {
     @Query('language') language?: string,
     @Query('max_price') max_price?: string,
     @Query('displacement_allowed') displacement_allowed?: string,
+    @Query('zone') zone?: string,
     @Query('q') q?: string,
   ) {
     return this.searchService.search({
@@ -72,6 +73,7 @@ export class GuideController {
       language,
       max_price: max_price ? parseFloat(max_price) : undefined,
       displacement_allowed: displacement_allowed === 'true' ? true : undefined,
+      zone,
       query: q,
     });
   }

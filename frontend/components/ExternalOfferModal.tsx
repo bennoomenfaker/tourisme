@@ -6,6 +6,7 @@ import ExternalOfferItemSearch from "./ExternalOfferItemSearch";
 
 type MyOfferItem = {
   id: string; name: string; item_type: string | null; offer_id: string; offer_title: string;
+  prices?: { id: string; label: string; price: string; pricing_unit: string }[];
 };
 
 type ExternalRef = {
@@ -27,7 +28,7 @@ type Props = {
   onClose: () => void;
   myOfferItems: MyOfferItem[];
   selectedMyOfferId: string | null;
-  onSelectMyOffer: (id: string | null) => void;
+  onSelectMyOffer: (id: string | null, price?: string) => void;
   externalRef: ExternalRef | null;
   onExternalRefChange: (ref: ExternalRef | null) => void;
   dayLat: number | null;
@@ -127,7 +128,7 @@ export default function ExternalOfferModal({
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => { onSelectMyOffer(isSelected ? null : item.id); }}
+                      onClick={() => { onSelectMyOffer(isSelected ? null : item.id, item.prices?.[0]?.price); }}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                         isSelected
                           ? "border-primary bg-primary/5 ring-1 ring-primary"
@@ -144,6 +145,9 @@ export default function ExternalOfferModal({
                         <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
                           <span className="bg-slate-100 rounded px-1 py-0.5">{item.item_type || "—"}</span>
                           <span>via {item.offer_title}</span>
+                          {item.prices?.[0] && (
+                            <span className="font-medium text-primary">💰 {Number(item.prices[0].price).toLocaleString()} TND</span>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -169,8 +173,8 @@ export default function ExternalOfferModal({
                 lng={dayLng}
                 excludeAuthorId={excludeAuthorId}
                 dayLabel={dayLabel}
-                onSelect={(offerItemId, offerTitle, itemName) => {
-                  onSelectMyOffer(offerItemId);
+                onSelect={(offerItemId, offerTitle, itemName, providerName, price) => {
+                  onSelectMyOffer(offerItemId, price);
                   onClose();
                 }}
               />

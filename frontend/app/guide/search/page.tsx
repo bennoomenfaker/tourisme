@@ -52,7 +52,6 @@ export default function GuideSearchPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   async function doSearch() {
-    if (!query.trim() && !zone && !language) return;
     setLoading(true); setHasSearched(true);
     try {
       const params = new URLSearchParams();
@@ -94,6 +93,9 @@ export default function GuideSearchPage() {
 
   const defaultLat = markers.length > 0 ? markers[0].lat : 33.8869;
   const defaultLng = markers.length > 0 ? markers[0].lng : 9.5375;
+
+  // Load all guides on mount
+  useEffect(() => { doSearch(); }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -168,7 +170,7 @@ export default function GuideSearchPage() {
         {/* View toggle + results count */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-slate-500">
-            {hasSearched ? `${results.length} guide${results.length !== 1 ? "s" : ""} trouvé${results.length !== 1 ? "s" : ""}` : ""}
+            {results.length > 0 ? `${results.length} guide${results.length !== 1 ? "s" : ""} trouvé${results.length !== 1 ? "s" : ""}` : ""}
             {loading && <Loader2 size={12} className="animate-spin inline ml-1" />}
           </p>
           <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
@@ -177,70 +179,63 @@ export default function GuideSearchPage() {
           </div>
         </div>
 
-        {/* Split view: list + map */}
-        {(viewMode === "split") && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              {!hasSearched && (
-                <div className="text-center py-12 text-slate-400">
-                  <Search size={32} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm font-medium">Cherchez un guide par nom, zone ou spécialité</p>
-                </div>
-              )}
-              {hasSearched && !loading && results.length === 0 && (
-                <div className="text-center py-12 text-slate-400">
-                  <p className="text-sm font-medium">Aucun guide trouvé</p>
-                  <p className="text-xs mt-1">Essayez d&apos;élargir vos critères de recherche</p>
-                </div>
-              )}
-              {results.map((g: any) => <GuideCard key={g.user_id} guide={g} />)}
-            </div>
-            <div className="sticky top-4 h-[calc(100vh-200px)] rounded-2xl overflow-hidden border border-slate-200">
-              {hasSearched && markers.length > 0 ? (
-                <MapView lat={defaultLat} lng={defaultLng} markers={markers} height="100%" radii={radii} layerVisibility={{ offers: false, circuits: false, places: false, guides: true }} />
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-300 bg-slate-50">
-                  <MapPin size={32} className="mb-2 opacity-50" />
-                  <p className="text-sm">Aucun guide avec localisation</p>
-                </div>
-              )}
-            </div>
+        {/* Loading state */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 size={32} className="animate-spin text-primary" />
           </div>
         )}
 
-        {/* Map only */}
-        {viewMode === "map" && (
-          <div className="h-[calc(100vh-280px)] rounded-2xl overflow-hidden border border-slate-200 relative">
-            {hasSearched && markers.length > 0 ? (
-              <MapView lat={defaultLat} lng={defaultLng} markers={markers} height="100%" radii={radii} layerVisibility={{ offers: false, circuits: false, places: false, guides: true }} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-300 bg-slate-50">
-                <MapPin size={32} className="mb-2 opacity-50" />
-                <p className="text-sm">Aucun guide avec localisation</p>
-              </div>
-            )}
+        {!loading && results.length === 0 && (
+          <div className="text-center py-16 text-slate-400">
+            <Search size={40} className="mx-auto mb-3 opacity-50" />
+            <p className="text-sm font-medium">Aucun guide trouvé</p>
+            <p className="text-xs mt-1">Essayez d&apos;élargir vos critères de recherche</p>
           </div>
         )}
 
-        {/* Grid only */}
-        {(viewMode === "grid") && (
-          <div>
-            {!hasSearched && (
-              <div className="text-center py-12 text-slate-400">
-                <Search size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">Cherchez un guide par nom, zone ou spécialité</p>
+        {!loading && results.length > 0 && (
+          <>
+            {/* Split view: list + map */}
+            {viewMode === "split" && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  {results.map((g: any) => <GuideCard key={g.user_id} guide={g} />)}
+                </div>
+                <div className="sticky top-4 h-[calc(100vh-200px)] rounded-2xl overflow-hidden border border-slate-200">
+                  {markers.length > 0 ? (
+                    <MapView lat={defaultLat} lng={defaultLng} markers={markers} height="100%" radii={radii} layerVisibility={{ offers: false, circuits: false, places: false, guides: true }} />
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-slate-300 bg-slate-50">
+                      <MapPin size={32} className="mb-2 opacity-50" />
+                      <p className="text-sm">Aucun guide avec localisation</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-            {hasSearched && !loading && results.length === 0 && (
-              <div className="text-center py-12 text-slate-400">
-                <p className="text-sm font-medium">Aucun guide trouvé</p>
-                <p className="text-xs mt-1">Essayez d&apos;élargir vos critères de recherche</p>
+
+            {/* Map only */}
+            {viewMode === "map" && (
+              <div className="h-[calc(100vh-280px)] rounded-2xl overflow-hidden border border-slate-200 relative">
+                {markers.length > 0 ? (
+                  <MapView lat={defaultLat} lng={defaultLng} markers={markers} height="100%" radii={radii} layerVisibility={{ offers: false, circuits: false, places: false, guides: true }} />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-300 bg-slate-50">
+                    <MapPin size={32} className="mb-2 opacity-50" />
+                    <p className="text-sm">Aucun guide avec localisation</p>
+                  </div>
+                )}
               </div>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {results.map((g: any) => <GuideCard key={g.user_id} guide={g} />)}
-            </div>
-          </div>
+
+            {/* Grid only */}
+            {viewMode === "grid" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {results.map((g: any) => <GuideCard key={g.user_id} guide={g} />)}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

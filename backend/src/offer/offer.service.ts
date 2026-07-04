@@ -586,12 +586,19 @@ export class OfferService {
     return { message: 'Session supprimée.' };
   }
 
-  async findMyItems(authorId: string): Promise<{ id: string; name: string; item_type: string | null; offer_id: string; offer_title: string }[]> {
+  async findMyItems(authorId: string): Promise<{ id: string; name: string; item_type: string | null; offer_id: string; offer_title: string; prices: { id: string; label: string; price: string; pricing_unit: string }[] }[]> {
     const offers = await this.findByAuthor(authorId);
-    const items: { id: string; name: string; item_type: string | null; offer_id: string; offer_title: string }[] = [];
+    const items: { id: string; name: string; item_type: string | null; offer_id: string; offer_title: string; prices: { id: string; label: string; price: string; pricing_unit: string }[] }[] = [];
     for (const offer of offers) {
       for (const item of offer.items || []) {
-        items.push({ id: item.id, name: item.name, item_type: item.item_type, offer_id: offer.id, offer_title: offer.title });
+        items.push({
+          id: item.id, name: item.name, item_type: item.item_type,
+          offer_id: offer.id, offer_title: offer.title,
+          prices: (item.prices || []).map((p) => ({
+            id: p.id, label: p.label, price: String(p.price),
+            pricing_unit: p.pricing_unit,
+          })),
+        });
       }
     }
     return items;

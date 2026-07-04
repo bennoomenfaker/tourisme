@@ -28,6 +28,7 @@ export class GuideSearchService {
     max_price?: number;
     min_capacity?: number;
     displacement_allowed?: boolean;
+    zone?: string;
     query?: string;
     min_rating?: number;
   }) {
@@ -37,6 +38,10 @@ export class GuideSearchService {
 
     if (params.query) {
       guideQb.andWhere('LOWER(guide.full_name) LIKE :q', { q: `%${params.query.toLowerCase()}%` });
+    }
+
+    if (params.zone) {
+      guideQb.andWhere('LOWER(guide.zone) LIKE :zone', { zone: `%${params.zone.toLowerCase()}%` });
     }
 
     if (params.min_rating !== undefined) {

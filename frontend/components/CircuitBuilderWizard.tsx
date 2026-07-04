@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import ImageUploader from "@/components/ImageUploader";
 import type { MyOfferItem } from "@/components/OfferItemSearchInline";
 import ExternalOfferModal from "@/components/ExternalOfferModal";
+import ExternalOfferItemSearch from "@/components/ExternalOfferItemSearch";
 import { Search, ArrowLeft, ArrowRight, X, Plus, Trash2, Check, MapPin, Clock, Calendar, DollarSign, Users, Info, Loader2, ExternalLink, Globe } from "lucide-react";
 
 const PolylineDrawer = dynamic(() => import("@/components/map/PolylineDrawer"), { ssr: false, loading: () => <div className="h-[300px] bg-slate-100 animate-pulse rounded-xl" /> });
@@ -27,7 +28,7 @@ interface ProgramItemForm {
   id: string; title: string; description: string; start_time: string; end_time: string;
   is_included: boolean; is_required: boolean; linked_offer_item_id: string | null;
   emoji: string; duration_minutes: string; distance_km: string; transport_mode: string;
-  guide_id: string | null; guide_name: string;
+  guide_id: string | null; guide_name: string; guide_cost: string;
   category: string | null; subtypes: string[] | null; price: string; photos: string[];
   fields: Record<string, any> | null;
   external_reference: Record<string, any> | null; is_external_reference: boolean;
@@ -69,7 +70,7 @@ const TUNISIA_REGIONS = [
 function genId() { return Math.random().toString(36).substring(2, 10); }
 
 function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
-  onSelect: (id: string, name: string) => void;
+  onSelect: (id: string, name: string, price?: string) => void;
   dayDate?: string;
   dayLat?: number | null;
   dayLng?: number | null;
@@ -84,33 +85,51 @@ function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
   const [showMap, setShowMap] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  async function doSearch(q: string) {
-    if (!q.trim()) { setResults([]); setHasSearched(false); return; }
+  function hasFilters(q: string, z: string, p: string) {
+    return q.trim() !== "" || z !== "" || p !== "";
+  }
+
+  async function doSearch(q: string, z: string, p: string) {
+    if (!hasFilters(q, z, p)) { setResults([]); setHasSearched(false); return; }
     setLoading(true); setHasSearched(true);
     try {
       const params = new URLSearchParams();
-      params.set("q", q.trim());
+      if (q.trim()) params.set("q", q.trim());
+      if (z) params.set("zone", z);
+      if (p) params.set("max_price", p);
       if (dayDate) params.set("date", dayDate);
       if (dayLat != null && dayLng != null) {
         params.set("lat", String(dayLat));
         params.set("lng", String(dayLng));
       }
-      if (zoneFilter) params.set("zone", zoneFilter);
-      if (maxPrice) params.set("max_price", maxPrice);
       const res = await apiFetch<any[]>(`/guide/search?${params.toString()}`);
       setResults(res || []);
     } catch { setResults([]); }
     setLoading(false);
   }
 
+  function triggerSearch() {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => doSearch(query, zoneFilter, maxPrice), 200);
+  }
+
   function handleChange(val: string) {
     setQuery(val);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => doSearch(val), 300);
+    triggerSearch();
+  }
+
+  function handleZoneChange(val: string) {
+    setZoneFilter(val);
+    triggerSearch();
+  }
+
+  function handlePriceChange(val: string) {
+    setMaxPrice(val);
+    triggerSearch();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") { e.preventDefault(); doSearch(query); }
+    if (e.key === "Enter") { e.preventDefault(); doSearch(query, zoneFilter, maxPrice); }
   }
 
   const hasLocation = results.some((g: any) => g.offerings?.[0]?.lat != null);
@@ -120,13 +139,13 @@ function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
       <div className="flex flex-wrap items-center gap-1">
         <input value={query} onChange={(e) => handleChange(e.target.value)} onKeyDown={handleKeyDown}
           placeholder="Guide, zone..." className="w-24 text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
-        <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} className="text-[10px] border border-slate-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary w-20">
+        <select value={zoneFilter} onChange={(e) => handleZoneChange(e.target.value)} className="text-[10px] border border-slate-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary w-20">
           <option value="">Zone</option>
           {TUNISIA_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        <input type="number" min={0} value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Prix max"
+        <input type="number" min={0} value={maxPrice} onChange={(e) => handlePriceChange(e.target.value)} placeholder="Prix max"
           className="w-14 text-[10px] border border-slate-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
-        <button type="button" onClick={() => doSearch(query)} className="p-1 text-primary hover:bg-primary/10 rounded-lg">
+        <button type="button" onClick={() => doSearch(query, zoneFilter, maxPrice)} className="p-1 text-primary hover:bg-primary/10 rounded-lg">
           {loading ? <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" /> : <Search size={13} />}
         </button>
         {!loading && hasSearched && results.length === 0 && (
@@ -145,7 +164,7 @@ function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
             const off = g.offerings?.[0];
             return (
               <div key={g.user_id} className="border-b border-slate-50 last:border-0">
-                <button type="button" onClick={() => { onSelect(g.user_id, g.full_name); setResults([]); setQuery(""); setZoneFilter(""); setMaxPrice(""); }}
+                <button type="button" onClick={() => { onSelect(g.user_id, g.full_name, g.offerings?.[0]?.price ? String(g.offerings[0].price) : undefined); setResults([]); setQuery(""); setZoneFilter(""); setMaxPrice(""); }}
                   className="w-full flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-primary/5 text-left">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                     {g.photo ? <img src={g.photo} alt="" className="w-full h-full rounded-full object-cover" /> : <span className="text-xs font-bold text-primary">{g.full_name?.charAt(0) || "G"}</span>}
@@ -155,7 +174,7 @@ function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: {
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 text-[10px] text-slate-400">
                       {g.zone && <span>📍 {g.zone}</span>}
                       {off?.radius_km && <span>📏 {off.radius_km}km</span>}
-                      {off?.price != null && <span className="font-medium text-primary">💰 {Number(off.price).toLocaleString()} TND</span>}
+                      {off?.price != null && <span className="font-medium text-primary">💰 {Number(off.price).toLocaleString()} TND/{off.pricing_unit === "day" ? "jour" : "pers"}</span>}
                       {off?.languages && <span>🗣️ {off.languages}</span>}
                     </div>
                     {g.availability !== false && (
@@ -421,6 +440,16 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
     }
   }, [token]);
 
+  // Auto-fill accommodation price from own offer items
+  useEffect(() => {
+    if (hebergementPriceSource !== "own" || hebergementPrixNuit) return;
+    const accomItem = offerItems.find((it) =>
+      ["room","bed","camping_space","dortoir","tente","chambre","emplacement"].includes(it.item_type || ""));
+    if (accomItem?.prices?.[0]?.price) {
+      setHebergementPrixNuit(accomItem.prices[0].price);
+    }
+  }, [hebergementPriceSource, offerItems, hebergementPrixNuit]);
+
   const sortedDays = [...days].sort((a, b) => a.day_number - b.day_number);
   const goNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   const goBack = () => setStep((s) => Math.max(s - 1, 1));
@@ -449,7 +478,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   }
 
   function addProgramItem(dayId: string) {
-    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null, emoji: "📍", duration_minutes: "", distance_km: "", transport_mode: "", guide_id: null, guide_name: "", category: null, subtypes: null, price: "", photos: [], fields: null, external_reference: null, is_external_reference: false }] }));
+    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null, emoji: "📍", duration_minutes: "", distance_km: "", transport_mode: "", guide_id: null, guide_name: "", guide_cost: "", category: null, subtypes: null, price: "", photos: [], fields: null, external_reference: null, is_external_reference: false }] }));
   }
 
   function removeProgramItem(dayId: string, itemId: string) {
@@ -546,7 +575,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
               subtypes: prog.subtypes?.length ? prog.subtypes : undefined,
               price: prog.price ? Number(prog.price) : undefined,
               photos: prog.photos?.length ? prog.photos : undefined,
-              fields: prog.fields || undefined,
+              fields: { ...(prog.fields || {}), guide_cost: prog.guide_cost ? Number(prog.guide_cost) : undefined } as any,
               external_reference: prog.external_reference || undefined,
               is_external_reference: prog.is_external_reference || false,
             }),
@@ -828,12 +857,33 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                               ) : (
                                 <div className="relative">
                                   <GuideSearchInline
-                                    onSelect={(id, name) => updateProgramItem(day.id, prog.id, { guide_id: id, guide_name: name })}
+                                    onSelect={(id, name, price) => updateProgramItem(day.id, prog.id, { guide_id: id, guide_name: name, guide_cost: price || "" })}
                                     dayDate={day.date || undefined}
                                     dayLat={day.lat}
                                     dayLng={day.lng}
                                     dayLocation={day.location_name}
                                   />
+                                </div>
+                              )}
+                            </div>
+                            {/* Price + guide cost */}
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1">
+                                <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Prix facturé voyageur</label>
+                                <div className="relative">
+                                  <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                  <input type="number" min={0} value={prog.price} onChange={(e) => updateProgramItem(day.id, prog.id, { price: e.target.value })}
+                                    placeholder="0" className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                                </div>
+                              </div>
+                              {prog.guide_id && prog.guide_cost && (
+                                <div className="text-[10px] text-slate-400 bg-slate-50 rounded-lg px-2 py-1.5 shrink-0">
+                                  Coût guide: <span className="font-medium text-slate-600">{Number(prog.guide_cost).toLocaleString()} TND</span>
+                                </div>
+                              )}
+                              {prog.linked_offer_item_id && offerItems.find((it) => it.id === prog.linked_offer_item_id)?.prices?.[0] && (
+                                <div className="text-[10px] text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1.5 shrink-0">
+                                  Offre à {Number(offerItems.find((it) => it.id === prog.linked_offer_item_id)!.prices![0].price).toLocaleString()} TND
                                 </div>
                               )}
                             </div>
@@ -1049,12 +1099,35 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                         ))}
                       </div>
                       {hebergementPriceSource === "own" && (
-                        <input type="number" min={0} value={hebergementPrixNuit} onChange={(e) => setHebergementPrixNuit(e.target.value)} placeholder="Prix par nuit/unité (TND)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                        <div className="space-y-2">
+                          <input type="number" min={0} value={hebergementPrixNuit} onChange={(e) => setHebergementPrixNuit(e.target.value)} placeholder="Prix par nuit/unité (TND)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                          {offerItems.filter((it) =>
+                            ["room","bed","camping_space","dortoir","tente","chambre","emplacement"].includes(it.item_type || "")
+                          ).slice(0, 1).map((it) => it.prices?.[0] && (
+                            <p key={it.id} className="text-[10px] text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1">
+                              Mon offre <strong>{it.name}</strong> — prix catalogue: {Number(it.prices[0].price).toLocaleString()} TND
+                            </p>
+                          ))}
+                        </div>
                       )}
                       {hebergementPriceSource === "other" && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <input type="number" min={0} value={hebergementPrixExterne} onChange={(e) => setHebergementPrixExterne(e.target.value)} placeholder="Prix achat (TND)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                          <input type="number" min={0} value={hebergementPrixNuit} onChange={(e) => setHebergementPrixNuit(e.target.value)} placeholder="Prix revente (TND)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                        <div className="space-y-2">
+                          <ExternalOfferItemSearch
+                            lat={days[0]?.lat ?? null}
+                            lng={days[0]?.lng ?? null}
+                            radiusKm={50}
+                            itemType="room"
+                            category="accommodation"
+                            excludeAuthorId={user?.sub || user?.id || ""}
+                            onSelect={(_id, _title, _name, _provider, price) => {
+                              if (price && !hebergementPrixExterne) setHebergementPrixExterne(price);
+                            }}
+                            dayLabel="Hébergement à proximité"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input type="number" min={0} value={hebergementPrixExterne} onChange={(e) => setHebergementPrixExterne(e.target.value)} placeholder="Prix achat (TND)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                            <input type="number" min={0} value={hebergementPrixNuit} onChange={(e) => setHebergementPrixNuit(e.target.value)} placeholder="Prix revente (TND)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                          </div>
                         </div>
                       )}
                       {hebergementPriceSource === "external" && (
@@ -1267,8 +1340,10 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
             onClose={() => { setExternalModalDayId(null); setExternalModalProgId(null); }}
             myOfferItems={offerItems}
             selectedMyOfferId={currentProg.linked_offer_item_id}
-            onSelectMyOffer={(id) => {
-              updateProgramItem(externalModalDayId, externalModalProgId, { linked_offer_item_id: id });
+            onSelectMyOffer={(id, price) => {
+              updateProgramItem(externalModalDayId, externalModalProgId, {
+                linked_offer_item_id: id, price: price || "",
+              });
             }}
             externalRef={null}
             onExternalRefChange={(ref) => {

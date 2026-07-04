@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 
 export interface MyOfferItem {
   id: string; name: string; item_type: string | null; offer_id: string; offer_title: string;
+  prices?: { id: string; label: string; price: string; pricing_unit: string }[];
 }
 
 export default function OfferItemSearchInline({ items, onSelect, selectedId, onAutoFill }: {

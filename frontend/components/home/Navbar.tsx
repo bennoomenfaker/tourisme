@@ -19,7 +19,7 @@ export default function Navbar({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 md:px-20 lg:px-40 py-4">
+    <header className="sticky top-0 z-50 w-full border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 dark:from-emerald-950/20 dark:via-background-dark dark:to-emerald-950/20 backdrop-blur-md px-6 md:px-20 lg:px-40 py-4">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between">
         <div className="flex items-center gap-4">
           {isAuth && (

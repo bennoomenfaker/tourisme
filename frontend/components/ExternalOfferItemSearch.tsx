@@ -28,7 +28,7 @@ type Props = {
   itemType?: string;
   category?: string;
   excludeAuthorId: string;
-  onSelect: (offerItemId: string, offerTitle: string, itemName: string, providerName: string) => void;
+  onSelect: (offerItemId: string, offerTitle: string, itemName: string, providerName: string, price?: string) => void;
   dayLabel?: string;
 };
 
@@ -99,21 +99,21 @@ export default function ExternalOfferItemSearch({
             {items.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {items.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onSelect(item.id, offer.title, item.name, offer.title)}
-                    className="flex items-center gap-1 text-[11px] bg-white border border-slate-200 rounded-lg px-2 py-1 hover:bg-primary hover:text-white hover:border-primary transition-colors"
-                  >
-                    <span>{item.name}</span>
-                    {item.prices?.[0] && (
-                      <span className="flex items-center gap-0.5 opacity-70">
-                        <DollarSign size={10} />
-                        {Number(item.prices[0].price).toLocaleString()}
-                      </span>
-                    )}
-                    <span className="text-[10px] opacity-60">Lier</span>
-                  </button>
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onSelect(item.id, offer.title, item.name, offer.title, item.prices?.[0]?.price)}
+                      className="flex items-center gap-1 text-[11px] bg-white border border-slate-200 rounded-lg px-2 py-1 hover:bg-primary hover:text-white hover:border-primary transition-colors"
+                    >
+                      <span>{item.name}</span>
+                      {item.prices?.[0] && (
+                        <span className="flex items-center gap-0.5 opacity-70">
+                          <DollarSign size={10} />
+                          {Number(item.prices[0].price).toLocaleString()}
+                        </span>
+                      )}
+                      <span className="text-[10px] opacity-60">Lier</span>
+                    </button>
                 ))}
               </div>
             )}

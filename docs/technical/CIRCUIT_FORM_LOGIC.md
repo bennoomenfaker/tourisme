@@ -78,9 +78,38 @@ Chaque mode change l'UI et les données envoyées :
 ### Tarification hébergement (3 scénarios)
 | Source | UI | Logique |
 |--------|-----|---------|
-| **own** (mon hébergement) | Prix unité/nuit | Le provider fixe son prix |
-| **other** (autre propriétaire) | Prix achat + prix revente | Marge = revente - achat |
-| **external** (hors plateforme) | Prix estimé + prestataire | Tarif indicatif, réservé via le prestataire |
+| **own** (mon hébergement) | Prix unité/nuit pré-rempli depuis mon offre catalogue (éditable) | *Mon offre catalogue = 50 TND → pré-rempli à 50 TND, je peux vendre 60 TND si je veux* |
+| **other** (autre propriétaire) | Prix achat pré-rempli depuis son offre catalogue + prix revente à saisir | *Son offre catalogue = 40 TND → achat pré-rempli 40 TND, je saisis revente 55 TND, marge = 15 TND* |
+| **external** (hors plateforme) | Prix estimé + prestataire | Saisie manuelle, tarif indicatif |
+
+### Tarification des activités (Step 3 — nouveau)
+
+Chaque activité (program item) a désormais :
+- **`price`** : prix facturé au voyageur pour cette activité (éditable)
+- **`guide_cost`** : coût interne du guide (pré-rempli depuis le catalogue du guide, éditable)
+
+#### Pré-remplissage automatique
+
+| Source sélectionnée | Champ pré-rempli | Valeur | Modifiable ? |
+|---------------------|-----------------|--------|:-----------:|
+| **Mon offre** (Tab 1) | `price` | Prix catalogue de mon offre | ✅ Oui |
+| **Offre externe** (Tab 2) | `price` | Prix catalogue de l'offre | ✅ Oui |
+| **Guide** (dans l'activité) | `guide_cost` | Prix du guide (offering.price) | ✅ Oui |
+| **Aucune offre / Externe** | `price` | Vide (saisie manuelle) | ✅ Oui |
+
+#### Logique économique
+
+- **Coût guide** : ce que je paie au guide (ex: 100 TND/jour)
+- **Prix activité** : ce que le voyageur paie pour cette activité (ex: 120 TND)
+- **Ma marge** = Prix activité - Coût guide - Coût offre liée (si applicable)
+
+*Exemple :*
+```
+Guide = 100 TND/jour  (coût)
+Mon offre (repas) = 50 TND  (coût interne)
+Prix activité = 200 TND  (facturé voyageur)
+Marge = 200 - 100 - 50 = 50 TND
+```
 
 ### Dans les activités (champ `inclus` multiselect)
 Les sous-types `circuit_nature`, `circuit_montagne`, `agence_ecotourisme` ont `Hébergement` comme option dans leur liste `inclus`.

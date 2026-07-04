@@ -30,7 +30,7 @@ export default function AppNavbar({ title }: AppNavbarProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/80 backdrop-blur-md px-4 md:px-8 py-3">
+    <header className="sticky top-0 z-50 w-full border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 backdrop-blur-md px-4 md:px-8 py-3">
       <div className="mx-auto flex max-w-6xl items-center justify-between">
         <div className="flex items-center gap-4">
           <Link
