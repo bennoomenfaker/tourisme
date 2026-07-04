@@ -240,6 +240,7 @@ export default function CircuitDetailPage() {
   const [progSubtypes, setProgSubtypes] = useState<string[]>([]);
   const [progPrice, setProgPrice] = useState("");
   const [progPhotos, setProgPhotos] = useState<string[]>([]);
+  const [progGuideCost, setProgGuideCost] = useState<string>("");
 
   const [showEditMap, setShowEditMap] = useState(false);
   const [showDayMap, setShowDayMap] = useState(false);
@@ -580,6 +581,7 @@ export default function CircuitDetailPage() {
           transport_mode: progTransport || undefined,
           guide_id: progWithGuide ? (progGuideId || null) : null,
           guide_name: progWithGuide ? (progGuideName || null) : null,
+          guide_cost: progGuideCost ? parseFloat(progGuideCost) : undefined,
           linked_offer_item_id: progLinkedOfferItemId || null,
           category: progCategory || undefined,
           subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
@@ -588,7 +590,7 @@ export default function CircuitDetailPage() {
         }),
       });
       setEditProgramItem(null);
-      setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false);
+      setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false); setProgGuideCost("");
       setProgLinkedOfferItemId(null);
       loadCircuit();
     } catch (err: any) {
@@ -626,6 +628,7 @@ export default function CircuitDetailPage() {
           transport_mode: progTransport || undefined,
           guide_id: progWithGuide ? (progGuideId || undefined) : undefined,
           guide_name: progWithGuide ? (progGuideName || undefined) : undefined,
+          guide_cost: progGuideCost ? parseFloat(progGuideCost) : undefined,
           linked_offer_item_id: progLinkedOfferItemId || undefined,
           category: progCategory || undefined,
           subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
@@ -636,7 +639,7 @@ export default function CircuitDetailPage() {
       setShowAddProgram(null);
       setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd("");
       setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport("");
-      setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false);
+      setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false); setProgGuideCost("");
       setProgLinkedOfferItemId(null);
       setProgCategory("activite"); setProgSubtypes([]); setProgPrice(""); setProgPhotos([]);
       loadCircuit();
@@ -898,7 +901,7 @@ export default function CircuitDetailPage() {
                                               <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0 mr-1">Requis</span>
                                             )}
                                             <button
-                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); setProgCategory(item.category ?? "activite"); setProgSubtypes(item.subtypes ?? []); setProgPrice(item.price?.toString() ?? ""); setProgPhotos(item.photos ?? []); }}
+                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); setProgCategory(item.category ?? "activite"); setProgSubtypes(item.subtypes ?? []); setProgPrice(item.price?.toString() ?? ""); setProgPhotos(item.photos ?? []); setProgGuideCost(item.fields?.guide_cost?.toString() ?? ""); }}
                                               className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
                                             >
                                               <Edit size={11} />
@@ -1357,16 +1360,7 @@ export default function CircuitDetailPage() {
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-500">Photos (URLs, optionnel)</label>
-            <input value={progPhotos[0] || ""} onChange={(e) => setProgPhotos(e.target.value ? [e.target.value] : [])} placeholder="https://..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-            {progPhotos.length > 0 && progPhotos[0] && (
-              <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
-                <img src={progPhotos[0]} alt="" className="w-full h-full object-cover" />
-                <button onClick={() => setProgPhotos([])} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px]">✕</button>
-              </div>
-            )}
-          </div>
+          <ImageUploader images={progPhotos} onChange={setProgPhotos} maxImages={5} label="Photos" />
 
           {/* ─── Guide optionnel (inline) ──────────────── */}
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
@@ -1426,6 +1420,15 @@ export default function CircuitDetailPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {progWithGuide && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Prix facturé voyageur (guide)</label>
+              <input type="number" min={0} step="0.01" value={progGuideCost}
+                onChange={(e) => setProgGuideCost(e.target.value)}
+                placeholder="ex: 50" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
           )}
 
@@ -1538,16 +1541,7 @@ export default function CircuitDetailPage() {
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-500">Photos (URLs, optionnel)</label>
-            <input value={progPhotos[0] || ""} onChange={(e) => setProgPhotos(e.target.value ? [e.target.value] : [])} placeholder="https://..." className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-            {progPhotos.length > 0 && progPhotos[0] && (
-              <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
-                <img src={progPhotos[0]} alt="" className="w-full h-full object-cover" />
-                <button onClick={() => setProgPhotos([])} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px]">✕</button>
-              </div>
-            )}
-          </div>
+          <ImageUploader images={progPhotos} onChange={setProgPhotos} maxImages={5} label="Photos" />
 
           {/* ─── Guide optionnel (inline) ──────────────── */}
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
@@ -1607,6 +1601,15 @@ export default function CircuitDetailPage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {progWithGuide && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Prix facturé voyageur (guide)</label>
+              <input type="number" min={0} step="0.01" value={progGuideCost}
+                onChange={(e) => setProgGuideCost(e.target.value)}
+                placeholder="ex: 50" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
           )}
 
