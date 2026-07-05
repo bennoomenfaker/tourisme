@@ -376,7 +376,32 @@ Ajouter `repeater` et `dynamicOptions` dans le renderer de schemas.
 
 ---
 
-## 8. Endpoints API Complets
+## 8. Audit DDD — Points Critiques
+
+Voir le document détaillé : [AUDIT_DDD_CIRCUITS.md](./AUDIT_DDD_CIRCUITS.md)
+
+### Bugs critiques identifiés
+
+| Bug | Risque | Priorité |
+|-----|--------|----------|
+| `linked_offer_item_id` sans FK | UUID dangling si Offer supprimée | 🔴 Haute |
+| CircuitReservation sans gestion capacité | Surréservation | 🔴 Haute |
+| Booking FK sans `onDelete` | Données orphelines | 🔴 Haute |
+| Pas de locking pessimiste | Race condition sur capacité | 🟡 Moyenne |
+| Pas de price_history | Pas d'audit trail prix | 🟡 Moyenne |
+
+### Score DDD global : 5/10
+
+Fonctionnel mais fragile. Les invariants cascades et la gestion du stock pour les circuits nécessitent une attention immédiate.
+
+### Plan d'action DDD
+
+1. **Semaine 1** : Sécurité (onDelete FK, vérif suppression Offer, capacité CircuitReservation, optimistic locking)
+2. **Semaine 2** : Cohérence (état draft, price_history, validation linked_offer_item_id)
+
+---
+
+## 9. Endpoints API Complets
 
 ### Auth & Profils
 | Méthode | Endpoint | Rôle |
