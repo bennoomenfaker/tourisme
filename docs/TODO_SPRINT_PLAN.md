@@ -1,18 +1,58 @@
-# Plan d'Action & Sprints — Éco-Voyage (v2 — 10/10)
+# Plan d'Action & Sprints — Éco-Voyage (v3 — 10/10)
 
 **Date :** 2026-07-05
-**Version :** 2.0 — Réorganisé suite au review binôme
-**Basé sur :** Audit DDD, Audit Circuits/Activités/Tarification, Analyse Comparative Maram
+**Version :** 3.0 — Roadmap officielle
+**Basé sur :** Audit DDD, Audit Circuits/Activités/Tarification, Review binôme v2
 
 ---
 
 ## Principes directeurs
 
-1. **Séparer bugs / architecture / fonctionnalités** — ne pas mélanger
+1. **Séparer bugs / architecture / fonctionnalités / tests**
 2. **Soft Delete > SET NULL** — préserver l'historique des réservations
-3. **Pas d'optimisation premature** — optimistic locking et price_history viendront plus tard
-4. **Maram = source d'inspiration**, pas un modèle d'architecture
-5. **Vérifier la chaîne catalogue** avant d'ajouter des fonctionnalités
+3. **Pas d'optimisation premature** — locking, price_history, analytics viendront plus tard
+4. **Maram = source d'inspiration** — récupérer constantes, validations, pas le modèle d'architecture
+5. **Le guide vend sa DISPONIBILITÉ, pas une offre** — distinction fondamentale
+6. **Vérifier la chaîne catalogue** avant d'ajouter des fonctionnalités
+7. **Tests métier de bout en bout** avant la mise en production
+
+---
+
+## 🧠 Le modèle guide : disponibilité ≠ offre
+
+**Point critique :** Un guide ne vend pas un "produit" stockable. Il vend des **créneaux horaires** (disponibilités). C'est un modèle fondamentalement différent du `Offer → OfferItem → Price`.
+
+```
+Guide
+  └── GuideOffering (prestation de guidage)
+        ├── title, description, price, pricing_unit
+        ├── zone (point/radius/governorate/all_tunisia)
+        ├── languages[], displacement_allowed
+        │
+        ├── GuideOfferingAvailabilityRule  ← QUAND je suis disponible
+        │   ├── availability_type: 'weekly' | 'date_range' | 'on_demand' | 'specific'
+        │   ├── weekdays[] (si weekly)
+        │   ├── start_date / end_date (si date_range)
+        │   └── start_time / end_time
+        │
+        ├── GuideOfferingSession           ← CRÉNEAUX générés
+        │   ├── date, start_time, end_time
+        │   ├── total_capacity / remaining_capacity
+        │   ├── price_override (prix saisonnier)
+        │   └── status: 'available' | 'full' | 'cancelled'
+        │
+        ├── GuideOfferingBlock             ← BLOQUAGES
+        │   ├── start_date / end_date
+        │   └── reason (vacances, indisponible)
+        │
+        └── GuideOfferingPrice             ← TARIFS
+            ├── label (1 personne, 2 personnes, groupe)
+            └── price
+```
+
+**Contrairement au project_owner :**
+- `ProjectOwner → Offer → OfferItem → Price → Session → Capacity` = **inventaire stockable**
+- `Guide → GuideOffering → AvailabilityRule → Session → Block` = **temps disponible**
 
 ---
 
@@ -20,29 +60,33 @@
 
 | Sprint | Thème | Type | Durée | Priorité |
 |--------|-------|------|-------|----------|
-| **Sprint 1** | Data Integrity & Sécurité | 🐛 Bugs | 3j | 🔴 Haute |
-| **Sprint 2** | Catalogue & Chaîne Offres | 🔍 Audit | 3j | 🔴 Haute |
-| **Sprint 3** | Circuits — Fix bugs métier | 🐛 Bugs | 2j | 🔴 Haute |
-| **Sprint 4** | Réservations — Lifecycle Booking | 🔧 Architecture | 2j | 🟡 Moyenne |
-| **Sprint 5** | DDD — Aggregate Roots & Lifecycle | 🔧 Architecture | 3j | 🟡 Moyenne |
-| **Sprint 6** | Moteur de Configuration | ✨ Fonctionnalités | 2j | 🟡 Moyenne |
-| **Sprint 7** | API & Performance | ⚡ Optimisation | 2j | 🟢 Basse |
-| **Sprint 8** | UX & Frontend | ✨ Fonctionnalités | 2j | 🟢 Basse |
+| **1** | Data Integrity & Sécurité | 🐛 Bugs | 3j | 🔴 Critique |
+| **2** | Audit Métier Catalogue | 🔍 Audit | 3j | 🔴 Haute |
+| **3** | Circuits — Fix bugs métier | 🐛 Bugs | 2j | 🔴 Haute |
+| **4** | Réservation Booking classique | 🔧 Architecture | 2j | 🟡 Moyenne |
+| **5** | Réservation Circuit | 🔧 Architecture | 2j | 🟡 Moyenne |
+| **6** | DDD — Lifecycle & Invariants | 🔧 Architecture | 2j | 🟡 Moyenne |
+| **7** | Workflow Admin & Modération | ✨ Fonctionnalités | 2j | 🟡 Moyenne |
+| **8** | Moteur de Configuration | ✨ Fonctionnalités | 2j | 🟡 Moyenne |
+| **9** | Search Engine & Explorer | ✨ Fonctionnalités | 3j | 🟢 Basse |
+| **10** | API & Performance | ⚡ Optimisation | 2j | 🟢 Basse |
+| **11** | Tests Métier Bout en Bout | 🧪 Tests | 3j | 🔴 Haute |
+| **12** | Documentation Finale | 📄 Docs | 1j | 🟢 Basse |
 
 ---
 
 ## Sprint 1 — Data Integrity & Sécurité 🐛
 
 > **Objectif :** Éviter les données orphelines, les surréservations et les UUID dangling.
-> **Type :** Correction de bugs critiques — pas de nouvelles fonctionnalités.
+> **Type :** Corrections de bugs critiques.
 
-### Task 1.1 : Soft Delete sur Offer (au lieu de SET NULL)
+### Task 1.1 : Soft Delete sur Offer
 
-**Fichier :** `backend/src/offer/entities/offer.entity.ts`
+**Fichiers :** `offer.entity.ts`, `offer.service.ts`, `offer.controller.ts`
 
-**Problème :** Supprimer une offre avec `SET NULL` sur le Booking perd l'information de réservation. Une réservation = un historique qu'il faut préserver.
+**Problème :** Supprimer une offre avec SET NULL sur le Booking perd l'historique de réservation. Une réservation = un historique métier qu'il faut préserver.
 
-**Solution :** Ajouter un champ `is_deleted` (soft delete) et interdire la suppression physique si des réservations existent.
+**Solution :** Soft delete (is_deleted + deleted_at) + interdire la suppression physique si réservations actives.
 
 ```typescript
 // offer.entity.ts
@@ -59,18 +103,15 @@ async remove(authorId: string, offerId: string) {
   const offer = await this.findOne(offerId);
   if (offer.author_id !== authorId) throw new ForbiddenException();
 
-  // Vérifier les réservations actives
   const activeBookings = await this.bookingRepo.count({
     where: { offer: { id: offerId }, status: Not('cancelled') }
   });
   if (activeBookings > 0) {
-    // Proposer archiver au lieu de supprimer
     throw new BadRequestException(
       `${activeBookings} réservation(s) active(s). Utilisez l'archivage.`
     );
   }
 
-  // Soft delete
   offer.is_deleted = true;
   offer.deleted_at = new Date();
   await this.offerRepo.save(offer);
@@ -83,67 +124,39 @@ async remove(authorId: string, offerId: string) {
 
 ### Task 1.2 : Options Archive / Désactiver / Voir circuits liés
 
-**Fichier :** `frontend/app/dashboard/page.tsx` + `backend/src/offer/offer.controller.ts`
-
-**Problème :** L'utilisateur n'a pas le choix entre archiver, désactiver ou voir les circuits concernés.
-
-**Solution :** 3 actions au lieu de "Supprimer" :
+**Fichiers :** `offer.controller.ts`, `offer.service.ts`, dashboard page
 
 ```typescript
-// offer.controller.ts — Nouvel endpoint
+// offer.controller.ts
 @Patch(':id/archive')
-async archive(@Param('id') id: string) {
-  return this.offerService.archive(id);
-}
+async archive(@Param('id') id: string) { return this.offerService.archive(id); }
 
 @Patch(':id/deactivate')
-async deactivate(@Param('id') id: string) {
-  return this.offerService.deactivate(id);
-}
+async deactivate(@Param('id') id: string) { return this.offerService.deactivate(id); }
 
 @Get(':id/linked-circuits')
-async getLinkedCircuits(@Param('id') id: string) {
-  return this.offerService.findLinkedCircuits(id);
-}
+async getLinkedCircuits(@Param('id') id: string) { return this.offerService.findLinkedCircuits(id); }
 ```
 
-```typescript
-// offer.service.ts
-async archive(offerId: string) {
-  const offer = await this.findOne(offerId);
-  offer.status = 'archived';
-  offer.is_deleted = true;
-  offer.deleted_at = new Date();
-  return this.offerRepo.save(offer);
-}
-
-async deactivate(offerId: string) {
-  const offer = await this.findOne(offerId);
-  offer.status = 'inactive';
-  return this.offerRepo.save(offer);
-}
+**Frontend — Modal de remplacement du bouton "Supprimer" :**
 ```
-
-**Frontend — Modal de suppression :**
-```
-┌─────────────────────────────────────────┐
-│  Que souhaitez-vous faire ?             │
-│                                         │
-│  📦 Archiver                            │
-│     Masquer sans supprimer.             │
-│     Les réservations restent intactes.  │
-│                                         │
-│  ⏸️ Désactiver                          │
-│     Masquer temporairement.             │
-│     Réactivable à tout moment.          │
-│                                         │
-│  🔗 Voir les circuits concernés         │
-│     X circuit(s) utilisent cette offre. │
-│                                         │
-│  ❌ Supprimer                           │
-│     Impossible si des réservations      │
-│     sont actives.                       │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  Que souhaitez-vous faire ?              │
+│                                          │
+│  📦 Archiver                             │
+│     Masquer sans supprimer.              │
+│     Les réservations restent intactes.   │
+│                                          │
+│  ⏸️  Désactiver                          │
+│     Masquer temporairement.              │
+│     Réactivable à tout moment.           │
+│                                          │
+│  🔗 Voir les circuits concernés          │
+│     X circuit(s) utilisent cette offre.  │
+│                                          │
+│  ❌ Supprimer                            │
+│     Impossible si réservations actives.  │
+└──────────────────────────────────────────┘
 ```
 
 **Status :** ⬜ À faire
@@ -152,38 +165,23 @@ async deactivate(offerId: string) {
 
 ### Task 1.3 : Gestion capacité dans CircuitReservation
 
-**Fichier :** `backend/src/circuit/circuit.service.ts`
+**Fichier :** `circuit.service.ts`
 
-**Problème :** `CircuitReservation` ne décrémente PAS `remaining_capacity` des sessions liées → surréservation possible.
-
-**Scénario :**
-```
-1. Activité "Kayak" : 10 places
-2. Circuit A réserve 8 places → AUCUNE décrémentation
-3. Circuit B réserve 5 places → AUCUNE décrémentation
-4. Booking direct 4 places → remaining_capacity = 10 - 4 = 6
-5. Total : 8 + 5 + 4 = 17 réservations pour 10 places
-```
-
-**Solution :**
+**Problème :** CircuitReservation ne décrémente PAS remaining_capacity → surréservation.
 
 ```typescript
 // circuit.service.ts — reserveCircuit()
 async reserveCircuit(circuitId: string, dto: CreateCircuitReservationDto) {
   const circuit = await this.findOne(circuitId);
 
-  // 1. Vérifier et décrémenter la capacité pour chaque activité liée
   for (const day of circuit.days ?? []) {
     for (const prog of day.programItems ?? []) {
       if (prog.linked_offer_item_id) {
-        const session = await this.findSessionForDate(
-          prog.linked_offer_item_id, dto.date
-        );
+        const session = await this.findSessionForDate(prog.linked_offer_item_id, dto.date);
         if (session?.remaining_capacity !== null) {
           if (session.remaining_capacity < dto.participants_count) {
             throw new BadRequestException(
-              `Capacité insuffisante pour "${prog.title}" : ` +
-              `${session.remaining_capacity} place(s) disponible(s)`
+              `Capacité insuffisante pour "${prog.title}" : ${session.remaining_capacity} place(s)`
             );
           }
           session.remaining_capacity -= dto.participants_count;
@@ -193,9 +191,7 @@ async reserveCircuit(circuitId: string, dto: CreateCircuitReservationDto) {
       }
     }
   }
-
-  // 2. Créer la réservation
-  // ...
+  // ... créer la réservation
 }
 ```
 
@@ -205,9 +201,7 @@ async reserveCircuit(circuitId: string, dto: CreateCircuitReservationDto) {
 
 ### Task 1.4 : Restaurer capacité à l'annulation
 
-**Fichier :** `backend/src/circuit/circuit.service.ts`
-
-**Solution :** Inverser la Task 1.3 lors de l'annulation.
+**Fichier :** `circuit.service.ts`
 
 ```typescript
 async cancelCircuitReservation(reservationId: string) {
@@ -216,13 +210,10 @@ async cancelCircuitReservation(reservationId: string) {
     relations: ['circuit', 'circuit.days', 'circuit.days.programItems']
   });
 
-  // Restaurer la capacité
   for (const day of reservation.circuit.days ?? []) {
     for (const prog of day.programItems ?? []) {
       if (prog.linked_offer_item_id) {
-        const session = await this.findSessionForDate(
-          prog.linked_offer_item_id, reservation.date
-        );
+        const session = await this.findSessionForDate(prog.linked_offer_item_id, reservation.date);
         if (session) {
           session.remaining_capacity += reservation.participants_count;
           if (session.status === 'full') session.status = 'active';
@@ -231,7 +222,6 @@ async cancelCircuitReservation(reservationId: string) {
       }
     }
   }
-
   reservation.status = 'cancelled';
   await this.circuitReservationRepo.save(reservation);
 }
@@ -241,31 +231,22 @@ async cancelCircuitReservation(reservationId: string) {
 
 ---
 
-### Task 1.5 : Vérifier linked_offer_item_id lors de création d'activité
+### Task 1.5 : Valider linked_offer_item_id à la création
 
-**Fichier :** `backend/src/circuit/circuit.service.ts`
+**Fichier :** `circuit.service.ts`
 
 ```typescript
 async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, authorId: string) {
-  // Invariant : le jour appartient bien au circuit
   const circuit = await this.findOne(circuitId);
-  if (circuit.author_id !== authorId) {
-    throw new ForbiddenException('Circuit non autorisé');
-  }
+  if (circuit.author_id !== authorId) throw new ForbiddenException('Circuit non autorisé');
 
   const day = circuit.days?.find(d => d.id === dayId);
   if (!day) throw new NotFoundException('Jour non trouvé');
 
-  // Invariant : si linked_offer_item_id, l'item existe bien
   if (dto.linked_offer_item_id) {
-    const item = await this.offerItemRepo.findOne({
-      where: { id: dto.linked_offer_item_id }
-    });
-    if (!item) {
-      throw new NotFoundException('OfferItem référencé introuvable');
-    }
+    const item = await this.offerItemRepo.findOne({ where: { id: dto.linked_offer_item_id } });
+    if (!item) throw new NotFoundException('OfferItem référencé introuvable');
   }
-
   // ... créer l'activité
 }
 ```
@@ -274,99 +255,75 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 
 ---
 
-## Sprint 2 — Catalogue & Chaîne Offres 🔍
+## Sprint 2 — Audit Métier Catalogue 🔍
 
-> **Objectif :** Vérifier que la chaîne Offer → OfferItem → Sessions → Capacity → Availability fonctionne correctement de bout en bout.
-> **Type :** Audit fonctionnel + corrections ciblées. Pas de nouvelles fonctionnalités.
+> **Objectif :** Vérifier la chaîne complète Offer → OfferItem → Price → Session → Capacity → Availability → Booking avec la logique métier, pas seulement technique.
+> **Type :** Audit fonctionnel + tests manuels.
 
-### Task 2.1 : Vérifier la chaîne complète Offres
+### Task 2.1 : Audit — Création d'offre par rôle
 
-**Endpoints à tester :**
-
-| Étape | Endpoint | Vérification |
-|-------|----------|-------------|
-| Créer une offre | `POST /offers` | Statut = `pending`, items créés |
-| Ajouter un item | `POST /offers/:id/items` | item_type, details_json persistés |
-| Ajouter un prix | `POST /offers/:id/items/:itemId/prices` | price, pricing_unit, is_default |
-| Ajouter une session | `POST /offers/:id/items/:itemId/sessions` | date, start_time, end_time |
-| Ajouter une capacité | `POST /offers/:id/items/:itemId/capacity` | remaining_quantity décrémenté |
-| Récupérer mine | `GET /offers/items/mine` | Prix inclus dans la réponse |
-| Récupérer public | `GET /offers/public` | Filtrage par region/category |
+| Scénario | Rôle | Vérification |
+|----------|------|-------------|
+| Créer une offre hébergement | project_owner | L'offre est liée au bon projet ? project_id correct ? |
+| Créer une offre activité | project_owner | project_type du projet correspond-il à la catégorie d'offre ? |
+| Créer une prestation guide | guide | guide_id automatique ? Pas de project_id ? |
+| Modifier une offre existante | owner | Tous les champs modifiables ? Les items sont bien mis à jour ? |
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 2.2 : Vérifier le calcul de prix serveur
+### Task 2.2 : Audit — Chaîne OfferItem → Price → Session → Capacity
 
-**Fichier :** `backend/src/booking/booking.service.ts`
-
-**Scénario à vérifier :**
-```
-1. Offre avec 2 items : chambre (50 TND) + petit-déjeuner (15 TND)
-2. Réservation pour 2 personnes
-3. total_price = (50 + 15) × 2 = 130 TND ?
-4. Vérifier que le client ne peut PAS envoyer son propre total_price
-```
-
-```typescript
-// Vérifier que total_price est calculé côté serveur uniquement
-// booking.service.ts — Ligne 148-165
-const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
-const unitPrice = Number(priceRow.price);
-// ... calcul selon pricingUnit ...
-totalPrice = unitPrice * participantCount;
-// Le body POST ne doit PAS accepter total_price du client
-```
+| Étape | Vérification |
+|-------|-------------|
+| Créer un OfferItem | item_type, details_json persistés ? |
+| Ajouter un prix | price, pricing_unit, is_default ? Deux prix possibles ? |
+| Ajouter une session | date, start_time, end_time ? Capacité créée automatiquement ? |
+| Ajouter une capacité | remaining_quantity = total ? Décrémenté à la réservation ? |
+| Récupérer via API | `GET /offers/items/mine` retourne les prix ? `GET /offers/public` filtre correctement ? |
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 2.3 : Vérifier la gestion de capacité (Booking direct)
+### Task 2.3 : Audit — Les 4 types d'activités dans un circuit
 
-**Fichier :** `backend/src/booking/booking.service.ts`
-
-**Scénario :**
-```
-1. Session avec remaining_capacity = 5
-2. Réservation de 3 personnes → remaining = 2 ✅
-3. Réservation de 3 personnes → ERREUR (capacité insuffisante) ✅
-4. Annulation → remaining = 5 ✅
-5. Session complète → remaining = 0 → status = 'full' ✅
-```
+| Type | Vérification |
+|------|-------------|
+| **own** | Sélection "Mes offres" → prix catalogue récupéré ? linked_offer_item_id = mon item ? Prix modifiable ? |
+| **other** | Sélection "Offres externes" → prix catalogue de l'autre propriétaire ? linked_offer_item_id = item tiers ? |
+| **guide** | Sélection guide → guide_id lié ? guide_cost récupéré ? Offre du guide auto-liée ? |
+| **external** | Référence externe → external_reference JSONB sauvegardé ? Aucune offre requise ? |
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 2.4 : Vérifier les disponibilités (Availability Rules)
+### Task 2.4 : Audit — Prix du circuit indépendant du catalogue
 
-**Fichier :** `backend/src/offer/offer-item-availability-rule.entity.ts`
-
-**Scénario :**
-```
-1. Règle : "Chaque lundi de 9h à 17h"
-2. Réservation un mardi → ERREUR (jour non disponible) ✅
-3. Réservation un lundi à 8h → ERREUR (hors créneau) ✅
-4. Réservation un lundi à 10h pour 2 personnes → OK ✅
-```
+| Scénario | Résultat attendu |
+|----------|-----------------|
+| Offre à 50 TND → Circuit copie 50 TND | ✅ Prix circuit = copie indépendante |
+| Modifier prix offre à 75 TND | Le prix du circuit reste 50 TND |
+| Badge "Offre à 75 TND" affiche le prix actuel | ✅ Le badge montre le prix catalogue ACTUEL |
+| Prix circuit modifiable manuellement | ✅ Le champ reste éditable |
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 2.5 : Vérifier les 3 fallbacks de calcul de prix
+### Task 2.5 : Audit — Disponibilité guide vs offre
 
-**Fichier :** `backend/src/booking/booking.service.ts`
+| Concept | Guide | Project Owner |
+|---------|-------|---------------|
+| **Ce qui est vendu** | Temps disponible (créneaux) | Produit stockable (chambre, plat, activité) |
+| **Disponibilité** | `GuideOfferingAvailabilityRule` (weekly, date_range, on_demand, specific) | `OfferItemAvailabilityRule` (similar) |
+| **Sessions** | `GuideOfferingSession` (date, start_time, end_time, capacity) | `OfferItemSession` (date, start_time, end_time) |
+| **Blocages** | `GuideOfferingBlock` (date range + reason) | Pas de blocage (utiliser availability rules) |
+| **Capacité** | `remaining_capacity` sur la session | `remaining_capacity` sur la session OU `remaining_quantity` sur l'item |
 
-**Ordre de fallback :**
-```
-1. Session.price_override (si défini) → prix saisonnier
-2. OfferItemPrice (is_default=true) → prix standard
-3. Offer.base_price → prix de base de l'offre
-4. Somme des items → si pas de prix unitaire
-```
+**Vérification :** Quand un guide est sélectionné dans un circuit, est-ce que le wizard cherche dans `GuideOfferingSession` (pas dans `OfferItemSession`) ?
 
 **Status :** ⬜ À faire
 
@@ -374,21 +331,18 @@ totalPrice = unitPrice * participantCount;
 
 ## Sprint 3 — Circuits — Fix bugs métier 🐛
 
-> **Objectif :** Corriger les bugs identifiés dans l'audit des circuits/activités/tarification.
-> **Type :** Corrections de bugs métier — pas de nouvelles fonctionnalités.
+> **Objectif :** Corriger les bugs identifiés dans l'audit circuits/activités/tarification.
 
 ### Task 3.1 : Brancher externalRef dans CircuitBuilderWizard
 
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
-
-**Bug :** `onExternalRefChange` callback non sauvegardée (commentaire `// Future: store external ref`).
+**Fichier :** `CircuitBuilderWizard.tsx`
 
 ```typescript
 // Ajouter dans ProgramItemForm :
 external_reference: Record<string, any> | null;
 is_external_reference: boolean;
 
-// Dans le callback ExternalOfferModal :
+// Dans le callback :
 onExternalRefChange={(ref) => {
   if (externalModalDayId && externalModalProgId) {
     updateProgramItem(externalModalDayId, externalModalProgId, {
@@ -405,19 +359,17 @@ onExternalRefChange={(ref) => {
 
 ### Task 3.2 : Auto-lien offre du guide
 
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
-
-**Bug :** Quand un guide est sélectionné, son offre n'est pas automatiquement liée.
+**Fichier :** `CircuitBuilderWizard.tsx`
 
 ```typescript
 onSelect={async (id, name, price) => {
-  // Récupérer l'offre du guide
-  const guideOffer = await apiFetch(`/guide/${id}/offering`).catch(() => null);
+  // Récupérer la prestation du guide
+  const guideOffering = await apiFetch(`/guide/${id}/offering`).catch(() => null);
   updateProgramItem(day.id, prog.id, {
     guide_id: id,
     guide_name: name,
     guide_cost: price || "",
-    linked_offer_item_id: guideOffer?.offer_item_id ?? null,
+    linked_offer_item_id: guideOffering?.offer_item_id ?? null,
   });
 }}
 ```
@@ -428,12 +380,9 @@ onSelect={async (id, name, price) => {
 
 ### Task 3.3 : Structurer guide_cost dans l'entité backend
 
-**Fichier :** `backend/src/circuit/entities/circuit-program-item.entity.ts`
-
-**Bug :** `guide_cost` stocké dans `fields` (JSONB) au lieu d'un champ dédié.
+**Fichier :** `circuit-program-item.entity.ts`
 
 ```typescript
-// Ajouter un champ dédié
 @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
 guide_cost!: number | null;
 ```
@@ -444,11 +393,9 @@ guide_cost!: number | null;
 
 ### Task 3.4 : Unifier GuideSearchInline
 
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
+**Fichier :** `CircuitBuilderWizard.tsx`
 
-**Bug :** Version inline (lignes 72-230) au lieu du component exporté `GuideSearchInline.tsx`.
-
-**Action :** Remplacer la version inline par le composant exporté pour éviter la divergence.
+Remplacer la version inline (lignes 72-230) par le composant exporté `GuideSearchInline`.
 
 **Status :** ⬜ À faire
 
@@ -456,7 +403,7 @@ guide_cost!: number | null;
 
 ### Task 3.5 : Badge visuel pour "Référence externe"
 
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
+**Fichier :** `CircuitBuilderWizard.tsx`
 
 ```tsx
 {prog.is_external_reference && prog.external_reference && (
@@ -473,27 +420,26 @@ guide_cost!: number | null;
 
 ---
 
-## Sprint 4 — Réservations — Lifecycle Booking 🔧
+## Sprint 4 — Réservation Booking classique 🔧
 
-> **Objectif :** Compléter le cycle de vie des réservations avec les transitions manquantes.
-> **Type :** Architecture métier — pas de nouvelles fonctionnalités utilisateur.
+> **Objectif :** Compléter le cycle de vie des réservations classiques (Offer → Booking).
+> **Type :** Architecture métier.
 
-### Task 4.1 : Ajouter état `expired` pour Booking
+### Task 4.1 : État `expired` pour Booking
 
-**Fichier :** `backend/src/booking/booking.service.ts`
+**Fichier :** `booking.service.ts`
 
 ```typescript
 async checkExpiredBookings() {
   const expired = await this.bookingRepo.find({
     where: {
       status: 'pending',
-      created_at: LessThan(new Date(Date.now() - 48 * 60 * 60 * 1000)), // 48h
+      created_at: LessThan(new Date(Date.now() - 48 * 60 * 60 * 1000)),
     },
   });
   for (const booking of expired) {
     booking.status = 'expired';
     await this.bookingRepo.save(booking);
-    // Restaurer capacité
     await this.restoreCapacity(booking);
   }
 }
@@ -505,15 +451,12 @@ async checkExpiredBookings() {
 
 ### Task 4.2 : Transition `confirmed → completed` automatique
 
-**Fichier :** `backend/src/booking/booking.service.ts`
+**Fichier :** `booking.service.ts`
 
 ```typescript
 async finalizeCompletedBookings() {
   const completed = await this.bookingRepo.find({
-    where: {
-      status: 'confirmed',
-      // Date de session passée
-    },
+    where: { status: 'confirmed' },
     relations: ['session']
   });
   for (const booking of completed) {
@@ -531,20 +474,15 @@ async finalizeCompletedBookings() {
 
 ### Task 4.3 : Vérifier annulation avec délai
 
-**Fichier :** `backend/src/booking/booking.service.ts`
+**Fichier :** `booking.service.ts`
 
 ```typescript
-// booking.service.ts — Ligne 238
 async cancel(bookingId: string, userId: string) {
   const booking = await this.findOne(bookingId);
-  const daysUntilSession = differenceInDays(
-    new Date(booking.session.date), new Date()
-  );
-
+  const daysUntilSession = differenceInDays(new Date(booking.session.date), new Date());
   if (daysUntilSession < booking.cancellation_deadline_days) {
     throw new BadRequestException(
-      `Délai d'annulation dépassé. ` +
-      `Annulation possible jusqu'à ${booking.cancellation_deadline_days} jours avant.`
+      `Délai d'annulation dépassé. Annulation possible jusqu'à ${booking.cancellation_deadline_days} jours avant.`
     );
   }
   // ... annuler et restaurer capacité
@@ -557,90 +495,143 @@ async cancel(bookingId: string, userId: string) {
 
 ### Task 4.4 : Vérifier double réservation
 
-**Fichier :** `backend/src/booking/booking.service.ts`
+**Fichier :** `booking.service.ts`
 
 ```typescript
-// Empêcher double réservation pour la même session
 const existing = await this.bookingRepo.findOne({
-  where: {
-    traveler_id: userId,
-    session_id: dto.session_id,
-    status: Not('cancelled'),
-  }
+  where: { traveler_id: userId, session_id: dto.session_id, status: Not('cancelled') }
 });
-if (existing) {
-  throw new BadRequestException('Vous avez déjà réservé cette session');
-}
+if (existing) throw new BadRequestException('Vous avez déjà réservé cette session');
 ```
 
 **Status :** ⬜ À faire
 
 ---
 
-## Sprint 5 — DDD — Aggregate Roots & Lifecycle 🔧
+## Sprint 5 — Réservation Circuit 🔧
 
-> **Objectif :** Définir les Aggregate Roots, ownership, lifecycle et invariants manquants.
-> **Type :** Architecture DDD — pas de nouvelles fonctionnalités utilisateur.
+> **Objectif :** Vérifier le workflow CircuitReservation de bout en bout.
+> **Type :** Architecture métier — séparé du Booking classique car c'est un Aggregate Root différent.
 
-### Task 5.1 : Ajouter état `draft` pour Offer et Circuit
+### Task 5.1 : Vérifier la création de CircuitReservation
 
-**Fichiers :** `offer.entity.ts`, `circuit.entity.ts`
+| Étape | Vérification |
+|-------|-------------|
+| Créer une réservation | Circuit existant ? Dates valides ? |
+| Vérifier capacité | Chaque activité liée a assez de places ? |
+| Décrémenter capacité | remaining_capacity -= participants_count ? |
+| Calculer le prix | Prix circuit × participants + options ? |
+| Créer les bookings sous-jacents | Un Booking par activité liée ? |
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 5.2 : Vérifier l'annulation de CircuitReservation
+
+| Étape | Vérification |
+|-------|-------------|
+| Annuler | Capacité restaurée pour chaque activité ? |
+| Annuler les bookings liés | Chaque Booking sous-jacent est annulé ? |
+| Notifications | Le guide est notifié ? Le propriétaire est notifié ? |
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 5.3 : Vérifier les notifications Circuit
+
+| Événement | Notification |
+|-----------|-------------|
+| Nouvelle réservation circuit | Propriétaire notifié + guides concernés notifiés |
+| Annulation circuit | Guides + propriétaires notifiés |
+| Modification circuit | Participants notifiés ? |
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 5.4 : Vérifier CircuitReservation vs Booking
+
+| Critère | CircuitReservation | Booking classique |
+|---------|-------------------|-------------------|
+| Aggregate Root | Circuit | Offer |
+| Capacité | Décrémentée via linked_offer_item_id | Décrémentée via session |
+| Prix | Prix circuit (copie indépendante) | Prix catalogue (calcul serveur) |
+| Annulation | Restaure capacité + annule bookings | Restaure capacité session |
+| Notifications | Guides + propriétaires | Propriétaire uniquement |
+
+**Status :** ⬜ À faire
+
+---
+
+## Sprint 6 — DDD — Lifecycle & Invariants 🔧
+
+> **Objectif :** Documenter et implémenter les Aggregate Roots, lifecycle et invariants.
+
+### Task 6.1 : Lifecycle Offer
+
+```
+draft → pending → approved → inactive → archived
+                ↘ rejected
+```
+
+| Transition | Guard | Action |
+|-----------|-------|--------|
+| draft → pending | Wizard soumis | Envoyer pour validation |
+| pending → approved | Admin ou Ambassadeur | Visible publiquement |
+| pending → rejected | Admin avec raison | Notifier l'auteur |
+| approved → inactive | Owner | Masquer temporairement |
+| approved → archived | Owner | Masquer définitivement |
+| inactive → approved | Owner | Réactiver |
 
 ```typescript
-// Le wizard crée en 'draft' au lieu de 'pending'
-@Column({ default: 'draft' })
-status!: string;
-// 'draft' | 'pending' | 'approved' | 'rejected' | 'archived' | 'inactive'
-```
-
-**Status :** ⬜ À faire
-
----
-
-### Task 5.2 : Ajouter état `inactive` pour Offer
-
-**Fichier :** `offer.entity.ts`
-
-```typescript
-// inactive = offres temporairement cachées sans supprimer
-// archived = offres définitivement masquées
+// offer.entity.ts
 @Column({ default: 'draft' })
 status!: string;
 ```
 
-**Transitions autorisées :**
+**Status :** ⬜ À faire
+
+---
+
+### Task 6.2 : Lifecycle Circuit
+
 ```
-draft → pending (soumettre pour validation)
-pending → approved (admin/ambassadeur)
-pending → rejected (admin avec raison)
-approved → inactive (désactiver temporairement)
-approved → archived (masquer définitivement)
-inactive → approved (réactiver)
-inactive → archived (archiver)
+draft → pending → approved → archived
+                ↘ rejected
 ```
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 5.3 : Documenter les Aggregate Roots
+### Task 6.3 : Lifecycle Booking
 
-**Fichier :** `docs/AUDIT_DDD_CIRCUITS.md`
-
-Mettre à jour l'audit DDD avec les Aggregate Roots clarifiés :
-
-| Aggregate Root | Enfants | Cross-aggregate refs | Ownership |
-|---|---|---|---|
-| **Project** | Offers | — | ProjectOwner |
-| **Offer** | OfferItems → Prices, Sessions, Capacity | project_id (nullable) | Author (ProjectOwner) |
-| **Circuit** | Days → ProgramItems, Options, Reservations | linked_offer_item_id (UUID) | Author (User) |
-| **Booking** | Participants | offer_id, session_id, guideOffering | Traveler (User) |
+```
+pending → confirmed → completed
+pending → expired
+confirmed → cancelled
+pending → cancelled
+```
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 5.4 : Documenter les Invariants
+### Task 6.4 : Lifecycle GuideOffering
+
+```
+pending → active → archived
+pending → rejected
+active → inactive
+```
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 6.5 : Documenter les invariants
 
 **Fichier :** `docs/AUDIT_DDD_CIRCUITS.md`
 
@@ -650,36 +641,84 @@ Mettre à jour l'audit DDD avec les Aggregate Roots clarifiés :
 | CircuitReservation → Capacité OfferItem | Décrémenter/Restaurer | 🔴 |
 | CircuitProgramItem → OfferItem existe | Vérifier à la création | 🔴 |
 | Offer modifiée → Prix circuit préservé | Prix = copie indépendante | 🟡 |
-| Project supprimé → Offers SET NULL | Correct mais surprenant | 🟡 |
+| Guide indisponible → Circuit affected | Vérifier disponibilité | 🟡 |
 | Session expirée → Booking finalized | Transition auto | 🟢 |
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 5.5 : Lifecycle documenté pour chaque entité
+## Sprint 7 — Workflow Admin & Modération ✨
 
-**Fichier :** `docs/AUDIT_DDD_CIRCUITS.md`
+> **Objectif :** Implémenter le workflow de modération (validation, rejet, archivage).
+
+### Task 7.1 : Page Admin — Liste des offres à valider
 
 ```
-Offer:     draft → pending → approved → inactive → archived
-Circuit:   draft → pending → approved → archived
-Booking:   pending → confirmed → completed
-           pending → expired
-           confirmed → cancelled
-CircuitRes: pending → confirmed → cancelled
+GET /api/admin/offers?status=pending&page=1&limit=20
+```
+
+Afficher : titre, auteur, catégorie, date de soumission, boutons Approuver/Rejeter.
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 7.2 : Validation / Rejet avec commentaire
+
+```
+PATCH /api/admin/offers/:id/approve
+PATCH /api/admin/offers/:id/reject  { reason: "..." }
+```
+
+Notifier l'auteur par email + notification in-app.
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 7.3 : Validation Ambassadeur (auto-approve)
+
+Si l'auteur est Ambassadeur (score ≥ 80), l'offre est automatiquement approuvée.
+
+```typescript
+// offer.service.ts
+if (author.eco_score >= 80) {
+  offer.status = 'approved';
+} else {
+  offer.status = 'pending';
+}
 ```
 
 **Status :** ⬜ À faire
 
 ---
 
-## Sprint 6 — Moteur de Configuration ✨
+### Task 7.4 : Historique de modération
+
+```typescript
+@Entity('moderation_logs')
+export class ModerationLog {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column('uuid') entity_id!: string;
+  @Column() entity_type!: string; // 'offer' | 'circuit' | 'guide_offering'
+  @Column() action!: string; // 'approved' | 'rejected' | 'archived'
+  @Column({ type: 'text', nullable: true }) reason!: string | null;
+  @Column('uuid') moderator_id!: string;
+  @CreateDateColumn() created_at!: Date;
+}
+```
+
+**Status :** ⬜ À faire
+
+---
+
+## Sprint 8 — Moteur de Configuration ✨
 
 > **Objectif :** Améliorer le système de schemas avec des constantes partagées, validations croisées et types dynamiques.
-> **Type :** Fonctionnalités d'amélioration — inspiré de Maram mais adapté à notre architecture.
+> **Inspiré de Maram, adapté à notre architecture.**
 
-### Task 6.1 : Créer shared-configs.ts
+### Task 8.1 : Créer shared-configs.ts
 
 **Fichier :** `frontend/lib/shared-configs.ts` (nouveau)
 
@@ -731,7 +770,7 @@ export const DUREES = [
 
 ---
 
-### Task 6.2 : Ajouter CrossValidationRule
+### Task 8.2 : Ajouter CrossValidationRule
 
 **Fichier :** `frontend/lib/offer-schema.ts`
 
@@ -739,18 +778,8 @@ export const DUREES = [
 export interface CrossValidationRule {
   field: string;
   rule: 'lte' | 'gte' | 'in' | 'subset' | 'coherent' | 'requiredIfTrue' | 'requiredIfFalse';
-  onboardingKey: string; // ex: 'max_participants' du projet
+  onboardingKey: string;
   message: string;
-}
-
-// Utilisation dans un schema :
-{
-  crossValidation: {
-    field: 'max_participants',
-    rule: 'lte',
-    onboardingKey: 'project_capacity',
-    message: 'Le nombre de participants ne peut pas dépasser la capacité du projet'
-  }
 }
 ```
 
@@ -758,25 +787,15 @@ export interface CrossValidationRule {
 
 ---
 
-### Task 6.3 : Ajouter types `repeater` et `dynamicOptions`
+### Task 8.3 : Ajouter types `repeater` et `dynamicOptions`
 
 **Fichier :** `frontend/lib/offer-schema.ts`
 
 ```typescript
 export interface SchemaField {
   type: 'text' | 'number' | 'select' | 'multiselect' | 'boolean' | 'time' | 'file' | 'textarea' | 'hierarchy' | 'repeater';
-  // ... existing fields
-  dynamicOptions?: {
-    endpoint: string;
-    labelField: string;
-    valueField: string;
-  };
-  repeaterConfig?: {
-    addLabel: string;
-    fields: string[];
-    minItems?: number;
-    maxItems?: number;
-  };
+  dynamicOptions?: { endpoint: string; labelField: string; valueField: string };
+  repeaterConfig?: { addLabel: string; fields: string[]; minItems?: number; maxItems?: number };
 }
 ```
 
@@ -784,57 +803,99 @@ export interface SchemaField {
 
 ---
 
-### Task 6.4 : Mettre à jour les schemas avec shared constants
+### Task 8.4 : Mettre à jour les schemas avec shared constants
 
 **Fichier :** `frontend/lib/offer-schema.ts`
 
-Remplacer les options hardcodées par les constantes importées de `shared-configs.ts`.
+Remplacer les options hardcodées par les constantes importées.
 
 **Status :** ⬜ À faire
 
 ---
 
-## Sprint 7 — API & Performance ⚡
+## Sprint 9 — Search Engine & Explorer ✨
 
-> **Objectif :** Vérifier la qualité API avant d'ajouter des fonctionnalités.
-> **Type :** Optimisation — pas de nouvelles fonctionnalités utilisateur.
+> **Objectif :** Améliorer la recherche et la page Explorer (vitriene de la plateforme).
 
-### Task 7.1 : Vérifier la pagination
+### Task 9.1 : Audit de la recherche multi-entités
 
-**Endpoints :**
+| Recherche | Endpoint actuel | Amélioration |
+|-----------|----------------|-------------|
+| Offres | `GET /offers/public` | Filtres avancés (prix, catégorie, disponibilité) |
+| Guides | `GET /guide/search` | Recherche par disponibilité + zone + langue |
+| Circuits | `GET /circuits` | Filtres (région, durée, difficulté, prix) |
+| Projets | `GET /projects` | Recherche par type, région |
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 9.2 : Page Explorer — Améliorations
+
+| Composant | Amélioration |
+|-----------|-------------|
+| Carte | Clustering marqueurs, couches toggle (offres/guides/circuits) |
+| Filtres | Prix, catégorie, disponibilité date, distance |
+| Pagination | Scroll infini ou pagination classique |
+| Favoris | Bouton favori sur chaque carte |
+| Tri | Pertinence, prix, distance, note |
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 9.3 : Recherche de disponibilité guide
+
+```typescript
+// guide-search.service.ts
+async searchAvailableGuides(date: Date, zone: string) {
+  return this.guideRepo
+    .createQueryBuilder('g')
+    .innerJoin('g.offerings', 'o')
+    .innerJoin('o.sessions', 's', 's.date = :date AND s.status = :status', {
+      date, status: 'available'
+    })
+    .where('s.remaining_capacity > 0')
+    .andWhere('LOWER(g.zone) LIKE :zone', { zone: `%${zone}%` })
+    .getMany();
+}
 ```
-GET /offers?page=1&limit=20
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 9.4 : Recherche d'hébergement dans le Circuit Builder
+
+Vérifier que la recherche d'hébergement dans Step 5 du wizard fonctionne :
+1. Mes offres (propre) → `GET /offers/items/mine?item_type=room`
+2. Autre propriétaire → `GET /offers/public?region=X&category=hebergement`
+3. Référence externe → formulaire manuel
+
+**Status :** ⬜ À faire
+
+---
+
+## Sprint 10 — API & Performance ⚡
+
+> **Objectif :** Vérifier la qualité API avant la mise en production.
+
+### Task 10.1 : Pagination sur tous les endpoints liste
+
+```
+GET /offers?page=1&limit=20     → { data, total, page, limit, totalPages }
 GET /circuits?page=1&limit=20
 GET /guide/search?page=1&limit=20
 GET /bookings/mine?page=1&limit=20
 ```
 
-**Vérifier :** Response contient `data`, `total`, `page`, `limit`, `totalPages`.
-
 **Status :** ⬜ À faire
 
 ---
 
-### Task 7.2 : Vérifier les filtres et recherche
+### Task 10.2 : Index SQL
 
-**Endpoints :**
-```
-GET /offers/public?region=&category=&min_price=&max_price=
-GET /circuits?region=&difficulty=&duration_min=&duration_max=
-GET /guide/search?q=&zone=&max_price=&lat=&lng=&date=
-```
-
-**Vérifier :** Filtres fonctionnent, combinaisons possibles.
-
-**Status :** ⬜ À faire
-
----
-
-### Task 7.3 : Vérifier les index SQL
-
-**Requêtes à optimiser :**
 ```sql
--- Vérifier les index sur les colonnes fréquemment requêtées
 CREATE INDEX IF NOT EXISTS idx_offers_author ON offers(author_id);
 CREATE INDEX IF NOT EXISTS idx_offers_region ON offers(region);
 CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
@@ -842,24 +903,24 @@ CREATE INDEX IF NOT EXISTS idx_offer_items_offer ON offer_items(offer_id);
 CREATE INDEX IF NOT EXISTS idx_circuits_author ON circuits(author_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_traveler ON bookings(traveler_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
+CREATE INDEX IF NOT EXISTS idx_guide_sessions_date ON guide_offering_sessions(date);
 ```
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 7.4 : Vérifier les N+1 Queries
+### Task 10.3 : Vérifier les N+1 Queries
 
-**Fichiers :** `offer.service.ts`, `circuit.service.ts`, `booking.service.ts`
+Vérifier dans `offer.service.ts`, `circuit.service.ts`, `booking.service.ts` :
 
-**Vérifier :**
 ```typescript
-// ❌ N+1 : Boucle sur les items pour charger les prix
+// ❌ N+1
 for (const item of items) {
   const prices = await this.priceRepo.find({ where: { offer_item_id: item.id } });
 }
 
-// ✅ Correct : Charger tout d'un coup
+// ✅ Correct
 const items = await this.offerItemRepo.find({
   relations: ['prices', 'sessions', 'capacity'],
   where: { offer_id: offerId }
@@ -870,56 +931,138 @@ const items = await this.offerItemRepo.find({
 
 ---
 
-### Task 7.5 : Vérifier l'eager loading
+### Task 10.4 : Vérifier l'eager loading
 
-**Fichiers :** `offer.entity.ts`, `circuit.entity.ts`
-
-**Vérifier :** Pas de `eager: true` sur les relations qui ne sont pas toujours nécessaires.
+Vérifier pas de `eagle: true` sur les relations non nécessaires.
 
 **Status :** ⬜ À faire
 
 ---
 
-## Sprint 8 — UX & Frontend ✨
+### Task 10.5 : Filtres et recherche
 
-> **Objectif :** Améliorer l'expérience utilisateur sur les composants existants.
-> **Type :** Fonctionnalités d'amélioration UX.
-
-### Task 8.1 : Afficher le type de prestation dans le wizard
-
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
-
-Badge clair pour chaque type : 🟢 Ma offre | 🔵 Offre externe | 🟠 Guide | ⚪ Référence externe
+Vérifier que les combinaisons de filtres fonctionnent :
+```
+GET /offers/public?region=Djerba&category=hebergement&min_price=50&max_price=200
+GET /circuits?region=Sahara&difficulty=modere&duration_min=2&duration_max=5
+GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
+```
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 8.2 : Skeleton loaders dans le wizard
+## Sprint 11 — Tests Métier Bout en Bout 🧪
 
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
+> **Objectif :** Valider tous les scénarios métier avant la mise en production.
+> **Type :** Tests manuels documentés + scripts de validation.
 
-Loading states pendant la recherche d'offres/guides.
+### Task 11.1 : Scénarios — Création d'offre
+
+| # | Scénario | Résultat attendu |
+|---|----------|-----------------|
+| 1 | Project owner crée offre hébergement | Offer créée avec project_id, status=draft |
+| 2 | Guide crée prestation randonnée | GuideOffering créée avec guide_id, availability rules |
+| 3 | Propriétaire modifie prix offre | Prix mis à jour, circuits existants inchangés |
+| 4 | Propriétaire ajoute OfferItem + Price | Item créé, prix visible dans le catalogue |
+| 5 | Propriétaire ajoute Session + Capacity | Session créée, capacité décrémentable |
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 8.3 : Tooltip explicatif sur les prix
+### Task 11.2 : Scénarios — Réservation
 
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
-
-Tooltip "Prix catalogue = prix de base de l'offre" au survol du badge prix.
+| # | Scénario | Résultat attendu |
+|---|----------|-----------------|
+| 1 | Réservation simple (1 personne) | Booking créé, capacité décrémentée, notification envoyée |
+| 2 | Réservation circuit (3 personnes) | CircuitReservation créée, capacité décrémentée pour chaque activité |
+| 3 | Réservation session complète | Erreur "Capacité insuffisante" |
+| 4 | Annulation avant délai | Capacité restaurée, notifications envoyées |
+| 5 | Annulation après délai | Erreur "Délai d'annulation dépassé" |
+| 6 | Double réservation même session | Erreur "Vous avez déjà réservé" |
+| 7 | Réservation avec guide | guide_offering_id lié, guide notifié |
 
 **Status :** ⬜ À faire
 
 ---
 
-### Task 8.4 : Confirmation avant suppression
+### Task 11.3 : Scénarios — Circuit
 
-**Fichier :** `frontend/components/CircuitBuilderWizard.tsx`
+| # | Scénario | Résultat attendu |
+|---|----------|-----------------|
+| 1 | Créer circuit 3 jours | Circuit créé avec 3 CircuitDays |
+| 2 | Ajouter activité "ma offre" | linked_offer_item_id = mon item, prix pré-rempli |
+| 3 | Ajouter activité "offre externe" | linked_offer_item_id = item tiers |
+| 4 | Ajouter activité "guide" | guide_id lié, guide_cost récupéré |
+| 5 | Ajouter activité "référence externe" | external_reference JSONB sauvegardé |
+| 6 | Modifier prix activité | Prix circuit modifié, prix catalogue inchangé |
+| 7 | Supprimer activité | Activité supprimée, capacité non affectée |
+| 8 | Supprimer offre liée à circuit | Erreur "X circuit(s) utilisent cette offre" |
 
-`confirm()` avant de supprimer une activité ou un jour.
+**Status :** ⬜ À faire
+
+---
+
+### Task 11.4 : Scénarios — Recherche
+
+| # | Scénario | Résultat attendu |
+|---|----------|-----------------|
+| 1 | Recherche offre par région | Offres de la région affichées |
+| 2 | Recherche guide par zone + date | Guides disponibles à cette date |
+| 3 | Recherche circuit par durée + difficulté | Circuits correspondants |
+| 4 | Recherche hébergement dans Circuit Builder | 3 niveaux fonctionnent (propre → autre → externe) |
+| 5 | Recherche avec filtres combinés | Filtres cumulés fonctionnent |
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 11.5 : Scénarios — Guide
+
+| # | Scénario | Résultat attendu |
+|---|----------|-----------------|
+| 1 | Guide crée prestation avec availability rule | Sessions générées pour 90 jours |
+| 2 | Guide bloque une période | Blocks créés, sessions correspondantes annulées |
+| 3 | Guide modifie prix saisonnier | price_override sur les sessions |
+| 4 | Voyageur cherche guide disponible | Guides avec sessions available affichés |
+| 5 | Voyageur réserve prestation guide | Booking + GuideOfferingSession liés |
+
+**Status :** ⬜ À faire
+
+---
+
+## Sprint 12 — Documentation Finale 📄
+
+> **Objectif :** Mettre à jour toute la documentation pour refléter l'état final.
+
+### Task 12.1 : Mettre à jour README.md
+
+Vérifier que le README reflète toutes les fonctionnalités implémentées.
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 12.2 : Mettre à jour docs/GLOBAL_PROJECT.md
+
+Architecture finale avec tous les modules.
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 12.3 : Mettre à jour docs/AUDIT_DDD_CIRCUITS.md
+
+Marquer tous les invariants comme vérifiés/corrigés.
+
+**Status :** ⬜ À faire
+
+---
+
+### Task 12.4 : Créer PR avec description type PR7
+
+Rédiger la description de PR suivant le format PR7.
 
 **Status :** ⬜ À faire
 
@@ -929,53 +1072,60 @@ Tooltip "Prix catalogue = prix de base de l'offre" au survol du badge prix.
 
 | Sprint | Tâches | Type | Status |
 |--------|--------|------|--------|
-| Sprint 1 — Data Integrity | 5 | 🐛 Bugs | ⬜ 0/5 |
-| Sprint 2 — Catalogue | 5 | 🔍 Audit | ⬜ 0/5 |
-| Sprint 3 — Circuits bugs | 5 | 🐛 Bugs | ⬜ 0/5 |
-| Sprint 4 — Booking lifecycle | 4 | 🔧 Architecture | ⬜ 0/4 |
-| Sprint 5 — DDD | 5 | 🔧 Architecture | ⬜ 0/5 |
-| Sprint 6 — Config engine | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
-| Sprint 7 — API & perf | 5 | ⚡ Optimisation | ⬜ 0/5 |
-| Sprint 8 — UX | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
-| **Total** | **37 tâches** | | **⬜ 0/37** |
+| 1 — Data Integrity | 5 | 🐛 Bugs | ⬜ 0/5 |
+| 2 — Catalogue métier | 5 | 🔍 Audit | ⬜ 0/5 |
+| 3 — Circuits bugs | 5 | 🐛 Bugs | ⬜ 0/5 |
+| 4 — Booking classique | 4 | 🔧 Architecture | ⬜ 0/4 |
+| 5 — CircuitReservation | 4 | 🔧 Architecture | ⬜ 0/4 |
+| 6 — DDD & Lifecycle | 5 | 🔧 Architecture | ⬜ 0/5 |
+| 7 — Admin Workflow | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
+| 8 — Config Engine | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
+| 9 — Search & Explorer | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
+| 10 — API & Perf | 5 | ⚡ Optimisation | ⬜ 0/5 |
+| 11 — Tests métier | 5 | 🧪 Tests | ⬜ 0/5 |
+| 12 — Documentation | 4 | 📄 Docs | ⬜ 0/4 |
+| **Total** | **54 tâches** | | **⬜ 0/54** |
 
 ---
 
 ## Ordre d'exécution
 
 ```
-Sprint 1 (Data Integrity) → Sprint 2 (Catalogue) → Sprint 3 (Circuits bugs)
-                                                           ↓
-                                                   Sprint 4 (Booking lifecycle)
-                                                           ↓
-                                                   Sprint 5 (DDD) → Sprint 6 (Config)
-                                                           ↓
-                                                   Sprint 7 (API) → Sprint 8 (UX)
+Sprint 1 (Data Integrity)
+    ↓
+Sprint 2 (Catalogue métier) ← AUDIT AVANT TOUT
+    ↓
+Sprint 3 (Circuits bugs) ← FIX APRÈS AUDIT
+    ↓
+Sprint 4 (Booking) ← SÉPARÉ de CircuitReservation
+Sprint 5 (CircuitReservation) ← SÉPARÉ du Booking
+    ↓
+Sprint 6 (DDD & Lifecycle) ← ARCHITECTURE
+Sprint 7 (Admin Workflow) ← PARALLÈLE
+    ↓
+Sprint 8 (Config Engine) ← INSPIRÉ DE MARAM
+Sprint 9 (Search & Explorer) ← PARALLÈLE
+Sprint 10 (API & Perf) ← PARALLÈLE
+    ↓
+Sprint 11 (Tests métier) ← AVANT MISE EN PRODUCTION
+    ↓
+Sprint 12 (Documentation) ← FINALE
 ```
-
-**Sprint 1 et 2 sont bloquants** — ils corrigent les problèmes critiques de données.
-
-**Sprint 3 dépend de Sprint 1** — les fixes circuits nécessitent la data integrity.
-
-**Sprint 4 et 5 sont indépendants** — lifecycle booking vs lifecycleDDD.
-
-**Sprint 6, 7, 8 sont indépendants** — ils peuvent être faits en parallèle.
 
 ---
 
-## Changements par rapport à v1
+## Changements par rapport à v2
 
 | Changement | Raison |
 |-----------|--------|
-| ❌ SET NULL → ✅ Soft Delete | Préserver l'historique des réservations |
-| ❌ Optimistic Locking → reporté | Pas encore de charge concurrente |
-| ❌ Price History → reporté | Pas encore d'analytics/audit |
-| ❌ "Intégration Maram" → ✅ "Moteur de Configuration" | Maram = source d'inspiration, pas un modèle |
-| ✅ Sprint 2 Catalogue ajouté | Vérifier la chaîne Offer → OfferItem → Capacity |
-| ✅ Sprint 7 API ajouté | Pagination, filtres, index, N+1 queries |
-| ✅ État `inactive` ajouté | Désactiver temporairement sans supprimer |
-| ✅ Séparation bugs/architecture/fonctionnalités | Organisation claire |
+| ✅ Guide = disponibilité, pas offre | Distinction fondamentale entre inventaire et temps |
+| ✅ Sprint 2 = Audit métier complet | Vérifier la logique, pas seulement le technique |
+| ✅ Sprint 4/5 séparés | Booking classique ≠ CircuitReservation (Aggregate Roots différents) |
+| ✅ Sprint 7 Admin Workflow | Validation, rejet, archivage, historique modération |
+| ✅ Sprint 9 Search & Explorer | La vitrine de la plateforme mérite un sprint dédié |
+| ✅ Sprint 11 Tests métier | Valider TOUS les scénarios avant production |
+| ✅ 54 tâches au lieu de 37 | Couverture complète |
 
 ---
 
-*Dernière mise à jour : 5 Juillet 2026 — v2.0*
+*Dernière mise à jour : 5 Juillet 2026 — v3.0 — Roadmap officielle*
