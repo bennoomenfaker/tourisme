@@ -374,11 +374,6 @@ Notre système de **schemas configurables** (`offer-schema.ts`) est le cœur mé
 
 ---
 
-## 🤝 Équipe
 
-- **Maram Mejri** <https://github.com/Maram172003>
-- **BEN NOOMEN Faker** <https://github.com/bennoomenfaker/tourisme>
-
----
 
 *Dernière mise à jour : 5 Juillet 2026*
