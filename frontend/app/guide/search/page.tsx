@@ -5,18 +5,14 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Search, MapPin, Loader2, LayoutGrid, Map, SlidersHorizontal, X, Star, Globe, Clock, ChevronLeft, ChevronRight, ExternalLink, Phone, Mail } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import governorates from "@/lib/tunisia-governorates.json";
+
+const TUNISIA_REGIONS = governorates.map((g) => g.name);
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => <div className="h-full bg-slate-100 animate-pulse rounded-2xl" />,
 });
-
-const TUNISIA_REGIONS = [
-  "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Hammamet", "Sousse",
-  "Monastir", "Mahdia", "Kairouan", "Bizerte", "Béja", "Jendouba", "Kef",
-  "Siliana", "Zaghouan", "Sfax", "Gabès", "Médenine", "Tataouine", "Gafsa",
-  "Tozeur", "Kébili", "Douz", "Djerba", "Zarzis", "Tabarka", "Aïn Draham",
-];
 
 const LANGUAGES = [
   "Arabe", "Français", "Anglais", "Allemand", "Italien", "Espagnol", "Russe", "Amazigh",

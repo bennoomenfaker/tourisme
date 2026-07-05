@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Publication } from '../publication/entities/publication.entity';
 import { Offer } from '../offer/entities/offer.entity';
+import { Circuit } from '../circuit/entities/circuit.entity';
+import { GuideOffering } from '../guide/entities/guide-offering.entity';
 import { Project } from '../project-owner/entities/project.entity';
 import { User } from '../users/entities/user.entity';
 import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
@@ -10,6 +12,7 @@ import { Guide } from '../guide/entities/guide.entity';
 import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 import { MailService } from '../mail/mail.service';
 import { NotificationService } from '../notification/notification.service';
+import { ModerationLog } from './entities/moderation-log.entity';
 
 @Injectable()
 export class AdminService {
@@ -19,6 +22,12 @@ export class AdminService {
 
     @InjectRepository(Offer)
     private readonly offerRepo: Repository<Offer>,
+
+    @InjectRepository(GuideOffering)
+    private readonly guideOfferingRepo: Repository<GuideOffering>,
+
+    @InjectRepository(Circuit)
+    private readonly circuitRepo: Repository<Circuit>,
 
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
@@ -35,6 +44,9 @@ export class AdminService {
     @InjectRepository(ProjectOwner)
     private readonly ownerRepo: Repository<ProjectOwner>,
 
+    @InjectRepository(ModerationLog)
+    private readonly logRepo: Repository<ModerationLog>,
+
     private readonly mailService: MailService,
     private readonly notificationService: NotificationService,
   ) {}
@@ -45,7 +57,7 @@ export class AdminService {
     return this.pubRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
   }
 
-  async approvePublication(id: string) {
+  async approvePublication(id: string, adminId: string) {
     const pub = await this.findPubOrFail(id);
     pub.status = 'approved';
     pub.rejection_reason = null;
@@ -59,10 +71,11 @@ export class AdminService {
         `/publications/${pub.id}`,
       ).catch(() => {});
     }
+    await this.logAction(adminId, 'publication', id, 'approve');
     return saved;
   }
 
-  async rejectPublication(id: string, reason: string) {
+  async rejectPublication(id: string, reason: string, adminId: string) {
     const pub = await this.findPubOrFail(id);
     pub.status = 'rejected';
     pub.rejection_reason = reason;
@@ -76,6 +89,7 @@ export class AdminService {
         `/publications/${pub.id}`,
       ).catch(() => {});
     }
+    await this.logAction(adminId, 'publication', id, 'reject', reason);
     return saved;
   }
 
@@ -85,7 +99,7 @@ export class AdminService {
     return this.offerRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
   }
 
-  async approveOffer(id: string) {
+  async approveOffer(id: string, adminId: string) {
     const offer = await this.findOfferOrFail(id);
     offer.status = 'approved';
     offer.rejection_reason = null;
@@ -99,10 +113,11 @@ export class AdminService {
         `/offers/${offer.id}`,
       ).catch(() => {});
     }
+    await this.logAction(adminId, 'offer', id, 'approve');
     return saved;
   }
 
-  async rejectOffer(id: string, reason: string) {
+  async rejectOffer(id: string, reason: string, adminId: string) {
     const offer = await this.findOfferOrFail(id);
     offer.status = 'rejected';
     offer.rejection_reason = reason;
@@ -116,6 +131,7 @@ export class AdminService {
         `/offers/${offer.id}`,
       ).catch(() => {});
     }
+    await this.logAction(adminId, 'offer', id, 'reject', reason);
     return saved;
   }
 
@@ -125,7 +141,7 @@ export class AdminService {
     return this.projectRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
   }
 
-  async approveProject(id: string) {
+  async approveProject(id: string, adminId: string) {
     const project = await this.findProjectOrFail(id);
     project.status = 'active';
     project.rejection_reason = null;
@@ -139,10 +155,11 @@ export class AdminService {
         `/projects/${project.id}`,
       ).catch(() => {});
     }
+    await this.logAction(adminId, 'project', id, 'approve');
     return saved;
   }
 
-  async rejectProject(id: string, reason: string) {
+  async rejectProject(id: string, reason: string, adminId: string) {
     const project = await this.findProjectOrFail(id);
     project.status = 'rejected';
     project.rejection_reason = reason;
@@ -156,6 +173,123 @@ export class AdminService {
         `/projects/${project.id}`,
       ).catch(() => {});
     }
+    await this.logAction(adminId, 'project', id, 'reject', reason);
+    return saved;
+  }
+
+  // ─── Circuits ──────────────────────────────────────────────────────────────
+
+  getPendingCircuits() {
+    return this.circuitRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
+  }
+
+  async approveCircuit(id: string, adminId: string) {
+    const circuit = await this.findCircuitOrFail(id);
+    circuit.status = 'approved';
+    circuit.rejection_reason = null;
+    const saved = await this.circuitRepo.save(circuit);
+    if (circuit.author_id) {
+      this.notificationService.create(
+        circuit.author_id,
+        'admin_approved',
+        'Circuit approuvé',
+        `Votre circuit "${circuit.title}" a été approuvé par l'administration.`,
+        `/circuits/${circuit.id}`,
+      ).catch(() => {});
+    }
+    await this.logAction(adminId, 'circuit', id, 'approve');
+    return saved;
+  }
+
+  async rejectCircuit(id: string, reason: string, adminId: string) {
+    const circuit = await this.findCircuitOrFail(id);
+    circuit.status = 'rejected';
+    circuit.rejection_reason = reason;
+    const saved = await this.circuitRepo.save(circuit);
+    if (circuit.author_id) {
+      this.notificationService.create(
+        circuit.author_id,
+        'admin_rejected',
+        'Circuit rejeté',
+        `Votre circuit "${circuit.title}" a été rejeté. Motif : ${reason}`,
+        `/circuits/${circuit.id}`,
+      ).catch(() => {});
+    }
+    await this.logAction(adminId, 'circuit', id, 'reject', reason);
+    return saved;
+  }
+
+  async archiveCircuit(id: string, adminId: string) {
+    const circuit = await this.findCircuitOrFail(id);
+    circuit.status = 'archived';
+    const saved = await this.circuitRepo.save(circuit);
+    if (circuit.author_id) {
+      this.notificationService.create(
+        circuit.author_id,
+        'admin_approved',
+        'Circuit archivé',
+        `Votre circuit "${circuit.title}" a été archivé.`,
+        `/circuits/${circuit.id}`,
+      ).catch(() => {});
+    }
+    await this.logAction(adminId, 'circuit', id, 'archive');
+    return saved;
+  }
+
+  // ─── Guide Offerings ───────────────────────────────────────────────────────
+
+  getPendingGuideOfferings() {
+    return this.guideOfferingRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
+  }
+
+  async approveGuideOffering(id: string, adminId: string) {
+    const offering = await this.findGuideOfferingOrFail(id);
+    offering.status = 'active';
+    const saved = await this.guideOfferingRepo.save(offering);
+    if (offering.guide_id) {
+      this.notificationService.create(
+        offering.guide_id,
+        'admin_approved',
+        'Service de guidage approuvé',
+        `Votre offre de guidage "${offering.title}" a été approuvée par l'administration.`,
+        `/guide-offerings/${offering.id}`,
+      ).catch(() => {});
+    }
+    await this.logAction(adminId, 'guide-offering', id, 'approve');
+    return saved;
+  }
+
+  async rejectGuideOffering(id: string, reason: string, adminId: string) {
+    const offering = await this.findGuideOfferingOrFail(id);
+    offering.status = 'rejected';
+    const saved = await this.guideOfferingRepo.save(offering);
+    if (offering.guide_id) {
+      this.notificationService.create(
+        offering.guide_id,
+        'admin_rejected',
+        'Service de guidage rejeté',
+        `Votre offre de guidage "${offering.title}" a été rejetée. Motif : ${reason}`,
+        `/guide-offerings/${offering.id}`,
+      ).catch(() => {});
+    }
+    await this.logAction(adminId, 'guide-offering', id, 'reject', reason);
+    return saved;
+  }
+
+  async archiveGuideOffering(id: string, adminId: string) {
+    const offering = await this.findGuideOfferingOrFail(id);
+    offering.status = 'archived';
+    const saved = await this.guideOfferingRepo.save(offering);
+    if (offering.guide_id) {
+      this.notificationService.create(
+        offering.guide_id,
+        'admin_approved',
+        'Service de guidage archivé',
+        `Votre offre de guidage "${offering.title}" a été archivée.`,
+        `/guide-offerings/${offering.id}`,
+      ).catch(() => {});
+    }
+    await this.logAction(adminId, 'guide-offering', id, 'archive');
     return saved;
   }
 
@@ -228,5 +362,21 @@ export class AdminService {
     const project = await this.projectRepo.findOne({ where: { id } });
     if (!project) throw new NotFoundException('Projet introuvable.');
     return project;
+  }
+
+  private async findCircuitOrFail(id: string) {
+    const circuit = await this.circuitRepo.findOne({ where: { id } });
+    if (!circuit) throw new NotFoundException('Circuit introuvable.');
+    return circuit;
+  }
+
+  private async findGuideOfferingOrFail(id: string) {
+    const offering = await this.guideOfferingRepo.findOne({ where: { id } });
+    if (!offering) throw new NotFoundException('Offre de guidage introuvable.');
+    return offering;
+  }
+
+  private async logAction(adminId: string, entityType: string, entityId: string, action: string, reason?: string) {
+    await this.logRepo.save({ admin_id: adminId, entity_type: entityType, entity_id: entityId, action, reason: reason ?? null });
   }
 }

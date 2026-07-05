@@ -53,8 +53,9 @@ export class CircuitController {
    */
   @Public()
   @Get()
-  findAll(@Query('status') status?: string, @Query('region') region?: string) {
-    return this.service.findAll(status, region);
+  findAll(@Query('status') status?: string, @Query('region') region?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
+    const pagination = page ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 } : undefined;
+    return this.service.findAll(status, region, pagination);
   }
 
   /**
@@ -195,6 +196,16 @@ export class CircuitController {
   @Patch('reservations/:id/confirm')
   confirmReservation(@Req() req: any, @Param('id') id: string) {
     return this.service.confirmReservation(id, req.user.sub);
+  }
+
+  /**
+   * Refuser une réservation de circuit (provider)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROJECT)
+  @Patch('reservations/:id/reject')
+  rejectReservation(@Req() req: any, @Param('id') id: string) {
+    return this.service.rejectReservation(id, req.user.sub);
   }
 
   /**

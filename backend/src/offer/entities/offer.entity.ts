@@ -121,12 +121,19 @@ export class Offer {
   @Column({ type: 'varchar', default: 'automatic' })
   confirmation_mode!: string;
 
-  // pending = en attente / approved = visible / rejected = refusé
+  // pending = en attente / approved = visible / rejected = refusé / archived = masqué / inactive = désactivé
   @Column({ type: 'varchar', default: 'pending' })
   status!: string;
 
   @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;
+
+  // Soft delete — préserver l'historique des réservations
+  @Column({ type: 'boolean', default: false })
+  is_deleted!: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at!: Date | null;
 
   @OneToMany(() => OfferItem, (item) => item.offer)
   items!: OfferItem[];

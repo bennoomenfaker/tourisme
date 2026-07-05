@@ -70,7 +70,31 @@ type PendingProject = {
   created_at: string;
 };
 
-type Tab = "publications" | "offers" | "projects" | "reports" | "banned";
+type PendingCircuit = {
+  id: string;
+  title: string;
+  description: string | null;
+  region: string | null;
+  base_price: number | null;
+  duration_days: number | null;
+  max_participants: number | null;
+  cover_image: string | null;
+  images: string[] | null;
+  author_id: string;
+  created_at: string;
+};
+
+type PendingGuideOffering = {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  languages: string[] | null;
+  guide_id: string;
+  created_at: string;
+};
+
+type Tab = "publications" | "offers" | "projects" | "circuits" | "guide-offerings" | "reports" | "banned";
 
 type BannedUser = {
   user_id: string;
@@ -286,6 +310,43 @@ function ProjectDetail({ project, onClose, onApprove, onReject, loading }: {
       <DetailTags label="Labels éco" tags={project.eco_labels} />
       <DetailMap lat={project.lat} lng={project.lng} />
       <DetailSustainability score={project.sustainability_score} />
+    </DetailModal>
+  );
+}
+
+function CircuitDetail({ circuit, onClose, onApprove, onReject, loading }: {
+  circuit: PendingCircuit;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  loading: boolean;
+}) {
+  return (
+    <DetailModal title={circuit.title} badge="Circuit" date={circuit.created_at} onClose={onClose} onApprove={onApprove} onReject={onReject} loading={loading}>
+      <DetailImages images={circuit.images ?? (circuit.cover_image ? [circuit.cover_image] : null)} />
+      <DetailField label="Région" value={circuit.region} />
+      <div className="grid grid-cols-2 gap-4">
+        <DetailField label="Durée" value={circuit.duration_days != null ? `${circuit.duration_days} jours` : null} />
+        <DetailField label="Prix de base" value={circuit.base_price != null ? `${circuit.base_price} TND` : null} />
+      </div>
+      <DetailField label="Participants max" value={circuit.max_participants} />
+      <DetailField label="Description" value={circuit.description} />
+    </DetailModal>
+  );
+}
+
+function GuideOfferingDetail({ offering, onClose, onApprove, onReject, loading }: {
+  offering: PendingGuideOffering;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  loading: boolean;
+}) {
+  return (
+    <DetailModal title={offering.title} badge="Offre Guide" date={offering.created_at} onClose={onClose} onApprove={onApprove} onReject={onReject} loading={loading}>
+      <DetailField label="Description" value={offering.description} />
+      <DetailField label="Prix" value={offering.price != null ? `${offering.price} TND` : null} />
+      <DetailTags label="Langues" tags={offering.languages} />
     </DetailModal>
   );
 }
@@ -514,6 +575,8 @@ export default function AdminPage() {
   const [publications, setPublications] = useState<PendingPublication[]>([]);
   const [offers, setOffers] = useState<PendingOffer[]>([]);
   const [projects, setProjects] = useState<PendingProject[]>([]);
+  const [circuits, setCircuits] = useState<PendingCircuit[]>([]);
+  const [guideOfferings, setGuideOfferings] = useState<PendingGuideOffering[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -521,6 +584,8 @@ export default function AdminPage() {
   const [detailPub, setDetailPub] = useState<PendingPublication | null>(null);
   const [detailOffer, setDetailOffer] = useState<PendingOffer | null>(null);
   const [detailProject, setDetailProject] = useState<PendingProject | null>(null);
+  const [detailCircuit, setDetailCircuit] = useState<PendingCircuit | null>(null);
+  const [detailGuideOffering, setDetailGuideOffering] = useState<PendingGuideOffering | null>(null);
 
   const [rejectTarget, setRejectTarget] = useState<{ type: Tab; id: string } | null>(null);
   const [resolveTarget, setResolveTarget] = useState<Report | null>(null);
@@ -542,16 +607,20 @@ export default function AdminPage() {
     async function fetchAll() {
       setLoading(true);
       try {
-        const [pubs, offrs, projs, reps, banned] = await Promise.all([
+        const [pubs, offrs, projs, circs, gos, reps, banned] = await Promise.all([
           apiFetch<PendingPublication[]>("/admin/publications/pending", { headers: { Authorization: `Bearer ${token}` } }),
           apiFetch<PendingOffer[]>("/admin/offers/pending", { headers: { Authorization: `Bearer ${token}` } }),
           apiFetch<PendingProject[]>("/admin/projects/pending", { headers: { Authorization: `Bearer ${token}` } }),
+          apiFetch<PendingCircuit[]>("/admin/circuits/pending", { headers: { Authorization: `Bearer ${token}` } }),
+          apiFetch<PendingGuideOffering[]>("/admin/guide-offerings/pending", { headers: { Authorization: `Bearer ${token}` } }),
           apiFetch<Report[]>("/admin/reports", { headers: { Authorization: `Bearer ${token}` } }),
           apiFetch<BannedUser[]>("/admin/users/banned", { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         setPublications(pubs);
         setOffers(offrs);
         setProjects(projs);
+        setCircuits(circs);
+        setGuideOfferings(gos);
         setReports(reps);
         setBannedUsers(banned);
       } catch {}
@@ -596,6 +665,8 @@ export default function AdminPage() {
     if (type === "publications") setPublications((p) => p.filter((x) => x.id !== id));
     if (type === "offers") setOffers((p) => p.filter((x) => x.id !== id));
     if (type === "projects") setProjects((p) => p.filter((x) => x.id !== id));
+    if (type === "circuits") setCircuits((p) => p.filter((x) => x.id !== id));
+    if (type === "guide-offerings") setGuideOfferings((p) => p.filter((x) => x.id !== id));
   }
 
   async function resolveReport(action: string, note: string, banDays?: number) {
@@ -620,6 +691,8 @@ export default function AdminPage() {
     setDetailPub(null);
     setDetailOffer(null);
     setDetailProject(null);
+    setDetailCircuit(null);
+    setDetailGuideOffering(null);
   }
 
   async function unbanUser(userId: string) {
@@ -646,8 +719,8 @@ export default function AdminPage() {
   }
 
   const pendingReports = reports.filter((r) => r.status === "pending");
-  const counts: Record<Tab, number> = { publications: publications.length, offers: offers.length, projects: projects.length, reports: pendingReports.length, banned: bannedUsers.length };
-  const tabLabels: Record<Tab, string> = { publications: "Lieux", offers: "Offres", projects: "Projets", reports: "Signalements", banned: "Bannis" };
+  const counts: Record<Tab, number> = { publications: publications.length, offers: offers.length, projects: projects.length, circuits: circuits.length, "guide-offerings": guideOfferings.length, reports: pendingReports.length, banned: bannedUsers.length };
+  const tabLabels: Record<Tab, string> = { publications: "Lieux", offers: "Offres", projects: "Projets", circuits: "Circuits", "guide-offerings": "Offres Guide", reports: "Signalements", banned: "Bannis" };
 
   if (!token) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -677,8 +750,8 @@ export default function AdminPage() {
 
       <main className="max-w-5xl mx-auto px-6 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-4 mb-8">
-          {(["publications", "offers", "projects"] as Tab[]).map((t) => (
+        <div className="grid grid-cols-7 gap-4 mb-8">
+          {(["publications", "offers", "projects", "circuits", "guide-offerings"] as Tab[]).map((t) => (
             <div key={t} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{tabLabels[t]}</p>
               <p className="text-3xl font-extrabold text-slate-900">{counts[t]}</p>
@@ -699,7 +772,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
-          {(["publications", "offers", "projects", "reports", "banned"] as Tab[]).map((t) => (
+          {(["publications", "offers", "projects", "circuits", "guide-offerings", "reports", "banned"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 tab === t
@@ -776,6 +849,40 @@ export default function AdminPage() {
                   onOpen={() => setDetailProject(proj)}
                   onApprove={() => approve("projects", proj.id)}
                   onReject={() => setRejectTarget({ type: "projects", id: proj.id })}
+                />
+              ))
+            )}
+
+            {tab === "circuits" && (
+              circuits.length === 0 ? <Empty label="Aucun circuit en attente" /> :
+              circuits.map((circuit) => (
+                <ContentCard key={circuit.id}
+                  title={circuit.title}
+                  badge="Circuit"
+                  meta={[circuit.region, circuit.duration_days != null ? `${circuit.duration_days} jours` : null, circuit.base_price != null ? `${circuit.base_price} TND` : null].filter(Boolean).join(" · ")}
+                  description={circuit.description}
+                  date={circuit.created_at}
+                  loading={actionLoading === circuit.id}
+                  onOpen={() => setDetailCircuit(circuit)}
+                  onApprove={() => approve("circuits", circuit.id)}
+                  onReject={() => setRejectTarget({ type: "circuits", id: circuit.id })}
+                />
+              ))
+            )}
+
+            {tab === "guide-offerings" && (
+              guideOfferings.length === 0 ? <Empty label="Aucune offre guide en attente" /> :
+              guideOfferings.map((go) => (
+                <ContentCard key={go.id}
+                  title={go.title}
+                  badge="Offre Guide"
+                  meta={[go.price != null ? `${go.price} TND` : null, go.languages?.join(", ")].filter(Boolean).join(" · ")}
+                  description={go.description}
+                  date={go.created_at}
+                  loading={actionLoading === go.id}
+                  onOpen={() => setDetailGuideOffering(go)}
+                  onApprove={() => approve("guide-offerings", go.id)}
+                  onReject={() => setRejectTarget({ type: "guide-offerings", id: go.id })}
                 />
               ))
             )}
@@ -935,6 +1042,20 @@ export default function AdminPage() {
           onApprove={() => approve("projects", detailProject.id)}
           onReject={() => { closeDetail(); setRejectTarget({ type: "projects", id: detailProject.id }); }}
           loading={actionLoading === detailProject.id}
+        />
+      )}
+      {detailCircuit && (
+        <CircuitDetail circuit={detailCircuit} onClose={closeDetail}
+          onApprove={() => approve("circuits", detailCircuit.id)}
+          onReject={() => { closeDetail(); setRejectTarget({ type: "circuits", id: detailCircuit.id }); }}
+          loading={actionLoading === detailCircuit.id}
+        />
+      )}
+      {detailGuideOffering && (
+        <GuideOfferingDetail offering={detailGuideOffering} onClose={closeDetail}
+          onApprove={() => approve("guide-offerings", detailGuideOffering.id)}
+          onReject={() => { closeDetail(); setRejectTarget({ type: "guide-offerings", id: detailGuideOffering.id }); }}
+          loading={actionLoading === detailGuideOffering.id}
         />
       )}
 

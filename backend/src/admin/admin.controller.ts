@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
@@ -24,13 +24,13 @@ export class AdminController {
   }
 
   @Patch('publications/:id/approve')
-  approvePublication(@Param('id') id: string) {
-    return this.service.approvePublication(id);
+  approvePublication(@Req() req: any, @Param('id') id: string) {
+    return this.service.approvePublication(id, req.user.sub);
   }
 
   @Patch('publications/:id/reject')
-  rejectPublication(@Param('id') id: string, @Body() dto: RejectDto) {
-    return this.service.rejectPublication(id, dto.reason);
+  rejectPublication(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+    return this.service.rejectPublication(id, dto.reason, req.user.sub);
   }
 
   // ─── Offers ───────────────────────────────────────────────────────────────
@@ -41,13 +41,13 @@ export class AdminController {
   }
 
   @Patch('offers/:id/approve')
-  approveOffer(@Param('id') id: string) {
-    return this.service.approveOffer(id);
+  approveOffer(@Req() req: any, @Param('id') id: string) {
+    return this.service.approveOffer(id, req.user.sub);
   }
 
   @Patch('offers/:id/reject')
-  rejectOffer(@Param('id') id: string, @Body() dto: RejectDto) {
-    return this.service.rejectOffer(id, dto.reason);
+  rejectOffer(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+    return this.service.rejectOffer(id, dto.reason, req.user.sub);
   }
 
   // ─── Projects ─────────────────────────────────────────────────────────────
@@ -58,13 +58,57 @@ export class AdminController {
   }
 
   @Patch('projects/:id/approve')
-  approveProject(@Param('id') id: string) {
-    return this.service.approveProject(id);
+  approveProject(@Req() req: any, @Param('id') id: string) {
+    return this.service.approveProject(id, req.user.sub);
   }
 
   @Patch('projects/:id/reject')
-  rejectProject(@Param('id') id: string, @Body() dto: RejectDto) {
-    return this.service.rejectProject(id, dto.reason);
+  rejectProject(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+    return this.service.rejectProject(id, dto.reason, req.user.sub);
+  }
+
+  // ─── Circuits ──────────────────────────────────────────────────────────────
+
+  @Get('circuits/pending')
+  getPendingCircuits() {
+    return this.service.getPendingCircuits();
+  }
+
+  @Patch('circuits/:id/approve')
+  approveCircuit(@Req() req: any, @Param('id') id: string) {
+    return this.service.approveCircuit(id, req.user.sub);
+  }
+
+  @Patch('circuits/:id/reject')
+  rejectCircuit(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+    return this.service.rejectCircuit(id, dto.reason, req.user.sub);
+  }
+
+  @Patch('circuits/:id/archive')
+  archiveCircuit(@Req() req: any, @Param('id') id: string) {
+    return this.service.archiveCircuit(id, req.user.sub);
+  }
+
+  // ─── Guide Offerings ───────────────────────────────────────────────────────
+
+  @Get('guide-offerings/pending')
+  getPendingGuideOfferings() {
+    return this.service.getPendingGuideOfferings();
+  }
+
+  @Patch('guide-offerings/:id/approve')
+  approveGuideOffering(@Req() req: any, @Param('id') id: string) {
+    return this.service.approveGuideOffering(id, req.user.sub);
+  }
+
+  @Patch('guide-offerings/:id/reject')
+  rejectGuideOffering(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+    return this.service.rejectGuideOffering(id, dto.reason, req.user.sub);
+  }
+
+  @Patch('guide-offerings/:id/archive')
+  archiveGuideOffering(@Req() req: any, @Param('id') id: string) {
+    return this.service.archiveGuideOffering(id, req.user.sub);
   }
 
   // ─── Reports ──────────────────────────────────────────────────────────────

@@ -28,9 +28,12 @@
 - **Consulter les statistiques** et les avis
 
 ### Pour l'Admin
-- **Modérer** les offres et circuits (statut pending → approved → rejected)
-- **Gérer les utilisateurs** et les rôles
-- **Superviser** les signalements
+- **Modérer** les publications, offres, circuits et prestations guides (statut pending → approved → rejected)
+- **ModerationLog** — historique complet de toutes les actions de modération
+- **Gérer les utilisateurs** (ban temporaire/permanent, unban)
+- **Superviser** les signalements (warn, ban, delete, dismiss)
+- **Circuits & GuideOfferings tabs** dans la page admin
+- **Auto-approve Ambassadeur** : score ≥ 80 → statut automatiquement approuvé
 
 ---
 

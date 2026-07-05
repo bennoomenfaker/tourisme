@@ -70,8 +70,9 @@ export class OfferController {
   /** Toutes les offres approuvées (page Destinations) */
   @Public()
   @Get()
-  findAllPublic(@Query('region') region?: string) {
-    return this.service.findAllPublic(region);
+  findAllPublic(@Query('region') region?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
+    const pagination = page ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 } : undefined;
+    return this.service.findAllPublic(region, pagination);
   }
 
   /** Offres publiées d'un auteur (page profil) */
@@ -99,13 +100,16 @@ export class OfferController {
     @Query('lng') lng?: string,
     @Query('radius_km') radiusKm?: string,
     @Query('item_type') itemType?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
+    const pagination = page ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 } : undefined;
     return this.service.findPublic(category, excludeAuthor, region, {
       lat: lat ? Number(lat) : undefined,
       lng: lng ? Number(lng) : undefined,
       radiusKm: radiusKm ? Number(radiusKm) : undefined,
       itemType,
-    });
+    }, pagination);
   }
 
   /** Lieux populaires pour la heatmap */
@@ -138,12 +142,44 @@ export class OfferController {
     return this.service.update(req.user.sub, id, dto);
   }
 
-  /** Supprimer une offre */
+  /** Supprimer une offre (soft delete si réservations actives) */
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.service.remove(req.user.sub, id);
+  }
+
+  /** Archiver une offre (masquer définitivement) */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.PROJECT)
+  @Patch(':id/archive')
+  archive(@Req() req: any, @Param('id') id: string) {
+    return this.service.archive(req.user.sub, id);
+  }
+
+  /** Désactiver une offre (masquer temporairement) */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.PROJECT)
+  @Patch(':id/deactivate')
+  deactivate(@Req() req: any, @Param('id') id: string) {
+    return this.service.deactivate(req.user.sub, id);
+  }
+
+  /** Réactiver une offre désactivée */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.PROJECT)
+  @Patch(':id/reactivate')
+  reactivate(@Req() req: any, @Param('id') id: string) {
+    return this.service.reactivate(req.user.sub, id);
+  }
+
+  /** Voir les circuits liés à une offre */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.PROJECT)
+  @Get(':id/linked-circuits')
+  linkedCircuits(@Param('id') id: string) {
+    return this.service.findLinkedCircuits(id);
   }
 
   // ─── OfferItems ────────────────────────────────────

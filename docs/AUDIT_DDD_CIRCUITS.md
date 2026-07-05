@@ -319,51 +319,114 @@ await this.sessionRepo.save(session);
 
 ```
 pending ──→ approved (auto si Ambassadeur, sinon Admin)
+   │              │
+   │              ├──→ inactive (Owner, désactivation temporaire)
+   │              │       └──→ approved (Owner, réactivation)
+   │              │
+   │              └──→ archived (Owner, soft-delete définitif)
    │
-   └──→ rejected (Admin avec raison)
+   └──→ rejected (Admin avec raison) ──→ (aucune sortie)
 ```
 
 | État | Transitions | Guard |
 |------|------------|-------|
 | `pending` | → approved | Author est Ambassadeur OU Admin approuve |
-| `pending` | → rejected | Admin rejette avec raison |
-| `approved` | → (publication active) | Visible publiquement |
+| `pending` | → rejected | Admin rejette avec raison, `rejection_reason` requis |
+| `pending` | → archived | Owner archive |
+| `approved` | → inactive | Owner désactive (temporaire) |
+| `approved` | → archived | Owner archive (définitif) |
+| `inactive` | → approved | Owner réactive |
+| `rejected` | — | Aucune transition possible |
+| `archived` | — | Aucune transition possible |
 
-**Manquant :**
-- Pas de `draft` (le wizard crée directement en `pending`)
-- Pas d'`archived` (pour masquer sans supprimer)
-- Pas de `suspended` (suspendre temporairement)
+**Transition guard :** `isValidOfferTransition()` dans `offer.service.ts` valide toutes les transitions.
+**Update DTO :** `status` supprimé de `UpdateOfferDto` — le statut change uniquement via endpoints dédiés (`archive`, `deactivate`, `reactivate`, admin `approve`/`reject`).
 
 ### 7.2 Circuit
 
 ```
-pending ──→ approved (Admin)
+pending ──→ approved (Admin, nouveau endpoint admin)
    │
-   └──→ rejected (Admin)
+   ├──→ rejected (Admin, avec raison)
+   │
+   └──→ archived (Admin)
 ```
 
-**Manquant :** Même chose que Offer — pas de draft/archived.
+| État | Transitions | Guard |
+|------|------------|-------|
+| `pending` | → approved | Admin approuve via `PATCH admin/circuits/:id/approve` |
+| `pending` | → rejected | Admin rejette via `PATCH admin/circuits/:id/reject` |
+| `pending` | → archived | Admin archive via `PATCH admin/circuits/:id/archive` |
+| `approved` | → archived | Admin archive |
+| `rejected` | — | Aucune transition possible |
+| `archived` | — | Aucune transition possible |
+
+**Nouveaux endpoints :**
+- `GET admin/circuits/pending` — liste des circuits en attente
+- `PATCH admin/circuits/:id/approve` — approuver (débloque la réservation)
+- `PATCH admin/circuits/:id/reject` — rejeter avec motif
+- `PATCH admin/circuits/:id/archive` — archiver
 
 ### 7.3 Booking
 
 ```
-pending ──→ confirmed (Provider en mode manual)
+pending ──→ confirmed (Provider en mode manual, avec guard)
    │
    ├──→ cancelled (Voyageur, avec délai)
    │
-   └──→ (expiration automatique si pas confirmé ?)
+   └──→ expired (automatique, > 48h sans confirmation)
    
-confirmed ──→ completed (après la date de session ?)
+confirmed ──→ completed (automatique, session passée)
    │
    └──→ cancelled (avec délai)
+
+expired ──→ (aucune sortie)
+completed ──→ (aucune sortie)
 ```
 
-**Manquant :**
-- Pas de transition automatique `pending → expired` si pas confirmé
-- Pas de transition `confirmed → completed` automatique
-- Pas de `no_show` (participant ne se présente pas)
+| État | Transitions | Guard |
+|------|------------|-------|
+| `pending` | → confirmed | Provider confirme, vérifié `status === 'pending'` |
+| `pending` | → cancelled | Voyageur annule, vérifié délai d'annulation |
+| `pending` | → expired | Automatique via `checkExpiredBookings()` (CRON / admin) |
+| `confirmed` | → completed | Automatique via `finalizeCompletedBookings()` |
+| `confirmed` | → cancelled | Voyageur annule, avec délai |
+| `expired` | — | Aucune transition possible |
+| `completed` | — | Aucune transition possible |
 
-### 7.4 CircuitReservation
+**Implémenté dans Sprint 4 + 6 :**
+- `checkExpiredBookings()` : pending > 48h → expired + capacité restaurée + notification
+- `finalizeCompletedBookings()` : confirmed + session passée → completed
+- Endpoints admin : `POST /bookings/check-expired`, `POST /bookings/finalize-completed`
+
+### 7.4 GuideOffering
+
+```
+pending ──→ active (Admin approuve)
+   │
+   ├──→ rejected (Admin, avec raison)
+   │
+   └──→ archived (Admin)
+```
+
+| État | Transitions | Guard |
+|------|------------|-------|
+| `pending` | → active | Admin approuve via `PATCH admin/guide-offerings/:id/approve` |
+| `pending` | → rejected | Admin rejette via `PATCH admin/guide-offerings/:id/reject` |
+| `pending` | → archived | Admin archive |
+| `active` | → archived | Admin archive |
+| `rejected` | — | Aucune transition possible |
+| `archived` | — | Aucune transition possible |
+
+**Nouveaux endpoints :**
+- `GET admin/guide-offerings/pending`
+- `PATCH admin/guide-offerings/:id/approve`
+- `PATCH admin/guide-offerings/:id/reject`
+- `PATCH admin/guide-offerings/:id/archive`
+
+**Update DTO :** `status` supprimé de `UpdateGuideOfferingDto` — le guide ne peut pas modifier son propre statut.
+
+### 7.5 CircuitReservation
 
 ```
 pending ──→ confirmed
@@ -450,7 +513,7 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 | # | Action | Effort |
 |---|--------|--------|
 | 5 | Ajouter état `draft` pour Offer et Circuit | Faible |
-| 6 | Ajouter transition automatique `pending → expired` | Moyen |
+| 6 | ~~Ajouter transition automatique `pending → expired`~~ | ✅ Fait (Sprint 4) |
 | 7 | Ajouter table d'historique des prix (price_history) | Moyen |
 | 8 | Valider linked_offer_item_id lors de la création d'activité | Faible |
 
@@ -458,26 +521,26 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 
 | # | Action | Effort |
 |---|--------|--------|
-| 9 | Ajouter état `archived` pour Offer | Faible |
-| 10 | Ajouter `completed` automatique après date de session | Moyen |
+| 9 | ~~Ajouter état `archived` pour Offer~~ | ✅ Fait (Sprint 6) |
+| 10 | ~~Ajouter `completed` automatique après date de session~~ | ✅ Fait (Sprint 4) |
 | 11 | Notification quand offre liée est modifiée | Moyen |
 | 12 | Gestion `no_show` pour les réservations | Faible |
 
 ---
 
-## 10. Score DDD
+## 10. Score DDD (Sprint 6)
 
 | Critère | Note | Commentaire |
 |---------|------|-------------|
 | Aggregate Roots | 8/10 | Clairs et bien séparés |
 | Ownership | 6/10 | linked_offer_item_id = référence sans FK |
-| Lifecycle | 5/10 | Pas de draft, pas d'archived, pas d'expiration auto |
-| Invariants | 4/10 | Beaucoup de rules non vérifiées |
-| Cascade Safety | 3/10 | Risque de données orphelines |
+| Lifecycle | 8/10 | Transitions complètes : Offer (6 états), Circuit (3 états), Booking (5 états), GuideOffering (4 états) |
+| Invariants | 5/10 | Transition guards ajoutés, booking correct, linked_offer_item_id sans FK |
+| Cascade Safety | 3/10 | Risque de données orphelines persiste |
 | Price Integrity | 7/10 | Copié au bon moment, mais pas d'historique |
 | Stock Management | 5/10 | Fonctionne pour Booking direct, pas pour CircuitReservation |
 | Concurrency | 3/10 | Pas de locking |
-| **Global** | **5/10** | Fonctionnel mais fragile |
+| **Global** | **6/10** | Nette amélioration lifecycle ; invariants et stock restent fragiles |
 
 ---
 
@@ -515,4 +578,15 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 
 ---
 
-*Dernière mise à jour : 5 Juillet 2026*
+## Changelog
+
+| Date | Sprint | Changements |
+|------|--------|-------------|
+| 2026-07-05 | Sprint 6 | Ajout approve/reject/archive pour Circuit + GuideOffering dans admin service/controller |
+| | | Ajout transition guards pour Offer (`isValidOfferTransition`) |
+| | | Ajout `reactivate()` pour Offer (transition `inactive` → `approved`) |
+| | | Suppression de `status` de `UpdateOfferDto` et `UpdateGuideOfferingDto` |
+| | | Remplacement de `Object.assign(offering, dto)` par assignation explicite |
+| | | Documentation lifecycle complète dans ce fichier |
+
+*Dernière mise à jour : 5 Juillet 2026 (Sprint 6)*

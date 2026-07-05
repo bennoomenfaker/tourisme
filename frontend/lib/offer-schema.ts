@@ -1,5 +1,14 @@
+import { LANGS, REGIMES, NIVEAUX } from './shared-configs';
+
+export interface CrossValidationRule {
+  field: string;
+  rule: 'lte' | 'gte' | 'in' | 'subset' | 'coherent' | 'requiredIfTrue' | 'requiredIfFalse';
+  onboardingKey: string;
+  message: string;
+}
+
 export interface SchemaField {
-  type: 'text' | 'number' | 'select' | 'multiselect' | 'boolean' | 'time' | 'file' | 'textarea' | 'hierarchy';
+  type: 'text' | 'number' | 'select' | 'multiselect' | 'boolean' | 'time' | 'file' | 'textarea' | 'hierarchy' | 'repeater';
   required?: boolean;
   label: string;
   placeholder?: string;
@@ -9,6 +18,8 @@ export interface SchemaField {
   max?: number;
   unit?: string;
   taxonomy?: string;
+  dynamicOptions?: { endpoint: string; labelField: string; valueField: string };
+  repeaterConfig?: { addLabel: string; fields: string[]; minItems?: number; maxItems?: number };
 }
 
 export interface SchemaSection {
@@ -319,11 +330,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       encadrement_guide: { type: 'boolean', label: 'Encadrement par un guide' },
-      langues_guides: { type: 'multiselect', label: "Langues du guide", conditionalOn: { field: 'encadrement_guide', value: true }, options: [
-        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
-        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
-        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
-      ]},
+      langues_guides: { type: 'multiselect', label: "Langues du guide", conditionalOn: { field: 'encadrement_guide', value: true }, options: LANGS },
       inclus: { type: 'multiselect', label: 'Inclus', options: [
         { value: 'guide', label: 'Guide' }, { value: 'repas', label: 'Repas' },
         { value: 'transport', label: 'Transport aller-retour' }, { value: 'assurance', label: 'Assurance' },
@@ -669,11 +676,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'oiseaux', label: 'Observation oiseaux' },
         { value: 'photographie', label: 'Photographie' },
       ]},
-      langues_guides: { type: 'multiselect', required: true, label: "Langues du guide", options: [
-        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
-        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
-        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
-      ]},
+      langues_guides: { type: 'multiselect', required: true, label: "Langues du guide", options: LANGS },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       points_interet: { type: 'textarea', label: "Points d'intérêt" },
       inclus: { type: 'multiselect', label: 'Inclus', options: [
@@ -726,11 +729,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     fields: {
       nb_plats: { type: 'number', required: true, label: 'Nombre de plats', min: 1 },
       formule: { type: 'text', label: 'Formule', placeholder: 'Entrée + Plat + Dessert' },
-      regimes_offre: { type: 'multiselect', label: 'Régimes proposés', options: [
-        { value: 'vegetarien', label: 'Végétarien' }, { value: 'vegan', label: 'Vegan' },
-        { value: 'halal', label: 'Halal' }, { value: 'sans_gluten', label: 'Sans gluten' },
-        { value: 'sans_lactose', label: 'Sans lactose' },
-      ]},
+      regimes_offre: { type: 'multiselect', label: 'Régimes proposés', options: REGIMES },
       nb_couverts_offre: { type: 'number', required: true, label: 'Nombre de couverts', min: 1 },
       inclus: { type: 'multiselect', label: 'Inclus', options: [
         { value: 'boisson', label: 'Boisson' }, { value: 'pain', label: 'Pain' },
@@ -1198,11 +1197,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       ]},
       duree: { type: 'text', required: true, label: 'Durée' },
       distance_marche: { type: 'number', label: 'Distance à pied (km)', unit: 'km' },
-      langues_guides: { type: 'multiselect', required: true, label: 'Langues du guide', options: [
-        { value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' },
-        { value: 'en', label: 'Anglais' }, { value: 'de', label: 'Allemand' },
-        { value: 'it', label: 'Italien' }, { value: 'es', label: 'Espagnol' },
-      ]},
+      langues_guides: { type: 'multiselect', required: true, label: 'Langues du guide', options: LANGS },
       pratiques_eco: { type: 'multiselect', label: 'Pratiques éco', options: [
         { value: 'sensibilisation', label: 'Sensibilisation' }, { value: 'groupe_restreint', label: 'Groupe restreint (max 8)' },
         { value: 'deplacement_doux', label: 'Déplacement doux' },

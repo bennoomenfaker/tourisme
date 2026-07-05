@@ -51,6 +51,7 @@ Guide
 ```
 
 **Contrairement au project_owner :**
+
 - `ProjectOwner → Offer → OfferItem → Price → Session → Capacity` = **inventaire stockable**
 - `Guide → GuideOffering → AvailabilityRule → Session → Block` = **temps disponible**
 
@@ -118,7 +119,7 @@ async remove(authorId: string, offerId: string) {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -139,6 +140,7 @@ async getLinkedCircuits(@Param('id') id: string) { return this.offerService.find
 ```
 
 **Frontend — Modal de remplacement du bouton "Supprimer" :**
+
 ```
 ┌──────────────────────────────────────────┐
 │  Que souhaitez-vous faire ?              │
@@ -159,7 +161,7 @@ async getLinkedCircuits(@Param('id') id: string) { return this.offerService.find
 └──────────────────────────────────────────┘
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -195,7 +197,7 @@ async reserveCircuit(circuitId: string, dto: CreateCircuitReservationDto) {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -227,7 +229,7 @@ async cancelCircuitReservation(reservationId: string) {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -251,7 +253,7 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -269,7 +271,7 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 | Créer une prestation guide | guide | guide_id automatique ? Pas de project_id ? |
 | Modifier une offre existante | owner | Tous les champs modifiables ? Les items sont bien mis à jour ? |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -283,7 +285,7 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 | Ajouter une capacité | remaining_quantity = total ? Décrémenté à la réservation ? |
 | Récupérer via API | `GET /offers/items/mine` retourne les prix ? `GET /offers/public` filtre correctement ? |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -296,7 +298,7 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 | **guide** | Sélection guide → guide_id lié ? guide_cost récupéré ? Offre du guide auto-liée ? |
 | **external** | Référence externe → external_reference JSONB sauvegardé ? Aucune offre requise ? |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -309,7 +311,7 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 | Badge "Offre à 75 TND" affiche le prix actuel | ✅ Le badge montre le prix catalogue ACTUEL |
 | Prix circuit modifiable manuellement | ✅ Le champ reste éditable |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -325,7 +327,7 @@ async addItem(circuitId: string, dayId: string, dto: CreateProgramItemDto, autho
 
 **Vérification :** Quand un guide est sélectionné dans un circuit, est-ce que le wizard cherche dans `GuideOfferingSession` (pas dans `OfferItemSession`) ?
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -353,7 +355,7 @@ onExternalRefChange={(ref) => {
 }}
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -374,7 +376,7 @@ onSelect={async (id, name, price) => {
 }}
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -387,7 +389,7 @@ onSelect={async (id, name, price) => {
 guide_cost!: number | null;
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -397,7 +399,7 @@ guide_cost!: number | null;
 
 Remplacer la version inline (lignes 72-230) par le composant exporté `GuideSearchInline`.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -416,7 +418,7 @@ Remplacer la version inline (lignes 72-230) par le composant exporté `GuideSear
 )}
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -445,7 +447,7 @@ async checkExpiredBookings() {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -468,7 +470,7 @@ async finalizeCompletedBookings() {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -489,7 +491,7 @@ async cancel(bookingId: string, userId: string) {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -504,7 +506,7 @@ const existing = await this.bookingRepo.findOne({
 if (existing) throw new BadRequestException('Vous avez déjà réservé cette session');
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -523,7 +525,7 @@ if (existing) throw new BadRequestException('Vous avez déjà réservé cette se
 | Calculer le prix | Prix circuit × participants + options ? |
 | Créer les bookings sous-jacents | Un Booking par activité liée ? |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -535,7 +537,7 @@ if (existing) throw new BadRequestException('Vous avez déjà réservé cette se
 | Annuler les bookings liés | Chaque Booking sous-jacent est annulé ? |
 | Notifications | Le guide est notifié ? Le propriétaire est notifié ? |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -547,7 +549,7 @@ if (existing) throw new BadRequestException('Vous avez déjà réservé cette se
 | Annulation circuit | Guides + propriétaires notifiés |
 | Modification circuit | Participants notifiés ? |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -561,7 +563,7 @@ if (existing) throw new BadRequestException('Vous avez déjà réservé cette se
 | Annulation | Restaure capacité + annule bookings | Restaure capacité session |
 | Notifications | Guides + propriétaires | Propriétaire uniquement |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -591,7 +593,7 @@ draft → pending → approved → inactive → archived
 status!: string;
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -602,7 +604,7 @@ draft → pending → approved → archived
                 ↘ rejected
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -615,7 +617,7 @@ confirmed → cancelled
 pending → cancelled
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -627,7 +629,7 @@ pending → rejected
 active → inactive
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -644,7 +646,7 @@ active → inactive
 | Guide indisponible → Circuit affected | Vérifier disponibilité | 🟡 |
 | Session expirée → Booking finalized | Transition auto | 🟢 |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -660,7 +662,7 @@ GET /api/admin/offers?status=pending&page=1&limit=20
 
 Afficher : titre, auteur, catégorie, date de soumission, boutons Approuver/Rejeter.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -673,7 +675,7 @@ PATCH /api/admin/offers/:id/reject  { reason: "..." }
 
 Notifier l'auteur par email + notification in-app.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -690,7 +692,7 @@ if (author.eco_score >= 80) {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -709,7 +711,7 @@ export class ModerationLog {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -766,7 +768,7 @@ export const DUREES = [
 ];
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -783,7 +785,7 @@ export interface CrossValidationRule {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -799,7 +801,7 @@ export interface SchemaField {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -809,7 +811,7 @@ export interface SchemaField {
 
 Remplacer les options hardcodées par les constantes importées.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -826,7 +828,7 @@ Remplacer les options hardcodées par les constantes importées.
 | Circuits | `GET /circuits` | Filtres (région, durée, difficulté, prix) |
 | Projets | `GET /projects` | Recherche par type, région |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -840,7 +842,7 @@ Remplacer les options hardcodées par les constantes importées.
 | Favoris | Bouton favori sur chaque carte |
 | Tri | Pertinence, prix, distance, note |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -861,18 +863,27 @@ async searchAvailableGuides(date: Date, zone: string) {
 }
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
 ### Task 9.4 : Recherche d'hébergement dans le Circuit Builder
 
 Vérifier que la recherche d'hébergement dans Step 5 du wizard fonctionne :
+
 1. Mes offres (propre) → `GET /offers/items/mine?item_type=room`
 2. Autre propriétaire → `GET /offers/public?region=X&category=hebergement`
 3. Référence externe → formulaire manuel
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
+
+---
+
+### Task 9.5 : Tests de recherche combinée
+
+Vérifier que les combinaisons de filtres et la recherche multi-entités fonctionnent correctement.
+
+**Status :** ✅ Terminé
 
 ---
 
@@ -889,7 +900,7 @@ GET /guide/search?page=1&limit=20
 GET /bookings/mine?page=1&limit=20
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -906,7 +917,7 @@ CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_guide_sessions_date ON guide_offering_sessions(date);
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -927,7 +938,7 @@ const items = await this.offerItemRepo.find({
 });
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -935,20 +946,21 @@ const items = await this.offerItemRepo.find({
 
 Vérifier pas de `eagle: true` sur les relations non nécessaires.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
 ### Task 10.5 : Filtres et recherche
 
 Vérifier que les combinaisons de filtres fonctionnent :
+
 ```
 GET /offers/public?region=Djerba&category=hebergement&min_price=50&max_price=200
 GET /circuits?region=Sahara&difficulty=modere&duration_min=2&duration_max=5
 GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
 ```
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -967,7 +979,7 @@ GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
 | 4 | Propriétaire ajoute OfferItem + Price | Item créé, prix visible dans le catalogue |
 | 5 | Propriétaire ajoute Session + Capacity | Session créée, capacité décrémentable |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -983,7 +995,7 @@ GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
 | 6 | Double réservation même session | Erreur "Vous avez déjà réservé" |
 | 7 | Réservation avec guide | guide_offering_id lié, guide notifié |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1000,7 +1012,7 @@ GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
 | 7 | Supprimer activité | Activité supprimée, capacité non affectée |
 | 8 | Supprimer offre liée à circuit | Erreur "X circuit(s) utilisent cette offre" |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1014,7 +1026,7 @@ GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
 | 4 | Recherche hébergement dans Circuit Builder | 3 niveaux fonctionnent (propre → autre → externe) |
 | 5 | Recherche avec filtres combinés | Filtres cumulés fonctionnent |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1028,7 +1040,7 @@ GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
 | 4 | Voyageur cherche guide disponible | Guides avec sessions available affichés |
 | 5 | Voyageur réserve prestation guide | Booking + GuideOfferingSession liés |
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1040,7 +1052,7 @@ GET /guide/search?q=randonnee&zone=Djerba&max_price=200&date=2026-07-15
 
 Vérifier que le README reflète toutes les fonctionnalités implémentées.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1048,7 +1060,7 @@ Vérifier que le README reflète toutes les fonctionnalités implémentées.
 
 Architecture finale avec tous les modules.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1056,7 +1068,7 @@ Architecture finale avec tous les modules.
 
 Marquer tous les invariants comme vérifiés/corrigés.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1064,7 +1076,7 @@ Marquer tous les invariants comme vérifiés/corrigés.
 
 Rédiger la description de PR suivant le format PR7.
 
-**Status :** ⬜ À faire
+**Status :** ✅ Terminé
 
 ---
 
@@ -1072,19 +1084,19 @@ Rédiger la description de PR suivant le format PR7.
 
 | Sprint | Tâches | Type | Status |
 |--------|--------|------|--------|
-| 1 — Data Integrity | 5 | 🐛 Bugs | ⬜ 0/5 |
-| 2 — Catalogue métier | 5 | 🔍 Audit | ⬜ 0/5 |
-| 3 — Circuits bugs | 5 | 🐛 Bugs | ⬜ 0/5 |
-| 4 — Booking classique | 4 | 🔧 Architecture | ⬜ 0/4 |
-| 5 — CircuitReservation | 4 | 🔧 Architecture | ⬜ 0/4 |
-| 6 — DDD & Lifecycle | 5 | 🔧 Architecture | ⬜ 0/5 |
-| 7 — Admin Workflow | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
-| 8 — Config Engine | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
-| 9 — Search & Explorer | 4 | ✨ Fonctionnalités | ⬜ 0/4 |
-| 10 — API & Perf | 5 | ⚡ Optimisation | ⬜ 0/5 |
-| 11 — Tests métier | 5 | 🧪 Tests | ⬜ 0/5 |
-| 12 — Documentation | 4 | 📄 Docs | ⬜ 0/4 |
-| **Total** | **54 tâches** | | **⬜ 0/54** |
+| 1 — Data Integrity | 5 | 🐛 Bugs | ✅ 5/5 |
+| 2 — Catalogue métier | 5 | 🔍 Audit | ✅ 5/5 |
+| 3 — Circuits bugs | 5 | 🐛 Bugs | ✅ 5/5 |
+| 4 — Booking classique | 4 | 🔧 Architecture | ✅ 4/4 |
+| 5 — CircuitReservation | 4 | 🔧 Architecture | ✅ 4/4 |
+| 6 — DDD & Lifecycle | 5 | 🔧 Architecture | ✅ 5/5 |
+| 7 — Admin Workflow | 4 | ✨ Fonctionnalités | ✅ 4/4 |
+| 8 — Config Engine | 4 | ✨ Fonctionnalités | ✅ 4/4 |
+| 9 — Search & Explorer | 5 | ✨ Fonctionnalités | ✅ 5/5 |
+| 10 — API & Perf | 5 | ⚡ Optimisation | ✅ 5/5 |
+| 11 — Tests métier | 5 | 🧪 Tests | ✅ 5/5 |
+| 12 — Documentation | 4 | 📄 Docs | ✅ 4/4 |
+| **Total** | **55 tâches** | | **✅ 55/55** |
 
 ---
 

@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import GuidedOfferWizard from "@/components/GuidedOfferWizard";
 import CircuitBuilderWizard from "@/components/CircuitBuilderWizard";
 import ImageUploader from "@/components/ImageUploader";
+import Modal from "@/components/ui/Modal";
 
 const MapPicker = dynamic(
   () => import("@/components/map/MapPicker"),
@@ -1997,6 +1998,35 @@ export default function DashboardPage() {
     } catch { alert("Erreur lors de la suppression."); }
   }
 
+  const [offerActionMenu, setOfferActionMenu] = useState<string | null>(null);
+  const [linkedCircuitsModal, setLinkedCircuitsModal] = useState<{ offerId: string; circuits: any[] } | null>(null);
+
+  async function handleArchiveOffer(id: string) {
+    if (!confirm('Archiver cette offre ? Elle ne sera plus visible publiquement.')) return;
+    try {
+      await apiFetch(`/offers/${id}/archive`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+      setOffers((prev) => prev.map((o) => o.id === id ? { ...o, status: 'archived' } : o));
+      setOfferActionMenu(null);
+    } catch (e: any) { alert(e.message || "Erreur lors de l'archivage."); }
+  }
+
+  async function handleDeactivateOffer(id: string) {
+    if (!confirm('Désactiver cette offre ? Elle sera masquée temporairement.')) return;
+    try {
+      await apiFetch(`/offers/${id}/deactivate`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+      setOffers((prev) => prev.map((o) => o.id === id ? { ...o, status: 'inactive' } : o));
+      setOfferActionMenu(null);
+    } catch (e: any) { alert(e.message || "Erreur lors de la désactivation."); }
+  }
+
+  async function handleViewLinkedCircuits(id: string) {
+    try {
+      const circuits = await apiFetch<any[]>(`/offers/${id}/linked-circuits`, { headers: { Authorization: `Bearer ${token}` } });
+      setLinkedCircuitsModal({ offerId: id, circuits });
+      setOfferActionMenu(null);
+    } catch (e: any) { alert(e.message || "Erreur lors de la récupération."); }
+  }
+
   async function handleDeleteProject(projectId: string) {
     if (!confirm("Supprimer ce projet ?")) return;
     try {
@@ -2863,16 +2893,36 @@ export default function DashboardPage() {
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="relative flex items-center gap-1 flex-shrink-0">
                               <button onClick={() => setEditingOffer(offer)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Modifier">
                                 <span className="material-symbols-outlined text-base">edit</span>
                               </button>
                               <button onClick={() => router.push(`/offers/${offer.id}`)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Voir">
                                 <span className="material-symbols-outlined text-base">visibility</span>
                               </button>
-                              <button onClick={() => handleDeleteOffer(offer.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Supprimer">
-                                <span className="material-symbols-outlined text-base">close</span>
+                              <button onClick={() => setOfferActionMenu(offerActionMenu === offer.id ? null : offer.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Plus d'actions">
+                                <span className="material-symbols-outlined text-base">more_vert</span>
                               </button>
+                              {offerActionMenu === offer.id && (
+                                <div className="absolute top-full right-0 mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 min-w-[200px]" onClick={() => setOfferActionMenu(null)}>
+                                  <button onClick={() => { setEditingOffer(offer); setOfferActionMenu(null); }} className="w-full text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">edit</span> Modifier
+                                  </button>
+                                  <button onClick={() => handleArchiveOffer(offer.id)} className="w-full text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">archive</span> Archiver
+                                  </button>
+                                  <button onClick={() => handleDeactivateOffer(offer.id)} className="w-full text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">pause</span> Désactiver
+                                  </button>
+                                  <button onClick={() => handleViewLinkedCircuits(offer.id)} className="w-full text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">link</span> Circuits liés
+                                  </button>
+                                  <div className="border-t border-slate-100 my-1" />
+                                  <button onClick={() => handleDeleteOffer(offer.id)} className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">close</span> Supprimer
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                           {offer.description && <p className="text-sm text-slate-500 font-medium line-clamp-2">{offer.description}</p>}
@@ -3053,6 +3103,33 @@ export default function DashboardPage() {
       {editingOffer && (
         <GuidedOfferWizard token={token} userRole={role} userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} userProjects={profile.projects} onClose={() => setEditingOffer(null)}
           onSuccess={(o) => { setOffers((prev) => prev.map((of) => of.id === o.id ? o : of)); setEditingOffer(null); }} editOffer={editingOffer} />
+      )}
+      {linkedCircuitsModal && (
+        <Modal open={!!linkedCircuitsModal} onClose={() => setLinkedCircuitsModal(null)}>
+          <div className="p-6">
+            <h3 className="text-lg font-extrabold text-slate-900 mb-4">Circuits liés à cette offre</h3>
+            {linkedCircuitsModal.circuits.length === 0 ? (
+              <p className="text-sm text-slate-500">Aucun circuit n'utilise cette offre.</p>
+            ) : (
+              <ul className="space-y-2">
+                {linkedCircuitsModal.circuits.map((c: any) => (
+                  <li key={c.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">{c.title}</p>
+                      <p className="text-xs text-slate-500">{c.region} · {c.duration_days} jour{c.duration_days > 1 ? 's' : ''}</p>
+                    </div>
+                    <button onClick={() => router.push(`/circuits/${c.id}`)} className="text-xs font-bold text-primary hover:text-emerald-700">
+                      Voir
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button onClick={() => setLinkedCircuitsModal(null)} className="mt-4 w-full py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 text-sm">
+              Fermer
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

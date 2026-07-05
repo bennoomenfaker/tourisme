@@ -101,10 +101,6 @@ export class CreateOfferDto {
 
   @IsOptional()
   @IsString()
-  status?: string;
-
-  @IsOptional()
-  @IsString()
   location_type?: string;
 
   @IsOptional()

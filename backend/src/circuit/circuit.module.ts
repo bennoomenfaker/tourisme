@@ -9,6 +9,8 @@ import { CircuitReservationOption } from './entities/circuit-reservation-option.
 import { CircuitService } from './circuit.service';
 import { CircuitController } from './circuit.controller';
 import { NotificationModule } from '../notification/notification.module';
+import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
+import { OfferItem } from '../offer/entities/offer-item.entity';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { NotificationModule } from '../notification/notification.module';
       CircuitOption,
       CircuitReservation,
       CircuitReservationOption,
+      OfferItemSession,
+      OfferItem,
     ]),
     NotificationModule,
   ],

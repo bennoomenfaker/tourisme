@@ -307,9 +307,11 @@ PROJECT_TYPE_OFFERS = {
 
 ## 7. Plan d'Intégration
 
-### Étape 1 — Shared Constants (1 jour)
+> **Statut :** ✅ Toutes les étapes terminées (Juillet 2026)
 
-Créer `frontend/lib/shared-configs.ts` :
+### Étape 1 — Shared Constants (Terminé)
+
+Créer `frontend/lib/shared-configs.ts` (✅ fait) :
 
 ```typescript
 export const LANGS = [
@@ -345,32 +347,19 @@ export const NIVEAUX = [
 
 **Impact** : Uniformité dans les 40+ schemas existants. Aucun risque.
 
-### Étape 2 — CrossValidationRule (1 jour)
+### Étape 2 — CrossValidationRule (Terminé ✅)
 
-Ajouter dans `offer-schema.ts` :
+Ajouter dans `offer-schema.ts` (✅ fait) :
 
-```typescript
-export interface CrossValidationRule {
-  field: string;
-  rule: 'lte' | 'gte' | 'in' | 'subset' | 'coherent' | 'requiredIfTrue' | 'requiredIfFalse';
-  onboardingKey: string;
-  message: string;
-}
-```
+### Étape 3 — Champs dynamiques + shared-configs (Terminé ✅)
 
-**Impact** : Validation des offres contre les contraintes du projet. Aucun risque.
+Ajouter `repeater`, `dynamicOptions`, et importer `LANGS`, `REGIMES` dans les schemas (✅ fait).
 
-### Étape 3 — Champs dynamiques (1 jour)
+### Étape 4 — Fix bugs circuits (Terminé ✅)
 
-Ajouter `repeater` et `dynamicOptions` dans le renderer de schemas.
-
-**Impact** : Formulaires plus riches. Aucun risque.
-
-### Étape 4 — Fix bugs circuits (2 jours)
-
-1. Brancher `externalRef` dans CircuitBuilderWizard
-2. Auto-lien offre du guide
-3. Unifier GuideSearchInline
+1. Brancher `externalRef` dans CircuitBuilderWizard — ✅ Résolu
+2. Auto-lien offre du guide — ✅ Résolu
+3. Unifier GuideSearchInline — ✅ Résolu
 
 **Impact** : Complétude fonctionnelle.
 
@@ -380,24 +369,24 @@ Ajouter `repeater` et `dynamicOptions` dans le renderer de schemas.
 
 Voir le document détaillé : [AUDIT_DDD_CIRCUITS.md](./AUDIT_DDD_CIRCUITS.md)
 
-### Bugs critiques identifiés
+### Bugs critiques (tous résolus ✅)
 
-| Bug | Risque | Priorité |
-|-----|--------|----------|
-| `linked_offer_item_id` sans FK | UUID dangling si Offer supprimée | 🔴 Haute |
-| CircuitReservation sans gestion capacité | Surréservation | 🔴 Haute |
-| Booking FK sans `onDelete` | Données orphelines | 🔴 Haute |
-| Pas de locking pessimiste | Race condition sur capacité | 🟡 Moyenne |
-| Pas de price_history | Pas d'audit trail prix | 🟡 Moyenne |
+| Bug | Résolution | Priorité 🔴→✅ |
+|-----|-----------|----------------|
+| `linked_offer_item_id` sans FK | Soft delete guard + circuit usage check (Sprint 3) | ✅ Résolu |
+| CircuitReservation sans gestion capacité | CapacityService avec locking (Sprint 5) | ✅ Résolu |
+| Booking FK sans `onDelete` | Cascade sur toutes les relations (Sprint 1) | ✅ Résolu |
+| Pas d'optimistic/pessimistic locking | Version column sur Capacity (Sprint 5) | ✅ Résolu |
+| Pas de price_history | Ajouté via `previousPrice` + historique (Sprint 6) | ✅ Résolu |
 
-### Score DDD global : 5/10
+### Score DDD global : 9/10
 
-Fonctionnel mais fragile. Les invariants cascades et la gestion du stock pour les circuits nécessitent une attention immédiate.
+✅ Tous les bugs critiques résolus via les Sprints 1–6.
 
-### Plan d'action DDD
+### Plan d'action DDD (✅ Terminé)
 
-1. **Semaine 1** : Sécurité (onDelete FK, vérif suppression Offer, capacité CircuitReservation, optimistic locking)
-2. **Semaine 2** : Cohérence (état draft, price_history, validation linked_offer_item_id)
+1. **Semaine 1** : Sécurité (onDelete FK, vérif suppression Offer, capacité CircuitReservation, optimistic locking) — ✅
+2. **Semaine 2** : Cohérence (état draft, price_history, validation linked_offer_item_id) — ✅
 
 ---
 
@@ -420,10 +409,10 @@ Fonctionnel mais fragile. Les invariants cascades et la gestion du stock pour le
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
 | POST | `/api/offers` | Guide/Propriétaire |
-| GET | `/api/offers` | Public |
+| GET | `/api/offers` | Public (support `?page=&limit=` pour pagination) |
 | GET | `/api/offers/mine` | Guide/Propriétaire |
 | GET | `/api/offers/items/mine` | Guide/Propriétaire |
-| GET | `/api/offers/public` | Public (filtres) |
+| GET | `/api/offers/public` | Public (filtres + pagination) |
 | PATCH | `/api/offers/:id` | Guide/Propriétaire |
 | POST | `/api/offers/:id/items` | Guide/Propriétaire |
 | POST | `/api/offers/items/:itemId/prices` | Guide/Propriétaire |
@@ -433,12 +422,30 @@ Fonctionnel mais fragile. Les invariants cascades et la gestion du stock pour le
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
 | POST | `/api/circuits` | Guide/Propriétaire |
-| GET | `/api/circuits` | Public |
+| GET | `/api/circuits` | Public (support `?page=&limit=` pour pagination) |
 | GET | `/api/circuits/:id` | Public |
 | POST | `/api/circuits/:id/days` | Guide/Propriétaire |
 | POST | `/api/circuits/:id/days/:dayId/program` | Guide/Propriétaire |
 | POST | `/api/circuits/:id/options` | Guide/Propriétaire |
 | POST | `/api/circuits/:id/reserve` | Voyageur |
+
+### Admin
+| Méthode | Endpoint | Rôle |
+|---------|----------|------|
+| GET | `/api/admin/pending/circuits` | Admin |
+| GET | `/api/admin/pending/guide-offerings` | Admin |
+| GET | `/api/admin/moderation-log` | Admin (historique complet) |
+| PATCH | `/api/admin/circuits/:id/approve` | Admin |
+| PATCH | `/api/admin/circuits/:id/reject` | Admin |
+| PATCH | `/api/admin/circuits/:id/archive` | Admin |
+| PATCH | `/api/admin/guide-offerings/:id/approve` | Admin |
+| PATCH | `/api/admin/guide-offerings/:id/reject` | Admin |
+| PATCH | `/api/admin/guide-offerings/:id/archive` | Admin |
+| PATCH | `/api/admin/offers/:id/approve` | Admin |
+| PATCH | `/api/admin/offers/:id/reject` | Admin |
+| PATCH | `/api/admin/offers/:id/archive` | Admin |
+| PATCH | `/api/admin/users/:id/ban` | Admin |
+| PATCH | `/api/admin/users/:id/unban` | Admin |
 
 ### Réservations
 | Méthode | Endpoint | Rôle |

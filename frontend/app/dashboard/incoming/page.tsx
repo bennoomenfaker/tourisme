@@ -93,6 +93,19 @@ export default function IncomingReservationsPage() {
     }
   };
 
+  const handleRejectCircuit = async (id: string) => {
+    if (!confirm("Refuser cette réservation ?")) return;
+    setProcessingId(id);
+    try {
+      await apiFetch(`/circuits/reservations/${id}/reject`, { method: "PATCH" });
+      fetchBookings();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 flex items-center justify-center">
@@ -278,6 +291,13 @@ export default function IncomingReservationsPage() {
                             className="flex items-center gap-1 text-xs text-white bg-primary hover:bg-emerald-600 rounded-lg px-3 py-1.5 disabled:opacity-50"
                           >
                             <Check size={14} /> Confirmer
+                          </button>
+                          <button
+                            onClick={() => handleRejectCircuit(res.id)}
+                            disabled={processingId === res.id}
+                            className="flex items-center gap-1 text-xs text-white bg-red-500 hover:bg-red-600 rounded-lg px-3 py-1.5 disabled:opacity-50"
+                          >
+                            <X size={14} /> Refuser
                           </button>
                         </div>
                       )}

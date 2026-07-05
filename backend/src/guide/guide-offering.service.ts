@@ -84,7 +84,22 @@ export class GuideOfferingService {
   async update(guideId: string, id: string, dto: UpdateGuideOfferingDto): Promise<GuideOffering> {
     const offering = await this.findById(id);
     if (offering.guide_id !== guideId) throw new ForbiddenException('Accès refusé.');
-    Object.assign(offering, dto);
+    if (dto.title !== undefined) offering.title = dto.title;
+    if (dto.description !== undefined) offering.description = dto.description;
+    if (dto.languages !== undefined) offering.languages = dto.languages;
+    if (dto.price !== undefined) offering.price = dto.price;
+    if (dto.pricing_unit !== undefined) offering.pricing_unit = dto.pricing_unit;
+    if (dto.min_travelers !== undefined) offering.min_travelers = dto.min_travelers;
+    if (dto.max_travelers !== undefined) offering.max_travelers = dto.max_travelers;
+    if (dto.service_zone_type !== undefined) offering.service_zone_type = dto.service_zone_type;
+    if (dto.lat !== undefined) offering.lat = dto.lat;
+    if (dto.lng !== undefined) offering.lng = dto.lng;
+    if (dto.radius_km !== undefined) offering.radius_km = dto.radius_km;
+    if (dto.zone_governorate !== undefined) offering.zone_governorate = dto.zone_governorate;
+    if (dto.zone_municipality !== undefined) offering.zone_municipality = dto.zone_municipality;
+    if (dto.displacement_allowed !== undefined) offering.displacement_allowed = dto.displacement_allowed;
+    if (dto.displacement_max_km !== undefined) offering.displacement_max_km = dto.displacement_max_km;
+    if (dto.displacement_type !== undefined) offering.displacement_type = dto.displacement_type;
     return this.repo.save(offering);
   }
 

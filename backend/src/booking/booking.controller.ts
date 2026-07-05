@@ -107,4 +107,24 @@ export class BookingController {
   addParticipants(@Req() req: any, @Param('id') id: string, @Body() dto: AddParticipantsDto) {
     return this.service.addParticipants(id, req.user.sub, dto.participants);
   }
+
+  /**
+   * Marque les réservations pending > 48h comme expirées (système)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Post('check-expired')
+  checkExpired() {
+    return this.service.checkExpiredBookings();
+  }
+
+  /**
+   * Transition confirmed → completed pour les sessions passées (système)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Post('finalize-completed')
+  finalizeCompleted() {
+    return this.service.finalizeCompletedBookings();
+  }
 }

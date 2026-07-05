@@ -10,6 +10,7 @@ import { OfferItemAvailabilityRule } from './entities/offer-item-availability-ru
 import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Project } from '../project-owner/entities/project.entity';
 import { RedisService } from '../redis/redis.service';
+import { paginated, PaginatedResult, PaginationParams } from '../common/helpers/pagination';
 import {
   CreateOfferDto,
   OfferSustainabilityDto,
@@ -117,7 +118,7 @@ export class OfferService {
 
   async findByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
-      where: { author_id: authorId },
+      where: { author_id: authorId, is_deleted: false },
       relations: ['items', 'items.prices', 'project'],
       order: { created_at: 'DESC' },
     });
@@ -125,9 +126,33 @@ export class OfferService {
 
   async findPublishedByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
-      where: { author_id: authorId, status: 'approved' },
+      where: { author_id: authorId, status: 'approved', is_deleted: false },
       order: { created_at: 'DESC' },
     });
+  }
+
+  async findAllPublic(region?: string, pagination?: PaginationParams): Promise<PaginatedResult<Offer> | Offer[]> {
+    const where: any = { status: 'approved', is_deleted: false };
+    if (region) where.region = region;
+
+    if (!pagination?.page) {
+      return this.repo.find({
+        where,
+        order: { created_at: 'DESC' },
+        relations: ['items', 'items.prices', 'project'],
+      });
+    }
+
+    const page = pagination.page;
+    const limit = pagination.limit ?? 20;
+    const [data, total] = await this.repo.findAndCount({
+      where,
+      order: { created_at: 'DESC' },
+      relations: ['items', 'items.prices', 'project'],
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return paginated(data, total, page, limit);
   }
 
   async findPublic(
@@ -135,12 +160,14 @@ export class OfferService {
     excludeAuthor?: string,
     region?: string,
     geo?: { lat?: number; lng?: number; radiusKm?: number; itemType?: string },
-  ): Promise<Offer[]> {
+    pagination?: PaginationParams,
+  ): Promise<PaginatedResult<Offer> | Offer[]> {
     const qb = this.repo.createQueryBuilder('offer')
       .leftJoinAndSelect('offer.items', 'items')
       .leftJoinAndSelect('items.prices', 'prices')
       .leftJoinAndSelect('offer.project', 'project')
-      .where('offer.status = :status', { status: 'approved' });
+      .where('offer.status = :status', { status: 'approved' })
+      .andWhere('offer.is_deleted = :isDeleted', { isDeleted: false });
 
     if (category) qb.andWhere('offer.offer_type = :category', { category });
     if (excludeAuthor) qb.andWhere('offer.author_id != :ex', { ex: excludeAuthor });
@@ -159,26 +186,18 @@ export class OfferService {
       );
     }
 
-    return qb.orderBy('offer.created_at', 'DESC').getMany();
-  }
+    if (!pagination?.page) {
+      return qb.orderBy('offer.created_at', 'DESC').getMany();
+    }
 
-  async findAllPublic(region?: string): Promise<Offer[]> {
-    const cacheKey = region
-      ? `${this.OFFER_CACHE_PREFIX}list:region:${region}`
-      : `${this.OFFER_CACHE_PREFIX}list:all`;
-    const cached = await this.redis.get<Offer[]>(cacheKey);
-    if (cached) return cached;
-
-    const where: any = { status: 'approved' };
-    if (region) where.region = region;
-    const offers = await this.repo.find({
-      where,
-      order: { created_at: 'DESC' },
-      relations: ['items', 'items.prices', 'project'],
-    });
-
-    await this.redis.set(cacheKey, offers);
-    return offers;
+    const page = pagination.page;
+    const limit = pagination.limit ?? 20;
+    const total = await qb.getCount();
+    const data = await qb.orderBy('offer.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+    return paginated(data, total, page, limit);
   }
 
   async findById(id: string): Promise<Offer> {
@@ -198,7 +217,7 @@ export class OfferService {
 
   async findByProject(projectId: string): Promise<Offer[]> {
     return this.repo.find({
-      where: { project_id: projectId, status: 'approved' },
+      where: { project_id: projectId, status: 'approved', is_deleted: false },
       order: { created_at: 'DESC' },
     });
   }
@@ -227,7 +246,11 @@ export class OfferService {
     if (dto.min_age !== undefined) offer.min_age = dto.min_age;
     if (dto.cancellation_policy !== undefined) offer.cancellation_policy = dto.cancellation_policy;
     if (dto.confirmation_mode !== undefined) offer.confirmation_mode = dto.confirmation_mode;
-    if (dto.status !== undefined) offer.status = dto.status;
+    if (dto.status !== undefined) {
+      const valid = this.isValidOfferTransition(offer.status, dto.status, authorId);
+      if (!valid) throw new BadRequestException(`Transition de statut interdite : ${offer.status} → ${dto.status}`);
+      offer.status = dto.status;
+    }
     if (dto.location_type !== undefined) offer.location_type = dto.location_type;
     if (dto.deposit_percentage !== undefined) offer.deposit_percentage = dto.deposit_percentage;
     if (dto.production_delay_days !== undefined) offer.production_delay_days = dto.production_delay_days;
@@ -248,9 +271,77 @@ export class OfferService {
   async remove(authorId: string, offerId: string): Promise<{ message: string }> {
     const offer = await this.findOrFail(offerId);
     if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
-    await this.repo.remove(offer);
+
+    // Vérifier les réservations actives liées à cette offre
+    const activeBookings = await this.itemRepo
+      .createQueryBuilder('item')
+      .innerJoin('bookings', 'b', 'b.offer_item_id = item.id AND b.status != :cancelled', { cancelled: 'cancelled' })
+      .where('item.offer_id = :offerId', { offerId })
+      .getCount();
+
+    if (activeBookings > 0) {
+      throw new BadRequestException(
+        `${activeBookings} réservation(s) active(s) liée(s) à cette offre. ` +
+        `Utilisez l'archivage ou la désactivation à la place.`
+      );
+    }
+
+    // Soft delete
+    offer.is_deleted = true;
+    offer.deleted_at = new Date();
+    offer.status = 'archived';
+    await this.repo.save(offer);
     await this.invalidateOfferCache();
-    return { message: 'Offre supprimée.' };
+    return { message: 'Offre supprimée (archivée).' };
+  }
+
+  async archive(authorId: string, offerId: string): Promise<Offer> {
+    const offer = await this.findOrFail(offerId);
+    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
+    if (offer.status === 'archived') throw new BadRequestException('Cette offre est déjà archivée');
+    offer.status = 'archived';
+    offer.is_deleted = true;
+    offer.deleted_at = new Date();
+    await this.repo.save(offer);
+    await this.invalidateOfferCache();
+    return this.findById(offerId);
+  }
+
+  async deactivate(authorId: string, offerId: string): Promise<Offer> {
+    const offer = await this.findOrFail(offerId);
+    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
+    if (offer.status !== 'approved') throw new BadRequestException('Seules les offres approuvées peuvent être désactivées');
+    offer.status = 'inactive';
+    await this.repo.save(offer);
+    await this.invalidateOfferCache();
+    return this.findById(offerId);
+  }
+
+  async reactivate(authorId: string, offerId: string): Promise<Offer> {
+    const offer = await this.findOrFail(offerId);
+    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
+    if (offer.status !== 'inactive') throw new BadRequestException('Seules les offres désactivées peuvent être réactivées');
+    offer.status = 'approved';
+    await this.repo.save(offer);
+    await this.invalidateOfferCache();
+    return this.findById(offerId);
+  }
+
+  async findLinkedCircuits(offerId: string): Promise<{ circuit_id: string; circuit_title: string; day_title: string; activity_title: string }[]> {
+    const items = await this.itemRepo.find({ where: { offer: { id: offerId } } });
+    if (!items.length) return [];
+    const itemIds = items.map((i) => i.id);
+
+    const linked = await this.repo.query(
+      `SELECT c.id AS circuit_id, c.title AS circuit_title,
+              cd.title AS day_title, cpi.title AS activity_title
+       FROM circuit_program_items cpi
+       INNER JOIN circuit_days cd ON cd.id = cpi.circuit_day_id
+       INNER JOIN circuits c ON c.id = cd.circuit_id
+       WHERE cpi.linked_offer_item_id IN (${itemIds.map(() => '?').join(',')})`,
+      itemIds,
+    );
+    return linked;
   }
 
   private async findOrFail(id: string): Promise<Offer> {
@@ -305,6 +396,19 @@ export class OfferService {
     const item = await this.findItemById(itemId);
     await this.itemRepo.remove(item);
     return { message: 'Élément supprimé.' };
+  }
+
+  // ─── Status transitions ───────────────────────────────────
+
+  private isValidOfferTransition(current: string, next: string, authorId: string): boolean {
+    const allowed: Record<string, string[]> = {
+      pending: ['approved', 'rejected', 'archived'],
+      approved: ['inactive', 'archived'],
+      inactive: ['approved'],
+      rejected: [],
+      archived: [],
+    };
+    return allowed[current]?.includes(next) ?? false;
   }
 
   // ─── OfferItem Prices ──────────────────────────────────

@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, LessThan } from 'typeorm';
 import { Booking } from './entities/booking.entity';
 import { BookingParticipant } from './entities/booking-participant.entity';
 import { CreateBookingDto, CreateGuideBookingDto } from './dto/create-booking.dto';
@@ -87,11 +87,14 @@ export class BookingService {
       }
     }
 
-    const existingBooking = await this.bookingRepo.findOne({
-      where: { traveler: { id: travelerId } as any, offer: { id: dto.offer_id } as any, status: Not('cancelled') },
-    });
-    if (existingBooking) {
-      throw new BadRequestException('Vous avez déjà réservé cette offre');
+    // ── Vérification double réservation même session ──
+    if (dto.session_id) {
+      const existingBooking = await this.bookingRepo.findOne({
+        where: { traveler: { id: travelerId } as any, session: { id: dto.session_id } as any, status: Not('cancelled') },
+      });
+      if (existingBooking) {
+        throw new BadRequestException('Vous avez déjà réservé cette session');
+      }
     }
 
     // ── Calcul du prix côté serveur ──
@@ -422,6 +425,74 @@ export class BookingService {
     await this.bookingRepo.save(updatedBooking);
 
     return this.findById(bookingId);
+  }
+
+  // ── Gestion du cycle de vie ──────────────────────────────────────
+
+  /**
+   * Marque les réservations pending > 48h comme expired
+   */
+  async checkExpiredBookings(): Promise<number> {
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const expired = await this.bookingRepo.find({
+      where: { status: 'pending', created_at: LessThan(cutoff) },
+      relations: ['offerItem', 'session', 'participants'],
+    });
+    for (const booking of expired) {
+      booking.status = 'expired';
+      await this.bookingRepo.save(booking);
+      await this.restoreBookingCapacity(booking);
+      this.notificationService.create(
+        booking.traveler.id,
+        'booking_expired',
+        'Réservation expirée',
+        `Votre réservation ${booking.booking_ref} a expirée faute de confirmation dans les 48h.`,
+        `/bookings/${booking.id}`,
+      ).catch(() => {});
+    }
+    return expired.length;
+  }
+
+  /**
+   * Transition automatique confirmed → completed quand la session est passée
+   */
+  async finalizeCompletedBookings(): Promise<number> {
+    const now = new Date();
+    const completed = await this.bookingRepo.find({
+      where: { status: 'confirmed' },
+      relations: ['session', 'participants'],
+    });
+    let count = 0;
+    for (const booking of completed) {
+      if (booking.session?.date && new Date(booking.session.date) < now) {
+        booking.status = 'completed';
+        await this.bookingRepo.save(booking);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Restaure la capacité d'une réservation (session + stock global)
+   */
+  private async restoreBookingCapacity(booking: Booking): Promise<void> {
+    const participantCount = booking.participants?.length ?? 1;
+    if (booking.session?.id) {
+      const session = await this.sessionRepo.findOne({ where: { id: booking.session.id } });
+      if (session && session.remaining_capacity !== null) {
+        session.remaining_capacity = session.remaining_capacity + participantCount;
+        if (session.status === 'full') session.status = 'available';
+        await this.sessionRepo.save(session);
+      }
+    }
+    if (booking.offerItem?.id && !booking.session?.id) {
+      const capacity = await this.capacityRepo.findOne({ where: { offerItem: { id: booking.offerItem.id } } });
+      if (capacity && capacity.remaining_quantity !== null) {
+        capacity.remaining_quantity = capacity.remaining_quantity + participantCount;
+        await this.capacityRepo.save(capacity);
+      }
+    }
   }
 
   // ── Guide Offering Booking ──────────────────────────────────────

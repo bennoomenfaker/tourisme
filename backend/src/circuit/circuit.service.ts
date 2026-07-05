@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { DataSource, Repository, Not } from 'typeorm';
 import { RedisService } from '../redis/redis.service';
+import { paginated, PaginatedResult, PaginationParams } from '../common/helpers/pagination';
 import { Circuit } from './entities/circuit.entity';
 import { CircuitDay } from './entities/circuit-day.entity';
 import { CircuitProgramItem } from './entities/circuit-program-item.entity';
@@ -15,10 +16,14 @@ import { CreateCircuitProgramItemDto } from './dto/create-circuit-program-item.d
 import { ReserveCircuitDto } from './dto/reserve-circuit.dto';
 import { User } from '../users/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
+import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
+import { OfferItem } from '../offer/entities/offer-item.entity';
 
 @Injectable()
 export class CircuitService {
   constructor(
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
     @InjectRepository(Circuit)
     private readonly circuitRepo: Repository<Circuit>,
     @InjectRepository(CircuitDay)
@@ -31,6 +36,10 @@ export class CircuitService {
     private readonly reservationRepo: Repository<CircuitReservation>,
     @InjectRepository(CircuitReservationOption)
     private readonly reservationOptionRepo: Repository<CircuitReservationOption>,
+    @InjectRepository(OfferItemSession)
+    private readonly sessionRepo: Repository<OfferItemSession>,
+    @InjectRepository(OfferItem)
+    private readonly offerItemRepo: Repository<OfferItem>,
     private readonly notificationService: NotificationService,
     private readonly redis: RedisService,
   ) {}
@@ -76,22 +85,27 @@ export class CircuitService {
     return saved;
   }
 
-  async findAll(status?: string, region?: string): Promise<Circuit[]> {
-    const cacheKey = region
-      ? `${this.CIRCUIT_CACHE_PREFIX}list:region:${region}${status ? `:status:${status}` : ''}`
-      : `${this.CIRCUIT_CACHE_PREFIX}list:all${status ? `:status:${status}` : ''}`;
-    const cached = await this.redis.get<Circuit[]>(cacheKey);
-    if (cached) return cached;
-
+  async findAll(status?: string, region?: string, pagination?: PaginationParams): Promise<PaginatedResult<Circuit> | Circuit[]> {
     const where: any = {};
     if (status) where.status = status;
     if (region) where.region = region;
-    const circuits = !status && !region
-      ? await this.circuitRepo.find({ order: { created_at: 'DESC' } })
-      : await this.circuitRepo.find({ where, order: { created_at: 'DESC' } });
 
-    await this.redis.set(cacheKey, circuits);
-    return circuits;
+    if (!pagination?.page) {
+      const circuits = !status && !region
+        ? await this.circuitRepo.find({ order: { created_at: 'DESC' } })
+        : await this.circuitRepo.find({ where, order: { created_at: 'DESC' } });
+      return circuits;
+    }
+
+    const page = pagination.page;
+    const limit = pagination.limit ?? 20;
+    const [data, total] = await this.circuitRepo.findAndCount({
+      where,
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return paginated(data, total, page, limit);
   }
 
   async findById(id: string): Promise<Circuit> {
@@ -143,6 +157,45 @@ export class CircuitService {
     if (dto.hebergement !== undefined) circuit.hebergement = dto.hebergement ?? null;
     const saved = await this.circuitRepo.save(circuit);
     await this.invalidateCircuitCache();
+
+    // Notifier les voyageurs avec réservation confirmée
+    const reservations = await this.reservationRepo.find({
+      where: { circuit: { id }, status: 'confirmed' },
+      relations: ['user', 'circuit'],
+    });
+    if (reservations.length) {
+      const msg = `Le circuit "${circuit.title}" a été modifié. Vérifiez les détails.`;
+      for (const r of reservations) {
+        this.notificationService.create(
+          r.user.id,
+          'circuit_updated',
+          'Circuit modifié',
+          msg,
+          `/circuits/${id}`,
+        ).catch(() => {});
+      }
+      // Notifier aussi les guides concernés
+      const guideIds = new Set<string>();
+      const circuitWithDays = await this.circuitRepo.findOne({
+        where: { id },
+        relations: ['days', 'days.programItems'],
+      });
+      for (const day of circuitWithDays?.days ?? []) {
+        for (const prog of day.programItems ?? []) {
+          if (prog.guide_id) guideIds.add(prog.guide_id);
+        }
+      }
+      for (const guideId of guideIds) {
+        this.notificationService.create(
+          guideId,
+          'circuit_updated',
+          'Circuit modifié',
+          `Le circuit "${circuit.title}" auquel vous participez a été modifié.`,
+          `/circuits/${id}`,
+        ).catch(() => {});
+      }
+    }
+
     return saved;
   }
 
@@ -247,6 +300,15 @@ export class CircuitService {
     if (authorId && day.circuit?.author_id !== authorId) {
       throw new ForbiddenException('Vous ne pouvez modifier que vos propres circuits');
     }
+
+    // Invariant : si linked_offer_item_id, l'item existe bien
+    if (dto.linked_offer_item_id) {
+      const item = await this.offerItemRepo.findOne({ where: { id: dto.linked_offer_item_id } });
+      if (!item) {
+        throw new NotFoundException('OfferItem référencé introuvable');
+      }
+    }
+
     const item = this.programItemRepo.create({
       circuitDay: { id: dayId } as CircuitDay,
       title: dto.title,
@@ -288,7 +350,13 @@ export class CircuitService {
     if (dto.end_time !== undefined) item.end_time = this.normalizeTime(dto.end_time);
     if (dto.is_included !== undefined) item.is_included = dto.is_included;
     if (dto.is_required !== undefined) item.is_required = dto.is_required;
-    if (dto.linked_offer_item_id !== undefined) item.linked_offer_item_id = dto.linked_offer_item_id ?? null;
+    if (dto.linked_offer_item_id !== undefined) {
+      if (dto.linked_offer_item_id) {
+        const linked = await this.offerItemRepo.findOne({ where: { id: dto.linked_offer_item_id } });
+        if (!linked) throw new NotFoundException('OfferItem référencé introuvable');
+      }
+      item.linked_offer_item_id = dto.linked_offer_item_id ?? null;
+    }
     if (dto.linked_location_id !== undefined) item.linked_location_id = dto.linked_location_id ?? null;
     if (dto.emoji !== undefined) item.emoji = dto.emoji ?? null;
     if (dto.duration_minutes !== undefined) item.duration_minutes = dto.duration_minutes ?? null;
@@ -320,8 +388,12 @@ export class CircuitService {
   // ─── Réservation de circuit ────────────────────────────
 
   async reserve(userId: string, dto: ReserveCircuitDto): Promise<CircuitReservation> {
-    const circuit = await this.circuitRepo.findOne({ where: { id: dto.circuit_id } });
+    const circuit = await this.circuitRepo.findOne({
+      where: { id: dto.circuit_id },
+      relations: ['days', 'days.programItems'],
+    });
     if (!circuit) throw new NotFoundException('Circuit introuvable');
+    if (circuit.status !== 'approved') throw new BadRequestException('Ce circuit n\'est pas encore publié');
 
     const participantsCount = dto.participants_count ?? 1;
     if (circuit.max_participants && participantsCount > circuit.max_participants) {
@@ -337,55 +409,108 @@ export class CircuitService {
       }
     }
 
-    const reservationStatus = circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
-    const reservation = this.reservationRepo.create({
-      circuit: { id: dto.circuit_id } as Circuit,
-      user: { id: userId } as User,
-      participants_count: participantsCount,
-      base_total: dto.base_total ?? circuit.base_price ?? 0,
-      options_total: 0,
-      final_total: dto.base_total ?? circuit.base_price ?? 0,
-      status: reservationStatus,
-    });
-    const saved = await this.reservationRepo.save(reservation);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (dto.options?.length) {
-      let optionsTotal = 0;
-      for (const opt of dto.options) {
-        const optEntity = await this.optionRepo.findOne({ where: { id: opt.circuit_option_id } });
-        if (!optEntity) continue;
-        const lineTotal = (opt.unit_price ?? Number(optEntity.extra_price) ?? 0) * (opt.quantity ?? 1);
-        optionsTotal += lineTotal;
-        await this.reservationOptionRepo.save(
-          this.reservationOptionRepo.create({
-            circuitReservation: { id: saved.id } as CircuitReservation,
-            circuitOption: { id: opt.circuit_option_id } as CircuitOption,
-            offer_item_session_id: opt.offer_item_session_id ?? null,
-            quantity: opt.quantity ?? 1,
-            unit_price: opt.unit_price ?? Number(optEntity.extra_price) ?? 0,
-            total_price: lineTotal,
-          }),
-        );
+    try {
+      // Vérifier et décrémenter la capacité pour chaque activité liée
+      for (const day of circuit.days ?? []) {
+        const dayDate = day.date || circuit.start_date;
+        if (!dayDate) continue;
+
+        for (const prog of day.programItems ?? []) {
+          if (prog.linked_offer_item_id) {
+            const session = await queryRunner.manager.findOne(OfferItemSession, {
+              where: {
+                offerItem: { id: prog.linked_offer_item_id },
+                date: dayDate,
+              },
+            });
+            if (session?.remaining_capacity !== null && session?.remaining_capacity !== undefined) {
+              if (session.remaining_capacity < participantsCount) {
+                throw new BadRequestException(
+                  `Capacité insuffisante pour "${prog.title}" : ${session.remaining_capacity} place(s) disponible(s) le ${dayDate}`
+                );
+              }
+              session.remaining_capacity -= participantsCount;
+              if (session.remaining_capacity <= 0) session.status = 'full';
+              await queryRunner.manager.save(session);
+            }
+          }
+        }
       }
-      saved.options_total = optionsTotal;
-      saved.final_total = (dto.base_total ?? Number(circuit.base_price) ?? 0) + optionsTotal;
-      await this.reservationRepo.save(saved);
-    }
 
-    if (reservationStatus === 'confirmed') {
-      this.notificationService.create(userId, 'booking_confirmed', 'Circuit réservé', `Votre réservation pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}) a été confirmée.`, `/circuits/${saved.id}`).catch(() => {});
-    } else {
-      this.notificationService.create(userId, 'booking_request', 'Demande de réservation', `Votre demande de réservation pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}) a été envoyée. Le prestataire va la confirmer.`, `/circuits/${saved.id}`).catch(() => {});
-    }
+      const reservationStatus = circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
+      const basePrice = (dto.base_total ?? Number(circuit.base_price) ?? 0) * participantsCount;
+      const reservation = this.reservationRepo.create({
+        circuit: { id: dto.circuit_id } as Circuit,
+        user: { id: userId } as User,
+        participants_count: participantsCount,
+        base_total: basePrice,
+        options_total: 0,
+        final_total: basePrice,
+        status: reservationStatus,
+      });
+      const saved = await queryRunner.manager.save(reservation);
 
-    if (circuit.author_id && circuit.author_id !== userId) {
-      const providerMsg = reservationStatus === 'confirmed'
-        ? `Nouvelle réservation confirmée pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}).`
-        : `Nouvelle demande de réservation pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}) en attente de votre confirmation.`;
-      this.notificationService.create(circuit.author_id, 'new_booking_request', 'Nouvelle réservation circuit', providerMsg, `/dashboard/incoming`).catch(() => {});
-    }
+      if (dto.options?.length) {
+        let optionsTotal = 0;
+        for (const opt of dto.options) {
+          const optEntity = await queryRunner.manager.findOne(CircuitOption, { where: { id: opt.circuit_option_id } });
+          if (!optEntity) continue;
+          const lineTotal = (opt.unit_price ?? Number(optEntity.extra_price) ?? 0) * (opt.quantity ?? 1);
+          optionsTotal += lineTotal;
+          await queryRunner.manager.save(
+            this.reservationOptionRepo.create({
+              circuitReservation: { id: saved.id } as CircuitReservation,
+              circuitOption: { id: opt.circuit_option_id } as CircuitOption,
+              offer_item_session_id: opt.offer_item_session_id ?? null,
+              quantity: opt.quantity ?? 1,
+              unit_price: opt.unit_price ?? Number(optEntity.extra_price) ?? 0,
+              total_price: lineTotal,
+            }),
+          );
+        }
+        saved.options_total = optionsTotal;
+        saved.final_total = basePrice + optionsTotal;
+        await queryRunner.manager.save(saved);
+      }
 
-    return saved;
+      await queryRunner.commitTransaction();
+
+      if (reservationStatus === 'confirmed') {
+        this.notificationService.create(userId, 'booking_confirmed', 'Circuit réservé', `Votre réservation pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}) a été confirmée.`, `/circuits/${saved.id}`).catch(() => {});
+      } else {
+        this.notificationService.create(userId, 'booking_request', 'Demande de réservation', `Votre demande de réservation pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}) a été envoyée. Le prestataire va la confirmer.`, `/circuits/${saved.id}`).catch(() => {});
+      }
+
+      if (circuit.author_id && circuit.author_id !== userId) {
+        const providerMsg = reservationStatus === 'confirmed'
+          ? `Nouvelle réservation confirmée pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}).`
+          : `Nouvelle demande de réservation pour "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}) en attente de votre confirmation.`;
+        this.notificationService.create(circuit.author_id, 'new_booking_request', 'Nouvelle réservation circuit', providerMsg, `/dashboard/incoming`).catch(() => {});
+      }
+
+      const guideIds = new Set<string>();
+      for (const day of circuit.days ?? []) {
+        for (const prog of day.programItems ?? []) {
+          if (prog.guide_id) guideIds.add(prog.guide_id);
+        }
+      }
+      for (const guideId of guideIds) {
+        if (guideId !== userId) {
+          this.notificationService.create(guideId, 'new_booking_request', 'Nouvelle réservation circuit', `Un circuit auquel vous participez a été réservé : "${circuit.title}" (${participantsCount} participant${participantsCount > 1 ? 's' : ''}).`, `/dashboard/incoming`).catch(() => {});
+        }
+      }
+
+      return saved;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async confirmReservation(id: string, providerId: string): Promise<CircuitReservation> {
@@ -407,6 +532,72 @@ export class CircuitService {
       `/circuits/${saved.id}`,
     ).catch(() => {});
     return saved;
+  }
+
+  async rejectReservation(id: string, providerId: string): Promise<CircuitReservation> {
+    const reservation = await this.reservationRepo.findOne({ where: { id }, relations: ['circuit', 'user'] });
+    if (!reservation) throw new NotFoundException('Réservation introuvable');
+    if (reservation.circuit.author_id !== providerId) {
+      throw new ForbiddenException('Vous ne pouvez refuser que les réservations de vos propres circuits');
+    }
+    if (reservation.status !== 'pending') {
+      throw new BadRequestException('Cette réservation ne peut plus être refusée');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      reservation.status = 'rejected';
+      const saved = await queryRunner.manager.save(reservation);
+
+      // Restaurer la capacité pour chaque activité liée
+      const circuitWithDays = await this.circuitRepo.findOne({
+        where: { id: reservation.circuit.id },
+        relations: ['days', 'days.programItems'],
+      });
+      if (circuitWithDays && saved.participants_count) {
+        for (const day of circuitWithDays.days ?? []) {
+          const dayDate = day.date || circuitWithDays.start_date;
+          if (!dayDate) continue;
+          for (const prog of day.programItems ?? []) {
+            if (prog.linked_offer_item_id) {
+              const session = await queryRunner.manager.findOne(OfferItemSession, {
+                where: {
+                  offerItem: { id: prog.linked_offer_item_id },
+                  date: dayDate,
+                },
+              });
+              if (session) {
+                session.remaining_capacity = (session.remaining_capacity ?? 0) + saved.participants_count;
+                if (session.total_capacity && session.remaining_capacity >= session.total_capacity) {
+                  session.status = 'available';
+                }
+                await queryRunner.manager.save(session);
+              }
+            }
+          }
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      this.notificationService.create(
+        reservation.user.id,
+        'booking_rejected',
+        'Réservation circuit refusée',
+        `Votre demande de réservation pour "${reservation.circuit.title}" a été refusée par le prestataire.`,
+        `/circuits/${reservation.circuit.id}`,
+      ).catch(() => {});
+
+      return saved;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findReservationsByUser(userId: string): Promise<CircuitReservation[]> {
@@ -453,35 +644,87 @@ export class CircuitService {
   }
 
   async cancelReservation(id: string, userId: string): Promise<CircuitReservation> {
-    const reservation = await this.reservationRepo.findOne({ where: { id }, relations: ['circuit', 'user'] });
+    const reservation = await this.reservationRepo.findOne({
+      where: { id },
+      relations: ['circuit', 'user', 'circuit.days', 'circuit.days.programItems'],
+    });
     if (!reservation) throw new NotFoundException('Réservation introuvable');
     if (reservation.user.id !== userId) throw new ForbiddenException('Accès refusé');
     if (reservation.status === 'cancelled') throw new BadRequestException('Déjà annulée');
 
-    reservation.status = 'cancelled';
-    const saved = await this.reservationRepo.save(reservation);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    // Notifier le voyageur
-    this.notificationService.create(
-      userId,
-      'booking_cancelled',
-      'Réservation circuit annulée',
-      `Votre réservation pour "${reservation.circuit.title}" a été annulée.`,
-      `/circuits/${reservation.circuit.id}`,
-    ).catch(() => {});
+    try {
+      // Restaurer la capacité pour chaque activité liée
+      for (const day of reservation.circuit.days ?? []) {
+        const dayDate = day.date || reservation.circuit.start_date;
+        if (!dayDate) continue;
 
-    // Notifier le provider
-    if (reservation.circuit.author_id && reservation.circuit.author_id !== userId) {
+        for (const prog of day.programItems ?? []) {
+          if (prog.linked_offer_item_id) {
+            const session = await queryRunner.manager.findOne(OfferItemSession, {
+              where: {
+                offerItem: { id: prog.linked_offer_item_id },
+                date: dayDate,
+              },
+            });
+            if (session && reservation.participants_count) {
+              session.remaining_capacity = (session.remaining_capacity ?? 0) + reservation.participants_count;
+              if (session.total_capacity && session.remaining_capacity >= session.total_capacity) {
+                session.status = 'available';
+              }
+              await queryRunner.manager.save(session);
+            }
+          }
+        }
+      }
+
+      reservation.status = 'cancelled';
+      const saved = await queryRunner.manager.save(reservation);
+      await queryRunner.commitTransaction();
+
+      // Notifier le voyageur
       this.notificationService.create(
-        reservation.circuit.author_id,
+        userId,
         'booking_cancelled',
+        'Réservation circuit annulée',
+        `Votre réservation pour "${reservation.circuit.title}" a été annulée.`,
+        `/circuits/${reservation.circuit.id}`,
+      ).catch(() => {});
+
+      // Notifier le provider
+      if (reservation.circuit.author_id && reservation.circuit.author_id !== userId) {
+        this.notificationService.create(
+          reservation.circuit.author_id,
+          'booking_cancelled',
         'Réservation circuit annulée',
         `La réservation de ${reservation.user.id} pour "${reservation.circuit.title}" a été annulée.`,
         `/dashboard/incoming`,
-      ).catch(() => {});
-    }
+        ).catch(() => {});
+      }
 
-    return saved;
+      // Notifier les guides concernés
+      const guideIds = new Set<string>();
+      for (const day of reservation.circuit.days ?? []) {
+        for (const prog of day.programItems ?? []) {
+          if (prog.guide_id) guideIds.add(prog.guide_id);
+        }
+      }
+      for (const guideId of guideIds) {
+        if (guideId !== userId) {
+          this.notificationService.create(guideId, 'booking_cancelled', 'Réservation circuit annulée', `La réservation du circuit "${reservation.circuit.title}" auquel vous participez a été annulée.`, `/dashboard/incoming`).catch(() => {});
+        }
+      }
+
+      return saved;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
 }

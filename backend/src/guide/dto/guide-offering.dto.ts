@@ -156,10 +156,6 @@ export class UpdateGuideOfferingDto {
   @IsOptional()
   @IsString()
   displacement_type?: string;
-
-  @IsOptional()
-  @IsString()
-  status?: string;
 }
 
 export class GenerateSessionsDto {
