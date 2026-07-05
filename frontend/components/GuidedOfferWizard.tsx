@@ -146,6 +146,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [loading, setLoading] = useState(false);
   const [generatingSessions, setGeneratingSessions] = useState(false);
   const [error, setError] = useState("");
+  const [publishImmediately, setPublishImmediately] = useState(true);
 
   const normalizedProjectType = userProjectType
     ? (PROJECT_TYPE_MAP[userProjectType.toLowerCase()] ?? userProjectType) : null;
@@ -463,11 +464,11 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         deposit_percentage: depositPercentage ? Number(depositPercentage) : undefined,
         production_delay_days: productionDelayDays ? Number(productionDelayDays) : undefined,
         fulfillment_mode: fulfillmentMode || undefined,
+        status: publishImmediately ? 'approved' : 'draft',
       };
 
       let resultOffer;
       if (isEdit) {
-        if (selectedProjectId) offerData.project_id = selectedProjectId;
         await apiFetch<any>(`/offers/${editOffer.id}`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },
@@ -1412,11 +1413,11 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
               {/* Options */}
               <div className="bg-slate-50 rounded-2xl p-4 space-y-2 text-sm">
                 <label className="flex items-center gap-2 font-medium text-slate-700">
-                  <input type="checkbox" defaultChecked className="rounded text-primary" />
+                  <input type="checkbox" checked={publishImmediately} onChange={(e) => setPublishImmediately(e.target.checked)} className="rounded text-primary" />
                   Publier immédiatement (visible dans les résultats de recherche)
                 </label>
                 <label className="flex items-center gap-2 font-medium text-slate-700">
-                  <input type="checkbox" className="rounded text-primary" />
+                  <input type="checkbox" checked={!publishImmediately} onChange={(e) => setPublishImmediately(!e.target.checked)} className="rounded text-primary" />
                   Enregistrer comme brouillon (modifiable plus tard)
                 </label>
               </div>

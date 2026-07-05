@@ -677,7 +677,7 @@ export default function CircuitDetailPage() {
         <div className="flex items-center gap-3 mb-4">
           <BackToDashboard />
           <button
-            onClick={() => router.push("/circuits")}
+            onClick={() => router.push("/dashboard#Circuits")}
             className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors"
           >
             <ArrowLeft size={16} /> Tous les circuits

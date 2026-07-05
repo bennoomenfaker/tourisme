@@ -19,7 +19,7 @@ export default function Navbar({
   const isAuth = variant === "auth";
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isLandingPage = pathname === "/" || pathname === "/how-it-works";
+  const isLandingPage = pathname === "/" || pathname === "/how-it-works" || pathname === "/destinations" || pathname === "/eco-projects" || pathname === "/impact" || pathname === "/auth/login" || pathname === "/auth/register" || pathname === "/onboarding/project-owner" || pathname.startsWith("/explore");
 
   return (
     <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-md px-6 md:px-20 lg:px-40 py-4 ${

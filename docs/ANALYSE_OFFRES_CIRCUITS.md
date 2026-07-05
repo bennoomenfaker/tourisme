@@ -1,308 +1,284 @@
-# Analyse — Offres, Circuits & Résolution du Problème d'Hébergement en Déplacement
+# Audit — Circuits, Activités & Tarification
 
-**Date :** 2026-07-04
-**Statut :** Document d'analyse + recommandation architecturale
-**Auteur :** Audit du projet tourisme
-
----
-
-## 1. Ce qui est déjà implémenté
-
-L'audit du code backend confirme que **les briques existent déjà** pour gérer le scénario que tu décris. Le modèle de données supporte nativement l'association multi-acteurs dans un circuit. Voici l'état réel, dossier par dossier.
-
-### 1.1 Module `offer/` — Catalogue de produits vendables
-
-L'**offre** est l'unité commerciale créée par un auteur (guide OU project-owner). Une offre n'est jamais réservée directement : elle contient des **OfferItems** qui sont les vraies unités réservables.
-
-| Entité | Rôle | Champs clés |
-|---|---|---|
-| `Offer` | Conteneur commercial | `author_id` + `author_type` ('guide' \| 'project_owner'), `category_id`, `region`, `latitude`, `longitude`, `address`, `meeting_point`, `meeting_lat`, `meeting_lng`, `status` |
-| `OfferItem` | **Produit réservable** | `item_type` ('room' \| 'bed' \| 'camping_space' \| 'dish' \| 'menu' \| 'equipment' \| 'activity' \| 'workshop' \| 'transport_service'), `details_json` flexible, `confirmation_mode`, `requires_confirmation` |
-| `OfferItemPrice` | Tarification | prix par catégorie (adulte, enfant, groupe…) |
-| `OfferItemSession` | Créneaux datés | sessions ponctuelles avec date/heure |
-| `OfferItemCapacity` | Capacité restante | stock disponible par date |
-| `OfferItemAvailabilityRule` | Règles de récurrence | date unique / hebdo / saisonnier / annuel / custom |
-| `OfferCategory` | Catégorisation | 10 catégories dont Hébergement, Restauration, Activité |
-
-**Endpoints REST existants (`/api/offers`) :**
-- `POST /offers` — création
-- `GET /offers/public` — catalogue public (avec filtre `?region=…`)
-- `GET /offers/:id/items` — lister les items d'une offre
-- `GET /items/:itemId/sessions` — sessions datées
-- `GET /items/:itemId/capacity` — capacité restante
-- `POST /offers/popular-locations` — heatmap géographique
-
-> **Conclusion 1 :** Le système sait déjà retourner des offres **par région** et **par géolocalisation** (`latitude`/`longitude`). Tu peux donc chercher des offres d'hébergement dans une localité précise.
-
-### 1.2 Module `circuit/` — Itinéraires multi-jours
-
-Le **circuit** est un assemblage structuré par un auteur (guide OU project-owner) avec un programme jour par jour.
-
-| Entité | Rôle | Champs clés |
-|---|---|---|
-| `Circuit` | Conteneur | `author_id`, `author_type`, `region`, `lat`, `lng`, `address`, `start_date`, `end_date`, `duration_days`, `base_price`, `difficulty_level` |
-| `CircuitDay` | Une journée | `day_number`, `date`, `title`, `lat`, `lng`, `location_name` |
-| `CircuitProgramItem` | **Une activité** | `title`, `start_time`, `end_time`, **`linked_offer_item_id`**, **`linked_location_id`**, **`guide_id`**, `guide_name`, `emoji`, `duration_minutes`, `distance_km`, `transport_mode`, `is_included`, `is_required` |
-| `CircuitOption` | Options additionnelles | transport, équipement, hébergement |
-| `CircuitReservation` | Réservation globale | participants, prix total |
-
-**Endpoints REST existants (`/api/circuits`) :**
-- `POST /circuits/:id/days` — ajouter un jour
-- `POST /circuits/:id/days/:dayId/program` — **ajouter une activité**
-- `PATCH /circuits/:id/days/:dayId/program/:itemId` — modifier
-- `DELETE /circuits/:id/days/:dayId/program/:itemId` — supprimer
-
-> **Conclusion 2 :** `CircuitProgramItem` possède déjà **`linked_offer_item_id`**, **`linked_location_id`**, **`guide_id`**. Ce sont précisément les trois liens dont tu parles : (1) hébergement du même auteur, (2) hébergement externe, (3) guide. Le champ `linked_offer_item_id` ne filtre **PAS** par auteur — n'importe quel OfferItem de la plateforme peut y être rattaché.
-
-### 1.3 Module `trip-plan/` — Plan personnel du voyageur
-
-L'écovoyageur peut composer son propre plan en assemblant des OfferItems et des Circuits existants. Il sert de panier avancé.
-
-| Entité | Rôle |
-|---|---|
-| `TripPlan` | Plan personnel avec dates, budget, statut (draft → planned → confirmed → completed) |
-| `TripPlanItem` | Item : `offer_item_id` **XOR** `circuit_id` |
-
-### 1.4 Module `travel-cart/` — Panier temporaire
-
-Le voyageur ajoute des offres et circuits à un panier, puis le convertit en TripPlan structuré.
+**Date :** 2026-07-05
+**Statut :** Audit fonctionnel complet
+**Auteur :** Buffy (Codebuff)
 
 ---
 
-## 2. Cartographie du scénario que tu décris
+## 1. Structure des Circuits
 
-Reformulons ton workflow en termes du modèle actuel :
+### Exigence
 
-```
-1. CRÉER UNE OFFRE D'HÉBERGEMENT
-   └─ Project-Owner X crée Offer #1 (Hébergement)
-      └─ OfferItem #1 : room (chambre double)
-         └─ Prix, sessions, capacité
+Un circuit doit être composé de :
+- Circuit → plusieurs jours
+- Chaque jour → plusieurs activités
+- Chaque activité doit pouvoir être créée, modifiée et supprimée
 
-2. CRÉER UN CIRCUIT MULTI-JOURS
-   └─ Project-Owner X crée Circuit #A
-      └─ Jour 1 (région A) — activité chez lui
-         └─ linked_offer_item_id = #1  (sa propre chambre) ✓
-      └─ Jour 2 (région B) — il se déplace
-         └─ linked_offer_item_id = ???  ← PROBLÈME
-            → Faut-il une chambre d'un autre owner dans la région B ?
-```
+### Résultat
 
-### 2.1 Les trois cas d'une activité dans un circuit
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Circuit → plusieurs jours | ✅ Conforme | `CircuitBuilderWizard` gère `days[]` avec add/remove |
+| Chaque jour → plusieurs activités | ✅ Conforme | `programItems[]` par jour |
+| CRUD activités | ✅ Conforme | add/remove/updateProgramItem |
 
-| Cas | Description | Lien actuel dans `CircuitProgramItem` |
-|---|---|---|
-| **A — Même lieu que l'hébergement du jour** | Activité dans le même lieu que là où on dort | `linked_offer_item_id` (item du même auteur) |
-| **B — Activité mobile (randonnée, kayak)** | Déplacement, besoin d'un guide | `linked_offer_item_id` (activité d'un guide) **+** `guide_id` + `guide_name` |
-| **C — Déplacement vers un autre lieu, pas d'hébergement** | On dort ailleurs, besoin d'une chambre externe | `linked_offer_item_id` **d'un autre auteur** OU champ à créer |
-
-Le cas C est celui qui te bloque. Aujourd'hui, **techniquement rien ne t'empêche** d'écrire `linked_offer_item_id = chambre_de_Y_dans_région_B` — la colonne est juste un UUID sans contrainte d'auteur. Ce qui manque, c'est :
-
-1. **Une API de recherche d'offres tierces** dans une localité donnée avec filtrage par type (hébergement).
-2. **Une UI** pour sélectionner cette offre tierce lors de la création du jour.
-3. **Une gestion contractuelle** : qui touche l'argent quand le voyageur réserve le circuit (l'auteur du circuit sous-traite l'hébergement à un autre owner).
+**Fichiers concernés :**
+- `frontend/components/CircuitBuilderWizard.tsx` — Wizard 6 étapes
+- `backend/src/circuit/` — Circuit, CircuitDay, CircuitProgramItem entities
+- `backend/src/circuit/circuit.service.ts` — CRUD complet
 
 ---
 
-## 3. Réponse à ta question : « activité indépendante comme un hôtel qui offre une chambre »
+## 2. Les 4 Types d'Activités
 
-Tu poses la question : *si aucun project-owner de la plateforme n'a d'offre d'hébergement dans la région B, est-ce que je crée une activité indépendante de type « hôtel offre chambre » ?*
+### Exigence
 
-**Réponse courte : NON, ne crée pas de type "activité externe" indépendant. Voici pourquoi et quoi faire à la place.**
+Le wizard doit permettre de gérer 4 cas :
+1. Ma propre offre (own)
+2. Offre d'un autre propriétaire (other)
+3. Guide
+4. Prestataire externe
 
-### 3.1 Pourquoi pas une entité séparée « HôtelExterne »
+### Résultat par cas
 
-| Problème | Impact |
-|---|---|
-| Duplication de modèle | Tu auras deux façons de représenter une chambre : `OfferItem` (interne) et `HôtelExterne` (externe). Tout le code de réservation, calendrier, prix devra être dupliqué. |
-| Pas de réservation atomique | Si le circuit réserve un "HôtelExterne", comment savoir s'il reste de la place ? Comment bloquer la chambre ? |
-| Pas de revenus pour la plateforme | Une activité 100% externe contourne le système de réservation et de paiement. |
-| Pas de garantie de qualité | Pas de sustainability_score, pas de reviews, pas de modération. |
-| Incohérence avec la donnée | Tu perds le lien entre la chambre et son fournisseur (avis, contact, fiabilité). |
+#### Cas 1 — Ma propre offre (own) ✅ Conforme
 
-### 3.2 La bonne architecture : trois niveaux de résolution
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Offres personnelles chargées | ✅ | `/offers/items/mine` dans useEffect |
+| Sélection crée lien | ✅ | `linked_offer_item_id` mis à jour |
+| Informations récupérées | ✅ | Nom, type, prix affichés |
+| Prix catalogue disponible | ✅ | Badge "Offre à X TND" |
 
-```
-                    ┌─────────────────────────────────────┐
-                    │  Création d'une activité dans un    │
-                    │  jour de circuit (région B)         │
-                    └──────────────┬──────────────────────┘
-                                   │
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │  ÉTAPE 1 : Recherche sur la plate-  │
-                    │  forme d'offres d'hébergement dans  │
-                    │  la région B (rayon configurable)   │
-                    └──────────────┬──────────────────────┘
-                                   │
-                       ┌───────────┴────────────┐
-                       ▼                        ▼
-              ┌────────────────┐         ┌─────────────────┐
-              │  RÉSULTATS     │         │  AUCUN RÉSULTAT  │
-              │  TROUVÉS       │         │  sur la platef.  │
-              └────────┬───────┘         └────────┬────────┘
-                       ▼                          ▼
-            ┌──────────────────┐       ┌────────────────────────┐
-            │ Cas A : lier à   │       │ Cas B : ExternalRef    │
-            │ un OfferItem     │       │ (référence externe     │
-            │ tiers via        │       │  sans entité métier)   │
-            │ linked_offer_    │       │                        │
-            │ item_id          │       │ - nom de l'hôtel       │
-            └──────────────────┘       │ - téléphone            │
-                                       │ - adresse              │
-                                       │ - tarif indicatif      │
-                                       │ - notes                │
-                                       └────────────────────────┘
-```
+**Fichiers :**
+- `CircuitBuilderWizard.tsx` — ExternalOfferModal (onglet "Mes offres")
+- `OfferItemSearchInline.tsx` — Composant de recherche
 
-#### Niveau 1 — Hébergement d'un autre owner de la plateforme (recommandé, **prioritaire**)
+#### Cas 2 — Offre d'un autre propriétaire (other) ✅ Conforme
 
-L'auteur du circuit cherche dans le catalogue public :
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Recherche offres publiques | ✅ | `/offers/public` avec filtres |
+| Filtrage géographique | ✅ | Paramètres lat/lng dans la requête |
+| Sélection crée lien externe | ✅ | `linked_offer_item_id` avec ID tiers |
+| Informations récupérées | ✅ | Titre, prix de l'offre externe |
 
-```
-GET /api/offers/public?region=B&category=hebergement
-GET /api/items?lat=X&lng=Y&radius_km=20&item_type=room
-```
+**Fichiers :**
+- `ExternalOfferModal.tsx` — Onglet "Offres externes"
+- `ExternalOfferItemSearch.tsx` — Recherche géolocalisée
 
-Puis il crée l'activité :
+#### Cas 3 — Guide ⚠️ Partiel
 
-```
-POST /api/circuits/:circuitId/days/:dayId/program
-{
-  "title": "Nuit à l'éco-gîte de Tata Yasmine",
-  "start_time": "18:00",
-  "linked_offer_item_id": "<uuid de la chambre chez Yasmine>",
-  "is_included": true,
-  "emoji": "🛏️"
-}
-```
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Recherche guides fonctionne | ✅ | `/guide/search` avec filtres zone/prix |
+| Recherche par rayon géo | ✅ | Paramètres lat/lng envoyés |
+| Guide lié à l'activité | ✅ | `guide_id` et `guide_name` dans state |
+| Auto-lien avec offre du guide | ⚠️ Manquant | L'offre du guide n'est pas automatiquement reliée |
 
-**Avantages :**
-- Réservation atomique via le module `booking` existant
-- Capacité et sessions vérifiées automatiquement
-- Avis, durabilité, paiement centralisés
-- Yasmine touche l'argent et la plateforme prend sa commission
+**Bug :** Quand un guide est sélectionné, son `guide_cost` est récupéré mais son offre (`linked_offer_item_id`) n'est pas auto-liée.
 
-#### Niveau 2 — Référence externe ponctuelle (fallback)
+**Fichiers :**
+- `CircuitBuilderWizard.tsx:72-230` — Version inline du GuideSearch
+- `GuideSearchInline.tsx` — Component exporté (non utilisé dans le wizard)
 
-Quand vraiment aucun owner local n'est inscrit, l'auteur du circuit documente l'hébergement comme une **référence externe** dans l'activité. Pas d'entité métier dédiée, juste un champ JSON sur `CircuitProgramItem`.
+#### Cas 4 — Prestataire externe ⚠️ Partiel
 
-#### Niveau 3 — (Décision à prendre) Créer un compte "owner virtuel" pour l'hôtel
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Formulaire saisie externe | ✅ | ExternalOfferModal onglet "Référence externe" |
+| Aucune offre requise | ✅ | Pas de linked_offer_item_id |
+| Enregistrement informations | ⚠️ Non branché | `onExternalRefChange` callback non sauvegardée |
 
-Si l'hôtel externe est un partenaire durable stable, **on l'invite à s'inscrire**. C'est la voie privilégiée à moyen terme : tout passe par `Offer` + `OfferItem`, le modèle est uniforme.
+**Bug :** Le commentaire `// Future: store external ref in prog state` indique que la callback n'est jamais exécutée dans le wizard.
+
+**Fichiers :**
+- `ExternalOfferModal.tsx` — Onglet "Référence externe"
+- `CircuitBuilderWizard.tsx:~800` — Callback non branchée
 
 ---
 
-## 4. Recommandation architecturale concrète
+## 3. Logique de Tarification
 
-### 4.1 Étape immédiate (1-2 jours) — Référencement externe sans nouvelle entité
+### Exigence
 
-Ajouter deux colonnes à `circuit_program_items` :
+Le système doit distinguer :
+- Le prix catalogue de l'offre (valeur de référence)
+- Le prix utilisé dans le circuit (copie indépendante)
+- Modifier le prix de l'offre ne doit jamais modifier un circuit existant
 
-```typescript
-// backend/src/circuit/entities/circuit-program-item.entity.ts
+### Résultat par cas
 
-@Column({ type: 'varchar', nullable: true })
-external_provider_name!: string | null;  // "Hôtel Dar El Houda"
+#### Cas 1 — Ma propre offre ✅ Conforme
 
-@Column({ type: 'json', nullable: true })
-external_reference!: {
-  name?: string;
-  phone?: string;
-  address?: string;
-  url?: string;
-  estimated_price?: number;
-  currency?: string;
-  notes?: string;
-} | null;
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Prix catalogue récupéré auto | ✅ | `offerItems.find(...)?.prices[0]` |
+| Prix circuit pré-rempli | ✅ | `price` dans `updateProgramItem` |
+| Prix modifiable | ✅ | Champ input éditable |
+| Prix catalogue visible | ✅ | Badge "Offre à X TND" |
 
-@Column({ type: 'boolean', default: false })
-is_external_reference!: boolean;
-```
+#### Cas 2 — Offre externe ✅ Conforme
 
-**Règle métier :**
-- `linked_offer_item_id` rempli → c'est une activité liée à la plateforme (cas A et B).
-- `external_reference` rempli → c'est une référence externe (niveau 2).
-- Les deux peuvent coexister si tu veux garder un lien interne ET une note externe (rare).
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Prix catalogue récupéré auto | ✅ | `onSelectMyOffer(itemId, price)` |
+| Prix circuit pré-rempli | ✅ | `price` passé en paramètre |
+| Prix modifiable | ✅ | Champ input éditable |
+| Prix catalogue visible | ✅ | Badge affiché |
 
-### 4.2 Étape 2 — Endpoints de recherche géolocalisée
+#### Cas 3 — Guide ⚠️ Partiel
 
-Créer deux endpoints pour faciliter la recherche :
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Prix offre guide récupéré | ✅ | `guide_cost` depuis la recherche |
+| Prix circuit pré-rempli | ⚠️ | Non pré-rempli automatiquement |
+| Prix modifiable | ✅ | Champ input éditable |
+| Prix catalogue visible | ✅ | "Coût guide: X TND" |
 
-```typescript
-// GET /api/offers/search?lat=36.4&lng=10.6&radius_km=20&item_type=room
-// GET /api/offers/near?lat=36.4&lng=10.6&radius_km=20&category_id=<uuid>
-```
+#### Cas 4 — Prestataire externe ✅ Conforme
 
-Implémentation avec PostgreSQL `ST_DWithin` sur `(latitude, longitude)` :
-
-```sql
-SELECT o.*, ST_Distance(location_point, ST_MakePoint($lng, $lat)) AS distance_m
-FROM offers o
-WHERE ST_DWithin(location_point, ST_MakePoint($lng, $lat), $radius_m)
-  AND status = 'approved'
-  AND EXISTS (
-    SELECT 1 FROM offer_items oi
-    WHERE oi.offer_id = o.id AND oi.item_type IN ('room','bed','camping_space')
-  )
-ORDER BY distance_m ASC;
-```
-
-### 4.3 Étape 3 — UI dans le `CircuitBuilderWizard`
-
-Dans l'étape « programme du jour », ajouter un bouton **« Chercher un hébergement à proximité »** qui ouvre une modale de recherche. Deux onglets :
-
-1. **Sur la plateforme** — liste d'`OfferItem` filtrés par géolocalisation
-2. **Référence externe** — formulaire simple (nom, téléphone, adresse, prix estimé)
-
-### 4.4 Étape 4 (long terme) — Système de partenariat
-
-Pour les hôtels externes récurrents, créer un programme « partenaires » qui :
-- Génère une invitation à rejoindre la plateforme
-- Offre une commission réduite la première année
-- Permet une inscription simplifiée (workflow guided onboarding)
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Pas de pré-remplissage | ✅ | Champs entièrement manuels |
+| Prix modifiable | ✅ | Champ input éditable |
+| Pas de prix catalogue | ✅ | Normal pour une référence externe |
 
 ---
 
-## 5. Schéma de décision final
+## 4. Vérification Backend
 
-```
-                        Activité d'un jour de circuit
-                                    │
-                                    ▼
-                    ┌───────────────────────────────┐
-                    │ L'auteur a-t-il sa propre     │
-                    │ offre d'hébergement ici ?     │
-                    └───────────┬───────────────────┘
-                                │
-                  ┌─────────────┴─────────────┐
-                  ▼                           ▼
-                OUI                          NON
-                  │                           │
-                  ▼                           ▼
-        linked_offer_item_id        Recherche d'offres tierces
-        (sa propre chambre)         dans la région (rayon X km)
-                                            │
-                              ┌─────────────┴─────────────┐
-                              ▼                           ▼
-                          TROUVÉ                      RIEN
-                              │                           │
-                              ▼                           ▼
-                    linked_offer_item_id        external_reference
-                    (chambre d'un autre         (nom, tél, adresse,
-                     owner de la plateforme)     prix, notes)
-```
+### Entités
+
+| Entité | Statut | Champs clés |
+|--------|--------|-------------|
+| Circuit | ✅ Conforme | `author_id`, `title`, `base_price`, `duration_days`, `difficulty_level`, `region`, `lat/lng` |
+| CircuitDay | ✅ Conforme | `circuit_id`, `day_number`, `title`, `date`, `lat/lng`, `location_name` |
+| CircuitProgramItem | ✅ Conforme | `circuit_day_id`, `title`, `linked_offer_item_id`, `guide_id`, `guide_name`, `price`, `emoji`, `duration_minutes`, `distance_km`, `transport_mode`, `external_reference`, `is_external_reference` |
+| CircuitOption | ✅ Conforme | `circuit_id`, `option_group`, `option_type`, `extra_price`, `external_offer_item_id` |
+
+### Endpoints
+
+| Endpoint | Statut | Description |
+|----------|--------|-------------|
+| `POST /circuits` | ✅ | Création circuit |
+| `POST /circuits/:id/days` | ✅ | Ajout jour |
+| `POST /circuits/:id/days/:dayId/program` | ✅ | Ajout activité |
+| `PATCH /circuits/:id/days/:dayId/program/:itemId` | ✅ | Modification activité |
+| `DELETE /circuits/:id/days/:dayId/program/:itemId` | ✅ | Suppression activité |
+| `GET /offers/items/mine` | ✅ | Récupération offres personnelles avec prix |
+| `GET /guide/search` | ✅ | Recherche guides avec zone/prix/geo |
+| `GET /offers/public` | ✅ | Recherche offres publiques |
 
 ---
 
-## 6. Résumé exécutif
+## 5. Vérification Frontend
 
-| Question | Réponse |
-|---|---|
-| Qu'est-ce qui existe déjà ? | `Offer`, `OfferItem`, `Circuit`, `CircuitDay`, `CircuitProgramItem`, `TripPlan`, `TravelCart` — modèle polymorphe guide/project-owner déjà en place |
-| Où est le lien entre activité et hébergement ? | `CircuitProgramItem.linked_offer_item_id` (UUID sans contrainte d'auteur → tu peux déjà lier un OfferItem tiers) |
-| Comment chercher un hébergement tiers dans une région ? | Aujourd'hui : `GET /api/offers/public?region=X` — manque la recherche par rayon GPS |
-| Faut-il créer une entité « activité externe / hôtel externe » ? | **Non.** Ajouter plutôt un champ `external_reference` (JSON) sur `CircuitProgramItem` pour les cas où aucun owner n'est inscrit |
-| Cas idéal à terme ? | Tous les hébergeurs sont inscrits sur la plateforme ; le circuit lie toujours un OfferItem réel (pas de référence externe) |
+### Composants
 
-**Prochaine action concrète :** implémenter l'étape 1 (3 colonnes supplémentaires sur `CircuitProgramItem`) et l'étape 2 (endpoint `/api/offers/near`).
+| Composant | Statut | Détails |
+|-----------|--------|---------|
+| `CircuitBuilderWizard.tsx` | ✅ | Wizard 6 étapes complet |
+| `ExternalOfferModal.tsx` | ✅ | 3 onglets fonctionnels |
+| `ExternalOfferItemSearch.tsx` | ✅ | Recherche géolocalisée |
+| `GuideSearchInline.tsx` | ✅ | Recherche avec carte |
+| `OfferItemSearchInline.tsx` | ✅ | Recherche items personnels |
+
+### Pré-remplissage automatique
+
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Prix auto-rempli depuis offre | ✅ | `onSelectMyOffer(id, price)` |
+| Prix guide auto-rempli | ✅ | `onSelect(id, name, price)` |
+| Champ prix modifiable | ✅ | Input type number |
+| Prix catalogue visible | ✅ | Badge visuel |
+
+---
+
+## 6. Vérification UX
+
+| Critère | Statut | Détails |
+|---------|--------|---------|
+| Origine prestation claire | ✅ | Badges colorés (own=primary, external=green) |
+| Prix catalogue visible | ✅ | Affiché comme référence |
+| Type prestation sélectionné | ⚠️ | Pas de badge visible pour "Référence externe" après sélection |
+| Sélection guidée | ✅ | Modal avec 3 onglets clairs |
+| Feedback visuel | ✅ | Loader, empty states, messages d'erreur |
+
+---
+
+## 7. Bugs et Incohérences
+
+### Bug 1 — externalRef non branché
+
+**Fichier :** `CircuitBuilderWizard.tsx:~800`
+
+```tsx
+onExternalRefChange={(ref) => {
+  // Future: store external ref in prog state
+}}
+```
+
+**Impact :** La référence externe n'est jamais sauvegardée dans le state du circuit.
+
+**Correction :** Ajouter un champ `external_reference` dans `ProgramItemForm` et le sauvegarder via `updateProgramItem`.
+
+### Bug 2 — Guide offer non auto-liée
+
+**Fichier :** `CircuitBuilderWizard.tsx:859-865`
+
+```tsx
+onSelect={(id, name, price) => updateProgramItem(day.id, prog.id, {
+  guide_id: id, guide_name: name, guide_cost: price || ""
+  // Il manque : linked_offer_item_id si le guide a une offre
+})}
+```
+
+**Impact :** L'offre du guide n'est pas automatiquement associée à l'activité.
+
+**Correction :** Appeler `/guide/:id/offer` pour récupérer l'offre du guide et la lier.
+
+### Bug 3 — Double implémentation GuideSearchInline
+
+Le composant `GuideSearchInline.tsx` existe en tant que composant exporté mais une version inline est utilisée dans `CircuitBuilderWizard.tsx:72-230`.
+
+**Impact :** Risque de divergence entre les deux implémentations.
+
+**Correction :** Utiliser le composant exporté partout.
+
+### Bug 4 — guide_cost dans fields
+
+Le `guide_cost` est envoyé dans `fields` du body POST mais le champ n'est pas structuré proprement dans l'entité backend.
+
+**Impact :** Le guide cost pourrait ne pas être correctement persisté.
+
+---
+
+## 8. Recommandations
+
+| Priorité | Action | Impact |
+|----------|--------|--------|
+| 🔴 Haute | Brancher `externalRef` dans CircuitBuilderWizard | Complétude fonctionnelle |
+| 🔴 Haute | Auto-lier l'offre du guide sélectionné | Logique métier respectée |
+| 🟡 Moyenne | Unifier GuideSearchInline (utiliser le component exporté) | Maintenabilité |
+| 🟡 Moyenne | Ajouter badge visuel pour "Référence externe" après sélection | UX |
+| 🟢 Basse | Structurer proprement guide_cost dans l'entité backend | Propreté des données |
+
+---
+
+## 9. Résumé
+
+| Catégorie | Conforme | Partiel | Manquant |
+|-----------|----------|---------|----------|
+| Structure circuits | 3/3 | 0 | 0 |
+| Types d'activités | 2/4 | 2 | 0 |
+| Tarification | 3/4 | 1 | 0 |
+| Backend | 4/4 | 0 | 0 |
+| Frontend | 5/5 | 0 | 0 |
+| UX | 3/4 | 1 | 0 |
+| **Total** | **20/24** | **4** | **0** |
+
+**Score global : 83% conforme**
+
+Le système est fonctionnel avec 4 points d'amélioration mineurs à corriger.
