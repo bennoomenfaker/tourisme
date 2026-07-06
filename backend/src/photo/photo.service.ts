@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Photo } from './entities/photo.entity';
@@ -54,9 +54,12 @@ export class PhotoService {
     return saved;
   }
 
-  async remove(photoId: string): Promise<void> {
+  async remove(photoId: string, userId?: string): Promise<void> {
     const photo = await this.repo.findOne({ where: { id: photoId } });
     if (!photo) throw new NotFoundException('Photo introuvable.');
+    if (userId && photo.uploaded_by !== userId) {
+      throw new ForbiddenException('Vous ne pouvez supprimer que vos propres photos.');
+    }
     const { entity_type, entity_id } = photo;
     await this.repo.remove(photo);
     await this.recalculateHero(entity_type, entity_id);

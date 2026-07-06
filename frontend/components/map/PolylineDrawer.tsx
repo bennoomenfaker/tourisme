@@ -12,10 +12,10 @@ const markerIcon = L.icon({
   iconAnchor: [12, 41],
 });
 
-function createNumberIcon(num: number) {
+function createNumberIcon(num: number, bgColor = "#13ec49") {
   return L.divIcon({
     className: "custom-marker",
-    html: `<div style="background:#13ec49;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${num}</div>`,
+    html: `<div style="background:${bgColor};color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${num}</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
@@ -46,9 +46,10 @@ interface DraggableMarkerProps {
   pos: [number, number];
   index: number;
   onDrag: (index: number, lat: number, lng: number) => void;
+  markerColor?: string;
 }
 
-function DraggableMarker({ pos, index, onDrag }: DraggableMarkerProps) {
+function DraggableMarker({ pos, index, onDrag, markerColor }: DraggableMarkerProps) {
   const markerRef = useRef<L.Marker>(null);
 
   const eventHandlers = {
@@ -66,7 +67,7 @@ function DraggableMarker({ pos, index, onDrag }: DraggableMarkerProps) {
       ref={markerRef}
       position={pos}
       draggable={true}
-      icon={index === 0 ? markerIcon : createNumberIcon(index + 1)}
+      icon={index === 0 ? markerIcon : createNumberIcon(index + 1, markerColor)}
       eventHandlers={eventHandlers}
     />
   );
@@ -75,9 +76,10 @@ function DraggableMarker({ pos, index, onDrag }: DraggableMarkerProps) {
 interface PolylineDrawerProps {
   waypoints: [number, number][];
   onChange: (waypoints: [number, number][]) => void;
+  color?: string;
 }
 
-export default function PolylineDrawer({ waypoints, onChange }: PolylineDrawerProps) {
+export default function PolylineDrawer({ waypoints, onChange, color = "#13ec49" }: PolylineDrawerProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -124,12 +126,12 @@ export default function PolylineDrawer({ waypoints, onChange }: PolylineDrawerPr
           <FitBounds points={waypoints} />
           <InvalidateSizeFix />
           {waypoints.map((pos, i) => (
-            <DraggableMarker key={`${i}-${pos[0]}-${pos[1]}`} pos={pos} index={i} onDrag={handleDrag} />
+            <DraggableMarker key={`${i}-${pos[0]}-${pos[1]}`} pos={pos} index={i} onDrag={handleDrag} markerColor={color} />
           ))}
           {waypoints.length > 1 && (
             <Polyline
               positions={waypoints}
-              pathOptions={{ color: "#13ec49", weight: 3, dashArray: "8 6" }}
+              pathOptions={{ color, weight: 3, dashArray: "8 6" }}
             />
           )}
         </MapContainer>

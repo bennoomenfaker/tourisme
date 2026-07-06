@@ -34,6 +34,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string, @Res() res: Response) {
     const result = await this.authService.verifyEmail(token);
@@ -65,6 +66,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto) {
     const result = await this.authService.refresh(dto);
@@ -80,6 +82,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.password);

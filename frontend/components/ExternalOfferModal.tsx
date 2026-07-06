@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { X, Building2, MapPin, Globe, User, Phone, DollarSign, ExternalLink, Loader2, Search } from "lucide-react";
 import ExternalOfferItemSearch from "./ExternalOfferItemSearch";
+
+const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
+  ssr: false,
+  loading: () => <div className="h-[200px] bg-slate-100 animate-pulse rounded-xl" />,
+});
 
 type MyOfferItem = {
   id: string; name: string; item_type: string | null; offer_id: string; offer_title: string;
@@ -57,6 +63,18 @@ export default function ExternalOfferModal({
 }: Props) {
   const [tab, setTab] = useState("my_offers");
   const [query, setQuery] = useState("");
+  const [showMap, setShowMap] = useState(false);
+  const [mapQuery, setMapQuery] = useState("");
+  const [mapSearching, setMapSearching] = useState(false);
+
+  async function searchPlace(query: string): Promise<{ lat: number; lng: number; display_name: string } | null> {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=fr`);
+      const data = await res.json();
+      if (!data.length) return null;
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), display_name: data[0].display_name };
+    } catch { return null; }
+  }
 
   if (!open) return null;
 
@@ -264,15 +282,40 @@ export default function ExternalOfferModal({
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Latitude</label>
-                  <input type="number" step="any" value={externalRef?.lat ?? ""} onChange={(e) => onExternalRefChange({ ...(externalRef || {} as ExternalRef), lat: e.target.value ? Number(e.target.value) : null })}
-                    placeholder="33.8667" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Longitude</label>
-                  <input type="number" step="any" value={externalRef?.lng ?? ""} onChange={(e) => onExternalRefChange({ ...(externalRef || {} as ExternalRef), lng: e.target.value ? Number(e.target.value) : null })}
-                    placeholder="10.8500" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-500">Localisation (lat/lng)</label>
+                    <button type="button" onClick={() => setShowMap(!showMap)}
+                      className="text-xs font-bold text-primary hover:underline">
+                      {showMap ? "Masquer la carte" : "Choisir sur la carte"}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="number" step="any" value={externalRef?.lat ?? ""} onChange={(e) => onExternalRefChange({ ...(externalRef || {} as ExternalRef), lat: e.target.value ? Number(e.target.value) : null })}
+                      placeholder="Latitude" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                    <input type="number" step="any" value={externalRef?.lng ?? ""} onChange={(e) => onExternalRefChange({ ...(externalRef || {} as ExternalRef), lng: e.target.value ? Number(e.target.value) : null })}
+                      placeholder="Longitude" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+                  </div>
+                  {showMap && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex gap-1.5">
+                        <input type="text" value={mapQuery} onChange={(e) => setMapQuery(e.target.value)}
+                          placeholder="Rechercher un lieu..." className="flex-1 text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary"
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (async () => { setMapSearching(true); const r = await searchPlace(mapQuery); if (r) onExternalRefChange({ ...(externalRef || {} as ExternalRef), lat: r.lat, lng: r.lng, address: r.display_name }); setMapSearching(false); })(); } }} />
+                        <button type="button" onClick={async () => { setMapSearching(true); const r = await searchPlace(mapQuery); if (r) onExternalRefChange({ ...(externalRef || {} as ExternalRef), lat: r.lat, lng: r.lng, address: r.display_name }); setMapSearching(false); }}
+                          className="px-2.5 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-emerald-600 disabled:opacity-50">
+                          {mapSearching ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                        </button>
+                      </div>
+                      <div className="rounded-xl overflow-hidden border border-slate-200">
+                        <MapPicker
+                          lat={externalRef?.lat ?? null}
+                          lng={externalRef?.lng ?? null}
+                          onPick={(lat, lng, addr) => onExternalRefChange({ ...(externalRef || {} as ExternalRef), lat, lng, address: addr || externalRef?.address || "" })}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-slate-500 mb-1">Site web</label>

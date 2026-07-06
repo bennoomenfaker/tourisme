@@ -243,16 +243,16 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Patch('items/:itemId')
-  updateItem(@Param('itemId') itemId: string, @Body() dto: UpdateOfferItemDto) {
-    return this.service.updateItem(itemId, dto);
+  updateItem(@Req() req: any, @Param('itemId') itemId: string, @Body() dto: UpdateOfferItemDto) {
+    return this.service.updateItem(itemId, dto, req.user.sub);
   }
 
   /** Supprimer un item */
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Delete('items/:itemId')
-  removeItem(@Param('itemId') itemId: string) {
-    return this.service.removeItem(itemId);
+  removeItem(@Req() req: any, @Param('itemId') itemId: string) {
+    return this.service.removeItem(itemId, req.user.sub);
   }
 
   // ─── OfferItem Prices ──────────────────────────────
@@ -262,10 +262,11 @@ export class OfferController {
   @Roles(Role.PROJECT)
   @Post('items/:itemId/prices')
   addPrice(
+    @Req() req: any,
     @Param('itemId') itemId: string,
     @Body() dto: CreateOfferItemPriceDto,
   ) {
-    return this.service.addPrice(itemId, dto);
+    return this.service.addPrice(itemId, dto, req.user.sub);
   }
 
   /** Modifier un prix */
@@ -273,18 +274,19 @@ export class OfferController {
   @Roles(Role.PROJECT)
   @Patch('items/prices/:priceId')
   updatePrice(
+    @Req() req: any,
     @Param('priceId') priceId: string,
     @Body() dto: UpdateOfferItemPriceDto,
   ) {
-    return this.service.updatePrice(priceId, dto);
+    return this.service.updatePrice(priceId, dto, req.user.sub);
   }
 
   /** Supprimer un prix */
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Delete('items/prices/:priceId')
-  removePrice(@Param('priceId') priceId: string) {
-    return this.service.removePrice(priceId);
+  removePrice(@Req() req: any, @Param('priceId') priceId: string) {
+    return this.service.removePrice(priceId, req.user.sub);
   }
 
   // ─── Availability Rules ────────────────────────────
@@ -294,10 +296,11 @@ export class OfferController {
   @Roles(Role.PROJECT)
   @Post('items/:itemId/availability')
   addAvailabilityRule(
+    @Req() req: any,
     @Param('itemId') itemId: string,
     @Body() dto: CreateAvailabilityRuleDto,
   ) {
-    return this.service.addAvailabilityRule(itemId, dto);
+    return this.service.addAvailabilityRule(itemId, dto, req.user.sub);
   }
 
   /** Liste les règles de disponibilité */
@@ -311,16 +314,16 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Delete('availability/:ruleId')
-  removeAvailabilityRule(@Param('ruleId') ruleId: string) {
-    return this.service.removeAvailabilityRule(ruleId);
+  removeAvailabilityRule(@Req() req: any, @Param('ruleId') ruleId: string) {
+    return this.service.removeAvailabilityRule(ruleId, req.user.sub);
   }
 
   /** Supprime toutes les règles de disponibilité d'un item */
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Delete('items/:itemId/availability/delete-all')
-  removeAllAvailabilityRules(@Param('itemId') itemId: string) {
-    return this.service.removeAllAvailabilityRules(itemId);
+  removeAllAvailabilityRules(@Req() req: any, @Param('itemId') itemId: string) {
+    return this.service.removeAllAvailabilityRules(itemId, req.user.sub);
   }
 
   /** Génère les sessions automatiquement depuis les règles */

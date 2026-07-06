@@ -536,9 +536,13 @@ export default function CircuitDetailPage() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      loadCircuit();
+      setTimeout(() => loadCircuit(), 100);
     } catch (err: any) {
-      setReserveError(err.message || "Erreur lors de la suppression du jour");
+      if (err.message?.includes("404") || err.message?.includes("introuvable")) {
+        loadCircuit();
+      } else {
+        setReserveError(err.message || "Erreur lors de la suppression du jour");
+      }
     }
   }
 

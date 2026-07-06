@@ -1,9 +1,12 @@
 import { Controller, Get, Param, Patch, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '../common/enums/roles.enum';
 import { NotificationService } from './notification.service';
 
 @ApiTags('Notifications')
 @ApiBearerAuth('bearer')
+@Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
 @Controller('notifications')
 export class NotificationController {
   constructor(private readonly service: NotificationService) {}

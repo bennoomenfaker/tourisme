@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -28,6 +29,10 @@ export class AuthService {
 
     if (existingUser) {
       throw new BadRequestException('Cet email est déjà utilisé.');
+    }
+
+    if (dto.role === Role.ADMIN) {
+      throw new ForbiddenException('Inscription en tant qu\'administrateur non autorisée.');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -85,9 +90,14 @@ export class AuthService {
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      user,
+      user: this.sanitizeUser(user),
       dashboard: this.getDashboardPathByRole(user.role),
     };
+  }
+
+  private sanitizeUser(user: any) {
+    const { password, verification_token, verification_token_expires_at, refresh_token, refresh_token_expires_at, reset_password_token, reset_password_token_expires_at, failed_login_attempts, locked_until, ...safe } = user;
+    return safe;
   }
 
   async generateAccessToken(user: any) {
@@ -166,7 +176,7 @@ export class AuthService {
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      user,
+      user: this.sanitizeUser(user),
       dashboard: this.getDashboardPathByRole(user.role),
     };
   }
@@ -203,8 +213,9 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
+    // Réponse identique que l'email existe ou non (anti-énumération)
     if (!user) {
-      throw new NotFoundException('Aucun compte trouvé avec cet email.');
+      return { message: 'Un lien de réinitialisation a été envoyé à votre email.' };
     }
 
     const token = randomBytes(32).toString('hex');

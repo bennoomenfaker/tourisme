@@ -10,6 +10,8 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '../common/enums/roles.enum';
 import { Public } from '../common/decorators/public.decorator';
 import { ReviewService } from './review.service';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -20,6 +22,7 @@ export class ReviewController {
   constructor(private readonly service: ReviewService) {}
 
   @ApiBearerAuth('bearer')
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Post()
   create(@Req() req: any, @Body() dto: CreateReviewDto) {
     return this.service.create(req.user.sub, dto);
@@ -41,6 +44,7 @@ export class ReviewController {
   }
 
   @ApiBearerAuth('bearer')
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Get('mine')
   findMine(@Req() req: any) {
     return this.service.findByAuthor(req.user.sub);
@@ -56,6 +60,7 @@ export class ReviewController {
   }
 
   @ApiBearerAuth('bearer')
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Patch(':id')
   update(
     @Req() req: any,
@@ -66,6 +71,7 @@ export class ReviewController {
   }
 
   @ApiBearerAuth('bearer')
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.service.remove(req.user.sub, id);

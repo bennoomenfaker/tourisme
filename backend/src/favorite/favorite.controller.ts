@@ -16,6 +16,7 @@ import { CreateFavoriteDto } from './dto/create-favorite.dto';
 
 @ApiTags('Favoris')
 @ApiBearerAuth('bearer')
+@Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
 @Controller('favorites')
 export class FavoriteController {
   constructor(private readonly service: FavoriteService) {}

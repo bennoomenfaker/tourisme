@@ -207,14 +207,15 @@ export class OfferService {
       geo?.lng !== undefined &&
       geo?.radiusKm !== undefined
     ) {
-      const radiusMeters = geo.radiusKm * 1000;
+      const deg = geo.radiusKm / 111;
       qb.andWhere(
-        `ST_DWithin(
-          ST_MakePoint(offer.longitude, offer.latitude)::geography,
-          ST_MakePoint(:lng, :lat)::geography,
-          :radius
-        )`,
-        { lng: geo.lng, lat: geo.lat, radius: radiusMeters },
+        `offer.latitude BETWEEN :latMin AND :latMax AND offer.longitude BETWEEN :lngMin AND :lngMax`,
+        {
+          latMin: geo.lat - deg,
+          latMax: geo.lat + deg,
+          lngMin: geo.lng - deg,
+          lngMax: geo.lng + deg,
+        },
       );
     }
 
@@ -481,24 +482,34 @@ export class OfferService {
   async findItemById(itemId: string): Promise<OfferItem> {
     const item = await this.itemRepo.findOne({
       where: { id: itemId },
-      relations: ['prices', 'sessions', 'capacity'],
+      relations: ['prices', 'sessions', 'capacity', 'offer'],
     });
     if (!item) throw new NotFoundException("Élément d'offre introuvable.");
+    return item;
+  }
+
+  private async verifyItemOwnership(itemId: string, userId: string): Promise<OfferItem> {
+    const item = await this.findItemById(itemId);
+    if (item.offer.author_id !== userId) {
+      throw new ForbiddenException('Accès refusé.');
+    }
     return item;
   }
 
   async updateItem(
     itemId: string,
     dto: UpdateOfferItemDto,
+    userId: string,
   ): Promise<OfferItem> {
+    await this.verifyItemOwnership(itemId, userId);
     const item = await this.findItemById(itemId);
     Object.assign(item, dto);
     return this.itemRepo.save(item);
   }
 
-  async removeItem(itemId: string): Promise<{ message: string }> {
-    const item = await this.findItemById(itemId);
-    await this.itemRepo.remove(item);
+  async removeItem(itemId: string, userId: string): Promise<{ message: string }> {
+    await this.verifyItemOwnership(itemId, userId);
+    await this.itemRepo.delete(itemId);
     return { message: 'Élément supprimé.' };
   }
 
@@ -526,8 +537,9 @@ export class OfferService {
   async addPrice(
     itemId: string,
     dto: CreateOfferItemPriceDto,
+    userId: string,
   ): Promise<OfferItemPrice> {
-    await this.findItemById(itemId);
+    await this.verifyItemOwnership(itemId, userId);
     const price = this.priceRepo.create({
       offerItem: { id: itemId } as OfferItem,
       label: dto.label,
@@ -541,20 +553,32 @@ export class OfferService {
     return this.priceRepo.save(price);
   }
 
+  private async verifyPriceOwnership(priceId: string, userId: string): Promise<void> {
+    const price = await this.priceRepo.findOne({
+      where: { id: priceId },
+      relations: ['offerItem', 'offerItem.offer'],
+    });
+    if (!price) throw new NotFoundException('Prix introuvable.');
+    if (price.offerItem.offer.author_id !== userId) {
+      throw new ForbiddenException('Accès refusé.');
+    }
+  }
+
   async updatePrice(
     priceId: string,
     dto: UpdateOfferItemPriceDto,
+    userId: string,
   ): Promise<OfferItemPrice> {
+    await this.verifyPriceOwnership(priceId, userId);
     const price = await this.priceRepo.findOne({ where: { id: priceId } });
     if (!price) throw new NotFoundException('Prix introuvable.');
     Object.assign(price, dto);
     return this.priceRepo.save(price);
   }
 
-  async removePrice(priceId: string): Promise<{ message: string }> {
-    const price = await this.priceRepo.findOne({ where: { id: priceId } });
-    if (!price) throw new NotFoundException('Prix introuvable.');
-    await this.priceRepo.remove(price);
+  async removePrice(priceId: string, userId: string): Promise<{ message: string }> {
+    await this.verifyPriceOwnership(priceId, userId);
+    await this.priceRepo.delete(priceId);
     return { message: 'Prix supprimé.' };
   }
 
@@ -599,8 +623,9 @@ export class OfferService {
   async addAvailabilityRule(
     itemId: string,
     dto: CreateAvailabilityRuleDto,
+    userId: string,
   ): Promise<OfferItemAvailabilityRule> {
-    await this.findItemById(itemId);
+    await this.verifyItemOwnership(itemId, userId);
     const rule = this.ruleRepo.create({
       offerItem: { id: itemId } as OfferItem,
       availability_type: dto.availability_type,
@@ -624,15 +649,25 @@ export class OfferService {
     });
   }
 
-  async removeAvailabilityRule(ruleId: string): Promise<{ message: string }> {
-    const rule = await this.ruleRepo.findOne({ where: { id: ruleId } });
-    if (!rule)
-      throw new NotFoundException('Règle de disponibilité introuvable.');
-    await this.ruleRepo.remove(rule);
+  private async verifyRuleOwnership(ruleId: string, userId: string): Promise<void> {
+    const rule = await this.ruleRepo.findOne({
+      where: { id: ruleId },
+      relations: ['offerItem', 'offerItem.offer'],
+    });
+    if (!rule) throw new NotFoundException('Règle de disponibilité introuvable.');
+    if (rule.offerItem.offer.author_id !== userId) {
+      throw new ForbiddenException('Accès refusé.');
+    }
+  }
+
+  async removeAvailabilityRule(ruleId: string, userId: string): Promise<{ message: string }> {
+    await this.verifyRuleOwnership(ruleId, userId);
+    await this.ruleRepo.delete(ruleId);
     return { message: 'Règle supprimée.' };
   }
 
-  async removeAllAvailabilityRules(itemId: string): Promise<void> {
+  async removeAllAvailabilityRules(itemId: string, userId: string): Promise<void> {
+    await this.verifyItemOwnership(itemId, userId);
     const rules = await this.ruleRepo.find({
       where: { offerItem: { id: itemId } },
     });

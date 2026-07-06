@@ -317,6 +317,7 @@ export class CircuitService {
       );
     }
     await this.dayRepo.remove(day);
+    await this.invalidateCircuitCache();
   }
 
   // ─── Options du circuit ────────────────────────────────

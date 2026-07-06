@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
 import ImageUploader from "@/components/ImageUploader";
@@ -182,6 +183,7 @@ function LocationSearch({ onPick, placeholder }: { onPick: (lat: number, lng: nu
 }
 
 export default function CircuitBuilderWizard({ token, onClose, onSuccess }: CircuitBuilderProps) {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,10 +197,13 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState("moderate");
+  const [dateError, setDateError] = useState("");
+  const [lodgeError, setLodgeError] = useState("");
 
   const [days, setDays] = useState<DayForm[]>([]);
   const [offerItems, setOfferItems] = useState<MyOfferItem[]>([]);
-  const [waypoints, setWaypoints] = useState<[number, number][]>([]);
+  const [waypointsByDay, setWaypointsByDay] = useState<Record<string, [number, number][]>>({});
+  const [activeDayId, setActiveDayId] = useState<string | null>(null);
   const [circuitLat, setCircuitLat] = useState<number | null>(null);
   const [circuitLng, setCircuitLng] = useState<number | null>(null);
   const [circuitAddress, setCircuitAddress] = useState("");
@@ -260,15 +265,24 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
 
   useEffect(() => {
     const nd = Number(durationDays) || 1;
-    if (nd > days.length) {
-      setDays((prev) => [...prev, ...Array.from({ length: nd - prev.length }, (_, i) => ({
-        id: genId(), day_number: prev.length + i + 1, title: `Jour ${prev.length + i + 1}`, description: "", date: "",
-        lat: null, lng: null, location_name: "", programItems: [],
-      }))].map((d, idx) => ({ ...d, day_number: idx + 1 })));
-    } else if (nd < days.length) {
-      setDays((prev) => prev.slice(0, nd).map((d, idx) => ({ ...d, day_number: idx + 1 })));
+    const nextDays = [...days];
+    if (nd > nextDays.length) {
+      for (let i = nextDays.length; i < nd; i++) {
+        nextDays.push({
+          id: genId(), day_number: i + 1, title: `Jour ${i + 1}`, description: "", date: "",
+          lat: null, lng: null, location_name: "", programItems: [],
+        });
+      }
+    } else if (nd < nextDays.length) {
+      nextDays.splice(nd);
     }
-  }, [durationDays]);
+    const updated = nextDays.map((d, idx) => ({
+      ...d,
+      day_number: idx + 1,
+      date: startDate ? new Date(new Date(startDate).getTime() + idx * 86400000).toISOString().split("T")[0] : d.date,
+    }));
+    setDays(updated);
+  }, [durationDays, startDate]);
 
   useEffect(() => {
     if (token) {
@@ -277,6 +291,29 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
         .catch(() => {});
     }
   }, [token]);
+
+  useEffect(() => {
+    const sd = [...days].sort((a, b) => a.day_number - b.day_number);
+    if (step === 4 && sd.length > 0) {
+      if (!activeDayId || !sd.some((d) => d.id === activeDayId)) {
+        setActiveDayId(sd[0].id);
+      }
+    }
+  }, [step, days, activeDayId]);
+
+  // Compute suggested price from activities + lodging
+  const suggestedPrice = useMemo(() => {
+    let total = 0;
+    for (const day of days) {
+      for (const prog of day.programItems) {
+        total += Number(prog.price) || 0;
+      }
+    }
+    if (hebergementInclus && hebergementPrixNuit) {
+      total += Number(hebergementPrixNuit) * (Number(durationNights) || 0);
+    }
+    return total;
+  }, [days, hebergementInclus, hebergementPrixNuit, durationNights]);
 
   // Auto-fill accommodation price from own offer items
   useEffect(() => {
@@ -288,14 +325,70 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
     }
   }, [hebergementPriceSource, offerItems, hebergementPrixNuit]);
 
+  const today = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    if (!startDate || !endDate || !durationDays) { setDateError(""); return; }
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) { setDateError(""); return; }
+    if (s < new Date(today)) { setDateError("La date de début ne peut pas être dans le passé."); return; }
+    if (e < s) { setDateError("La date de fin doit être après la date de début."); return; }
+    const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    if (diff !== Number(durationDays)) {
+      setDateError(`La durée (${durationDays}j) ne correspond pas aux dates (${diff}j du ${startDate} au ${endDate}).`);
+      return;
+    }
+    setDateError("");
+  }, [startDate, endDate, durationDays, today]);
+
   const sortedDays = [...days].sort((a, b) => a.day_number - b.day_number);
-  const goNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  const ACCOM_ITEM_TYPES = ["room","bed","camping_space","dortoir","tente","chambre","emplacement"];
+  const lodgingCount = sortedDays.reduce((sum, d) =>
+    sum + d.programItems.filter((p) => {
+      if (p.category === "hebergement") return true;
+      if (p.external_reference?.type === "hebergement") return true;
+      if (p.linked_offer_item_id && offerItems.some((it) => it.id === p.linked_offer_item_id && ACCOM_ITEM_TYPES.includes(it.item_type || ""))) return true;
+      return false;
+    }).length, 0);
+
+  const goNext = () => {
+    if (step === 1 && dateError) return;
+    if (step === 3 && Number(durationNights) > lodgingCount) {
+      setLodgeError(`Vous avez ${durationNights} nuit(s) mais seulement ${lodgingCount} activité(s) d'hébergement. Ajoutez un hébergement pour chaque nuit.`);
+      return;
+    }
+    setLodgeError("");
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  };
   const goBack = () => setStep((s) => Math.max(s - 1, 1));
 
   function handleDurationDaysChange(val: string) {
     const n = parseInt(val) || 1;
     setDurationDays(String(n));
     setDurationNights(String(Math.max(0, n - 1)));
+  }
+
+  function handleStartDateChange(val: string) {
+    setStartDate(val);
+    if (val && durationDays) {
+      const s = new Date(val);
+      const nd = Number(durationDays);
+      setEndDate(new Date(s.getTime() + (nd - 1) * 86400000).toISOString().split("T")[0]);
+    }
+  }
+
+  function handleEndDateChange(val: string) {
+    setEndDate(val);
+    if (startDate && val) {
+      const s = new Date(startDate);
+      const e = new Date(val);
+      const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      if (diff > 0 && diff !== Number(durationDays)) {
+        setDurationDays(String(diff));
+        setDurationNights(String(diff - 1));
+      }
+    }
   }
 
   function addDay() {
@@ -324,7 +417,21 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   }
 
   function updateProgramItem(dayId: string, itemId: string, updates: Partial<ProgramItemForm>) {
-    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: d.programItems.map((p) => p.id === itemId ? { ...p, ...updates } : p) }));
+    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: d.programItems.map((p) => {
+      if (p.id !== itemId) return p;
+      const updated = { ...p, ...updates };
+      const start = updated.start_time || p.start_time;
+      const end = updated.end_time || p.end_time;
+      if (start && end && (updates.start_time !== undefined || updates.end_time !== undefined || updates.duration_minutes === undefined)) {
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
+          const diff = (eh * 60 + em) - (sh * 60 + sm);
+          if (diff > 0) updated.duration_minutes = String(diff);
+        }
+      }
+      return updated;
+    }) }));
   }
 
   function addOption() {
@@ -339,6 +446,27 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
     setOptions((prev) => prev.map((o) => (o.id === optId ? { ...o, ...updates } : o)));
   }
 
+  const DAY_COLORS = ["#13ec49", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+
+  function getDayColor(index: number) {
+    return DAY_COLORS[index % DAY_COLORS.length];
+  }
+
+  function getDayWaypoints(dayId: string): [number, number][] {
+    return waypointsByDay[dayId] || [];
+  }
+
+  function setDayWaypoints(dayId: string, pts: [number, number][]) {
+    setWaypointsByDay((prev) => ({ ...prev, [dayId]: pts }));
+  }
+
+  function addDayWaypoint(dayId: string, pt: [number, number]) {
+    setWaypointsByDay((prev) => ({
+      ...prev,
+      [dayId]: [...(prev[dayId] || []), pt],
+    }));
+  }
+
   function getWaypointFromDays(): [number, number][] {
     const pts: [number, number][] = [];
     if (circuitLat !== null && circuitLng !== null) pts.push([circuitLat, circuitLng]);
@@ -350,7 +478,12 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
     if (!title.trim()) { setError("Le titre est requis."); return; }
     setSubmitting(true); setError(null);
     try {
-      const finalWaypoints = waypoints.length > 0 ? waypoints : getWaypointFromDays();
+      const allWaypoints: [number, number][] = [];
+      for (const d of sortedDays) {
+        const pts = waypointsByDay[d.id];
+        if (pts && pts.length > 0) allWaypoints.push(...pts);
+      }
+      const finalWaypoints = allWaypoints.length > 0 ? allWaypoints : getWaypointFromDays();
       const mainLat = finalWaypoints.length > 0 ? finalWaypoints[0][0] : circuitLat;
       const mainLng = finalWaypoints.length > 0 ? finalWaypoints[0][1] : circuitLng;
       const circuit = await apiFetch<any>("/circuits", {
@@ -431,6 +564,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
         });
       }
       onSuccess(); onClose();
+      setTimeout(() => router.push(`/circuits/${circuitId}`), 150);
     } catch (e: any) {
       setError(e.message || "Erreur lors de la création du circuit");
     } finally { setSubmitting(false); }
@@ -479,7 +613,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Région</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Région du circuit</label>
                   <select value={region} onChange={(e) => setRegion(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                     <option value="">Sélectionner une région</option>
                     {TUNISIA_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -500,19 +634,20 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Durée (nuits)</label>
-                  <input type="number" min={0} max={89} value={durationNights} onChange={(e) => setDurationNights(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" min={0} max={89} value={durationNights} readOnly className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-500 focus:outline-none" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Date de début</label>
-                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="date" value={startDate} min={today} onChange={(e) => handleStartDateChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-500 mb-1">Date de fin</label>
-                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="date" value={endDate} min={startDate || today} onChange={(e) => handleEndDateChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
               </div>
+              {dateError && <div className="bg-red-50 border border-red-100 rounded-xl p-2.5 text-xs text-red-600">{dateError}</div>}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Niveau de difficulté</label>
                 <select value={difficultyLevel} onChange={(e) => setDifficultyLevel(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
@@ -590,6 +725,12 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
           {step === 3 && (
             <div className="space-y-4">
               <p className="text-xs text-slate-400">Chaque activité peut être liée à une offre personnelle, à une offre externe d&apos;un autre propriétaire, ou être une référence indépendante.</p>
+              {lodgeError && <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-700">{lodgeError}</div>}
+              {Number(durationNights) > 0 && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-2.5 text-xs text-blue-700">
+                  {durationNights} nuit{durationNights !== "1" ? "s" : ""} à couvrir — {lodgingCount} activité{durationNights !== "1" && lodgingCount !== 1 ? "s" : ""} d&apos;hébergement
+                </div>
+              )}
               {offerItems.length === 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
                   Vous n&apos;avez pas encore d&apos;offres. <a href="/dashboard?tab=offers" className="font-semibold underline">Créez des offres</a> avant d&apos;ajouter des activités au circuit.
@@ -770,28 +911,64 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
             </div>
           )}
 
-          {/* ─── Step 4: Map & Route ───────────────────────── */}
+          {/* ─── Step 4: Map & Route (per day) ──────────── */}
           {step === 4 && (
             <div className="space-y-4">
-              <p className="text-xs text-slate-400">Tracez l&apos;itinéraire sur la carte. Cliquez pour ajouter des points ou utilisez la recherche.</p>
+              <p className="text-xs text-slate-400">Tracez l&apos;itinéraire jour par jour. Sélectionnez un jour puis ajoutez ses étapes sur la carte.</p>
 
-              {/* Search to add waypoint */}
-              <div className="bg-slate-50 rounded-xl p-3">
-                <label className="block text-xs font-medium text-slate-500 mb-1.5">Ajouter une étape par recherche</label>
-                <LocationSearch
-                  onPick={(lat, lng, name) => {
-                    setWaypoints((prev) => [...prev, [lat, lng]]);
-                  }}
-                  placeholder="Ex: Matmata, Gabès..."
-                />
+              {/* Day tabs */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {sortedDays.map((day, i) => {
+                  const color = getDayColor(i);
+                  const count = getDayWaypoints(day.id).length;
+                  const isActive = activeDayId === day.id;
+                  return (
+                    <button key={day.id} type="button" onClick={() => setActiveDayId(day.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                        isActive ? "text-white shadow-md" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                      style={isActive ? { backgroundColor: color } : undefined}
+                    >
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                        style={{ backgroundColor: isActive ? "#fff" : color, color: isActive ? color : "#fff" }}>
+                        {day.day_number}
+                      </span>
+                      <span className="max-w-[100px] truncate">{day.title || `Jour ${day.day_number}`}</span>
+                      {count > 0 && <span className={`text-[10px] ${isActive ? "text-white/80" : "text-slate-400"}`}>({count})</span>}
+                    </button>
+                  );
+                })}
               </div>
 
-              <PolylineDrawer waypoints={waypoints} onChange={setWaypoints} />
+              {/* Map for active day */}
+              {activeDayId && (() => {
+                const dayIdx = sortedDays.findIndex((d) => d.id === activeDayId);
+                const color = getDayColor(dayIdx);
+                const dayWaypoints = getDayWaypoints(activeDayId);
+                const dayTitle = sortedDays.find((d) => d.id === activeDayId)?.title || `Jour ${dayIdx + 1}`;
+                return (
+                  <>
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                        Ajouter une étape pour <strong>{dayTitle}</strong>
+                      </label>
+                      <LocationSearch
+                        onPick={(lat, lng) => addDayWaypoint(activeDayId, [lat, lng])}
+                        placeholder={`Ex: Matmata, Gabès... pour ${dayTitle}`}
+                      />
+                    </div>
+                    <PolylineDrawer key={activeDayId} waypoints={dayWaypoints} onChange={(pts) => setDayWaypoints(activeDayId, pts)} color={color} />
+                  </>
+                );
+              })()}
+              {!activeDayId && (
+                <p className="text-sm text-slate-400 text-center py-8">Sélectionnez un jour ci-dessus pour tracer son itinéraire.</p>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Adresse du point de départ</label>
-                  <input value={circuitAddress} onChange={(e) => setCircuitAddress(e.target.value)} placeholder="Adresse du circuit" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Adresse du point de départ (rendez-vous)</label>
+                  <input value={circuitAddress} onChange={(e) => setCircuitAddress(e.target.value)} placeholder="Ex: Place de la Liberté, Tunis" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
@@ -1016,10 +1193,17 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
               {/* ─── Tarification ──────────────────────── */}
               <div className="border-t border-slate-100 pt-4">
                 <h3 className="font-semibold text-sm text-slate-700 mb-2">Tarification</h3>
+                {suggestedPrice > 0 && !basePrice && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 mb-3 text-xs text-emerald-700">
+                    Prix suggéré (activités + logement) : <strong>{suggestedPrice.toLocaleString()} TND</strong>
+                    <button type="button" onClick={() => setBasePrice(String(suggestedPrice))}
+                      className="ml-2 text-primary font-semibold underline hover:no-underline">Appliquer</button>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-500 mb-1">Prix de base</label>
-                    <input type="number" min={0} step={0.01} value={basePrice} onChange={(e) => setBasePrice(e.target.value)} placeholder="Ex: 500" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                    <input type="number" min={0} step={0.01} value={basePrice} onChange={(e) => setBasePrice(e.target.value)} placeholder={suggestedPrice > 0 ? `Suggéré: ${suggestedPrice}` : "Ex: 500"} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500 mb-1">Participants max</label>
@@ -1062,7 +1246,8 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
               {/* ─── Options supplémentaires ──────────── */}
               <div className="border-t border-slate-100 pt-4">
                 <h3 className="font-semibold text-sm text-slate-700 mb-2">Options supplémentaires</h3>
-                <p className="text-xs text-slate-400 mb-3">Ajoutez des options externes (hébergement, restaurant, transport). Si le service est chez un autre prestataire, cherchez-le dans le catalogue.</p>
+                <p className="text-xs text-slate-400 mb-1">Les options sont des <strong>suppléments que le voyageur peut ajouter</strong> (ex: upgrade chambre privée, repas supplémentaire, transport optionnel).</p>
+                <p className="text-xs text-slate-400 mb-3">Contrairement aux activités du programme (Step 3) qui décrivent le déroulement jour par jour, les options sont des <strong>extras payants</strong> proposés en plus du circuit de base.</p>
                 <div className="space-y-2">
                   {options.length === 0 && <p className="text-xs text-slate-400 text-center py-2">Aucune option ajoutée</p>}
                   {options.map((opt) => (
