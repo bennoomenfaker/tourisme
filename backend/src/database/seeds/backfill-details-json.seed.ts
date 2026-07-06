@@ -28,7 +28,9 @@ async function seed() {
     WHERE details_json IS NULL
   `);
 
-  console.log(`Backfill terminé : ${result[1] ?? 0} offer_items mis à jour (details_json NULL → {}).`);
+  console.log(
+    `Backfill terminé : ${result[1] ?? 0} offer_items mis à jour (details_json NULL → {}).`,
+  );
   await dataSource.destroy();
 }
 

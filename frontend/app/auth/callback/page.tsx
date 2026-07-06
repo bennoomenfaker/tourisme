@@ -31,19 +31,29 @@ function AuthCallbackInner() {
       return;
     }
 
-    // Onboarding check
+    // Vérifier si l'utilisateur a déjà complété l'onboarding
+    const profileApi = parsedUser.role === "eco_traveler" ? "/eco-traveler/profile"
+      : parsedUser.role === "guide" ? "/guide/profile"
+      : "/project-owner/profile";
+
+    try {
+      const { apiFetch } = await import("@/lib/api");
+      const profile = await apiFetch<any>(profileApi, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (profile?.is_onboarded) {
+        router.push(storedRedirect || "/dashboard");
+        return;
+      }
+    } catch {}
+
     const onboardingRoutes: Record<string, string> = {
       eco_traveler: "/onboarding/eco-traveler",
       guide: "/onboarding/guide",
       project: "/onboarding/project-owner",
     };
 
-    const onboardingRoute = onboardingRoutes[parsedUser.role];
-    if (onboardingRoute) {
-      router.push(onboardingRoute);
-    } else {
-      router.push("/dashboard");
-    }
+    router.push(onboardingRoutes[parsedUser.role] || "/dashboard");
   }, [router, searchParams]);
 
   return (

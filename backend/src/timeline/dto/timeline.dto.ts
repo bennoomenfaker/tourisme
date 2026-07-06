@@ -1,10 +1,17 @@
-import { IsArray, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateTimelineEntryDto {
   @IsInt()
   step_order!: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   emoji?: string;
 
   @IsString()
@@ -13,54 +20,70 @@ export class CreateTimelineEntryDto {
   @IsString()
   title!: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @IsInt()
   duration_minutes?: number;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   distance_km?: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   transport_mode?: string;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   latitude?: number;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   longitude?: number;
 }
 
 export class UpdateTimelineEntryDto {
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @IsInt()
   step_order?: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   emoji?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   time_label?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   title?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @IsInt()
   duration_minutes?: number;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   distance_km?: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   transport_mode?: string;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   latitude?: number;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   longitude?: number;
 }
 

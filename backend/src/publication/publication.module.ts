@@ -14,7 +14,16 @@ import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Publication, PublicationLike, PublicationComment, CommentLike, PlaceContribution, EcoTraveler, Guide, ProjectOwner]),
+    TypeOrmModule.forFeature([
+      Publication,
+      PublicationLike,
+      PublicationComment,
+      CommentLike,
+      PlaceContribution,
+      EcoTraveler,
+      Guide,
+      ProjectOwner,
+    ]),
     EcoTravelerModule,
   ],
   providers: [PublicationService],

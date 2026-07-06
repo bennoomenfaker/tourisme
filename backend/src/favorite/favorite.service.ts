@@ -15,7 +15,10 @@ export class FavoriteService {
     private readonly favoriteRepo: Repository<Favorite>,
   ) {}
 
-  async toggle(userId: string, dto: CreateFavoriteDto): Promise<{ favorited: boolean }> {
+  async toggle(
+    userId: string,
+    dto: CreateFavoriteDto,
+  ): Promise<{ favorited: boolean }> {
     const existing = await this.favoriteRepo.findOne({
       where: {
         user_id: userId,
@@ -44,7 +47,11 @@ export class FavoriteService {
     return this.favoriteRepo.find({ where, order: { created_at: 'DESC' } });
   }
 
-  async check(userId: string, targetType: string, targetId: string): Promise<boolean> {
+  async check(
+    userId: string,
+    targetType: string,
+    targetId: string,
+  ): Promise<boolean> {
     const count = await this.favoriteRepo.count({
       where: { user_id: userId, target_type: targetType, target_id: targetId },
     });
@@ -57,7 +64,11 @@ export class FavoriteService {
     });
   }
 
-  async remove(userId: string, targetType: string, targetId: string): Promise<void> {
+  async remove(
+    userId: string,
+    targetType: string,
+    targetId: string,
+  ): Promise<void> {
     const favorite = await this.favoriteRepo.findOne({
       where: { user_id: userId, target_type: targetType, target_id: targetId },
     });

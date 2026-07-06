@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MessagesService } from './messages.service';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -14,7 +22,11 @@ export class MessagesController {
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Post('conversations')
   createOrGet(@Req() req: any, @Body() body: { recipient_id: string }) {
-    return this.service.createOrGet(req.user.sub, req.user.role, body.recipient_id);
+    return this.service.createOrGet(
+      req.user.sub,
+      req.user.role,
+      body.recipient_id,
+    );
   }
 
   /** List all my conversations */
@@ -48,7 +60,15 @@ export class MessagesController {
   /** Send a message */
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Post()
-  sendMessage(@Req() req: any, @Body() body: { conversation_id: string; content: string }) {
-    return this.service.sendMessage(body.conversation_id, req.user.sub, req.user.role, body.content);
+  sendMessage(
+    @Req() req: any,
+    @Body() body: { conversation_id: string; content: string },
+  ) {
+    return this.service.sendMessage(
+      body.conversation_id,
+      req.user.sub,
+      req.user.role,
+      body.content,
+    );
   }
 }

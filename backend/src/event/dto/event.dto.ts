@@ -1,52 +1,78 @@
-import {
-  IsArray, IsIn, IsOptional, IsString, IsUUID,
-} from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateEventDto {
   @IsString()
   title!: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsIn(['festival', 'concert', 'market', 'competition', 'exhibition', 'workshop', 'other'])
+  @IsIn([
+    'festival',
+    'concert',
+    'market',
+    'competition',
+    'exhibition',
+    'workshop',
+    'other',
+  ])
   event_type!: string;
 
   @IsString()
   start_date!: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   end_date?: string;
 
-  @IsOptional() @IsArray()
+  @IsOptional()
+  @IsArray()
   images?: string[];
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   external_url?: string;
 }
 
 export class UpdateEventDto {
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   title?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsOptional() @IsIn(['festival', 'concert', 'market', 'competition', 'exhibition', 'workshop', 'other'])
+  @IsOptional()
+  @IsIn([
+    'festival',
+    'concert',
+    'market',
+    'competition',
+    'exhibition',
+    'workshop',
+    'other',
+  ])
   event_type?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   start_date?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   end_date?: string;
 
-  @IsOptional() @IsArray()
+  @IsOptional()
+  @IsArray()
   images?: string[];
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   external_url?: string;
 
-  @IsOptional() @IsIn(['published', 'cancelled'])
+  @IsOptional()
+  @IsIn(['published', 'cancelled'])
   status?: string;
 }

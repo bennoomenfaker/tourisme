@@ -305,7 +305,7 @@ export default function OfferDetailPage() {
 
             <div className="flex flex-wrap gap-3 text-sm text-slate-500 mb-4">
               {offer.region && <span className="flex items-center gap-1"><MapPin size={14} /> {offer.region}</span>}
-              {offer.project && <span className="flex items-center gap-1"><Tag size={14} /> {offer.project.name}</span>}
+              {offer.project?.name && <span className="flex items-center gap-1"><Tag size={14} /> {offer.project.name}</span>}
               {offer.duration && <span className="flex items-center gap-1"><Clock size={14} /> {offer.duration}</span>}
               {(offer.min_group_size || offer.max_group_size) && (
                 <span className="flex items-center gap-1">
@@ -374,14 +374,14 @@ export default function OfferDetailPage() {
             )}
 
             {/* ─── Règles de disponibilité ──────────────────────── */}
-            {offer.items.some((item) => item.status === "active") && (
+            {offer.items?.some((item) => item.status === "active") && (
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-slate-600 mb-2 flex items-center gap-1.5">
                   <CalendarDays size={14} /> Règles de disponibilité
                 </h3>
                 <div className="bg-blue-50 rounded-xl p-3 text-sm space-y-1.5">
                   {(() => {
-                    const activeItems = offer.items.filter((i) => i.status === "active");
+                    const activeItems = (offer.items ?? []).filter((i) => i.status === "active");
                     const firstItem = activeItems[0];
                     const rules: string[] = [];
                     if (firstItem.booking_deadline_days !== null) {
@@ -409,11 +409,11 @@ export default function OfferDetailPage() {
               </div>
             )}
 
-            {offer.items.length > 0 && (
+            {(offer.items?.length ?? 0) > 0 && (
               <div className="mt-6">
                 <h2 className="text-lg font-bold text-slate-800 mb-3">Ce qui est proposé</h2>
                 <div className="space-y-3">
-                  {offer.items.filter((item) => item.status === "active").map((item) => (
+                  {(offer.items ?? []).filter((item) => item.status === "active").map((item) => (
                     <div key={item.id} className="border border-slate-100 rounded-xl overflow-hidden">
                       <button
                         onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}

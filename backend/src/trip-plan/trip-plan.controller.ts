@@ -14,7 +14,10 @@ import { Role } from '../common/enums/roles.enum';
 import { TripPlanService } from './trip-plan.service';
 import { CreateTripPlanDto } from './dto/create-trip-plan.dto';
 import { UpdateTripPlanDto } from './dto/update-trip-plan.dto';
-import { AddTripPlanItemDto, UpdateTripPlanItemDto } from './dto/add-trip-plan-item.dto';
+import {
+  AddTripPlanItemDto,
+  UpdateTripPlanItemDto,
+} from './dto/add-trip-plan-item.dto';
 import { BookTripPlanDto } from './dto/book-trip-plan.dto';
 
 @ApiTags('Plans de voyage (TripPlan)')
@@ -39,7 +42,9 @@ export class TripPlanController {
     return this.service.findByTraveler(req.user.sub);
   }
 
-  @ApiOperation({ summary: 'Détail d\'un plan de voyage (propriétaire uniquement)' })
+  @ApiOperation({
+    summary: "Détail d'un plan de voyage (propriétaire uniquement)",
+  })
   @Roles(Role.ECO_TRAVELER)
   @Get(':id')
   findById(@Req() req: any, @Param('id') id: string) {
@@ -49,7 +54,11 @@ export class TripPlanController {
   @ApiOperation({ summary: 'Modifier un plan de voyage' })
   @Roles(Role.ECO_TRAVELER)
   @Patch(':id')
-  update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateTripPlanDto) {
+  update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateTripPlanDto,
+  ) {
     return this.service.update(id, req.user.sub, dto);
   }
 
@@ -65,7 +74,11 @@ export class TripPlanController {
   @ApiOperation({ summary: 'Ajouter une offre au plan' })
   @Roles(Role.ECO_TRAVELER)
   @Post(':id/items')
-  addItem(@Req() req: any, @Param('id') id: string, @Body() dto: AddTripPlanItemDto) {
+  addItem(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: AddTripPlanItemDto,
+  ) {
     return this.service.addItem(id, req.user.sub, dto);
   }
 
@@ -84,7 +97,11 @@ export class TripPlanController {
   @ApiOperation({ summary: 'Supprimer un élément du plan' })
   @Roles(Role.ECO_TRAVELER)
   @Delete(':id/items/:itemId')
-  removeItem(@Req() req: any, @Param('id') id: string, @Param('itemId') itemId: string) {
+  removeItem(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
     return this.service.removeItem(id, itemId, req.user.sub);
   }
 

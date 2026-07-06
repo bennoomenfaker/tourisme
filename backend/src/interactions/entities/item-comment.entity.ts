@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('item_comments')
 export class ItemComment {
@@ -8,6 +13,8 @@ export class ItemComment {
   @Column('uuid') author_id!: string;
   @Column({ type: 'varchar' }) author_role!: string;
   @Column({ type: 'text' }) content!: string;
-  @Column({ type: 'uuid', nullable: true, default: null }) parent_id!: string | null;
+  @Column({ type: 'uuid', nullable: true, default: null }) parent_id!:
+    | string
+    | null;
   @CreateDateColumn() created_at!: Date;
 }

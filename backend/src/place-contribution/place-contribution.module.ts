@@ -11,7 +11,17 @@ import { PlaceContributionController } from './place-contribution.controller';
 import { PublicationModule } from '../publication/publication.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PlaceContribution, ContributionVote, Publication, EcoTraveler, Guide, ProjectOwner]), PublicationModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      PlaceContribution,
+      ContributionVote,
+      Publication,
+      EcoTraveler,
+      Guide,
+      ProjectOwner,
+    ]),
+    PublicationModule,
+  ],
   controllers: [PlaceContributionController],
   providers: [PlaceContributionService],
 })

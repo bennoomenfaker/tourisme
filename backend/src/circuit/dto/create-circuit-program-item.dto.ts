@@ -1,4 +1,16 @@
-import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Min,
+} from 'class-validator';
 
 export class CreateCircuitProgramItemDto {
   @IsString()
@@ -11,12 +23,16 @@ export class CreateCircuitProgramItemDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, { message: 'start_time doit être au format HH:MM ou HH:MM:SS' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, {
+    message: 'start_time doit être au format HH:MM ou HH:MM:SS',
+  })
   start_time?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, { message: 'end_time doit être au format HH:MM ou HH:MM:SS' })
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, {
+    message: 'end_time doit être au format HH:MM ou HH:MM:SS',
+  })
   end_time?: string;
 
   @IsOptional()

@@ -271,6 +271,9 @@ function StatusBadge({ status, reason }: { status: string; reason?: string | nul
       </div>
     );
   }
+  if (status === "draft") {
+    return <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">Brouillon</span>;
+  }
   return <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">En attente</span>;
 }
 
@@ -2019,6 +2022,14 @@ export default function DashboardPage() {
     } catch (e: any) { alert(e.message || "Erreur lors de la désactivation."); }
   }
 
+  async function handlePublishOffer(id: string) {
+    try {
+      await apiFetch(`/offers/${id}`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: 'approved' }) });
+      setOffers((prev) => prev.map((o) => o.id === id ? { ...o, status: 'approved' } : o));
+      setOfferActionMenu(null);
+    } catch (e: any) { alert(e.message || "Erreur lors de la publication."); }
+  }
+
   async function handleViewLinkedCircuits(id: string) {
     try {
       const circuits = await apiFetch<any[]>(`/offers/${id}/linked-circuits`, { headers: { Authorization: `Bearer ${token}` } });
@@ -2905,6 +2916,11 @@ export default function DashboardPage() {
                               </button>
                               {offerActionMenu === offer.id && (
                                 <div className="absolute top-full right-0 mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 min-w-[200px]" onClick={() => setOfferActionMenu(null)}>
+                                  {offer.status === 'draft' && (
+                                    <button onClick={async () => { await handlePublishOffer(offer.id); setOfferActionMenu(null); }} className="w-full text-left px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 flex items-center gap-2">
+                                      <span className="material-symbols-outlined text-sm">check_circle</span> Publier
+                                    </button>
+                                  )}
                                   <button onClick={() => { setEditingOffer(offer); setOfferActionMenu(null); }} className="w-full text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
                                     <span className="material-symbols-outlined text-sm">edit</span> Modifier
                                   </button>

@@ -47,8 +47,16 @@ export class OfferController {
   async create(@Req() req: any, @Body() dto: CreateOfferDto) {
     const userId = req.user.sub;
     const mongoService = this.projectOwnerMongoService;
-    const hasAmbassador = await mongoService.hasBadge(userId, PROJECT_AMBASSADOR_BADGE);
-    return this.service.create(userId, 'project_owner', dto, hasAmbassador ? 'approved' : 'pending');
+    const hasAmbassador = await mongoService.hasBadge(
+      userId,
+      PROJECT_AMBASSADOR_BADGE,
+    );
+    return this.service.create(
+      userId,
+      'project_owner',
+      dto,
+      hasAmbassador ? 'approved' : 'pending',
+    );
   }
 
   /** Mes propres offres (dashboard) */
@@ -70,8 +78,14 @@ export class OfferController {
   /** Toutes les offres approuvées (page Destinations) */
   @Public()
   @Get()
-  findAllPublic(@Query('region') region?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
-    const pagination = page ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 } : undefined;
+  findAllPublic(
+    @Query('region') region?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pagination = page
+      ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 }
+      : undefined;
     return this.service.findAllPublic(region, pagination);
   }
 
@@ -103,13 +117,21 @@ export class OfferController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    const pagination = page ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 } : undefined;
-    return this.service.findPublic(category, excludeAuthor, region, {
-      lat: lat ? Number(lat) : undefined,
-      lng: lng ? Number(lng) : undefined,
-      radiusKm: radiusKm ? Number(radiusKm) : undefined,
-      itemType,
-    }, pagination);
+    const pagination = page
+      ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 }
+      : undefined;
+    return this.service.findPublic(
+      category,
+      excludeAuthor,
+      region,
+      {
+        lat: lat ? Number(lat) : undefined,
+        lng: lng ? Number(lng) : undefined,
+        radiusKm: radiusKm ? Number(radiusKm) : undefined,
+        itemType,
+      },
+      pagination,
+    );
   }
 
   /** Lieux populaires pour la heatmap */
@@ -130,7 +152,11 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Patch(':id/sustainability')
-  updateSustainability(@Req() req: any, @Param('id') id: string, @Body() dto: OfferSustainabilityDto) {
+  updateSustainability(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: OfferSustainabilityDto,
+  ) {
     return this.service.updateOfferSustainability(req.user.sub, id, dto);
   }
 
@@ -138,7 +164,11 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Patch(':id')
-  update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateOfferDto) {
+  update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateOfferDto,
+  ) {
     return this.service.update(req.user.sub, id, dto);
   }
 
@@ -195,7 +225,10 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Post(':offerId/items')
-  createItem(@Param('offerId') offerId: string, @Body() dto: CreateOfferItemDto) {
+  createItem(
+    @Param('offerId') offerId: string,
+    @Body() dto: CreateOfferItemDto,
+  ) {
     return this.service.createItem(offerId, dto);
   }
 
@@ -228,7 +261,10 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Post('items/:itemId/prices')
-  addPrice(@Param('itemId') itemId: string, @Body() dto: CreateOfferItemPriceDto) {
+  addPrice(
+    @Param('itemId') itemId: string,
+    @Body() dto: CreateOfferItemPriceDto,
+  ) {
     return this.service.addPrice(itemId, dto);
   }
 
@@ -236,7 +272,10 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Patch('items/prices/:priceId')
-  updatePrice(@Param('priceId') priceId: string, @Body() dto: UpdateOfferItemPriceDto) {
+  updatePrice(
+    @Param('priceId') priceId: string,
+    @Body() dto: UpdateOfferItemPriceDto,
+  ) {
     return this.service.updatePrice(priceId, dto);
   }
 
@@ -254,7 +293,10 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Post('items/:itemId/availability')
-  addAvailabilityRule(@Param('itemId') itemId: string, @Body() dto: CreateAvailabilityRuleDto) {
+  addAvailabilityRule(
+    @Param('itemId') itemId: string,
+    @Body() dto: CreateAvailabilityRuleDto,
+  ) {
     return this.service.addAvailabilityRule(itemId, dto);
   }
 
@@ -295,7 +337,10 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Post('items/:itemId/capacity')
-  setCapacity(@Param('itemId') itemId: string, @Body() dto: { capacity_type: string; total_quantity: number }) {
+  setCapacity(
+    @Param('itemId') itemId: string,
+    @Body() dto: { capacity_type: string; total_quantity: number },
+  ) {
     return this.service.setCapacity(itemId, dto);
   }
 
@@ -320,7 +365,10 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Post('items/:itemId/sessions')
-  createSession(@Param('itemId') itemId: string, @Body() dto: CreateOfferItemSessionDto) {
+  createSession(
+    @Param('itemId') itemId: string,
+    @Body() dto: CreateOfferItemSessionDto,
+  ) {
     return this.service.createSession(itemId, dto);
   }
 
@@ -328,7 +376,10 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Patch('items/sessions/:sessionId')
-  updateSession(@Param('sessionId') sessionId: string, @Body() dto: UpdateOfferItemSessionDto) {
+  updateSession(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: UpdateOfferItemSessionDto,
+  ) {
     return this.service.updateSession(sessionId, dto);
   }
 

@@ -17,7 +17,18 @@ import { CircuitReservation } from '../circuit/entities/circuit-reservation.enti
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TripPlan, TripPlanItem, Booking, BookingParticipant, OfferItemSession, GuideOffering, GuideOfferingSession, Offer, Circuit, CircuitReservation]),
+    TypeOrmModule.forFeature([
+      TripPlan,
+      TripPlanItem,
+      Booking,
+      BookingParticipant,
+      OfferItemSession,
+      GuideOffering,
+      GuideOfferingSession,
+      Offer,
+      Circuit,
+      CircuitReservation,
+    ]),
     NotificationModule,
     EcoTravelerModule,
   ],

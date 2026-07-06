@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, In } from 'typeorm';
 import { TripPlan } from './entities/trip-plan.entity';
 import { TripPlanItem } from './entities/trip-plan-item.entity';
 import { CreateTripPlanDto } from './dto/create-trip-plan.dto';
 import { UpdateTripPlanDto } from './dto/update-trip-plan.dto';
-import { AddTripPlanItemDto, UpdateTripPlanItemDto } from './dto/add-trip-plan-item.dto';
+import {
+  AddTripPlanItemDto,
+  UpdateTripPlanItemDto,
+} from './dto/add-trip-plan-item.dto';
 import { BookTripPlanDto } from './dto/book-trip-plan.dto';
 import { User } from '../users/entities/user.entity';
 import { OfferItem } from '../offer/entities/offer-item.entity';
@@ -50,7 +58,10 @@ export class TripPlanService {
 
   // ─── TripPlan CRUD ───────────────────────────────────
 
-  async create(ecoTravelerId: string, dto: CreateTripPlanDto): Promise<TripPlan> {
+  async create(
+    ecoTravelerId: string,
+    dto: CreateTripPlanDto,
+  ): Promise<TripPlan> {
     const plan = this.tripPlanRepo.create({
       ecoTraveler: { id: ecoTravelerId } as User,
       title: dto.title,
@@ -60,7 +71,9 @@ export class TripPlanService {
     });
     const saved = await this.tripPlanRepo.save(plan);
 
-    this.mongoService.incrementStat(ecoTravelerId, 'plans_shared').catch(() => {});
+    this.mongoService
+      .incrementStat(ecoTravelerId, 'plans_shared')
+      .catch(() => {});
 
     return saved;
   }
@@ -76,7 +89,14 @@ export class TripPlanService {
   async findById(id: string): Promise<TripPlan> {
     const plan = await this.tripPlanRepo.findOne({
       where: { id },
-      relations: ['items', 'items.offerItem', 'items.offerItem.offer', 'items.offerItem.prices', 'items.circuit', 'ecoTraveler'],
+      relations: [
+        'items',
+        'items.offerItem',
+        'items.offerItem.offer',
+        'items.offerItem.prices',
+        'items.circuit',
+        'ecoTraveler',
+      ],
     });
     if (!plan) throw new NotFoundException('Plan de voyage introuvable');
     return plan;
@@ -90,7 +110,11 @@ export class TripPlanService {
     return plan;
   }
 
-  async update(id: string, ecoTravelerId: string, dto: UpdateTripPlanDto): Promise<TripPlan> {
+  async update(
+    id: string,
+    ecoTravelerId: string,
+    dto: UpdateTripPlanDto,
+  ): Promise<TripPlan> {
     const plan = await this.findByIdForOwner(id, ecoTravelerId);
     Object.assign(plan, {
       ...dto,
@@ -107,7 +131,11 @@ export class TripPlanService {
 
   // ─── TripPlan Items ──────────────────────────────────
 
-  async addItem(tripPlanId: string, ecoTravelerId: string, dto: AddTripPlanItemDto): Promise<TripPlanItem> {
+  async addItem(
+    tripPlanId: string,
+    ecoTravelerId: string,
+    dto: AddTripPlanItemDto,
+  ): Promise<TripPlanItem> {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
 
     const hasOfferItem = !!dto.offer_item_id;
@@ -115,17 +143,25 @@ export class TripPlanService {
     const hasGuideOffering = !!dto.guide_offering_id;
 
     if (!hasOfferItem && !hasCircuit && !hasGuideOffering) {
-      throw new BadRequestException('Vous devez fournir offer_item_id, circuit_id ou guide_offering_id');
+      throw new BadRequestException(
+        'Vous devez fournir offer_item_id, circuit_id ou guide_offering_id',
+      );
     }
-    if ([hasOfferItem, hasCircuit, hasGuideOffering].filter(Boolean).length > 1) {
-      throw new BadRequestException('Vous ne pouvez fournir qu\'un seul type d\'élément');
+    if (
+      [hasOfferItem, hasCircuit, hasGuideOffering].filter(Boolean).length > 1
+    ) {
+      throw new BadRequestException(
+        "Vous ne pouvez fournir qu'un seul type d'élément",
+      );
     }
 
     const item = this.itemRepo.create({
       tripPlan: { id: tripPlanId } as TripPlan,
       offerItem: hasOfferItem ? ({ id: dto.offer_item_id } as OfferItem) : null,
       circuit: hasCircuit ? ({ id: dto.circuit_id } as Circuit) : null,
-      guideOffering: hasGuideOffering ? ({ id: dto.guide_offering_id } as GuideOffering) : null,
+      guideOffering: hasGuideOffering
+        ? ({ id: dto.guide_offering_id } as GuideOffering)
+        : null,
       day_number: dto.day_number ?? null,
       sort_order: dto.sort_order ?? 0,
       lat: dto.lat ?? null,
@@ -152,7 +188,11 @@ export class TripPlanService {
     return this.itemRepo.save(item);
   }
 
-  async removeItem(tripPlanId: string, itemId: string, ecoTravelerId: string): Promise<void> {
+  async removeItem(
+    tripPlanId: string,
+    itemId: string,
+    ecoTravelerId: string,
+  ): Promise<void> {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
 
     const item = await this.itemRepo.findOne({
@@ -165,17 +205,32 @@ export class TripPlanService {
 
   // ─── Booking from TripPlan ───────────────────────────
 
-  async book(tripPlanId: string, ecoTravelerId: string, dto: BookTripPlanDto): Promise<Booking[]> {
+  async book(
+    tripPlanId: string,
+    ecoTravelerId: string,
+    dto: BookTripPlanDto,
+  ): Promise<Booking[]> {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
     const fullPlan = await this.tripPlanRepo.findOne({
       where: { id: tripPlanId },
-      relations: ['items', 'items.offerItem', 'items.offerItem.offer', 'items.offerItem.prices', 'items.circuit', 'items.guideOffering', 'items.guideOfferingSession'],
+      relations: [
+        'items',
+        'items.offerItem',
+        'items.offerItem.offer',
+        'items.offerItem.prices',
+        'items.circuit',
+        'items.guideOffering',
+        'items.guideOfferingSession',
+      ],
     });
     if (!fullPlan?.items?.length) {
-      throw new BadRequestException('Ce plan ne contient aucun élément à réserver');
+      throw new BadRequestException(
+        'Ce plan ne contient aucun élément à réserver',
+      );
     }
 
-    const participantCount = dto.participants?.filter(p => p.full_name?.trim())?.length ?? 1;
+    const participantCount =
+      dto.participants?.filter((p) => p.full_name?.trim())?.length ?? 1;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -189,13 +244,17 @@ export class TripPlanService {
         // ── Reserver un circuit ──
         if (item.circuit) {
           const circuit = item.circuit;
-          if (circuit.max_participants && participantCount > circuit.max_participants) {
+          if (
+            circuit.max_participants &&
+            participantCount > circuit.max_participants
+          ) {
             throw new BadRequestException(
-              `Le nombre de participants (${participantCount}) dépasse la limite pour le circuit "${circuit.title}" (${circuit.max_participants} max)`
+              `Le nombre de participants (${participantCount}) dépasse la limite pour le circuit "${circuit.title}" (${circuit.max_participants} max)`,
             );
           }
 
-          const reservationStatus = circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
+          const reservationStatus =
+            circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
           const reservation = queryRunner.manager.create(CircuitReservation, {
             circuit: { id: circuit.id } as Circuit,
             user: { id: ecoTravelerId } as User,
@@ -209,12 +268,27 @@ export class TripPlanService {
           circuitReservationsCount++;
 
           if (circuit.author_id) {
-            const notifType = reservationStatus === 'confirmed' ? 'booking_confirmed' : 'booking_request';
-            const notifTitle = reservationStatus === 'confirmed' ? 'Réservation circuit confirmée' : 'Demande de réservation circuit';
-            const notifBody = reservationStatus === 'confirmed'
-              ? `Un voyageur a réservé le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan.`
-              : `Un voyageur souhaite réserver le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan. En attente de confirmation.`;
-            this.notificationService.create(circuit.author_id, notifType, notifTitle, notifBody, `/dashboard/incoming`).catch(() => {});
+            const notifType =
+              reservationStatus === 'confirmed'
+                ? 'booking_confirmed'
+                : 'booking_request';
+            const notifTitle =
+              reservationStatus === 'confirmed'
+                ? 'Réservation circuit confirmée'
+                : 'Demande de réservation circuit';
+            const notifBody =
+              reservationStatus === 'confirmed'
+                ? `Un voyageur a réservé le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan.`
+                : `Un voyageur souhaite réserver le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan. En attente de confirmation.`;
+            this.notificationService
+              .create(
+                circuit.author_id,
+                notifType,
+                notifTitle,
+                notifBody,
+                `/dashboard/incoming`,
+              )
+              .catch(() => {});
           }
           continue;
         }
@@ -225,31 +299,44 @@ export class TripPlanService {
           const guideSession = item.guideOfferingSession;
 
           if (guideOffering.status !== 'active') {
-            throw new BadRequestException(`La prestation "${guideOffering.title}" n'est pas active`);
+            throw new BadRequestException(
+              `La prestation "${guideOffering.title}" n'est pas active`,
+            );
           }
 
           if (!guideSession) {
             // Prendre la première session disponible si non spécifiée
             const session = await this.guideSessionRepo.findOne({
-              where: { guideOffering: { id: guideOffering.id }, status: 'available' },
+              where: {
+                guideOffering: { id: guideOffering.id },
+                status: 'available',
+              },
               order: { date: 'ASC' },
             });
             if (!session) {
-              throw new BadRequestException(`Aucune session disponible pour "${guideOffering.title}"`);
+              throw new BadRequestException(
+                `Aucune session disponible pour "${guideOffering.title}"`,
+              );
             }
             item.guideOfferingSession = session;
           }
 
           const sess = item.guideOfferingSession!;
 
-          if (sess.remaining_capacity !== null && participantCount > sess.remaining_capacity) {
+          if (
+            sess.remaining_capacity !== null &&
+            participantCount > sess.remaining_capacity
+          ) {
             throw new BadRequestException(
-              `Capacité insuffisante pour "${guideOffering.title}" : ${sess.remaining_capacity} place(s) restante(s)`
+              `Capacité insuffisante pour "${guideOffering.title}" : ${sess.remaining_capacity} place(s) restante(s)`,
             );
           }
 
           const totalPrice = Number(guideOffering.price) * participantCount;
-          const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+          const refSuffix = Math.random()
+            .toString(36)
+            .substring(2, 8)
+            .toUpperCase();
           const booking = queryRunner.manager.create(Booking, {
             booking_ref: `BK-${refSuffix}`,
             traveler: { id: ecoTravelerId } as User,
@@ -259,7 +346,10 @@ export class TripPlanService {
             currency: 'TND',
             special_requests: dto.special_requests ?? null,
             confirmation_mode: guideOffering.confirmation_mode ?? 'manual',
-            status: guideOffering.confirmation_mode === 'automatic' ? 'confirmed' : 'pending',
+            status:
+              guideOffering.confirmation_mode === 'automatic'
+                ? 'confirmed'
+                : 'pending',
           });
 
           const saved = await queryRunner.manager.save(Booking, booking);
@@ -279,23 +369,27 @@ export class TripPlanService {
           }
 
           // Décrémenter capacité session
-          const newRemaining = sess.remaining_capacity !== null
-            ? Math.max(0, sess.remaining_capacity - participantCount)
-            : null;
+          const newRemaining =
+            sess.remaining_capacity !== null
+              ? Math.max(0, sess.remaining_capacity - participantCount)
+              : null;
           await queryRunner.manager.update(GuideOfferingSession, sess.id, {
             remaining_capacity: newRemaining,
-            status: newRemaining !== null && newRemaining <= 0 ? 'full' : sess.status,
+            status:
+              newRemaining !== null && newRemaining <= 0 ? 'full' : sess.status,
           });
 
           bookings.push(saved);
 
-          this.notificationService.create(
-            guideOffering.guide_id,
-            'guide_booking',
-            'Réservation guide via Trip Plan',
-            `Un voyageur a réservé "${guideOffering.title}" pour ${participantCount} participant(s) le ${sess.date instanceof Date ? sess.date.toLocaleDateString('fr-FR') : sess.date}`,
-            `/dashboard/incoming`,
-          ).catch(() => {});
+          this.notificationService
+            .create(
+              guideOffering.guide_id,
+              'guide_booking',
+              'Réservation guide via Trip Plan',
+              `Un voyageur a réservé "${guideOffering.title}" pour ${participantCount} participant(s) le ${sess.date instanceof Date ? sess.date.toLocaleDateString('fr-FR') : sess.date}`,
+              `/dashboard/incoming`,
+            )
+            .catch(() => {});
 
           continue;
         }
@@ -309,17 +403,21 @@ export class TripPlanService {
 
         if (offer.max_group_size && participantCount > offer.max_group_size) {
           throw new BadRequestException(
-            `Le nombre de participants (${participantCount}) dépasse la limite autorisée pour "${offer.title}" (${offer.max_group_size} max)`
+            `Le nombre de participants (${participantCount}) dépasse la limite autorisée pour "${offer.title}" (${offer.max_group_size} max)`,
           );
         }
 
-        if (offer.min_age != null && dto.participants?.some(p => p.age != null && p.age < offer.min_age!)) {
+        if (
+          offer.min_age != null &&
+          dto.participants?.some((p) => p.age != null && p.age < offer.min_age!)
+        ) {
           throw new BadRequestException(
-            `Un participant est trop jeune pour "${offer.title}" (âge minimum: ${offer.min_age} ans)`
+            `Un participant est trop jeune pour "${offer.title}" (âge minimum: ${offer.min_age} ans)`,
           );
         }
 
-        const defaultPrice = offerItem.prices?.find((p) => p.is_default) ?? offerItem.prices?.[0];
+        const defaultPrice =
+          offerItem.prices?.find((p) => p.is_default) ?? offerItem.prices?.[0];
         let totalPrice = 0;
         if (defaultPrice) {
           const unitPrice = Number(defaultPrice.price);
@@ -335,7 +433,8 @@ export class TripPlanService {
               totalPrice = unitPrice * nights;
               break;
             case 'per_bed': {
-              const bedCount = offerItem.details_json?.bed_count ?? participantCount;
+              const bedCount =
+                offerItem.details_json?.bed_count ?? participantCount;
               totalPrice = unitPrice * bedCount * nights;
               break;
             }
@@ -348,7 +447,10 @@ export class TripPlanService {
           totalPrice = Number(offer.price) * participantCount;
         }
 
-        const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const refSuffix = Math.random()
+          .toString(36)
+          .substring(2, 8)
+          .toUpperCase();
         const booking = queryRunner.manager.create(Booking, {
           booking_ref: `BK-${refSuffix}`,
           traveler: { id: ecoTravelerId } as User,
@@ -357,7 +459,8 @@ export class TripPlanService {
           total_price: totalPrice,
           special_requests: dto.special_requests ?? null,
           confirmation_mode: offer.confirmation_mode ?? 'automatic',
-          status: offer.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
+          status:
+            offer.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
         });
 
         const saved = await queryRunner.manager.save(Booking, booking);
@@ -379,13 +482,28 @@ export class TripPlanService {
         bookings.push(saved);
 
         if (offer.author_id) {
-          const notifType = offer.confirmation_mode === 'manual' ? 'booking_request' : 'booking_confirmed';
-          const notifTitle = offer.confirmation_mode === 'manual' ? 'Demande de réservation Trip Plan' : 'Réservation Trip Plan confirmée';
-          const notifBody = offer.confirmation_mode === 'manual'
-            ? `Un voyageur réserve "${offer.title}" via un Trip Plan. ${participantCount} participant(s). En attente de votre confirmation.`
-            : `Un voyageur a réservé "${offer.title}" via un Trip Plan. ${participantCount} participant(s). Réservation confirmée automatiquement.`;
+          const notifType =
+            offer.confirmation_mode === 'manual'
+              ? 'booking_request'
+              : 'booking_confirmed';
+          const notifTitle =
+            offer.confirmation_mode === 'manual'
+              ? 'Demande de réservation Trip Plan'
+              : 'Réservation Trip Plan confirmée';
+          const notifBody =
+            offer.confirmation_mode === 'manual'
+              ? `Un voyageur réserve "${offer.title}" via un Trip Plan. ${participantCount} participant(s). En attente de votre confirmation.`
+              : `Un voyageur a réservé "${offer.title}" via un Trip Plan. ${participantCount} participant(s). Réservation confirmée automatiquement.`;
           const notifLink = `/dashboard/incoming`;
-          this.notificationService.create(offer.author_id, notifType, notifTitle, notifBody, notifLink).catch(() => {});
+          this.notificationService
+            .create(
+              offer.author_id,
+              notifType,
+              notifTitle,
+              notifBody,
+              notifLink,
+            )
+            .catch(() => {});
         }
       }
 
@@ -394,25 +512,37 @@ export class TripPlanService {
 
       await queryRunner.commitTransaction();
 
-      this.mongoService.incrementStat(ecoTravelerId, 'reservations_made').catch(() => {});
+      this.mongoService
+        .incrementStat(ecoTravelerId, 'reservations_made')
+        .catch(() => {});
 
       const offerCount = bookings.length;
       const totalCount = offerCount + circuitReservationsCount;
-      this.notificationService.create(
-        ecoTravelerId,
-        'booking_request',
-        'Réservation Trip Plan',
-        `${totalCount} élément${totalCount > 1 ? 's' : ''} réservé${totalCount > 1 ? 's' : ''} depuis votre Trip Plan.`,
-        `/trip-plans/${tripPlanId}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          ecoTravelerId,
+          'booking_request',
+          'Réservation Trip Plan',
+          `${totalCount} élément${totalCount > 1 ? 's' : ''} réservé${totalCount > 1 ? 's' : ''} depuis votre Trip Plan.`,
+          `/trip-plans/${tripPlanId}`,
+        )
+        .catch(() => {});
 
       return this.bookingRepo.find({
         where: { id: In(bookings.map((b) => b.id)) },
-        relations: ['offer', 'offerItem', 'guideOffering', 'guideOfferingSession', 'participants'],
+        relations: [
+          'offer',
+          'offerItem',
+          'guideOffering',
+          'guideOfferingSession',
+          'participants',
+        ],
       });
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      throw new BadRequestException('Erreur lors de la réservation : ' + (err.message || 'erreur inconnu'));
+      throw new BadRequestException(
+        'Erreur lors de la réservation : ' + (err.message || 'erreur inconnu'),
+      );
     } finally {
       await queryRunner.release();
     }

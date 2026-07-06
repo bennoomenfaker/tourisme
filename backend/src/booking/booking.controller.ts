@@ -12,7 +12,10 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { BookingService } from './booking.service';
-import { CreateBookingDto, CreateGuideBookingDto } from './dto/create-booking.dto';
+import {
+  CreateBookingDto,
+  CreateGuideBookingDto,
+} from './dto/create-booking.dto';
 import { AddParticipantsDto } from './dto/add-participants.dto';
 import { Public } from '../common/decorators/public.decorator';
 
@@ -37,7 +40,10 @@ export class BookingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER)
   @Post('guide')
-  async createGuideBooking(@Req() req: any, @Body() dto: CreateGuideBookingDto) {
+  async createGuideBooking(
+    @Req() req: any,
+    @Body() dto: CreateGuideBookingDto,
+  ) {
     return this.service.createGuideBooking(req.user.sub, dto);
   }
 
@@ -72,8 +78,15 @@ export class BookingController {
     const isTraveler = booking.traveler.id === userId;
     const isProvider = booking.offer?.author_id === userId;
     const isGuideProvider = booking.guideOffering?.guide_id === userId;
-    if (!isTraveler && !isProvider && !isGuideProvider && req.user.role !== 'admin') {
-      throw new ForbiddenException('Vous ne pouvez consulter que vos propres réservations');
+    if (
+      !isTraveler &&
+      !isProvider &&
+      !isGuideProvider &&
+      req.user.role !== 'admin'
+    ) {
+      throw new ForbiddenException(
+        'Vous ne pouvez consulter que vos propres réservations',
+      );
     }
     return booking;
   }
@@ -84,7 +97,11 @@ export class BookingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER)
   @Patch(':id/cancel')
-  cancel(@Req() req: any, @Param('id') id: string, @Body('reason') reason?: string) {
+  cancel(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body('reason') reason?: string,
+  ) {
     return this.service.cancel(id, req.user.sub, reason);
   }
 
@@ -104,7 +121,11 @@ export class BookingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER)
   @Patch(':id/participants')
-  addParticipants(@Req() req: any, @Param('id') id: string, @Body() dto: AddParticipantsDto) {
+  addParticipants(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: AddParticipantsDto,
+  ) {
     return this.service.addParticipants(id, req.user.sub, dto.participants);
   }
 

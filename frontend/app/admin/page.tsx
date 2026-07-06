@@ -45,6 +45,7 @@ type PendingOffer = {
   cancellation_policy: string | null;
   sustainability_score: number | null;
   created_at: string;
+  status: string;
 };
 
 type PendingProject = {
@@ -409,7 +410,7 @@ function TypeBadge({ label }: { label: string }) {
 
 // ─── ContentCard ──────────────────────────────────────────────────────────────
 
-function ContentCard({ title, badge, meta, description, date, loading, onOpen, onApprove, onReject }: {
+function ContentCard({ title, badge, meta, description, date, loading, onOpen, onApprove, onReject, status }: {
   title: string;
   badge: string;
   meta: string;
@@ -419,12 +420,14 @@ function ContentCard({ title, badge, meta, description, date, loading, onOpen, o
   onOpen: () => void;
   onApprove: () => void;
   onReject: () => void;
+  status?: string;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-start gap-5">
       <button className="flex-1 min-w-0 text-left group" onClick={onOpen}>
         <div className="flex items-center gap-2 mb-1.5">
           <TypeBadge label={badge} />
+          {status === 'draft' && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">Brouillon</span>}
           <span className="text-xs font-medium text-slate-400">
             {new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
           </span>
@@ -828,6 +831,7 @@ export default function AdminPage() {
                   meta={[offer.offer_type, offer.duration, offer.price != null ? `${offer.price} TND` : null].filter(Boolean).join(" · ")}
                   description={offer.description}
                   date={offer.created_at}
+                  status={offer.status}
                   loading={actionLoading === offer.id}
                   onOpen={() => setDetailOffer(offer)}
                   onApprove={() => approve("offers", offer.id)}

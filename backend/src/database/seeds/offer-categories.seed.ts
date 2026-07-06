@@ -17,16 +17,16 @@ const dataSource = new DataSource({
 });
 
 const CATEGORIES = [
-  { slug: 'eco_tour',       label: 'Éco-Tour',       icon: 'eco',     sort_order: 1 },
-  { slug: 'accommodation',  label: 'Hébergement',     icon: 'house',   sort_order: 2 },
-  { slug: 'activity',       label: 'Activité',        icon: 'target',  sort_order: 3 },
-  { slug: 'restaurant',     label: 'Restauration',    icon: 'food',    sort_order: 4 },
-  { slug: 'craft',          label: 'Artisanat',       icon: 'craft',   sort_order: 5 },
-  { slug: 'workshop',       label: 'Atelier',         icon: 'tools',   sort_order: 6 },
-  { slug: 'transfer',       label: 'Transfert',       icon: 'van',     sort_order: 7 },
-  { slug: 'sejour',         label: 'Séjour',          icon: 'stay',    sort_order: 8 },
-  { slug: 'circuit',        label: 'Circuit',         icon: 'route',   sort_order: 9 },
-  { slug: 'other',          label: 'Autre',           icon: 'other',   sort_order: 10 },
+  { slug: 'eco_tour', label: 'Éco-Tour', icon: 'eco', sort_order: 1 },
+  { slug: 'accommodation', label: 'Hébergement', icon: 'house', sort_order: 2 },
+  { slug: 'activity', label: 'Activité', icon: 'target', sort_order: 3 },
+  { slug: 'restaurant', label: 'Restauration', icon: 'food', sort_order: 4 },
+  { slug: 'craft', label: 'Artisanat', icon: 'craft', sort_order: 5 },
+  { slug: 'workshop', label: 'Atelier', icon: 'tools', sort_order: 6 },
+  { slug: 'transfer', label: 'Transfert', icon: 'van', sort_order: 7 },
+  { slug: 'sejour', label: 'Séjour', icon: 'stay', sort_order: 8 },
+  { slug: 'circuit', label: 'Circuit', icon: 'route', sort_order: 9 },
+  { slug: 'other', label: 'Autre', icon: 'other', sort_order: 10 },
 ];
 
 async function seed() {
@@ -49,7 +49,9 @@ async function seed() {
     created++;
   }
 
-  console.log(`Seeded ${created} offer categories (${CATEGORIES.length - created} already existed).`);
+  console.log(
+    `Seeded ${created} offer categories (${CATEGORIES.length - created} already existed).`,
+  );
   await dataSource.destroy();
 }
 

@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
@@ -53,7 +63,11 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Patch(':id')
-  update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateGuideOfferingDto) {
+  update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateGuideOfferingDto,
+  ) {
     return this.service.update(req.user.sub, id, dto);
   }
 
@@ -67,7 +81,10 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Post(':id/availability')
-  addAvailabilityRule(@Param('id') id: string, @Body() dto: CreateGuideOfferingAvailabilityRuleDto) {
+  addAvailabilityRule(
+    @Param('id') id: string,
+    @Body() dto: CreateGuideOfferingAvailabilityRuleDto,
+  ) {
     return this.service.addAvailabilityRule(id, dto);
   }
 
@@ -102,14 +119,21 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Post(':id/sessions')
-  createSession(@Param('id') id: string, @Body() dto: CreateGuideOfferingSessionDto) {
+  createSession(
+    @Param('id') id: string,
+    @Body() dto: CreateGuideOfferingSessionDto,
+  ) {
     return this.service.createSession(id, dto);
   }
 
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Delete(':id/sessions/:sessionId')
-  removeSession(@Req() req: any, @Param('id') id: string, @Param('sessionId') sessionId: string) {
+  removeSession(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('sessionId') sessionId: string,
+  ) {
     return this.service.removeSession(id, sessionId, req.user.sub);
   }
 
@@ -117,7 +141,12 @@ export class GuideOfferingController {
 
   @ApiBearerAuth('bearer')
   @Post(':id/sessions/:sessionId/book')
-  book(@Req() req: any, @Param('id') id: string, @Param('sessionId') sessionId: string, @Body() dto: CreateGuideBookingDto) {
+  book(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: CreateGuideBookingDto,
+  ) {
     dto.guide_offering_id = id;
     dto.guide_offering_session_id = sessionId;
     return this.bookingService.createGuideBooking(req.user.sub, dto);
@@ -134,7 +163,10 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Post(':id/blocks')
-  createBlock(@Param('id') id: string, @Body() dto: CreateGuideOfferingBlockDto) {
+  createBlock(
+    @Param('id') id: string,
+    @Body() dto: CreateGuideOfferingBlockDto,
+  ) {
     return this.service.createBlock(id, dto);
   }
 
@@ -156,7 +188,10 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Post(':id/prices')
-  createPrice(@Param('id') id: string, @Body() dto: CreateGuideOfferingPriceDto) {
+  createPrice(
+    @Param('id') id: string,
+    @Body() dto: CreateGuideOfferingPriceDto,
+  ) {
     return this.service.createPrice(id, dto);
   }
 

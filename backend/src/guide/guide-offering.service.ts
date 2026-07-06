@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GuideOffering } from './entities/guide-offering.entity';
@@ -33,7 +38,10 @@ export class GuideOfferingService {
     private readonly priceRepo: Repository<GuideOfferingPrice>,
   ) {}
 
-  async create(guideId: string, dto: CreateGuideOfferingDto): Promise<GuideOffering> {
+  async create(
+    guideId: string,
+    dto: CreateGuideOfferingDto,
+  ): Promise<GuideOffering> {
     const offering = this.repo.create({
       guide_id: guideId,
       title: dto.title,
@@ -81,36 +89,54 @@ export class GuideOfferingService {
     });
   }
 
-  async update(guideId: string, id: string, dto: UpdateGuideOfferingDto): Promise<GuideOffering> {
+  async update(
+    guideId: string,
+    id: string,
+    dto: UpdateGuideOfferingDto,
+  ): Promise<GuideOffering> {
     const offering = await this.findById(id);
-    if (offering.guide_id !== guideId) throw new ForbiddenException('Accès refusé.');
+    if (offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     if (dto.title !== undefined) offering.title = dto.title;
     if (dto.description !== undefined) offering.description = dto.description;
     if (dto.languages !== undefined) offering.languages = dto.languages;
     if (dto.price !== undefined) offering.price = dto.price;
-    if (dto.pricing_unit !== undefined) offering.pricing_unit = dto.pricing_unit;
-    if (dto.min_travelers !== undefined) offering.min_travelers = dto.min_travelers;
-    if (dto.max_travelers !== undefined) offering.max_travelers = dto.max_travelers;
-    if (dto.service_zone_type !== undefined) offering.service_zone_type = dto.service_zone_type;
+    if (dto.pricing_unit !== undefined)
+      offering.pricing_unit = dto.pricing_unit;
+    if (dto.min_travelers !== undefined)
+      offering.min_travelers = dto.min_travelers;
+    if (dto.max_travelers !== undefined)
+      offering.max_travelers = dto.max_travelers;
+    if (dto.service_zone_type !== undefined)
+      offering.service_zone_type = dto.service_zone_type;
     if (dto.lat !== undefined) offering.lat = dto.lat;
     if (dto.lng !== undefined) offering.lng = dto.lng;
     if (dto.radius_km !== undefined) offering.radius_km = dto.radius_km;
-    if (dto.zone_governorate !== undefined) offering.zone_governorate = dto.zone_governorate;
-    if (dto.zone_municipality !== undefined) offering.zone_municipality = dto.zone_municipality;
-    if (dto.displacement_allowed !== undefined) offering.displacement_allowed = dto.displacement_allowed;
-    if (dto.displacement_max_km !== undefined) offering.displacement_max_km = dto.displacement_max_km;
-    if (dto.displacement_type !== undefined) offering.displacement_type = dto.displacement_type;
+    if (dto.zone_governorate !== undefined)
+      offering.zone_governorate = dto.zone_governorate;
+    if (dto.zone_municipality !== undefined)
+      offering.zone_municipality = dto.zone_municipality;
+    if (dto.displacement_allowed !== undefined)
+      offering.displacement_allowed = dto.displacement_allowed;
+    if (dto.displacement_max_km !== undefined)
+      offering.displacement_max_km = dto.displacement_max_km;
+    if (dto.displacement_type !== undefined)
+      offering.displacement_type = dto.displacement_type;
     return this.repo.save(offering);
   }
 
   async remove(guideId: string, id: string): Promise<{ message: string }> {
     const offering = await this.findById(id);
-    if (offering.guide_id !== guideId) throw new ForbiddenException('Accès refusé.');
+    if (offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     await this.repo.remove(offering);
     return { message: 'Offre de guidage supprimée.' };
   }
 
-  async addAvailabilityRule(offeringId: string, dto: CreateGuideOfferingAvailabilityRuleDto): Promise<GuideOfferingAvailabilityRule> {
+  async addAvailabilityRule(
+    offeringId: string,
+    dto: CreateGuideOfferingAvailabilityRuleDto,
+  ): Promise<GuideOfferingAvailabilityRule> {
     await this.findById(offeringId);
     const rule = this.ruleRepo.create({
       guideOffering: { id: offeringId } as GuideOffering,
@@ -125,7 +151,9 @@ export class GuideOfferingService {
     return this.ruleRepo.save(rule);
   }
 
-  async findAvailabilityRules(offeringId: string): Promise<GuideOfferingAvailabilityRule[]> {
+  async findAvailabilityRules(
+    offeringId: string,
+  ): Promise<GuideOfferingAvailabilityRule[]> {
     await this.findById(offeringId);
     return this.ruleRepo.find({
       where: { guideOffering: { id: offeringId }, is_active: true },
@@ -135,14 +163,18 @@ export class GuideOfferingService {
 
   async removeAvailabilityRule(ruleId: string): Promise<{ message: string }> {
     const rule = await this.ruleRepo.findOne({ where: { id: ruleId } });
-    if (!rule) throw new NotFoundException('Règle de disponibilité introuvable.');
+    if (!rule)
+      throw new NotFoundException('Règle de disponibilité introuvable.');
     await this.ruleRepo.remove(rule);
     return { message: 'Règle supprimée.' };
   }
 
   // ─── Sessions ───────────────────────────────────────
 
-  async generateSessions(offeringId: string, daysAhead: number = 90): Promise<GuideOfferingSession[]> {
+  async generateSessions(
+    offeringId: string,
+    daysAhead: number = 90,
+  ): Promise<GuideOfferingSession[]> {
     const offering = await this.repo.findOne({
       where: { id: offeringId },
       relations: ['availabilityRules'],
@@ -150,7 +182,10 @@ export class GuideOfferingService {
     if (!offering) throw new NotFoundException('Offre de guidage introuvable.');
 
     const rules = (offering.availabilityRules ?? []).filter((r) => r.is_active);
-    if (!rules.length) throw new BadRequestException('Aucune règle de disponibilité active. Créez d\'abord une règle.');
+    if (!rules.length)
+      throw new BadRequestException(
+        "Aucune règle de disponibilité active. Créez d'abord une règle.",
+      );
 
     const capacity = offering.max_travelers ?? null;
 
@@ -161,9 +196,14 @@ export class GuideOfferingService {
     const bookedSessionIds: string[] = await this.bookingRepo
       .createQueryBuilder()
       .select('"guide_offering_session_id"')
-      .where('"guide_offering_session_id" IS NOT NULL AND status != :cancelled', { cancelled: 'cancelled' })
+      .where(
+        '"guide_offering_session_id" IS NOT NULL AND status != :cancelled',
+        { cancelled: 'cancelled' },
+      )
       .getRawMany()
-      .then((rows) => rows.map((r: any) => r.guide_offering_session_id).filter(Boolean));
+      .then((rows) =>
+        rows.map((r: any) => r.guide_offering_session_id).filter(Boolean),
+      );
     const bookedSet = new Set(bookedSessionIds);
     const deletable = existing.filter((s) => !bookedSet.has(s.id));
     if (deletable.length) {
@@ -188,17 +228,23 @@ export class GuideOfferingService {
             const start = new Date(rule.start_date);
             const end = new Date(rule.end_date);
             const weekdays = rule.weekdays;
-            for (let d = new Date(start); d <= end && d <= maxDate; d.setDate(d.getDate() + 1)) {
+            for (
+              let d = new Date(start);
+              d <= end && d <= maxDate;
+              d.setDate(d.getDate() + 1)
+            ) {
               if (d < today) continue;
               if (weekdays?.length && !weekdays.includes(d.getDay())) continue;
-              sessions.push(this.sessionRepo.create({
-                guideOffering: { id: offeringId } as GuideOffering,
-                date: d.toISOString().split('T')[0],
-                start_time: startTime,
-                end_time: endTime,
-                total_capacity: capacity,
-                remaining_capacity: capacity,
-              }));
+              sessions.push(
+                this.sessionRepo.create({
+                  guideOffering: { id: offeringId } as GuideOffering,
+                  date: d.toISOString().split('T')[0],
+                  start_time: startTime,
+                  end_time: endTime,
+                  total_capacity: capacity,
+                  remaining_capacity: capacity,
+                }),
+              );
             }
           }
           break;
@@ -206,31 +252,43 @@ export class GuideOfferingService {
 
         case 'weekly': {
           const weekdays = rule.weekdays ?? [1, 2, 3, 4, 5];
-          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
+          for (
+            let d = new Date(today);
+            d <= maxDate;
+            d.setDate(d.getDate() + 1)
+          ) {
             if (weekdays.includes(d.getDay())) {
-              sessions.push(this.sessionRepo.create({
-                guideOffering: { id: offeringId } as GuideOffering,
-                date: d.toISOString().split('T')[0],
-                start_time: startTime,
-                end_time: endTime,
-                total_capacity: capacity,
-                remaining_capacity: capacity,
-              }));
+              sessions.push(
+                this.sessionRepo.create({
+                  guideOffering: { id: offeringId } as GuideOffering,
+                  date: d.toISOString().split('T')[0],
+                  start_time: startTime,
+                  end_time: endTime,
+                  total_capacity: capacity,
+                  remaining_capacity: capacity,
+                }),
+              );
             }
           }
           break;
         }
 
         case 'daily': {
-          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
-            sessions.push(this.sessionRepo.create({
-              guideOffering: { id: offeringId } as GuideOffering,
-              date: d.toISOString().split('T')[0],
-              start_time: startTime,
-              end_time: endTime,
-              total_capacity: capacity,
-              remaining_capacity: capacity,
-            }));
+          for (
+            let d = new Date(today);
+            d <= maxDate;
+            d.setDate(d.getDate() + 1)
+          ) {
+            sessions.push(
+              this.sessionRepo.create({
+                guideOffering: { id: offeringId } as GuideOffering,
+                date: d.toISOString().split('T')[0],
+                start_time: startTime,
+                end_time: endTime,
+                total_capacity: capacity,
+                remaining_capacity: capacity,
+              }),
+            );
           }
           break;
         }
@@ -248,7 +306,10 @@ export class GuideOfferingService {
     });
   }
 
-  async createSession(offeringId: string, dto: CreateGuideOfferingSessionDto): Promise<GuideOfferingSession> {
+  async createSession(
+    offeringId: string,
+    dto: CreateGuideOfferingSessionDto,
+  ): Promise<GuideOfferingSession> {
     await this.findById(offeringId);
     const session = this.sessionRepo.create({
       guideOffering: { id: offeringId } as GuideOffering,
@@ -262,10 +323,17 @@ export class GuideOfferingService {
     return this.sessionRepo.save(session);
   }
 
-  async removeSession(offeringId: string, sessionId: string, guideId: string): Promise<{ message: string }> {
+  async removeSession(
+    offeringId: string,
+    sessionId: string,
+    guideId: string,
+  ): Promise<{ message: string }> {
     const offering = await this.findById(offeringId);
-    if (offering.guide_id !== guideId) throw new ForbiddenException('Accès refusé.');
-    const session = await this.sessionRepo.findOne({ where: { id: sessionId, guideOffering: { id: offeringId } } });
+    if (offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId, guideOffering: { id: offeringId } },
+    });
     if (!session) throw new NotFoundException('Session introuvable.');
     await this.sessionRepo.remove(session);
     return { message: 'Session supprimée.' };
@@ -280,7 +348,10 @@ export class GuideOfferingService {
     });
   }
 
-  async createBlock(offeringId: string, dto: CreateGuideOfferingBlockDto): Promise<GuideOfferingBlock> {
+  async createBlock(
+    offeringId: string,
+    dto: CreateGuideOfferingBlockDto,
+  ): Promise<GuideOfferingBlock> {
     const offering = await this.repo.findOne({ where: { id: offeringId } });
     if (!offering) throw new NotFoundException('Prestation introuvable.');
     const block = this.blockRepo.create({
@@ -308,7 +379,10 @@ export class GuideOfferingService {
     });
   }
 
-  async createPrice(offeringId: string, dto: CreateGuideOfferingPriceDto): Promise<GuideOfferingPrice> {
+  async createPrice(
+    offeringId: string,
+    dto: CreateGuideOfferingPriceDto,
+  ): Promise<GuideOfferingPrice> {
     const offering = await this.repo.findOne({ where: { id: offeringId } });
     if (!offering) throw new NotFoundException('Prestation introuvable.');
     const price = this.priceRepo.create({

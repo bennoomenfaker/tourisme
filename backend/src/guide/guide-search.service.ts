@@ -33,19 +33,26 @@ export class GuideSearchService {
     min_rating?: number;
   }) {
     // 1. Filtrage guide (status + query)
-    const guideQb = this.guideRepo.createQueryBuilder('guide')
+    const guideQb = this.guideRepo
+      .createQueryBuilder('guide')
       .where('guide.status = :status', { status: 'active' });
 
     if (params.query) {
-      guideQb.andWhere('LOWER(guide.full_name) LIKE :q', { q: `%${params.query.toLowerCase()}%` });
+      guideQb.andWhere('LOWER(guide.full_name) LIKE :q', {
+        q: `%${params.query.toLowerCase()}%`,
+      });
     }
 
     if (params.zone) {
-      guideQb.andWhere('LOWER(guide.zone) LIKE :zone', { zone: `%${params.zone.toLowerCase()}%` });
+      guideQb.andWhere('LOWER(guide.zone) LIKE :zone', {
+        zone: `%${params.zone.toLowerCase()}%`,
+      });
     }
 
     if (params.min_rating !== undefined) {
-      guideQb.andWhere('guide.sustainability_score >= :minRating', { minRating: params.min_rating });
+      guideQb.andWhere('guide.sustainability_score >= :minRating', {
+        minRating: params.min_rating,
+      });
     }
 
     const guides = await guideQb.getMany();
@@ -53,18 +60,25 @@ export class GuideSearchService {
     const guideIds = guides.map((g) => g.user_id);
 
     // 2. Filtrage offres
-    const offQb = this.offeringRepo.createQueryBuilder('offering')
+    const offQb = this.offeringRepo
+      .createQueryBuilder('offering')
       .where('offering.guide_id IN (:...guideIds)', { guideIds })
       .andWhere('offering.status = :active', { active: 'active' });
 
     if (params.max_price !== undefined) {
-      offQb.andWhere('offering.price <= :maxPrice', { maxPrice: params.max_price });
+      offQb.andWhere('offering.price <= :maxPrice', {
+        maxPrice: params.max_price,
+      });
     }
     if (params.language) {
-      offQb.andWhere('offering.languages LIKE :lang', { lang: `%${params.language}%` });
+      offQb.andWhere('offering.languages LIKE :lang', {
+        lang: `%${params.language}%`,
+      });
     }
     if (params.displacement_allowed !== undefined) {
-      offQb.andWhere('offering.displacement_allowed = :disp', { disp: params.displacement_allowed });
+      offQb.andWhere('offering.displacement_allowed = :disp', {
+        disp: params.displacement_allowed,
+      });
     }
 
     // 3. Filtrage spatial en SQL (haversine)
@@ -129,7 +143,11 @@ export class GuideSearchService {
           },
         });
 
-        if (session && session.remaining_capacity !== null && session.remaining_capacity > 0) {
+        if (
+          session &&
+          session.remaining_capacity !== null &&
+          session.remaining_capacity > 0
+        ) {
           continue; // disponible via session
         }
 
@@ -144,10 +162,16 @@ export class GuideSearchService {
         const targetDay = targetDate.getDay();
         const isAvailable = rules.some((rule) => {
           if (rule.availability_type === 'on_demand') return true;
-          if (rule.availability_type === 'date_range' || rule.availability_type === 'weekly') {
-            if (rule.start_date && targetDate < new Date(rule.start_date)) return false;
-            if (rule.end_date && targetDate > new Date(rule.end_date)) return false;
-            if (rule.weekdays?.length && !rule.weekdays.includes(targetDay)) return false;
+          if (
+            rule.availability_type === 'date_range' ||
+            rule.availability_type === 'weekly'
+          ) {
+            if (rule.start_date && targetDate < new Date(rule.start_date))
+              return false;
+            if (rule.end_date && targetDate > new Date(rule.end_date))
+              return false;
+            if (rule.weekdays?.length && !rule.weekdays.includes(targetDay))
+              return false;
             return true;
           }
           if (rule.availability_type === 'daily') return true;

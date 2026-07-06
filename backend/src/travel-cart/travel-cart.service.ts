@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TravelCart } from './entities/travel-cart.entity';
@@ -60,19 +64,35 @@ export class TravelCartService {
   async findById(id: string, userId: string): Promise<TravelCart> {
     const cart = await this.cartRepo.findOne({
       where: { id, user: { id: userId } as any },
-      relations: ['items', 'items.offerItem', 'items.offerItem.offer', 'items.circuit', 'items.session', 'items.offerItem.prices', 'items.circuit.options'],
+      relations: [
+        'items',
+        'items.offerItem',
+        'items.offerItem.offer',
+        'items.circuit',
+        'items.session',
+        'items.offerItem.prices',
+        'items.circuit.options',
+      ],
     });
     if (!cart) throw new NotFoundException('Panier introuvable');
     return cart;
   }
 
-  async updateCart(id: string, userId: string, dto: UpdateCartDto): Promise<TravelCart> {
+  async updateCart(
+    id: string,
+    userId: string,
+    dto: UpdateCartDto,
+  ): Promise<TravelCart> {
     const cart = await this.findById(id, userId);
     if (dto.title !== undefined) cart.title = dto.title;
-    if (dto.description !== undefined) cart.description = dto.description ?? null;
-    if (dto.start_date !== undefined) cart.start_date = dto.start_date ? new Date(dto.start_date) : null;
-    if (dto.end_date !== undefined) cart.end_date = dto.end_date ? new Date(dto.end_date) : null;
-    if (dto.participant_count !== undefined) cart.participant_count = dto.participant_count ?? null;
+    if (dto.description !== undefined)
+      cart.description = dto.description ?? null;
+    if (dto.start_date !== undefined)
+      cart.start_date = dto.start_date ? new Date(dto.start_date) : null;
+    if (dto.end_date !== undefined)
+      cart.end_date = dto.end_date ? new Date(dto.end_date) : null;
+    if (dto.participant_count !== undefined)
+      cart.participant_count = dto.participant_count ?? null;
     await this.cartRepo.save(cart);
     return this.findById(id, userId);
   }
@@ -85,18 +105,24 @@ export class TravelCartService {
 
   // ─── Cart Items ─────────────────────────────────────────
 
-  async addItem(cartId: string, userId: string, dto: AddCartItemDto): Promise<TravelCartItem> {
+  async addItem(
+    cartId: string,
+    userId: string,
+    dto: AddCartItemDto,
+  ): Promise<TravelCartItem> {
     if (!dto.offer_item_id && !dto.circuit_id) {
-      throw new BadRequestException('Vous devez fournir offer_item_id ou circuit_id');
+      throw new BadRequestException(
+        'Vous devez fournir offer_item_id ou circuit_id',
+      );
     }
     if (dto.offer_item_id && dto.circuit_id) {
-      throw new BadRequestException('Un seul type d\'élément à la fois');
+      throw new BadRequestException("Un seul type d'élément à la fois");
     }
 
     const cart = await this.findById(cartId, userId);
 
-    let itemData: Partial<TravelCartItem> = {
-      cart: cart as TravelCart,
+    const itemData: Partial<TravelCartItem> = {
+      cart: cart,
       quantity: dto.quantity ?? 1,
       selected_date: dto.selected_date ? new Date(dto.selected_date) : null,
       selected_options: dto.selected_options ?? null,
@@ -104,16 +130,26 @@ export class TravelCartService {
     };
 
     if (dto.offer_item_id) {
-      const offerItem = await this.offerItemRepo.findOne({ where: { id: dto.offer_item_id }, relations: ['prices'] });
+      const offerItem = await this.offerItemRepo.findOne({
+        where: { id: dto.offer_item_id },
+        relations: ['prices'],
+      });
       if (!offerItem) throw new NotFoundException('OfferItem introuvable');
 
       itemData.offerItem = offerItem;
 
       if (dto.session_id) {
-        const session = await this.sessionRepo.findOne({ where: { id: dto.session_id } });
+        const session = await this.sessionRepo.findOne({
+          where: { id: dto.session_id },
+        });
         if (!session) throw new NotFoundException('Session introuvable');
-        if (session.remaining_capacity !== null && session.remaining_capacity < (dto.quantity ?? 1)) {
-          throw new BadRequestException('Pas assez de places pour cette session');
+        if (
+          session.remaining_capacity !== null &&
+          session.remaining_capacity < (dto.quantity ?? 1)
+        ) {
+          throw new BadRequestException(
+            'Pas assez de places pour cette session',
+          );
         }
         itemData.session = session;
         itemData.selected_date = new Date(session.date);
@@ -121,17 +157,24 @@ export class TravelCartService {
 
       // Calculer le prix estimé
       if (offerItem.prices?.length) {
-        const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
+        const priceRow =
+          offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
         itemData.unit_price = Number(priceRow.price);
         itemData.line_total = itemData.unit_price * (dto.quantity ?? 1);
       }
     } else if (dto.circuit_id) {
-      const circuit = await this.circuitRepo.findOne({ where: { id: dto.circuit_id } });
+      const circuit = await this.circuitRepo.findOne({
+        where: { id: dto.circuit_id },
+      });
       if (!circuit) throw new NotFoundException('Circuit introuvable');
 
       itemData.circuit = circuit;
-      itemData.unit_price = circuit.base_price ? Number(circuit.base_price) : null;
-      itemData.line_total = itemData.unit_price ? itemData.unit_price * (dto.quantity ?? 1) : null;
+      itemData.unit_price = circuit.base_price
+        ? Number(circuit.base_price)
+        : null;
+      itemData.line_total = itemData.unit_price
+        ? itemData.unit_price * (dto.quantity ?? 1)
+        : null;
     }
 
     const item = this.itemRepo.create(itemData);
@@ -145,14 +188,24 @@ export class TravelCartService {
     }) as Promise<TravelCartItem>;
   }
 
-  async updateItem(cartId: string, itemId: string, userId: string, dto: UpdateCartItemDto): Promise<TravelCartItem> {
+  async updateItem(
+    cartId: string,
+    itemId: string,
+    userId: string,
+    dto: UpdateCartItemDto,
+  ): Promise<TravelCartItem> {
     await this.findById(cartId, userId);
-    const item = await this.itemRepo.findOne({ where: { id: itemId, cart: { id: cartId } as any } });
-    if (!item) throw new NotFoundException('Élément introuvable dans le panier');
+    const item = await this.itemRepo.findOne({
+      where: { id: itemId, cart: { id: cartId } as any },
+    });
+    if (!item)
+      throw new NotFoundException('Élément introuvable dans le panier');
 
     if (dto.session_id !== undefined) {
       if (dto.session_id) {
-        const session = await this.sessionRepo.findOne({ where: { id: dto.session_id } });
+        const session = await this.sessionRepo.findOne({
+          where: { id: dto.session_id },
+        });
         if (!session) throw new NotFoundException('Session introuvable');
         item.session = session;
         item.selected_date = new Date(session.date);
@@ -160,7 +213,10 @@ export class TravelCartService {
         item.session = null;
       }
     }
-    if (dto.selected_date !== undefined) item.selected_date = dto.selected_date ? new Date(dto.selected_date) : null;
+    if (dto.selected_date !== undefined)
+      item.selected_date = dto.selected_date
+        ? new Date(dto.selected_date)
+        : null;
     if (dto.quantity !== undefined) {
       item.quantity = dto.quantity;
       // Recalculer le line_total
@@ -168,7 +224,8 @@ export class TravelCartService {
         item.line_total = item.unit_price * dto.quantity;
       }
     }
-    if (dto.selected_options !== undefined) item.selected_options = dto.selected_options;
+    if (dto.selected_options !== undefined)
+      item.selected_options = dto.selected_options;
     if (dto.notes !== undefined) item.notes = dto.notes;
 
     await this.itemRepo.save(item);
@@ -180,10 +237,17 @@ export class TravelCartService {
     }) as Promise<TravelCartItem>;
   }
 
-  async removeItem(cartId: string, itemId: string, userId: string): Promise<{ message: string }> {
+  async removeItem(
+    cartId: string,
+    itemId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
     await this.findById(cartId, userId);
-    const item = await this.itemRepo.findOne({ where: { id: itemId, cart: { id: cartId } as any } });
-    if (!item) throw new NotFoundException('Élément introuvable dans le panier');
+    const item = await this.itemRepo.findOne({
+      where: { id: itemId, cart: { id: cartId } as any },
+    });
+    if (!item)
+      throw new NotFoundException('Élément introuvable dans le panier');
     await this.itemRepo.remove(item);
     await this.recalculateTotal(cartId);
     return { message: 'Élément supprimé du panier.' };
@@ -191,7 +255,11 @@ export class TravelCartService {
 
   // ─── Convert to TripPlan ────────────────────────────────
 
-  async convertToTripPlan(cartId: string, userId: string, dto: ConvertCartToTripPlanDto): Promise<TripPlan> {
+  async convertToTripPlan(
+    cartId: string,
+    userId: string,
+    dto: ConvertCartToTripPlanDto,
+  ): Promise<TripPlan> {
     const cart = await this.findById(cartId, userId);
     if (!cart.items?.length) {
       throw new BadRequestException('Le panier est vide');
@@ -200,12 +268,16 @@ export class TravelCartService {
     // Determine status: if all items are auto-confirmation → "planning", else "draft"
     const allAuto = cart.items.every((item) => {
       if (item.circuit) return item.circuit.confirmation_mode === 'automatic';
-      if (item.offerItem?.offer) return item.offerItem.offer.confirmation_mode === 'automatic';
+      if (item.offerItem?.offer)
+        return item.offerItem.offer.confirmation_mode === 'automatic';
       return true;
     });
 
     // Use the max quantity across all items as participant count
-    const participantCount = Math.max(...cart.items.map((i) => i.quantity ?? 1), 1);
+    const participantCount = Math.max(
+      ...cart.items.map((i) => i.quantity ?? 1),
+      1,
+    );
 
     const plan = this.tripPlanRepo.create({
       ecoTraveler: { id: userId } as any,
@@ -224,7 +296,9 @@ export class TravelCartService {
       const notes = [
         cartItem.notes,
         participantCount > 1 ? `${participantCount} participants` : null,
-      ].filter(Boolean).join(' — ');
+      ]
+        .filter(Boolean)
+        .join(' — ');
 
       // Auto-assign day_number from session date or circuit start_date
       let dayNumber: number | null = null;
@@ -245,9 +319,13 @@ export class TravelCartService {
       sortOrder++;
 
       const planItem = this.tripPlanItemRepo.create({
-        tripPlan: savedPlan as TripPlan,
-        offerItem: cartItem.offerItem ? { id: cartItem.offerItem.id } as OfferItem : null,
-        circuit: cartItem.circuit ? { id: cartItem.circuit.id } as Circuit : null,
+        tripPlan: savedPlan,
+        offerItem: cartItem.offerItem
+          ? ({ id: cartItem.offerItem.id } as OfferItem)
+          : null,
+        circuit: cartItem.circuit
+          ? ({ id: cartItem.circuit.id } as Circuit)
+          : null,
         day_number: dayNumber,
         sort_order: sortOrder,
         notes: notes || null,
@@ -267,8 +345,13 @@ export class TravelCartService {
   // ─── Calcul du total ────────────────────────────────────
 
   private async recalculateTotal(cartId: string): Promise<void> {
-    const items = await this.itemRepo.find({ where: { cart: { id: cartId } as any } });
-    const total = items.reduce((sum, item) => sum + (item.line_total ? Number(item.line_total) : 0), 0);
+    const items = await this.itemRepo.find({
+      where: { cart: { id: cartId } as any },
+    });
+    const total = items.reduce(
+      (sum, item) => sum + (item.line_total ? Number(item.line_total) : 0),
+      0,
+    );
     await this.cartRepo.update(cartId, { estimated_total: total || null });
   }
 }

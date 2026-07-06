@@ -33,7 +33,10 @@ export class TripPlanItem {
   @JoinColumn({ name: 'guide_offering_id' })
   guideOffering!: GuideOffering | null;
 
-  @ManyToOne(() => GuideOfferingSession, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => GuideOfferingSession, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'guide_offering_session_id' })
   guideOfferingSession!: GuideOfferingSession | null;
 

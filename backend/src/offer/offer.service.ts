@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { Offer } from './entities/offer.entity';
@@ -10,7 +15,11 @@ import { OfferItemAvailabilityRule } from './entities/offer-item-availability-ru
 import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Project } from '../project-owner/entities/project.entity';
 import { RedisService } from '../redis/redis.service';
-import { paginated, PaginatedResult, PaginationParams } from '../common/helpers/pagination';
+import {
+  paginated,
+  PaginatedResult,
+  PaginationParams,
+} from '../common/helpers/pagination';
 import {
   CreateOfferDto,
   OfferSustainabilityDto,
@@ -54,10 +63,17 @@ export class OfferService {
 
   // ─── Offer CRUD ────────────────────────────────────────
 
-  async create(authorId: string, authorType: string, dto: CreateOfferDto, initialStatus: string = 'pending'): Promise<Offer> {
+  async create(
+    authorId: string,
+    authorType: string,
+    dto: CreateOfferDto,
+    initialStatus: string = 'pending',
+  ): Promise<Offer> {
     if (authorType === 'project_owner') {
       if (!dto.project_id) {
-        throw new BadRequestException('Les offres doivent être liées à un projet.');
+        throw new BadRequestException(
+          'Les offres doivent être liées à un projet.',
+        );
       }
     }
 
@@ -67,10 +83,14 @@ export class OfferService {
     let projectAddress: string | null = null;
 
     if (dto.project_id) {
-      const project = await this.projectRepo.findOne({ where: { id: dto.project_id } });
+      const project = await this.projectRepo.findOne({
+        where: { id: dto.project_id },
+      });
       if (!project) throw new NotFoundException('Projet introuvable.');
       if (project.status !== 'active') {
-        throw new BadRequestException('Impossible de lier une offre à un projet non encore validé par l\'administrateur.');
+        throw new BadRequestException(
+          "Impossible de lier une offre à un projet non encore validé par l'administrateur.",
+        );
       }
       projectLat = project.lat;
       projectLng = project.lng;
@@ -89,7 +109,9 @@ export class OfferService {
       price: dto.price ?? null,
       duration: dto.duration ?? null,
       offer_type: dto.offer_type ?? null,
-      category: dto.category_id ? ({ id: dto.category_id } as OfferCategory) : null,
+      category: dto.category_id
+        ? ({ id: dto.category_id } as OfferCategory)
+        : null,
       images: dto.images?.length ? dto.images : null,
       inclusions: dto.inclusions ?? null,
       region: isFixed ? projectRegion : (dto.region ?? null),
@@ -131,7 +153,10 @@ export class OfferService {
     });
   }
 
-  async findAllPublic(region?: string, pagination?: PaginationParams): Promise<PaginatedResult<Offer> | Offer[]> {
+  async findAllPublic(
+    region?: string,
+    pagination?: PaginationParams,
+  ): Promise<PaginatedResult<Offer> | Offer[]> {
     const where: any = { status: 'approved', is_deleted: false };
     if (region) where.region = region;
 
@@ -162,7 +187,8 @@ export class OfferService {
     geo?: { lat?: number; lng?: number; radiusKm?: number; itemType?: string },
     pagination?: PaginationParams,
   ): Promise<PaginatedResult<Offer> | Offer[]> {
-    const qb = this.repo.createQueryBuilder('offer')
+    const qb = this.repo
+      .createQueryBuilder('offer')
       .leftJoinAndSelect('offer.items', 'items')
       .leftJoinAndSelect('items.prices', 'prices')
       .leftJoinAndSelect('offer.project', 'project')
@@ -170,11 +196,17 @@ export class OfferService {
       .andWhere('offer.is_deleted = :isDeleted', { isDeleted: false });
 
     if (category) qb.andWhere('offer.offer_type = :category', { category });
-    if (excludeAuthor) qb.andWhere('offer.author_id != :ex', { ex: excludeAuthor });
+    if (excludeAuthor)
+      qb.andWhere('offer.author_id != :ex', { ex: excludeAuthor });
     if (region) qb.andWhere('offer.region = :region', { region });
-    if (geo?.itemType) qb.andWhere('items.item_type = :itemType', { itemType: geo.itemType });
+    if (geo?.itemType)
+      qb.andWhere('items.item_type = :itemType', { itemType: geo.itemType });
 
-    if (geo?.lat !== undefined && geo?.lng !== undefined && geo?.radiusKm !== undefined) {
+    if (
+      geo?.lat !== undefined &&
+      geo?.lng !== undefined &&
+      geo?.radiusKm !== undefined
+    ) {
       const radiusMeters = geo.radiusKm * 1000;
       qb.andWhere(
         `ST_DWithin(
@@ -193,7 +225,8 @@ export class OfferService {
     const page = pagination.page;
     const limit = pagination.limit ?? 20;
     const total = await qb.getCount();
-    const data = await qb.orderBy('offer.created_at', 'DESC')
+    const data = await qb
+      .orderBy('offer.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getMany();
@@ -207,7 +240,14 @@ export class OfferService {
 
     const offer = await this.repo.findOne({
       where: { id },
-      relations: ['items', 'items.prices', 'items.sessions', 'items.capacity', 'category', 'project'],
+      relations: [
+        'items',
+        'items.prices',
+        'items.sessions',
+        'items.capacity',
+        'category',
+        'project',
+      ],
     });
     if (!offer) throw new NotFoundException('Offre introuvable.');
 
@@ -222,67 +262,106 @@ export class OfferService {
     });
   }
 
-  async update(authorId: string, offerId: string, dto: UpdateOfferDto): Promise<Offer> {
+  async update(
+    authorId: string,
+    offerId: string,
+    dto: UpdateOfferDto,
+  ): Promise<Offer> {
     const offer = await this.findOrFail(offerId);
-    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
+    if (offer.author_id !== authorId)
+      throw new ForbiddenException('Accès refusé.');
 
     if (dto.title !== undefined) offer.title = dto.title;
     if (dto.description !== undefined) offer.description = dto.description;
     if (dto.price !== undefined) offer.price = dto.price;
     if (dto.duration !== undefined) offer.duration = dto.duration;
     if (dto.offer_type !== undefined) offer.offer_type = dto.offer_type;
-    if (dto.category_id !== undefined) offer.category = { id: dto.category_id } as OfferCategory;
-    if (dto.images !== undefined) offer.images = dto.images.length ? dto.images : null;
+    if (dto.category_id !== undefined)
+      offer.category = { id: dto.category_id } as OfferCategory;
+    if (dto.images !== undefined)
+      offer.images = dto.images.length ? dto.images : null;
     if (dto.inclusions !== undefined) offer.inclusions = dto.inclusions;
     if (dto.region !== undefined) offer.region = dto.region;
     if (dto.address !== undefined) offer.address = dto.address;
     if (dto.latitude !== undefined) offer.latitude = dto.latitude ?? null;
     if (dto.longitude !== undefined) offer.longitude = dto.longitude ?? null;
-    if (dto.meeting_point !== undefined) offer.meeting_point = dto.meeting_point;
-    if (dto.meeting_lat !== undefined) offer.meeting_lat = dto.meeting_lat ?? null;
-    if (dto.meeting_lng !== undefined) offer.meeting_lng = dto.meeting_lng ?? null;
-    if (dto.min_group_size !== undefined) offer.min_group_size = dto.min_group_size;
-    if (dto.max_group_size !== undefined) offer.max_group_size = dto.max_group_size;
+    if (dto.meeting_point !== undefined)
+      offer.meeting_point = dto.meeting_point;
+    if (dto.meeting_lat !== undefined)
+      offer.meeting_lat = dto.meeting_lat ?? null;
+    if (dto.meeting_lng !== undefined)
+      offer.meeting_lng = dto.meeting_lng ?? null;
+    if (dto.min_group_size !== undefined)
+      offer.min_group_size = dto.min_group_size;
+    if (dto.max_group_size !== undefined)
+      offer.max_group_size = dto.max_group_size;
     if (dto.min_age !== undefined) offer.min_age = dto.min_age;
-    if (dto.cancellation_policy !== undefined) offer.cancellation_policy = dto.cancellation_policy;
-    if (dto.confirmation_mode !== undefined) offer.confirmation_mode = dto.confirmation_mode;
+    if (dto.cancellation_policy !== undefined)
+      offer.cancellation_policy = dto.cancellation_policy;
+    if (dto.confirmation_mode !== undefined)
+      offer.confirmation_mode = dto.confirmation_mode;
     if (dto.status !== undefined) {
-      const valid = this.isValidOfferTransition(offer.status, dto.status, authorId);
-      if (!valid) throw new BadRequestException(`Transition de statut interdite : ${offer.status} → ${dto.status}`);
+      const valid = this.isValidOfferTransition(
+        offer.status,
+        dto.status,
+        authorId,
+      );
+      if (!valid)
+        throw new BadRequestException(
+          `Transition de statut interdite : ${offer.status} → ${dto.status}`,
+        );
       offer.status = dto.status;
     }
-    if (dto.location_type !== undefined) offer.location_type = dto.location_type;
-    if (dto.deposit_percentage !== undefined) offer.deposit_percentage = dto.deposit_percentage;
-    if (dto.production_delay_days !== undefined) offer.production_delay_days = dto.production_delay_days;
-    if (dto.fulfillment_mode !== undefined) offer.fulfillment_mode = dto.fulfillment_mode;
+    if (dto.location_type !== undefined)
+      offer.location_type = dto.location_type;
+    if (dto.deposit_percentage !== undefined)
+      offer.deposit_percentage = dto.deposit_percentage;
+    if (dto.production_delay_days !== undefined)
+      offer.production_delay_days = dto.production_delay_days;
+    if (dto.fulfillment_mode !== undefined)
+      offer.fulfillment_mode = dto.fulfillment_mode;
 
     await this.repo.save(offer);
     await this.invalidateOfferCache();
     return this.findById(offerId);
   }
 
-  async updateOfferSustainability(authorId: string, offerId: string, dto: OfferSustainabilityDto): Promise<Offer> {
+  async updateOfferSustainability(
+    authorId: string,
+    offerId: string,
+    dto: OfferSustainabilityDto,
+  ): Promise<Offer> {
     const offer = await this.findOrFail(offerId);
-    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
+    if (offer.author_id !== authorId)
+      throw new ForbiddenException('Accès refusé.');
     offer.sustainability_score = dto.score;
     return this.repo.save(offer);
   }
 
-  async remove(authorId: string, offerId: string): Promise<{ message: string }> {
+  async remove(
+    authorId: string,
+    offerId: string,
+  ): Promise<{ message: string }> {
     const offer = await this.findOrFail(offerId);
-    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
+    if (offer.author_id !== authorId)
+      throw new ForbiddenException('Accès refusé.');
 
     // Vérifier les réservations actives liées à cette offre
     const activeBookings = await this.itemRepo
       .createQueryBuilder('item')
-      .innerJoin('bookings', 'b', 'b.offer_item_id = item.id AND b.status != :cancelled', { cancelled: 'cancelled' })
+      .innerJoin(
+        'bookings',
+        'b',
+        'b.offer_item_id = item.id AND b.status != :cancelled',
+        { cancelled: 'cancelled' },
+      )
       .where('item.offer_id = :offerId', { offerId })
       .getCount();
 
     if (activeBookings > 0) {
       throw new BadRequestException(
         `${activeBookings} réservation(s) active(s) liée(s) à cette offre. ` +
-        `Utilisez l'archivage ou la désactivation à la place.`
+          `Utilisez l'archivage ou la désactivation à la place.`,
       );
     }
 
@@ -297,8 +376,10 @@ export class OfferService {
 
   async archive(authorId: string, offerId: string): Promise<Offer> {
     const offer = await this.findOrFail(offerId);
-    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
-    if (offer.status === 'archived') throw new BadRequestException('Cette offre est déjà archivée');
+    if (offer.author_id !== authorId)
+      throw new ForbiddenException('Accès refusé.');
+    if (offer.status === 'archived')
+      throw new BadRequestException('Cette offre est déjà archivée');
     offer.status = 'archived';
     offer.is_deleted = true;
     offer.deleted_at = new Date();
@@ -309,8 +390,12 @@ export class OfferService {
 
   async deactivate(authorId: string, offerId: string): Promise<Offer> {
     const offer = await this.findOrFail(offerId);
-    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
-    if (offer.status !== 'approved') throw new BadRequestException('Seules les offres approuvées peuvent être désactivées');
+    if (offer.author_id !== authorId)
+      throw new ForbiddenException('Accès refusé.');
+    if (offer.status !== 'approved')
+      throw new BadRequestException(
+        'Seules les offres approuvées peuvent être désactivées',
+      );
     offer.status = 'inactive';
     await this.repo.save(offer);
     await this.invalidateOfferCache();
@@ -319,16 +404,29 @@ export class OfferService {
 
   async reactivate(authorId: string, offerId: string): Promise<Offer> {
     const offer = await this.findOrFail(offerId);
-    if (offer.author_id !== authorId) throw new ForbiddenException('Accès refusé.');
-    if (offer.status !== 'inactive') throw new BadRequestException('Seules les offres désactivées peuvent être réactivées');
+    if (offer.author_id !== authorId)
+      throw new ForbiddenException('Accès refusé.');
+    if (offer.status !== 'inactive')
+      throw new BadRequestException(
+        'Seules les offres désactivées peuvent être réactivées',
+      );
     offer.status = 'approved';
     await this.repo.save(offer);
     await this.invalidateOfferCache();
     return this.findById(offerId);
   }
 
-  async findLinkedCircuits(offerId: string): Promise<{ circuit_id: string; circuit_title: string; day_title: string; activity_title: string }[]> {
-    const items = await this.itemRepo.find({ where: { offer: { id: offerId } } });
+  async findLinkedCircuits(offerId: string): Promise<
+    {
+      circuit_id: string;
+      circuit_title: string;
+      day_title: string;
+      activity_title: string;
+    }[]
+  > {
+    const items = await this.itemRepo.find({
+      where: { offer: { id: offerId } },
+    });
     if (!items.length) return [];
     const itemIds = items.map((i) => i.id);
 
@@ -352,7 +450,10 @@ export class OfferService {
 
   // ─── OfferItem ─────────────────────────────────────────
 
-  async createItem(offerId: string, dto: CreateOfferItemDto): Promise<OfferItem> {
+  async createItem(
+    offerId: string,
+    dto: CreateOfferItemDto,
+  ): Promise<OfferItem> {
     await this.findOrFail(offerId);
     const item = this.itemRepo.create({
       offer: { id: offerId } as Offer,
@@ -382,11 +483,14 @@ export class OfferService {
       where: { id: itemId },
       relations: ['prices', 'sessions', 'capacity'],
     });
-    if (!item) throw new NotFoundException('Élément d\'offre introuvable.');
+    if (!item) throw new NotFoundException("Élément d'offre introuvable.");
     return item;
   }
 
-  async updateItem(itemId: string, dto: UpdateOfferItemDto): Promise<OfferItem> {
+  async updateItem(
+    itemId: string,
+    dto: UpdateOfferItemDto,
+  ): Promise<OfferItem> {
     const item = await this.findItemById(itemId);
     Object.assign(item, dto);
     return this.itemRepo.save(item);
@@ -400,12 +504,18 @@ export class OfferService {
 
   // ─── Status transitions ───────────────────────────────────
 
-  private isValidOfferTransition(current: string, next: string, authorId: string): boolean {
+  private isValidOfferTransition(
+    current: string,
+    next: string,
+    authorId: string,
+  ): boolean {
+    if (current === next) return true;
     const allowed: Record<string, string[]> = {
+      draft: ['pending', 'approved', 'archived'],
       pending: ['approved', 'rejected', 'archived'],
       approved: ['inactive', 'archived'],
       inactive: ['approved'],
-      rejected: [],
+      rejected: ['pending', 'archived'],
       archived: [],
     };
     return allowed[current]?.includes(next) ?? false;
@@ -413,7 +523,10 @@ export class OfferService {
 
   // ─── OfferItem Prices ──────────────────────────────────
 
-  async addPrice(itemId: string, dto: CreateOfferItemPriceDto): Promise<OfferItemPrice> {
+  async addPrice(
+    itemId: string,
+    dto: CreateOfferItemPriceDto,
+  ): Promise<OfferItemPrice> {
     await this.findItemById(itemId);
     const price = this.priceRepo.create({
       offerItem: { id: itemId } as OfferItem,
@@ -428,7 +541,10 @@ export class OfferService {
     return this.priceRepo.save(price);
   }
 
-  async updatePrice(priceId: string, dto: UpdateOfferItemPriceDto): Promise<OfferItemPrice> {
+  async updatePrice(
+    priceId: string,
+    dto: UpdateOfferItemPriceDto,
+  ): Promise<OfferItemPrice> {
     const price = await this.priceRepo.findOne({ where: { id: priceId } });
     if (!price) throw new NotFoundException('Prix introuvable.');
     Object.assign(price, dto);
@@ -444,10 +560,15 @@ export class OfferService {
 
   // ─── OfferItem Capacity ────────────────────────────────
 
-  async setCapacity(itemId: string, dto: { capacity_type: string; total_quantity: number }): Promise<OfferItemCapacity> {
+  async setCapacity(
+    itemId: string,
+    dto: { capacity_type: string; total_quantity: number },
+  ): Promise<OfferItemCapacity> {
     await this.findItemById(itemId);
     // Remove existing capacity for this item
-    const existing = await this.capacityRepo.find({ where: { offerItem: { id: itemId } } });
+    const existing = await this.capacityRepo.find({
+      where: { offerItem: { id: itemId } },
+    });
     if (existing.length) await this.capacityRepo.remove(existing);
 
     const cap = this.capacityRepo.create({
@@ -475,7 +596,10 @@ export class OfferService {
 
   // ─── OfferItem Availability Rules ──────────────────────
 
-  async addAvailabilityRule(itemId: string, dto: CreateAvailabilityRuleDto): Promise<OfferItemAvailabilityRule> {
+  async addAvailabilityRule(
+    itemId: string,
+    dto: CreateAvailabilityRuleDto,
+  ): Promise<OfferItemAvailabilityRule> {
     await this.findItemById(itemId);
     const rule = this.ruleRepo.create({
       offerItem: { id: itemId } as OfferItem,
@@ -490,7 +614,9 @@ export class OfferService {
     return this.ruleRepo.save(rule);
   }
 
-  async findAvailabilityRules(itemId: string): Promise<OfferItemAvailabilityRule[]> {
+  async findAvailabilityRules(
+    itemId: string,
+  ): Promise<OfferItemAvailabilityRule[]> {
     await this.findItemById(itemId);
     return this.ruleRepo.find({
       where: { offerItem: { id: itemId }, is_active: true },
@@ -500,13 +626,16 @@ export class OfferService {
 
   async removeAvailabilityRule(ruleId: string): Promise<{ message: string }> {
     const rule = await this.ruleRepo.findOne({ where: { id: ruleId } });
-    if (!rule) throw new NotFoundException('Règle de disponibilité introuvable.');
+    if (!rule)
+      throw new NotFoundException('Règle de disponibilité introuvable.');
     await this.ruleRepo.remove(rule);
     return { message: 'Règle supprimée.' };
   }
 
   async removeAllAvailabilityRules(itemId: string): Promise<void> {
-    const rules = await this.ruleRepo.find({ where: { offerItem: { id: itemId } } });
+    const rules = await this.ruleRepo.find({
+      where: { offerItem: { id: itemId } },
+    });
     if (rules.length) {
       await this.ruleRepo.remove(rules);
     }
@@ -514,11 +643,17 @@ export class OfferService {
 
   // ─── Session Generator ────────────────────────────────
 
-  async generateSessions(itemId: string, daysAhead: number = 90): Promise<OfferItemSession[]> {
+  async generateSessions(
+    itemId: string,
+    daysAhead: number = 90,
+  ): Promise<OfferItemSession[]> {
     const rules = await this.ruleRepo.find({
       where: { offerItem: { id: itemId }, is_active: true },
     });
-    if (!rules.length) throw new BadRequestException('Aucune règle de disponibilité trouvée. Créez d\'abord une règle.');
+    if (!rules.length)
+      throw new BadRequestException(
+        "Aucune règle de disponibilité trouvée. Créez d'abord une règle.",
+      );
 
     const item = await this.findItemById(itemId);
     const capacity = item.capacity?.[0]?.total_quantity ?? null;
@@ -527,7 +662,12 @@ export class OfferService {
     const bookedSessionIds = await this.sessionRepo
       .createQueryBuilder('session')
       .select('session.id')
-      .innerJoin('bookings', 'booking', 'booking.session_id = session.id AND booking.status != :cancelled', { cancelled: 'cancelled' })
+      .innerJoin(
+        'bookings',
+        'booking',
+        'booking.session_id = session.id AND booking.status != :cancelled',
+        { cancelled: 'cancelled' },
+      )
       .where('session.offer_item_id = :itemId', { itemId })
       .getRawMany()
       .then((rows) => new Set(rows.map((r) => r.session_id)));
@@ -557,17 +697,23 @@ export class OfferService {
             const end = new Date(rule.end_date);
             const weekdays = rule.weekdays;
 
-            for (let d = new Date(start); d <= end && d <= maxDate; d.setDate(d.getDate() + 1)) {
+            for (
+              let d = new Date(start);
+              d <= end && d <= maxDate;
+              d.setDate(d.getDate() + 1)
+            ) {
               if (d < today) continue;
               if (weekdays?.length && !weekdays.includes(d.getDay())) continue;
-              sessions.push(this.sessionRepo.create({
-                offerItem: { id: itemId } as OfferItem,
-                date: d.toISOString().split('T')[0],
-                start_time: startTime,
-                end_time: endTime,
-                total_capacity: capacity,
-                remaining_capacity: capacity,
-              }));
+              sessions.push(
+                this.sessionRepo.create({
+                  offerItem: { id: itemId } as OfferItem,
+                  date: d.toISOString().split('T')[0],
+                  start_time: startTime,
+                  end_time: endTime,
+                  total_capacity: capacity,
+                  remaining_capacity: capacity,
+                }),
+              );
             }
           }
           break;
@@ -575,47 +721,65 @@ export class OfferService {
 
         case 'weekly': {
           const weekdays = rule.weekdays ?? [1, 2, 3, 4, 5];
-          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
+          for (
+            let d = new Date(today);
+            d <= maxDate;
+            d.setDate(d.getDate() + 1)
+          ) {
             if (weekdays.includes(d.getDay())) {
-              sessions.push(this.sessionRepo.create({
-                offerItem: { id: itemId } as OfferItem,
-                date: d.toISOString().split('T')[0],
-                start_time: startTime,
-                end_time: endTime,
-                total_capacity: capacity,
-                remaining_capacity: capacity,
-              }));
+              sessions.push(
+                this.sessionRepo.create({
+                  offerItem: { id: itemId } as OfferItem,
+                  date: d.toISOString().split('T')[0],
+                  start_time: startTime,
+                  end_time: endTime,
+                  total_capacity: capacity,
+                  remaining_capacity: capacity,
+                }),
+              );
             }
           }
           break;
         }
 
         case 'daily': {
-          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
-            sessions.push(this.sessionRepo.create({
-              offerItem: { id: itemId } as OfferItem,
-              date: d.toISOString().split('T')[0],
-              start_time: startTime,
-              end_time: endTime,
-              total_capacity: capacity,
-              remaining_capacity: capacity,
-            }));
-          }
-          break;
-        }
-
-        case 'weekend_only': {
-          for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
-            const day = d.getDay();
-            if (day === 0 || day === 6) {
-              sessions.push(this.sessionRepo.create({
+          for (
+            let d = new Date(today);
+            d <= maxDate;
+            d.setDate(d.getDate() + 1)
+          ) {
+            sessions.push(
+              this.sessionRepo.create({
                 offerItem: { id: itemId } as OfferItem,
                 date: d.toISOString().split('T')[0],
                 start_time: startTime,
                 end_time: endTime,
                 total_capacity: capacity,
                 remaining_capacity: capacity,
-              }));
+              }),
+            );
+          }
+          break;
+        }
+
+        case 'weekend_only': {
+          for (
+            let d = new Date(today);
+            d <= maxDate;
+            d.setDate(d.getDate() + 1)
+          ) {
+            const day = d.getDay();
+            if (day === 0 || day === 6) {
+              sessions.push(
+                this.sessionRepo.create({
+                  offerItem: { id: itemId } as OfferItem,
+                  date: d.toISOString().split('T')[0],
+                  start_time: startTime,
+                  end_time: endTime,
+                  total_capacity: capacity,
+                  remaining_capacity: capacity,
+                }),
+              );
             }
           }
           break;
@@ -629,26 +793,43 @@ export class OfferService {
             const byDay = rruleStr.match(/BYDAY=([\w,]+)/)?.[1]?.split(',');
             const byMonth = rruleStr.match(/BYMONTH=(\d+)/)?.[1];
 
-            const dayMap: Record<string, number> = { 'SU': 0, 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6 };
-            const targetDays = byDay?.map((d) => dayMap[d]).filter((d) => d !== undefined) ?? [];
+            const dayMap: Record<string, number> = {
+              SU: 0,
+              MO: 1,
+              TU: 2,
+              WE: 3,
+              TH: 4,
+              FR: 5,
+              SA: 6,
+            };
+            const targetDays =
+              byDay?.map((d) => dayMap[d]).filter((d) => d !== undefined) ?? [];
             const targetMonth = byMonth ? parseInt(byMonth) - 1 : null;
 
-            for (let d = new Date(today); d <= maxDate; d.setDate(d.getDate() + 1)) {
+            for (
+              let d = new Date(today);
+              d <= maxDate;
+              d.setDate(d.getDate() + 1)
+            ) {
               let match = false;
               if (freq === 'WEEKLY' && targetDays.length) {
                 match = targetDays.includes(d.getDay());
               } else if (freq === 'YEARLY' && targetMonth !== null) {
-                match = d.getMonth() === targetMonth && targetDays.includes(d.getDay());
+                match =
+                  d.getMonth() === targetMonth &&
+                  targetDays.includes(d.getDay());
               }
               if (match) {
-                sessions.push(this.sessionRepo.create({
-                  offerItem: { id: itemId } as OfferItem,
-                  date: d.toISOString().split('T')[0],
-                  start_time: startTime,
-                  end_time: endTime,
-                  total_capacity: capacity,
-                  remaining_capacity: capacity,
-                }));
+                sessions.push(
+                  this.sessionRepo.create({
+                    offerItem: { id: itemId } as OfferItem,
+                    date: d.toISOString().split('T')[0],
+                    start_time: startTime,
+                    end_time: endTime,
+                    total_capacity: capacity,
+                    remaining_capacity: capacity,
+                  }),
+                );
               }
             }
           }
@@ -662,7 +843,10 @@ export class OfferService {
 
   // ─── OfferItem Sessions ────────────────────────────────
 
-  async createSession(itemId: string, dto: CreateOfferItemSessionDto): Promise<OfferItemSession> {
+  async createSession(
+    itemId: string,
+    dto: CreateOfferItemSessionDto,
+  ): Promise<OfferItemSession> {
     await this.findItemById(itemId);
     const session = this.sessionRepo.create({
       offerItem: { id: itemId } as OfferItem,
@@ -676,30 +860,68 @@ export class OfferService {
     return this.sessionRepo.save(session);
   }
 
-  async updateSession(sessionId: string, dto: UpdateOfferItemSessionDto): Promise<OfferItemSession> {
-    const session = await this.sessionRepo.findOne({ where: { id: sessionId } });
+  async updateSession(
+    sessionId: string,
+    dto: UpdateOfferItemSessionDto,
+  ): Promise<OfferItemSession> {
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+    });
     if (!session) throw new NotFoundException('Session introuvable.');
     Object.assign(session, dto);
     return this.sessionRepo.save(session);
   }
 
   async removeSession(sessionId: string): Promise<{ message: string }> {
-    const session = await this.sessionRepo.findOne({ where: { id: sessionId } });
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+    });
     if (!session) throw new NotFoundException('Session introuvable.');
     await this.sessionRepo.remove(session);
     return { message: 'Session supprimée.' };
   }
 
-  async findMyItems(authorId: string): Promise<{ id: string; name: string; item_type: string | null; offer_id: string; offer_title: string; prices: { id: string; label: string; price: string; pricing_unit: string }[] }[]> {
+  async findMyItems(authorId: string): Promise<
+    {
+      id: string;
+      name: string;
+      item_type: string | null;
+      offer_id: string;
+      offer_title: string;
+      prices: {
+        id: string;
+        label: string;
+        price: string;
+        pricing_unit: string;
+      }[];
+    }[]
+  > {
     const offers = await this.findByAuthor(authorId);
-    const items: { id: string; name: string; item_type: string | null; offer_id: string; offer_title: string; prices: { id: string; label: string; price: string; pricing_unit: string }[] }[] = [];
+    const items: {
+      id: string;
+      name: string;
+      item_type: string | null;
+      offer_id: string;
+      offer_title: string;
+      prices: {
+        id: string;
+        label: string;
+        price: string;
+        pricing_unit: string;
+      }[];
+    }[] = [];
     for (const offer of offers) {
       for (const item of offer.items || []) {
         items.push({
-          id: item.id, name: item.name, item_type: item.item_type,
-          offer_id: offer.id, offer_title: offer.title,
+          id: item.id,
+          name: item.name,
+          item_type: item.item_type,
+          offer_id: offer.id,
+          offer_title: offer.title,
           prices: (item.prices || []).map((p) => ({
-            id: p.id, label: p.label, price: String(p.price),
+            id: p.id,
+            label: p.label,
+            price: String(p.price),
             pricing_unit: p.pricing_unit,
           })),
         });
@@ -715,7 +937,9 @@ export class OfferService {
     });
   }
 
-  async getPopularLocations(): Promise<{ lat: number; lng: number; weight: number; label: string; type: string }[]> {
+  async getPopularLocations(): Promise<
+    { lat: number; lng: number; weight: number; label: string; type: string }[]
+  > {
     const cacheKey = `${this.OFFER_CACHE_PREFIX}popular-locations`;
     const cached = await this.redis.get<any[]>(cacheKey);
     if (cached) return cached;
@@ -725,7 +949,13 @@ export class OfferService {
       relations: ['prices'],
     });
 
-    const locations: { lat: number; lng: number; weight: number; label: string; type: string }[] = [];
+    const locations: {
+      lat: number;
+      lng: number;
+      weight: number;
+      label: string;
+      type: string;
+    }[] = [];
 
     for (const item of items) {
       const details = item.details_json || {};
@@ -734,7 +964,13 @@ export class OfferService {
       if (lat != null && lng != null) {
         const priceCount = item.prices?.length || 1;
         const weight = Math.min(1 + priceCount * 0.3, 3);
-        locations.push({ lat: Number(lat), lng: Number(lng), weight, label: item.name, type: 'offer' });
+        locations.push({
+          lat: Number(lat),
+          lng: Number(lng),
+          weight,
+          label: item.name,
+          type: 'offer',
+        });
       }
     }
 

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Patch, Post, Req, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Req,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
@@ -46,13 +55,15 @@ export class GuideController {
     return this.service.markOnboarded(req.user.sub);
   }
 
-  @Public() @Roles()
+  @Public()
+  @Roles()
   @Get('public/search')
   searchGuides(@Query('q') q: string) {
     return this.service.searchGuides(q ?? '');
   }
 
-  @Public() @Roles()
+  @Public()
+  @Roles()
   @Get('search')
   advancedSearch(
     @Query('date') date?: string,
@@ -78,7 +89,8 @@ export class GuideController {
     });
   }
 
-  @Public() @Roles()
+  @Public()
+  @Roles()
   @Get('public/:userId')
   getPublicProfile(@Param('userId') userId: string) {
     return this.service.getPublicProfile(userId);

@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Follow } from './entities/follow.entity';
@@ -19,22 +23,38 @@ export class FollowService {
     private readonly ecoTravelerRepo: Repository<EcoTraveler>,
   ) {}
 
-  async follow(followerId: string, followerType: string, followingId: string, followingType: string) {
-    if (followerId === followingId) throw new BadRequestException('Action invalide.');
+  async follow(
+    followerId: string,
+    followerType: string,
+    followingId: string,
+    followingType: string,
+  ) {
+    if (followerId === followingId)
+      throw new BadRequestException('Action invalide.');
 
     // Validate allowed follow combinations
     const allowed =
-      (followerType === 'eco_traveler' && (followingType === 'guide' || followingType === 'project')) ||
+      (followerType === 'eco_traveler' &&
+        (followingType === 'guide' || followingType === 'project')) ||
       (followerType === 'project' && followingType === 'guide') ||
       (followerType === 'guide' && followingType === 'project');
-    if (!allowed) throw new BadRequestException('Cette relation de suivi n\'est pas autorisée.');
+    if (!allowed)
+      throw new BadRequestException(
+        "Cette relation de suivi n'est pas autorisée.",
+      );
 
     const existing = await this.repo.findOne({
       where: { follower_id: followerId, following_id: followingId },
     });
-    if (existing) throw new BadRequestException('Vous suivez déjà cet utilisateur.');
+    if (existing)
+      throw new BadRequestException('Vous suivez déjà cet utilisateur.');
 
-    const follow = this.repo.create({ follower_id: followerId, follower_type: followerType, following_id: followingId, following_type: followingType });
+    const follow = this.repo.create({
+      follower_id: followerId,
+      follower_type: followerType,
+      following_id: followingId,
+      following_type: followingType,
+    });
     return this.repo.save(follow);
   }
 
@@ -42,7 +62,8 @@ export class FollowService {
     const follow = await this.repo.findOne({
       where: { follower_id: followerId, following_id: followingId },
     });
-    if (!follow) throw new NotFoundException('Vous ne suivez pas cet utilisateur.');
+    if (!follow)
+      throw new NotFoundException('Vous ne suivez pas cet utilisateur.');
     await this.repo.remove(follow);
     return { message: 'Désabonné.' };
   }
@@ -61,7 +82,10 @@ export class FollowService {
     });
   }
 
-  async getFollowStatus(followerId: string, followingId: string): Promise<{ following: boolean; followId: string | null }> {
+  async getFollowStatus(
+    followerId: string,
+    followingId: string,
+  ): Promise<{ following: boolean; followId: string | null }> {
     const follow = await this.repo.findOne({
       where: { follower_id: followerId, following_id: followingId },
     });
@@ -77,18 +101,44 @@ export class FollowService {
       where: { following_id: targetId },
       order: { created_at: 'DESC' },
     });
-    return Promise.all(follows.map(async (f) => {
-      if (f.follower_type === 'guide') {
-        const g = await this.guideRepo.findOne({ where: { user_id: f.follower_id } });
-        return { user_id: f.follower_id, full_name: g?.full_name ?? null, photo: g?.photo ?? null, _type: 'guide', sub: g?.zone ?? null };
-      }
-      if (f.follower_type === 'project') {
-        const o = await this.projectOwnerRepo.findOne({ where: { user_id: f.follower_id } });
-        return { user_id: f.follower_id, full_name: o?.full_name ?? null, photo: o?.photo ?? null, _type: 'project', sub: o?.organization ?? null };
-      }
-      const t = await this.ecoTravelerRepo.findOne({ where: { user_id: f.follower_id } });
-      return { user_id: f.follower_id, full_name: t?.full_name ?? null, photo: t?.photo ?? null, _type: 'eco_traveler', sub: t?.country ?? null };
-    }));
+    return Promise.all(
+      follows.map(async (f) => {
+        if (f.follower_type === 'guide') {
+          const g = await this.guideRepo.findOne({
+            where: { user_id: f.follower_id },
+          });
+          return {
+            user_id: f.follower_id,
+            full_name: g?.full_name ?? null,
+            photo: g?.photo ?? null,
+            _type: 'guide',
+            sub: g?.zone ?? null,
+          };
+        }
+        if (f.follower_type === 'project') {
+          const o = await this.projectOwnerRepo.findOne({
+            where: { user_id: f.follower_id },
+          });
+          return {
+            user_id: f.follower_id,
+            full_name: o?.full_name ?? null,
+            photo: o?.photo ?? null,
+            _type: 'project',
+            sub: o?.organization ?? null,
+          };
+        }
+        const t = await this.ecoTravelerRepo.findOne({
+          where: { user_id: f.follower_id },
+        });
+        return {
+          user_id: f.follower_id,
+          full_name: t?.full_name ?? null,
+          photo: t?.photo ?? null,
+          _type: 'eco_traveler',
+          sub: t?.country ?? null,
+        };
+      }),
+    );
   }
 
   async removeFollower(followingId: string, followerId: string) {
@@ -105,14 +155,32 @@ export class FollowService {
       where: { follower_id: followerId },
       order: { created_at: 'DESC' },
     });
-    return Promise.all(follows.map(async (f) => {
-      if (f.following_type === 'guide') {
-        const g = await this.guideRepo.findOne({ where: { user_id: f.following_id } });
-        return { user_id: f.following_id, full_name: g?.full_name ?? null, photo: g?.photo ?? null, _type: 'guide', sub: g?.zone ?? null };
-      }
-      const o = await this.projectOwnerRepo.findOne({ where: { user_id: f.following_id } });
-      return { user_id: f.following_id, full_name: o?.full_name ?? null, photo: o?.photo ?? null, _type: 'project', sub: o?.organization ?? null };
-    }));
+    return Promise.all(
+      follows.map(async (f) => {
+        if (f.following_type === 'guide') {
+          const g = await this.guideRepo.findOne({
+            where: { user_id: f.following_id },
+          });
+          return {
+            user_id: f.following_id,
+            full_name: g?.full_name ?? null,
+            photo: g?.photo ?? null,
+            _type: 'guide',
+            sub: g?.zone ?? null,
+          };
+        }
+        const o = await this.projectOwnerRepo.findOne({
+          where: { user_id: f.following_id },
+        });
+        return {
+          user_id: f.following_id,
+          full_name: o?.full_name ?? null,
+          photo: o?.photo ?? null,
+          _type: 'project',
+          sub: o?.organization ?? null,
+        };
+      }),
+    );
   }
 
   async getFollowersWithProfiles(followingId: string) {
@@ -120,17 +188,43 @@ export class FollowService {
       where: { following_id: followingId },
       order: { created_at: 'DESC' },
     });
-    return Promise.all(follows.map(async (f) => {
-      if (f.follower_type === 'guide') {
-        const g = await this.guideRepo.findOne({ where: { user_id: f.follower_id } });
-        return { user_id: f.follower_id, full_name: g?.full_name ?? null, photo: g?.photo ?? null, _type: 'guide', sub: g?.zone ?? null };
-      }
-      if (f.follower_type === 'project') {
-        const o = await this.projectOwnerRepo.findOne({ where: { user_id: f.follower_id } });
-        return { user_id: f.follower_id, full_name: o?.full_name ?? null, photo: o?.photo ?? null, _type: 'project', sub: o?.organization ?? null };
-      }
-      const t = await this.ecoTravelerRepo.findOne({ where: { user_id: f.follower_id } });
-      return { user_id: f.follower_id, full_name: t?.full_name ?? null, photo: t?.photo ?? null, _type: 'eco_traveler', sub: t?.country ?? null };
-    }));
+    return Promise.all(
+      follows.map(async (f) => {
+        if (f.follower_type === 'guide') {
+          const g = await this.guideRepo.findOne({
+            where: { user_id: f.follower_id },
+          });
+          return {
+            user_id: f.follower_id,
+            full_name: g?.full_name ?? null,
+            photo: g?.photo ?? null,
+            _type: 'guide',
+            sub: g?.zone ?? null,
+          };
+        }
+        if (f.follower_type === 'project') {
+          const o = await this.projectOwnerRepo.findOne({
+            where: { user_id: f.follower_id },
+          });
+          return {
+            user_id: f.follower_id,
+            full_name: o?.full_name ?? null,
+            photo: o?.photo ?? null,
+            _type: 'project',
+            sub: o?.organization ?? null,
+          };
+        }
+        const t = await this.ecoTravelerRepo.findOne({
+          where: { user_id: f.follower_id },
+        });
+        return {
+          user_id: f.follower_id,
+          full_name: t?.full_name ?? null,
+          photo: t?.photo ?? null,
+          _type: 'eco_traveler',
+          sub: t?.country ?? null,
+        };
+      }),
+    );
   }
 }

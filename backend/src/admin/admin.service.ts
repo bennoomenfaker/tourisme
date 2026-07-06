@@ -54,7 +54,10 @@ export class AdminService {
   // ─── Publications ─────────────────────────────────────────────────────────
 
   getPendingPublications() {
-    return this.pubRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
+    return this.pubRepo.find({
+      where: { status: 'pending' },
+      order: { created_at: 'DESC' },
+    });
   }
 
   async approvePublication(id: string, adminId: string) {
@@ -63,13 +66,15 @@ export class AdminService {
     pub.rejection_reason = null;
     const saved = await this.pubRepo.save(pub);
     if (pub.author_id) {
-      this.notificationService.create(
-        pub.author_id,
-        'admin_approved',
-        'Publication approuvée',
-        `Votre publication "${pub.title}" a été approuvée par l'administration.`,
-        `/publications/${pub.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          pub.author_id,
+          'admin_approved',
+          'Publication approuvée',
+          `Votre publication "${pub.title}" a été approuvée par l'administration.`,
+          `/publications/${pub.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'publication', id, 'approve');
     return saved;
@@ -81,13 +86,15 @@ export class AdminService {
     pub.rejection_reason = reason;
     const saved = await this.pubRepo.save(pub);
     if (pub.author_id) {
-      this.notificationService.create(
-        pub.author_id,
-        'admin_rejected',
-        'Publication rejetée',
-        `Votre publication "${pub.title}" a été rejetée. Motif : ${reason}`,
-        `/publications/${pub.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          pub.author_id,
+          'admin_rejected',
+          'Publication rejetée',
+          `Votre publication "${pub.title}" a été rejetée. Motif : ${reason}`,
+          `/publications/${pub.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'publication', id, 'reject', reason);
     return saved;
@@ -96,7 +103,10 @@ export class AdminService {
   // ─── Offers ───────────────────────────────────────────────────────────────
 
   getPendingOffers() {
-    return this.offerRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
+    return this.offerRepo.find({
+      where: [{ status: 'pending' }, { status: 'draft' }],
+      order: { created_at: 'DESC' },
+    });
   }
 
   async approveOffer(id: string, adminId: string) {
@@ -105,13 +115,15 @@ export class AdminService {
     offer.rejection_reason = null;
     const saved = await this.offerRepo.save(offer);
     if (offer.author_id) {
-      this.notificationService.create(
-        offer.author_id,
-        'admin_approved',
-        'Offre approuvée',
-        `Votre offre "${offer.title}" a été approuvée par l'administration.`,
-        `/offers/${offer.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          offer.author_id,
+          'admin_approved',
+          'Offre approuvée',
+          `Votre offre "${offer.title}" a été approuvée par l'administration.`,
+          `/offers/${offer.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'offer', id, 'approve');
     return saved;
@@ -123,13 +135,15 @@ export class AdminService {
     offer.rejection_reason = reason;
     const saved = await this.offerRepo.save(offer);
     if (offer.author_id) {
-      this.notificationService.create(
-        offer.author_id,
-        'admin_rejected',
-        'Offre rejetée',
-        `Votre offre "${offer.title}" a été rejetée. Motif : ${reason}`,
-        `/offers/${offer.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          offer.author_id,
+          'admin_rejected',
+          'Offre rejetée',
+          `Votre offre "${offer.title}" a été rejetée. Motif : ${reason}`,
+          `/offers/${offer.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'offer', id, 'reject', reason);
     return saved;
@@ -138,7 +152,10 @@ export class AdminService {
   // ─── Projects ─────────────────────────────────────────────────────────────
 
   getPendingProjects() {
-    return this.projectRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
+    return this.projectRepo.find({
+      where: { status: 'pending' },
+      order: { created_at: 'DESC' },
+    });
   }
 
   async approveProject(id: string, adminId: string) {
@@ -147,13 +164,15 @@ export class AdminService {
     project.rejection_reason = null;
     const saved = await this.projectRepo.save(project);
     if (project.owner_id) {
-      this.notificationService.create(
-        project.owner_id,
-        'admin_approved',
-        'Projet approuvé',
-        `Votre projet "${project.name}" a été approuvé par l'administration.`,
-        `/projects/${project.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          project.owner_id,
+          'admin_approved',
+          'Projet approuvé',
+          `Votre projet "${project.name}" a été approuvé par l'administration.`,
+          `/projects/${project.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'project', id, 'approve');
     return saved;
@@ -165,13 +184,15 @@ export class AdminService {
     project.rejection_reason = reason;
     const saved = await this.projectRepo.save(project);
     if (project.owner_id) {
-      this.notificationService.create(
-        project.owner_id,
-        'admin_rejected',
-        'Projet rejeté',
-        `Votre projet "${project.name}" a été rejeté. Motif : ${reason}`,
-        `/projects/${project.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          project.owner_id,
+          'admin_rejected',
+          'Projet rejeté',
+          `Votre projet "${project.name}" a été rejeté. Motif : ${reason}`,
+          `/projects/${project.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'project', id, 'reject', reason);
     return saved;
@@ -180,7 +201,10 @@ export class AdminService {
   // ─── Circuits ──────────────────────────────────────────────────────────────
 
   getPendingCircuits() {
-    return this.circuitRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
+    return this.circuitRepo.find({
+      where: { status: 'pending' },
+      order: { created_at: 'DESC' },
+    });
   }
 
   async approveCircuit(id: string, adminId: string) {
@@ -189,13 +213,15 @@ export class AdminService {
     circuit.rejection_reason = null;
     const saved = await this.circuitRepo.save(circuit);
     if (circuit.author_id) {
-      this.notificationService.create(
-        circuit.author_id,
-        'admin_approved',
-        'Circuit approuvé',
-        `Votre circuit "${circuit.title}" a été approuvé par l'administration.`,
-        `/circuits/${circuit.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          circuit.author_id,
+          'admin_approved',
+          'Circuit approuvé',
+          `Votre circuit "${circuit.title}" a été approuvé par l'administration.`,
+          `/circuits/${circuit.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'circuit', id, 'approve');
     return saved;
@@ -207,13 +233,15 @@ export class AdminService {
     circuit.rejection_reason = reason;
     const saved = await this.circuitRepo.save(circuit);
     if (circuit.author_id) {
-      this.notificationService.create(
-        circuit.author_id,
-        'admin_rejected',
-        'Circuit rejeté',
-        `Votre circuit "${circuit.title}" a été rejeté. Motif : ${reason}`,
-        `/circuits/${circuit.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          circuit.author_id,
+          'admin_rejected',
+          'Circuit rejeté',
+          `Votre circuit "${circuit.title}" a été rejeté. Motif : ${reason}`,
+          `/circuits/${circuit.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'circuit', id, 'reject', reason);
     return saved;
@@ -224,13 +252,15 @@ export class AdminService {
     circuit.status = 'archived';
     const saved = await this.circuitRepo.save(circuit);
     if (circuit.author_id) {
-      this.notificationService.create(
-        circuit.author_id,
-        'admin_approved',
-        'Circuit archivé',
-        `Votre circuit "${circuit.title}" a été archivé.`,
-        `/circuits/${circuit.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          circuit.author_id,
+          'admin_approved',
+          'Circuit archivé',
+          `Votre circuit "${circuit.title}" a été archivé.`,
+          `/circuits/${circuit.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'circuit', id, 'archive');
     return saved;
@@ -239,7 +269,10 @@ export class AdminService {
   // ─── Guide Offerings ───────────────────────────────────────────────────────
 
   getPendingGuideOfferings() {
-    return this.guideOfferingRepo.find({ where: { status: 'pending' }, order: { created_at: 'DESC' } });
+    return this.guideOfferingRepo.find({
+      where: { status: 'pending' },
+      order: { created_at: 'DESC' },
+    });
   }
 
   async approveGuideOffering(id: string, adminId: string) {
@@ -247,13 +280,15 @@ export class AdminService {
     offering.status = 'active';
     const saved = await this.guideOfferingRepo.save(offering);
     if (offering.guide_id) {
-      this.notificationService.create(
-        offering.guide_id,
-        'admin_approved',
-        'Service de guidage approuvé',
-        `Votre offre de guidage "${offering.title}" a été approuvée par l'administration.`,
-        `/guide-offerings/${offering.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          offering.guide_id,
+          'admin_approved',
+          'Service de guidage approuvé',
+          `Votre offre de guidage "${offering.title}" a été approuvée par l'administration.`,
+          `/guide-offerings/${offering.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'guide-offering', id, 'approve');
     return saved;
@@ -264,13 +299,15 @@ export class AdminService {
     offering.status = 'rejected';
     const saved = await this.guideOfferingRepo.save(offering);
     if (offering.guide_id) {
-      this.notificationService.create(
-        offering.guide_id,
-        'admin_rejected',
-        'Service de guidage rejeté',
-        `Votre offre de guidage "${offering.title}" a été rejetée. Motif : ${reason}`,
-        `/guide-offerings/${offering.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          offering.guide_id,
+          'admin_rejected',
+          'Service de guidage rejeté',
+          `Votre offre de guidage "${offering.title}" a été rejetée. Motif : ${reason}`,
+          `/guide-offerings/${offering.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'guide-offering', id, 'reject', reason);
     return saved;
@@ -281,13 +318,15 @@ export class AdminService {
     offering.status = 'archived';
     const saved = await this.guideOfferingRepo.save(offering);
     if (offering.guide_id) {
-      this.notificationService.create(
-        offering.guide_id,
-        'admin_approved',
-        'Service de guidage archivé',
-        `Votre offre de guidage "${offering.title}" a été archivée.`,
-        `/guide-offerings/${offering.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          offering.guide_id,
+          'admin_approved',
+          'Service de guidage archivé',
+          `Votre offre de guidage "${offering.title}" a été archivée.`,
+          `/guide-offerings/${offering.id}`,
+        )
+        .catch(() => {});
     }
     await this.logAction(adminId, 'guide-offering', id, 'archive');
     return saved;
@@ -296,23 +335,30 @@ export class AdminService {
   // ─── Ban management ───────────────────────────────────────────────────────
 
   async getBannedUsers() {
-    const users = await this.userRepo.find({ where: { status: 'banned' as any } });
-    return Promise.all(users.map(async (u) => {
-      let profile: any = null;
-      if (u.role === 'eco_traveler') profile = await this.ecoRepo.findOne({ where: { user_id: u.id } });
-      else if (u.role === 'guide') profile = await this.guideRepo.findOne({ where: { user_id: u.id } });
-      else if (u.role === 'project') profile = await this.ownerRepo.findOne({ where: { user_id: u.id } });
-      return {
-        user_id: u.id,
-        email: u.email,
-        role: u.role,
-        status: u.status,
-        ban_until: u.ban_until,
-        banned_at: u.updated_at,
-        full_name: profile?.full_name ?? null,
-        photo: profile?.photo ?? null,
-      };
-    }));
+    const users = await this.userRepo.find({
+      where: { status: 'banned' as any },
+    });
+    return Promise.all(
+      users.map(async (u) => {
+        let profile: any = null;
+        if (u.role === 'eco_traveler')
+          profile = await this.ecoRepo.findOne({ where: { user_id: u.id } });
+        else if (u.role === 'guide')
+          profile = await this.guideRepo.findOne({ where: { user_id: u.id } });
+        else if (u.role === 'project')
+          profile = await this.ownerRepo.findOne({ where: { user_id: u.id } });
+        return {
+          user_id: u.id,
+          email: u.email,
+          role: u.role,
+          status: u.status,
+          ban_until: u.ban_until,
+          banned_at: u.updated_at,
+          full_name: profile?.full_name ?? null,
+          photo: profile?.photo ?? null,
+        };
+      }),
+    );
   }
 
   async updateBan(userId: string, banDays?: number, note?: string) {
@@ -330,7 +376,12 @@ export class AdminService {
     user.refresh_token = null;
     user.refresh_token_expires_at = null;
     await this.userRepo.save(user);
-    await this.mailService.sendAccountBanned(user.email, null, note ?? '', banDays ?? 0);
+    await this.mailService.sendAccountBanned(
+      user.email,
+      null,
+      note ?? '',
+      banDays ?? 0,
+    );
     return { message: 'Ban mis à jour.', ban_until: user.ban_until };
   }
 
@@ -376,7 +427,19 @@ export class AdminService {
     return offering;
   }
 
-  private async logAction(adminId: string, entityType: string, entityId: string, action: string, reason?: string) {
-    await this.logRepo.save({ admin_id: adminId, entity_type: entityType, entity_id: entityId, action, reason: reason ?? null });
+  private async logAction(
+    adminId: string,
+    entityType: string,
+    entityId: string,
+    action: string,
+    reason?: string,
+  ) {
+    await this.logRepo.save({
+      admin_id: adminId,
+      entity_type: entityType,
+      entity_id: entityId,
+      action,
+      reason: reason ?? null,
+    });
   }
 }

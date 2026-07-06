@@ -24,7 +24,14 @@ import {
 @Module({
   imports: [
     // PostgreSQL
-    TypeOrmModule.forFeature([EcoTraveler, Publication, Friendship, TripPlan, Booking, CircuitReservation]),
+    TypeOrmModule.forFeature([
+      EcoTraveler,
+      Publication,
+      Friendship,
+      TripPlan,
+      Booking,
+      CircuitReservation,
+    ]),
 
     // MongoDB
     MongooseModule.forFeature([

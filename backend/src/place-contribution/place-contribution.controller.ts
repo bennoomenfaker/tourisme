@@ -1,5 +1,12 @@
 import {
-  Body, Controller, Delete, Get, Param, Post, Query, Req,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PlaceContributionService } from './place-contribution.service';
@@ -16,7 +23,8 @@ const ALL_ROLES = [...CONTRIBUTOR_ROLES, Role.ADMIN];
 export class PlaceContributionController {
   constructor(private readonly service: PlaceContributionService) {}
 
-  @ApiBearerAuth('bearer') @Roles(...CONTRIBUTOR_ROLES)
+  @ApiBearerAuth('bearer')
+  @Roles(...CONTRIBUTOR_ROLES)
   @Post('places/:publicationId/contributions')
   create(
     @Req() req: any,
@@ -35,7 +43,8 @@ export class PlaceContributionController {
     return this.service.findByPublication(publicationId, viewer);
   }
 
-  @ApiBearerAuth('bearer') @Roles(...CONTRIBUTOR_ROLES)
+  @ApiBearerAuth('bearer')
+  @Roles(...CONTRIBUTOR_ROLES)
   @Post('contributions/:id/vote')
   toggleVote(
     @Req() req: any,
@@ -45,7 +54,8 @@ export class PlaceContributionController {
     return this.service.toggleVote(id, req.user.sub, body?.imageIndex);
   }
 
-  @ApiBearerAuth('bearer') @Roles(...ALL_ROLES)
+  @ApiBearerAuth('bearer')
+  @Roles(...ALL_ROLES)
   @Delete('contributions/:id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.service.remove(id, req.user.sub, req.user.role);

@@ -10,7 +10,13 @@ export class PhotoService {
     private readonly repo: Repository<Photo>,
   ) {}
 
-  async create(data: { url: string; entity_type: string; entity_id: string; uploaded_by: string; is_hero?: boolean }): Promise<Photo> {
+  async create(data: {
+    url: string;
+    entity_type: string;
+    entity_id: string;
+    uploaded_by: string;
+    is_hero?: boolean;
+  }): Promise<Photo> {
     const photo = await this.repo.save(this.repo.create(data));
     await this.recalculateHero(data.entity_type, data.entity_id);
     return photo;
@@ -57,7 +63,9 @@ export class PhotoService {
   }
 
   async getHero(entityType: string, entityId: string): Promise<Photo | null> {
-    return this.repo.findOne({ where: { entity_type: entityType, entity_id: entityId, is_hero: true } });
+    return this.repo.findOne({
+      where: { entity_type: entityType, entity_id: entityId, is_hero: true },
+    });
   }
 
   /**
@@ -66,7 +74,11 @@ export class PhotoService {
    * En cas d'égalité, la plus récente l'emporte.
    * Si `forceId` est fourni, cette photo sera imposée comme hero.
    */
-  async recalculateHero(entityType: string, entityId: string, forceId?: string): Promise<void> {
+  async recalculateHero(
+    entityType: string,
+    entityId: string,
+    forceId?: string,
+  ): Promise<void> {
     const photos = await this.repo.find({
       where: { entity_type: entityType, entity_id: entityId },
       order: { score: 'DESC', created_at: 'DESC' },

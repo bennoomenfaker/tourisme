@@ -28,7 +28,11 @@ export class Offer {
   @Column({ type: 'uuid', nullable: true })
   project_id!: string | null;
 
-  @ManyToOne(() => Project, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @ManyToOne(() => Project, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    eager: false,
+  })
   @JoinColumn({ name: 'project_id' })
   project!: Project | null;
 

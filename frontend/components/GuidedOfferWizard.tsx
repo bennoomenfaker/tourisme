@@ -464,8 +464,15 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         deposit_percentage: depositPercentage ? Number(depositPercentage) : undefined,
         production_delay_days: productionDelayDays ? Number(productionDelayDays) : undefined,
         fulfillment_mode: fulfillmentMode || undefined,
-        status: publishImmediately ? 'approved' : 'draft',
       };
+
+      if (isEdit) {
+        if (editOffer?.status === 'rejected') {
+          (offerData as any).status = 'pending';
+        } else if (publishImmediately) {
+          (offerData as any).status = 'approved';
+        }
+      }
 
       let resultOffer;
       if (isEdit) {
@@ -620,6 +627,9 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     const updated = [...items];
     (updated[0] as any).details_json = { ...(updated[0] as any).details_json, [field]: value };
     setItems(updated);
+    if (field === 'capacite_offre' && value && !maxGroupSize) {
+      setMaxGroupSize(String(value));
+    }
   }
 
   function getSchemaField(field: string): any {

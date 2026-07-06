@@ -45,7 +45,11 @@ export class TravelCartController {
   @ApiOperation({ summary: 'Modifier le panier' })
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Patch(':id')
-  updateCart(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateCartDto) {
+  updateCart(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateCartDto,
+  ) {
     return this.service.updateCart(id, req.user.sub, dto);
   }
 
@@ -58,10 +62,16 @@ export class TravelCartController {
 
   // ─── Cart Items ─────────────────────────────────────────
 
-  @ApiOperation({ summary: 'Ajouter un élément au panier (OfferItem ou Circuit)' })
+  @ApiOperation({
+    summary: 'Ajouter un élément au panier (OfferItem ou Circuit)',
+  })
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Post(':id/items')
-  addItem(@Req() req: any, @Param('id') id: string, @Body() dto: AddCartItemDto) {
+  addItem(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: AddCartItemDto,
+  ) {
     return this.service.addItem(id, req.user.sub, dto);
   }
 
@@ -80,7 +90,11 @@ export class TravelCartController {
   @ApiOperation({ summary: 'Supprimer un élément du panier' })
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Delete(':id/items/:itemId')
-  removeItem(@Req() req: any, @Param('id') id: string, @Param('itemId') itemId: string) {
+  removeItem(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
     return this.service.removeItem(id, itemId, req.user.sub);
   }
 
@@ -88,11 +102,16 @@ export class TravelCartController {
 
   @ApiOperation({
     summary: 'Convertir le panier en Trip Plan',
-    description: 'Transforme le panier temporaire en plan de voyage structuré et valide.',
+    description:
+      'Transforme le panier temporaire en plan de voyage structuré et valide.',
   })
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Post(':id/convert')
-  convertToTripPlan(@Req() req: any, @Param('id') id: string, @Body() dto: ConvertCartToTripPlanDto) {
+  convertToTripPlan(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: ConvertCartToTripPlanDto,
+  ) {
     return this.service.convertToTripPlan(id, req.user.sub, dto);
   }
 }

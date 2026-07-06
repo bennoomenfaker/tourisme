@@ -27,7 +27,10 @@ export class ReviewController {
 
   @Public()
   @Get('target/:targetType/:targetId')
-  findByTarget(@Param('targetType') targetType: string, @Param('targetId') targetId: string) {
+  findByTarget(
+    @Param('targetType') targetType: string,
+    @Param('targetId') targetId: string,
+  ) {
     return this.service.findByTarget(targetType, targetId);
   }
 
@@ -45,13 +48,20 @@ export class ReviewController {
 
   @Public()
   @Get('average/:targetType/:targetId')
-  getAverageRating(@Param('targetType') targetType: string, @Param('targetId') targetId: string) {
+  getAverageRating(
+    @Param('targetType') targetType: string,
+    @Param('targetId') targetId: string,
+  ) {
     return this.service.getAverageRating(targetType, targetId);
   }
 
   @ApiBearerAuth('bearer')
   @Patch(':id')
-  update(@Req() req: any, @Param('id') id: string, @Body() dto: Partial<CreateReviewDto>) {
+  update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateReviewDto>,
+  ) {
     return this.service.update(req.user.sub, id, dto);
   }
 

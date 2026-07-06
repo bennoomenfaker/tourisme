@@ -8,7 +8,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, LessThan } from 'typeorm';
 import { Booking } from './entities/booking.entity';
 import { BookingParticipant } from './entities/booking-participant.entity';
-import { CreateBookingDto, CreateGuideBookingDto } from './dto/create-booking.dto';
+import {
+  CreateBookingDto,
+  CreateGuideBookingDto,
+} from './dto/create-booking.dto';
 import { User } from '../users/entities/user.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { OfferItem } from '../offer/entities/offer-item.entity';
@@ -47,11 +50,19 @@ export class BookingService {
   async create(travelerId: string, dto: CreateBookingDto): Promise<Booking> {
     let session: OfferItemSession | null = null;
     if (dto.session_id) {
-      session = await this.sessionRepo.findOne({ where: { id: dto.session_id } });
+      session = await this.sessionRepo.findOne({
+        where: { id: dto.session_id },
+      });
       if (!session) throw new NotFoundException('Session introuvable');
-      if (session.status === 'full') throw new BadRequestException('Cette session est complète');
-      if (session.remaining_capacity !== null && session.remaining_capacity <= 0) {
-        throw new BadRequestException('Plus de places disponibles pour cette session');
+      if (session.status === 'full')
+        throw new BadRequestException('Cette session est complète');
+      if (
+        session.remaining_capacity !== null &&
+        session.remaining_capacity <= 0
+      ) {
+        throw new BadRequestException(
+          'Plus de places disponibles pour cette session',
+        );
       }
     }
 
@@ -60,14 +71,18 @@ export class BookingService {
 
     // ── Vérification des délais de réservation ──
     if (dto.offer_item_id && dto.session_id && session) {
-      const offerItem = await this.offerItemRepo.findOne({ where: { id: dto.offer_item_id } });
+      const offerItem = await this.offerItemRepo.findOne({
+        where: { id: dto.offer_item_id },
+      });
       if (offerItem?.booking_deadline_days != null && session.date) {
         const sessionDate = new Date(session.date);
         const now = new Date();
-        const daysUntilSession = Math.ceil((sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const daysUntilSession = Math.ceil(
+          (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
         if (daysUntilSession < offerItem.booking_deadline_days) {
           throw new BadRequestException(
-            `La réservation doit être faite au moins ${offerItem.booking_deadline_days} jour(s) avant la session (plus que ${daysUntilSession} jour(s))`
+            `La réservation doit être faite au moins ${offerItem.booking_deadline_days} jour(s) avant la session (plus que ${daysUntilSession} jour(s))`,
           );
         }
       }
@@ -76,12 +91,14 @@ export class BookingService {
     // ── Vérification du stock global (items sans session) ──
     let itemCapacity: OfferItemCapacity | null = null;
     if (dto.offer_item_id && !dto.session_id) {
-      itemCapacity = await this.capacityRepo.findOne({ where: { offerItem: { id: dto.offer_item_id } } });
+      itemCapacity = await this.capacityRepo.findOne({
+        where: { offerItem: { id: dto.offer_item_id } },
+      });
       if (itemCapacity?.remaining_quantity != null) {
         const participantCount = dto.participants?.length ?? 1;
         if (itemCapacity.remaining_quantity < participantCount) {
           throw new BadRequestException(
-            `Stock insuffisant : ${itemCapacity.remaining_quantity} ${itemCapacity.capacity_type} restant(s) (demandé : ${participantCount})`
+            `Stock insuffisant : ${itemCapacity.remaining_quantity} ${itemCapacity.capacity_type} restant(s) (demandé : ${participantCount})`,
           );
         }
       }
@@ -90,7 +107,11 @@ export class BookingService {
     // ── Vérification double réservation même session ──
     if (dto.session_id) {
       const existingBooking = await this.bookingRepo.findOne({
-        where: { traveler: { id: travelerId } as any, session: { id: dto.session_id } as any, status: Not('cancelled') },
+        where: {
+          traveler: { id: travelerId } as any,
+          session: { id: dto.session_id } as any,
+          status: Not('cancelled'),
+        },
       });
       if (existingBooking) {
         throw new BadRequestException('Vous avez déjà réservé cette session');
@@ -107,7 +128,8 @@ export class BookingService {
         relations: ['prices'],
       });
       if (offerItem && offerItem.prices?.length) {
-        const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
+        const priceRow =
+          offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
         const unitPrice = Number(priceRow.price);
         const pricingUnit = priceRow.pricing_unit ?? 'per_person';
         const nights = dto.nights ?? offerItem.details_json?.nights ?? 1;
@@ -121,7 +143,8 @@ export class BookingService {
             totalPrice = unitPrice * nights;
             break;
           case 'per_bed': {
-            const bedCount = offerItem.details_json?.bed_count ?? participantCount;
+            const bedCount =
+              offerItem.details_json?.bed_count ?? participantCount;
             totalPrice = unitPrice * bedCount * nights;
             break;
           }
@@ -142,7 +165,8 @@ export class BookingService {
       });
       if (allItems.length) {
         const sumDefaultPrices = allItems.reduce((sum, item) => {
-          const priceRow = item.prices?.find((p) => p.is_default) ?? item.prices?.[0];
+          const priceRow =
+            item.prices?.find((p) => p.is_default) ?? item.prices?.[0];
           return sum + (priceRow ? Number(priceRow.price) : 0);
         }, 0);
         totalPrice = sumDefaultPrices * participantCount;
@@ -154,8 +178,12 @@ export class BookingService {
       booking_ref: `BK-${refSuffix}`,
       traveler: { id: travelerId } as User,
       offer: { id: dto.offer_id } as Offer,
-      offerItem: dto.offer_item_id ? ({ id: dto.offer_item_id } as OfferItem) : null,
-      session: dto.session_id ? ({ id: dto.session_id } as OfferItemSession) : null,
+      offerItem: dto.offer_item_id
+        ? ({ id: dto.offer_item_id } as OfferItem)
+        : null,
+      session: dto.session_id
+        ? ({ id: dto.session_id } as OfferItemSession)
+        : null,
       total_price: totalPrice,
       currency: dto.currency ?? 'TND',
       special_requests: dto.special_requests ?? null,
@@ -166,7 +194,10 @@ export class BookingService {
 
     // ── Décrémentation de la capacité ──
     if (session && session.remaining_capacity !== null) {
-      session.remaining_capacity = Math.max(0, session.remaining_capacity - participantCount);
+      session.remaining_capacity = Math.max(
+        0,
+        session.remaining_capacity - participantCount,
+      );
       if (session.remaining_capacity <= 0) {
         session.status = 'full';
       }
@@ -175,7 +206,10 @@ export class BookingService {
 
     // ── Décrémentation du stock global (items sans session) ──
     if (itemCapacity && itemCapacity.remaining_quantity !== null) {
-      itemCapacity.remaining_quantity = Math.max(0, itemCapacity.remaining_quantity - participantCount);
+      itemCapacity.remaining_quantity = Math.max(
+        0,
+        itemCapacity.remaining_quantity - participantCount,
+      );
       await this.capacityRepo.save(itemCapacity);
     }
 
@@ -193,18 +227,40 @@ export class BookingService {
       await this.participantRepo.save(participants);
     }
 
-    const notifType = booking.status === 'confirmed' ? 'booking_confirmed' : 'booking_request';
-    const notifTitle = booking.status === 'confirmed' ? 'Réservation confirmée' : 'Demande de réservation';
-    const travelerMsg = booking.status === 'confirmed'
-      ? `Votre réservation ${saved.booking_ref} pour "${offer.title}" a été confirmée.`
-      : `Votre demande de réservation ${saved.booking_ref} pour "${offer.title}" a été envoyée. Le prestataire va la confirmer.`;
-    this.notificationService.create(travelerId, notifType, notifTitle, travelerMsg, `/bookings/${saved.id}`).catch(() => {});
+    const notifType =
+      booking.status === 'confirmed' ? 'booking_confirmed' : 'booking_request';
+    const notifTitle =
+      booking.status === 'confirmed'
+        ? 'Réservation confirmée'
+        : 'Demande de réservation';
+    const travelerMsg =
+      booking.status === 'confirmed'
+        ? `Votre réservation ${saved.booking_ref} pour "${offer.title}" a été confirmée.`
+        : `Votre demande de réservation ${saved.booking_ref} pour "${offer.title}" a été envoyée. Le prestataire va la confirmer.`;
+    this.notificationService
+      .create(
+        travelerId,
+        notifType,
+        notifTitle,
+        travelerMsg,
+        `/bookings/${saved.id}`,
+      )
+      .catch(() => {});
 
     if (offer.author_id && offer.author_id !== travelerId) {
-      const providerMsg = booking.status === 'confirmed'
-        ? `Nouvelle réservation ${saved.booking_ref} confirmée pour "${offer.title}" par un voyageur.`
-        : `Nouvelle demande de réservation ${saved.booking_ref} pour "${offer.title}" en attente de votre confirmation.`;
-      this.notificationService.create(offer.author_id, 'new_booking_request', 'Nouvelle réservation', providerMsg, `/dashboard/incoming`).catch(() => {});
+      const providerMsg =
+        booking.status === 'confirmed'
+          ? `Nouvelle réservation ${saved.booking_ref} confirmée pour "${offer.title}" par un voyageur.`
+          : `Nouvelle demande de réservation ${saved.booking_ref} pour "${offer.title}" en attente de votre confirmation.`;
+      this.notificationService
+        .create(
+          offer.author_id,
+          'new_booking_request',
+          'Nouvelle réservation',
+          providerMsg,
+          `/dashboard/incoming`,
+        )
+        .catch(() => {});
     }
 
     return this.bookingRepo.findOne({
@@ -226,30 +282,50 @@ export class BookingService {
   async findById(id: string): Promise<Booking> {
     const booking = await this.bookingRepo.findOne({
       where: { id },
-      relations: ['offer', 'offerItem', 'session', 'guideOffering', 'guideOfferingSession', 'participants', 'traveler'],
+      relations: [
+        'offer',
+        'offerItem',
+        'session',
+        'guideOffering',
+        'guideOfferingSession',
+        'participants',
+        'traveler',
+      ],
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
     return booking;
   }
 
   /** Annule une réservation (par le voyageur) */
-  async cancel(id: string, travelerId: string, reason?: string): Promise<Booking> {
+  async cancel(
+    id: string,
+    travelerId: string,
+    reason?: string,
+  ): Promise<Booking> {
     const booking = await this.findById(id);
     if (booking.traveler.id !== travelerId) {
-      throw new ForbiddenException('Vous ne pouvez annuler que vos propres réservations');
+      throw new ForbiddenException(
+        'Vous ne pouvez annuler que vos propres réservations',
+      );
     }
 
     // ── Vérification du délai d'annulation ──
     if (booking.offerItem?.id && booking.session?.id) {
-      const offerItem = await this.offerItemRepo.findOne({ where: { id: booking.offerItem.id } });
-      const session = await this.sessionRepo.findOne({ where: { id: booking.session.id } });
+      const offerItem = await this.offerItemRepo.findOne({
+        where: { id: booking.offerItem.id },
+      });
+      const session = await this.sessionRepo.findOne({
+        where: { id: booking.session.id },
+      });
       if (offerItem?.cancellation_deadline_days != null && session?.date) {
         const sessionDate = new Date(session.date);
         const now = new Date();
-        const daysUntilSession = Math.ceil((sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const daysUntilSession = Math.ceil(
+          (sessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
         if (daysUntilSession < offerItem.cancellation_deadline_days) {
           throw new BadRequestException(
-            `L'annulation doit être faite au moins ${offerItem.cancellation_deadline_days} jour(s) avant la session (plus que ${daysUntilSession} jour(s))`
+            `L'annulation doit être faite au moins ${offerItem.cancellation_deadline_days} jour(s) avant la session (plus que ${daysUntilSession} jour(s))`,
           );
         }
       }
@@ -262,10 +338,13 @@ export class BookingService {
 
     // Restaurer la capacité de la session
     if (booking.session?.id) {
-      const session = await this.sessionRepo.findOne({ where: { id: booking.session.id } });
+      const session = await this.sessionRepo.findOne({
+        where: { id: booking.session.id },
+      });
       if (session && session.remaining_capacity !== null) {
         const participantCount = booking.participants?.length ?? 1;
-        session.remaining_capacity = session.remaining_capacity + participantCount;
+        session.remaining_capacity =
+          session.remaining_capacity + participantCount;
         if (session.status === 'full') {
           session.status = 'available';
         }
@@ -275,34 +354,43 @@ export class BookingService {
 
     // Restaurer le stock global (items sans session)
     if (booking.offerItem?.id && !booking.session?.id) {
-      const capacity = await this.capacityRepo.findOne({ where: { offerItem: { id: booking.offerItem.id } } });
+      const capacity = await this.capacityRepo.findOne({
+        where: { offerItem: { id: booking.offerItem.id } },
+      });
       if (capacity && capacity.remaining_quantity !== null) {
         const participantCount = booking.participants?.length ?? 1;
-        capacity.remaining_quantity = capacity.remaining_quantity + participantCount;
+        capacity.remaining_quantity =
+          capacity.remaining_quantity + participantCount;
         await this.capacityRepo.save(capacity);
       }
     }
 
     // Notifier le voyageur
-    this.notificationService.create(
-      travelerId,
-      'booking_cancelled',
-      'Réservation annulée',
-      `Votre réservation ${saved.booking_ref} a été annulée.${reason ? ` Motif : ${reason}` : ''}`,
-      `/bookings/${saved.id}`,
-    ).catch(() => {});
+    this.notificationService
+      .create(
+        travelerId,
+        'booking_cancelled',
+        'Réservation annulée',
+        `Votre réservation ${saved.booking_ref} a été annulée.${reason ? ` Motif : ${reason}` : ''}`,
+        `/bookings/${saved.id}`,
+      )
+      .catch(() => {});
 
     // Notifier le provider
     if (booking.offer) {
-      const offer = await this.offerRepo.findOne({ where: { id: booking.offer.id } });
+      const offer = await this.offerRepo.findOne({
+        where: { id: booking.offer.id },
+      });
       if (offer?.author_id && offer.author_id !== travelerId) {
-        this.notificationService.create(
-          offer.author_id,
-          'booking_cancelled',
-          'Réservation annulée',
-          `La réservation ${saved.booking_ref} pour "${offer.title}" a été annulée par le voyageur.${reason ? ` Motif : ${reason}` : ''}`,
-          `/dashboard/incoming`,
-        ).catch(() => {});
+        this.notificationService
+          .create(
+            offer.author_id,
+            'booking_cancelled',
+            'Réservation annulée',
+            `La réservation ${saved.booking_ref} pour "${offer.title}" a été annulée par le voyageur.${reason ? ` Motif : ${reason}` : ''}`,
+            `/dashboard/incoming`,
+          )
+          .catch(() => {});
       }
     }
     return saved;
@@ -311,22 +399,30 @@ export class BookingService {
   /** Confirme une réservation (par le provider, mode manual) */
   async confirm(id: string, providerId: string): Promise<Booking> {
     const booking = await this.findById(id);
-    const offer = booking.offer ? await this.offerRepo.findOne({ where: { id: booking.offer.id } }) : null;
+    const offer = booking.offer
+      ? await this.offerRepo.findOne({ where: { id: booking.offer.id } })
+      : null;
     if (!offer || offer.author_id !== providerId) {
-      throw new ForbiddenException('Vous ne pouvez confirmer que les réservations de vos propres offres');
+      throw new ForbiddenException(
+        'Vous ne pouvez confirmer que les réservations de vos propres offres',
+      );
     }
     if (booking.status !== 'pending') {
-      throw new BadRequestException('Cette réservation ne peut plus être confirmée');
+      throw new BadRequestException(
+        'Cette réservation ne peut plus être confirmée',
+      );
     }
     booking.status = 'confirmed';
     const saved = await this.bookingRepo.save(booking);
-    this.notificationService.create(
-      booking.traveler.id,
-      'booking_confirmed',
-      'Réservation confirmée',
-      `Votre réservation ${saved.booking_ref} pour "${offer.title}" a été confirmée par le prestataire.`,
-      `/bookings/${saved.id}`,
-    ).catch(() => {});
+    this.notificationService
+      .create(
+        booking.traveler.id,
+        'booking_confirmed',
+        'Réservation confirmée',
+        `Votre réservation ${saved.booking_ref} pour "${offer.title}" a été confirmée par le prestataire.`,
+        `/bookings/${saved.id}`,
+      )
+      .catch(() => {});
     return saved;
   }
 
@@ -348,14 +444,24 @@ export class BookingService {
   async addParticipants(
     bookingId: string,
     travelerId: string,
-    participants: { full_name: string; age?: number; document_type?: string; document_number?: string; is_group_leader?: boolean }[],
+    participants: {
+      full_name: string;
+      age?: number;
+      document_type?: string;
+      document_number?: string;
+      is_group_leader?: boolean;
+    }[],
   ): Promise<Booking> {
     const booking = await this.findById(bookingId);
     if (booking.traveler.id !== travelerId) {
-      throw new ForbiddenException('Vous ne pouvez modifier que vos propres réservations');
+      throw new ForbiddenException(
+        'Vous ne pouvez modifier que vos propres réservations',
+      );
     }
     if (booking.status === 'cancelled') {
-      throw new ForbiddenException('Impossible d\'ajouter des participants à une réservation annulée');
+      throw new ForbiddenException(
+        "Impossible d'ajouter des participants à une réservation annulée",
+      );
     }
     const entities = participants.map((p) =>
       this.participantRepo.create({
@@ -380,7 +486,8 @@ export class BookingService {
         relations: ['prices'],
       });
       if (offerItem && offerItem.prices?.length) {
-        const priceRow = offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
+        const priceRow =
+          offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
         const unitPrice = Number(priceRow.price);
         const pricingUnit = priceRow.pricing_unit ?? 'per_person';
         const nights = offerItem.details_json?.nights ?? 1;
@@ -414,7 +521,8 @@ export class BookingService {
       });
       if (allItems.length) {
         const sumDefaultPrices = allItems.reduce((sum, item) => {
-          const priceRow = item.prices?.find((p) => p.is_default) ?? item.prices?.[0];
+          const priceRow =
+            item.prices?.find((p) => p.is_default) ?? item.prices?.[0];
           return sum + (priceRow ? Number(priceRow.price) : 0);
         }, 0);
         totalPrice = sumDefaultPrices * totalCount;
@@ -442,13 +550,15 @@ export class BookingService {
       booking.status = 'expired';
       await this.bookingRepo.save(booking);
       await this.restoreBookingCapacity(booking);
-      this.notificationService.create(
-        booking.traveler.id,
-        'booking_expired',
-        'Réservation expirée',
-        `Votre réservation ${booking.booking_ref} a expirée faute de confirmation dans les 48h.`,
-        `/bookings/${booking.id}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          booking.traveler.id,
+          'booking_expired',
+          'Réservation expirée',
+          `Votre réservation ${booking.booking_ref} a expirée faute de confirmation dans les 48h.`,
+          `/bookings/${booking.id}`,
+        )
+        .catch(() => {});
     }
     return expired.length;
   }
@@ -479,17 +589,23 @@ export class BookingService {
   private async restoreBookingCapacity(booking: Booking): Promise<void> {
     const participantCount = booking.participants?.length ?? 1;
     if (booking.session?.id) {
-      const session = await this.sessionRepo.findOne({ where: { id: booking.session.id } });
+      const session = await this.sessionRepo.findOne({
+        where: { id: booking.session.id },
+      });
       if (session && session.remaining_capacity !== null) {
-        session.remaining_capacity = session.remaining_capacity + participantCount;
+        session.remaining_capacity =
+          session.remaining_capacity + participantCount;
         if (session.status === 'full') session.status = 'available';
         await this.sessionRepo.save(session);
       }
     }
     if (booking.offerItem?.id && !booking.session?.id) {
-      const capacity = await this.capacityRepo.findOne({ where: { offerItem: { id: booking.offerItem.id } } });
+      const capacity = await this.capacityRepo.findOne({
+        where: { offerItem: { id: booking.offerItem.id } },
+      });
       if (capacity && capacity.remaining_quantity !== null) {
-        capacity.remaining_quantity = capacity.remaining_quantity + participantCount;
+        capacity.remaining_quantity =
+          capacity.remaining_quantity + participantCount;
         await this.capacityRepo.save(capacity);
       }
     }
@@ -506,15 +622,22 @@ export class BookingService {
       relations: ['guide'],
     });
     if (!offering) throw new NotFoundException('Prestation guide introuvable');
-    if (offering.status !== 'active') throw new BadRequestException('Cette prestation n\'est pas active');
+    if (offering.status !== 'active')
+      throw new BadRequestException("Cette prestation n'est pas active");
 
     const session = await this.guideSessionRepo.findOne({
-      where: { id: dto.guide_offering_session_id, guideOffering: { id: dto.guide_offering_id } },
+      where: {
+        id: dto.guide_offering_session_id,
+        guideOffering: { id: dto.guide_offering_id },
+      },
     });
     if (!session) throw new NotFoundException('Session introuvable');
-    if (session.status === 'cancelled') throw new BadRequestException('Cette session est annulée');
-    const sessionCapacity = session.remaining_capacity ?? session.total_capacity ?? 0;
-    if (sessionCapacity <= 0) throw new BadRequestException('Cette session est complète');
+    if (session.status === 'cancelled')
+      throw new BadRequestException('Cette session est annulée');
+    const sessionCapacity =
+      session.remaining_capacity ?? session.total_capacity ?? 0;
+    if (sessionCapacity <= 0)
+      throw new BadRequestException('Cette session est complète');
 
     const participantCount = dto.participants?.length ?? 0;
     if (participantCount > sessionCapacity) {
@@ -525,7 +648,8 @@ export class BookingService {
 
     const total_price = participantCount * Number(offering.price);
 
-    const bookingRef = 'BK-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const bookingRef =
+      'BK-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
     const booking = this.bookingRepo.create({
       booking_ref: bookingRef,
@@ -535,7 +659,8 @@ export class BookingService {
       total_price,
       currency: dto.currency ?? 'TND',
       special_requests: dto.special_requests ?? null,
-      status: offering.confirmation_mode === 'automatic' ? 'confirmed' : 'pending',
+      status:
+        offering.confirmation_mode === 'automatic' ? 'confirmed' : 'pending',
       confirmation_mode: offering.confirmation_mode,
     });
 
@@ -567,7 +692,7 @@ export class BookingService {
         `Réservation ${bookingRef} pour ${participantCount > 0 ? participantCount + ' participant(s)' : '1 voyageur'} le ${session.date.toLocaleDateString('fr-FR')}`,
         `/dashboard/bookings/${saved.id}`,
       );
-    } catch { }
+    } catch {}
 
     return this.findById(saved.id);
   }

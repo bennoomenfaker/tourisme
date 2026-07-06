@@ -13,7 +13,16 @@ import { Project } from '../project-owner/entities/project.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ItemLike, ItemComment, ItemCommentLike, EcoTraveler, Guide, ProjectOwner, Offer, Project]),
+    TypeOrmModule.forFeature([
+      ItemLike,
+      ItemComment,
+      ItemCommentLike,
+      EcoTraveler,
+      Guide,
+      ProjectOwner,
+      Offer,
+      Project,
+    ]),
   ],
   providers: [InteractionsService],
   controllers: [InteractionsController],

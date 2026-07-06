@@ -1,8 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TimelineEntry } from './entities/timeline-entry.entity';
-import { CreateTimelineEntryDto, UpdateTimelineEntryDto, BulkSaveTimelineDto } from './dto/timeline.dto';
+import {
+  CreateTimelineEntryDto,
+  UpdateTimelineEntryDto,
+  BulkSaveTimelineDto,
+} from './dto/timeline.dto';
 
 @Injectable()
 export class TimelineService {
@@ -18,7 +26,10 @@ export class TimelineService {
     });
   }
 
-  async create(publicationId: string, dto: CreateTimelineEntryDto): Promise<TimelineEntry> {
+  async create(
+    publicationId: string,
+    dto: CreateTimelineEntryDto,
+  ): Promise<TimelineEntry> {
     const entry = this.repo.create({
       publication_id: publicationId,
       step_order: dto.step_order,
@@ -35,7 +46,10 @@ export class TimelineService {
     return this.repo.save(entry);
   }
 
-  async bulkSave(publicationId: string, dto: BulkSaveTimelineDto): Promise<TimelineEntry[]> {
+  async bulkSave(
+    publicationId: string,
+    dto: BulkSaveTimelineDto,
+  ): Promise<TimelineEntry[]> {
     await this.repo.delete({ publication_id: publicationId });
     if (dto.entries.length === 0) return [];
     const entries = dto.entries.map((e, i) =>
@@ -51,12 +65,15 @@ export class TimelineService {
         transport_mode: e.transport_mode ?? null,
         latitude: e.latitude ?? null,
         longitude: e.longitude ?? null,
-      })
+      }),
     );
     return this.repo.save(entries);
   }
 
-  async update(entryId: string, dto: UpdateTimelineEntryDto): Promise<TimelineEntry> {
+  async update(
+    entryId: string,
+    dto: UpdateTimelineEntryDto,
+  ): Promise<TimelineEntry> {
     const entry = await this.repo.findOne({ where: { id: entryId } });
     if (!entry) throw new NotFoundException('Entrée de timeline introuvable.');
     if (dto.step_order !== undefined) entry.step_order = dto.step_order;
@@ -64,9 +81,11 @@ export class TimelineService {
     if (dto.time_label !== undefined) entry.time_label = dto.time_label;
     if (dto.title !== undefined) entry.title = dto.title;
     if (dto.description !== undefined) entry.description = dto.description;
-    if (dto.duration_minutes !== undefined) entry.duration_minutes = dto.duration_minutes;
+    if (dto.duration_minutes !== undefined)
+      entry.duration_minutes = dto.duration_minutes;
     if (dto.distance_km !== undefined) entry.distance_km = dto.distance_km;
-    if (dto.transport_mode !== undefined) entry.transport_mode = dto.transport_mode;
+    if (dto.transport_mode !== undefined)
+      entry.transport_mode = dto.transport_mode;
     if (dto.latitude !== undefined) entry.latitude = dto.latitude;
     if (dto.longitude !== undefined) entry.longitude = dto.longitude;
     return this.repo.save(entry);

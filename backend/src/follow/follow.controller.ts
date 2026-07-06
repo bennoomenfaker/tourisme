@@ -12,13 +12,22 @@ export class FollowController {
 
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
   @Post(':targetId/:targetType')
-  follow(@Req() req: any, @Param('targetId') targetId: string, @Param('targetType') targetType: string) {
+  follow(
+    @Req() req: any,
+    @Param('targetId') targetId: string,
+    @Param('targetType') targetType: string,
+  ) {
     const roleMap: Record<string, string> = {
       eco_traveler: 'eco_traveler',
       guide: 'guide',
       project: 'project',
     };
-    return this.service.follow(req.user.sub, roleMap[req.user.role] ?? req.user.role, targetId, targetType);
+    return this.service.follow(
+      req.user.sub,
+      roleMap[req.user.role] ?? req.user.role,
+      targetId,
+      targetType,
+    );
   }
 
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)

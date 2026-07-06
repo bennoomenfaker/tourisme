@@ -13,9 +13,25 @@ describe('AuthController', () => {
       controllers: [AuthController],
       providers: [
         AuthService,
-        { provide: UsersService, useValue: { findByEmail: jest.fn(), create: jest.fn(), saveVerificationToken: jest.fn() } },
-        { provide: MailService, useValue: { sendVerificationEmail: jest.fn(), sendPasswordResetEmail: jest.fn() } },
-        { provide: JwtService, useValue: { sign: jest.fn(() => 'token'), verify: jest.fn() } },
+        {
+          provide: UsersService,
+          useValue: {
+            findByEmail: jest.fn(),
+            create: jest.fn(),
+            saveVerificationToken: jest.fn(),
+          },
+        },
+        {
+          provide: MailService,
+          useValue: {
+            sendVerificationEmail: jest.fn(),
+            sendPasswordResetEmail: jest.fn(),
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: { sign: jest.fn(() => 'token'), verify: jest.fn() },
+        },
       ],
     }).compile();
 

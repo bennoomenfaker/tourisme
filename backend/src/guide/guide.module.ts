@@ -16,20 +16,41 @@ import { GuideController } from './guide.controller';
 import { GuideOfferingController } from './guide-offering.controller';
 import { GuideMongoService } from './guide-mongo.service';
 import { GuideSkills, GuideSkillsSchema } from './schemas/guide-skills.schema';
-import { GuideEngagement, GuideEngagementSchema } from './schemas/guide-engagement.schema';
+import {
+  GuideEngagement,
+  GuideEngagementSchema,
+} from './schemas/guide-engagement.schema';
 import { BookingModule } from '../booking/booking.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Guide, GuideOffering, GuideOfferingAvailabilityRule, GuideOfferingSession, GuideOfferingBlock, GuideOfferingPrice, Booking]),
+    TypeOrmModule.forFeature([
+      Guide,
+      GuideOffering,
+      GuideOfferingAvailabilityRule,
+      GuideOfferingSession,
+      GuideOfferingBlock,
+      GuideOfferingPrice,
+      Booking,
+    ]),
     MongooseModule.forFeature([
       { name: GuideSkills.name, schema: GuideSkillsSchema },
       { name: GuideEngagement.name, schema: GuideEngagementSchema },
     ]),
     forwardRef(() => BookingModule),
   ],
-  providers: [GuideService, GuideOfferingService, GuideSearchService, GuideMongoService],
+  providers: [
+    GuideService,
+    GuideOfferingService,
+    GuideSearchService,
+    GuideMongoService,
+  ],
   controllers: [GuideController, GuideOfferingController],
-  exports: [GuideService, GuideOfferingService, GuideSearchService, GuideMongoService],
+  exports: [
+    GuideService,
+    GuideOfferingService,
+    GuideSearchService,
+    GuideMongoService,
+  ],
 })
 export class GuideModule {}

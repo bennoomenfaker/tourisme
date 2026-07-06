@@ -18,7 +18,18 @@ import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Publication, Offer, Circuit, GuideOffering, Project, User, EcoTraveler, Guide, ProjectOwner, ModerationLog]),
+    TypeOrmModule.forFeature([
+      Publication,
+      Offer,
+      Circuit,
+      GuideOffering,
+      Project,
+      User,
+      EcoTraveler,
+      Guide,
+      ProjectOwner,
+      ModerationLog,
+    ]),
     ReportsModule,
     MailModule,
     NotificationModule,

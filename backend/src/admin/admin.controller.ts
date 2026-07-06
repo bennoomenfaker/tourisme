@@ -1,10 +1,15 @@
 import { Body, Controller, Get, Param, Patch, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { AdminService } from './admin.service';
 import { RejectDto } from './dto/admin.dto';
 import { ReportsService } from '../reports/reports.service';
+
+interface AuthenticatedRequest extends Request {
+  user: { sub: string; email: string; role: string };
+}
 
 @ApiTags('Admin')
 @ApiBearerAuth('bearer')
@@ -16,24 +21,27 @@ export class AdminController {
     private readonly reportsService: ReportsService,
   ) {}
 
-  // ─── Publications ─────────────────────────────────────────────────────────
-
   @Get('publications/pending')
   getPendingPublications() {
     return this.service.getPendingPublications();
   }
 
   @Patch('publications/:id/approve')
-  approvePublication(@Req() req: any, @Param('id') id: string) {
+  approvePublication(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.service.approvePublication(id, req.user.sub);
   }
 
   @Patch('publications/:id/reject')
-  rejectPublication(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+  rejectPublication(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: RejectDto,
+  ) {
     return this.service.rejectPublication(id, dto.reason, req.user.sub);
   }
-
-  // ─── Offers ───────────────────────────────────────────────────────────────
 
   @Get('offers/pending')
   getPendingOffers() {
@@ -41,16 +49,18 @@ export class AdminController {
   }
 
   @Patch('offers/:id/approve')
-  approveOffer(@Req() req: any, @Param('id') id: string) {
+  approveOffer(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.service.approveOffer(id, req.user.sub);
   }
 
   @Patch('offers/:id/reject')
-  rejectOffer(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+  rejectOffer(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: RejectDto,
+  ) {
     return this.service.rejectOffer(id, dto.reason, req.user.sub);
   }
-
-  // ─── Projects ─────────────────────────────────────────────────────────────
 
   @Get('projects/pending')
   getPendingProjects() {
@@ -58,16 +68,18 @@ export class AdminController {
   }
 
   @Patch('projects/:id/approve')
-  approveProject(@Req() req: any, @Param('id') id: string) {
+  approveProject(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.service.approveProject(id, req.user.sub);
   }
 
   @Patch('projects/:id/reject')
-  rejectProject(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+  rejectProject(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: RejectDto,
+  ) {
     return this.service.rejectProject(id, dto.reason, req.user.sub);
   }
-
-  // ─── Circuits ──────────────────────────────────────────────────────────────
 
   @Get('circuits/pending')
   getPendingCircuits() {
@@ -75,21 +87,23 @@ export class AdminController {
   }
 
   @Patch('circuits/:id/approve')
-  approveCircuit(@Req() req: any, @Param('id') id: string) {
+  approveCircuit(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.service.approveCircuit(id, req.user.sub);
   }
 
   @Patch('circuits/:id/reject')
-  rejectCircuit(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+  rejectCircuit(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: RejectDto,
+  ) {
     return this.service.rejectCircuit(id, dto.reason, req.user.sub);
   }
 
   @Patch('circuits/:id/archive')
-  archiveCircuit(@Req() req: any, @Param('id') id: string) {
+  archiveCircuit(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.service.archiveCircuit(id, req.user.sub);
   }
-
-  // ─── Guide Offerings ───────────────────────────────────────────────────────
 
   @Get('guide-offerings/pending')
   getPendingGuideOfferings() {
@@ -97,21 +111,29 @@ export class AdminController {
   }
 
   @Patch('guide-offerings/:id/approve')
-  approveGuideOffering(@Req() req: any, @Param('id') id: string) {
+  approveGuideOffering(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.service.approveGuideOffering(id, req.user.sub);
   }
 
   @Patch('guide-offerings/:id/reject')
-  rejectGuideOffering(@Req() req: any, @Param('id') id: string, @Body() dto: RejectDto) {
+  rejectGuideOffering(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: RejectDto,
+  ) {
     return this.service.rejectGuideOffering(id, dto.reason, req.user.sub);
   }
 
   @Patch('guide-offerings/:id/archive')
-  archiveGuideOffering(@Req() req: any, @Param('id') id: string) {
+  archiveGuideOffering(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.service.archiveGuideOffering(id, req.user.sub);
   }
-
-  // ─── Reports ──────────────────────────────────────────────────────────────
 
   @Get('reports')
   getReports() {
@@ -123,10 +145,13 @@ export class AdminController {
     @Param('id') id: string,
     @Body() body: { action: string; note?: string; ban_days?: number },
   ) {
-    return this.reportsService.resolveReport(id, body.action, body.note ?? '', body.ban_days);
+    return this.reportsService.resolveReport(
+      id,
+      body.action,
+      body.note ?? '',
+      body.ban_days,
+    );
   }
-
-  // ─── Ban management ───────────────────────────────────────────────────────
 
   @Get('users/banned')
   getBannedUsers() {
@@ -134,7 +159,10 @@ export class AdminController {
   }
 
   @Patch('users/:id/ban')
-  updateBan(@Param('id') id: string, @Body() body: { ban_days?: number; note?: string }) {
+  updateBan(
+    @Param('id') id: string,
+    @Body() body: { ban_days?: number; note?: string },
+  ) {
     return this.service.updateBan(id, body.ban_days, body.note);
   }
 

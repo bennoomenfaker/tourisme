@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProjectOwner } from './entities/project-owner.entity';
 import { Project } from './entities/project.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { CompleteOwnerProfileDto } from './dto/project-owner.dto';
-import { CreateProjectDto, UpdateProjectDto, ProjectSustainabilityDto } from './dto/project.dto';
+import {
+  CreateProjectDto,
+  UpdateProjectDto,
+  ProjectSustainabilityDto,
+} from './dto/project.dto';
 import { ProjectOwnerMongoService } from './project-owner-mongo.service';
 
 @Injectable()
@@ -36,7 +44,9 @@ export class ProjectOwnerService {
       }
     }
 
-    const projects = await this.projectRepo.find({ where: { owner_id: userId } });
+    const projects = await this.projectRepo.find({
+      where: { owner_id: userId },
+    });
 
     return {
       user_id: sqlProfile?.user_id,
@@ -106,7 +116,10 @@ export class ProjectOwnerService {
   async createProject(userId: string, dto: CreateProjectDto) {
     await this.findOwnerOrFail(userId);
 
-    const hasAmbassador = await this.mongoService.hasBadge(userId, 'Propriétaire Ambassadeur AFRATIM');
+    const hasAmbassador = await this.mongoService.hasBadge(
+      userId,
+      'Propriétaire Ambassadeur AFRATIM',
+    );
 
     const project = this.projectRepo.create({
       owner_id: userId,
@@ -136,22 +149,32 @@ export class ProjectOwnerService {
     return saved;
   }
 
-  async updateProject(userId: string, projectId: string, dto: UpdateProjectDto) {
-    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+  async updateProject(
+    userId: string,
+    projectId: string,
+    dto: UpdateProjectDto,
+  ) {
+    const project = await this.projectRepo.findOne({
+      where: { id: projectId },
+    });
 
     if (!project) throw new NotFoundException('Projet introuvable.');
-    if (project.owner_id !== userId) throw new ForbiddenException('Accès refusé.');
+    if (project.owner_id !== userId)
+      throw new ForbiddenException('Accès refusé.');
 
     if (dto.name !== undefined) project.name = dto.name;
     if (dto.project_type !== undefined) project.project_type = dto.project_type;
     if (dto.description !== undefined) project.description = dto.description;
     if (dto.region !== undefined) project.region = dto.region;
     if (dto.address !== undefined) project.address = dto.address;
-    if (dto.photos !== undefined) { project.photos = dto.photos.length ? dto.photos : null; project.photo = dto.photos[0] ?? null; }
-    else if (dto.photo !== undefined) project.photo = dto.photo;
+    if (dto.photos !== undefined) {
+      project.photos = dto.photos.length ? dto.photos : null;
+      project.photo = dto.photos[0] ?? null;
+    } else if (dto.photo !== undefined) project.photo = dto.photo;
     if (dto.lat !== undefined) project.lat = dto.lat;
     if (dto.lng !== undefined) project.lng = dto.lng;
-    if (dto.opening_hours !== undefined) project.opening_hours = dto.opening_hours;
+    if (dto.opening_hours !== undefined)
+      project.opening_hours = dto.opening_hours;
     if (dto.facebook !== undefined) project.facebook = dto.facebook;
     if (dto.instagram !== undefined) project.instagram = dto.instagram;
     if (dto.services !== undefined) project.services = dto.services;
@@ -161,25 +184,34 @@ export class ProjectOwnerService {
 
     const saved = await this.projectRepo.save(project);
 
-
     return saved;
   }
 
   async deleteProject(userId: string, projectId: string) {
-    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    const project = await this.projectRepo.findOne({
+      where: { id: projectId },
+    });
 
     if (!project) throw new NotFoundException('Projet introuvable.');
-    if (project.owner_id !== userId) throw new ForbiddenException('Accès refusé.');
+    if (project.owner_id !== userId)
+      throw new ForbiddenException('Accès refusé.');
 
     await this.projectRepo.remove(project);
 
     return { message: 'Projet supprimé avec succès.' };
   }
 
-  async updateProjectSustainability(userId: string, projectId: string, dto: ProjectSustainabilityDto): Promise<Project> {
-    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+  async updateProjectSustainability(
+    userId: string,
+    projectId: string,
+    dto: ProjectSustainabilityDto,
+  ): Promise<Project> {
+    const project = await this.projectRepo.findOne({
+      where: { id: projectId },
+    });
     if (!project) throw new NotFoundException('Projet introuvable.');
-    if (project.owner_id !== userId) throw new ForbiddenException('Accès refusé.');
+    if (project.owner_id !== userId)
+      throw new ForbiddenException('Accès refusé.');
     project.sustainability_score = dto.score;
     return this.projectRepo.save(project);
   }
@@ -195,19 +227,28 @@ export class ProjectOwnerService {
     const profile = await this.findOwnerOrFail(userId);
     profile.score_questionnaire = scoreQuestionnaire;
     profile.sustainability_score = Math.round(
-      scoreQuestionnaire * 0.40 + profile.score_reservations * 0.40 + profile.score_feedbacks * 0.20,
+      scoreQuestionnaire * 0.4 +
+        profile.score_reservations * 0.4 +
+        profile.score_feedbacks * 0.2,
     );
     const saved = await this.ownerRepo.save(profile);
     if (profile.sustainability_score >= 80) {
-      await this.mongoService.addBadge(userId, 'Propriétaire Ambassadeur AFRATIM');
+      await this.mongoService.addBadge(
+        userId,
+        'Propriétaire Ambassadeur AFRATIM',
+      );
     }
     return saved;
   }
 
   private async findOwnerOrFail(userId: string) {
-    const profile = await this.ownerRepo.findOne({ where: { user_id: userId } });
+    const profile = await this.ownerRepo.findOne({
+      where: { user_id: userId },
+    });
     if (!profile) {
-      throw new NotFoundException("Profil introuvable. Complétez d'abord votre profil.");
+      throw new NotFoundException(
+        "Profil introuvable. Complétez d'abord votre profil.",
+      );
     }
     return profile;
   }
@@ -216,8 +257,18 @@ export class ProjectOwnerService {
     const owner = await this.ownerRepo.findOne({ where: { user_id: ownerId } });
     if (!owner) throw new NotFoundException('Profil introuvable.');
     const [projects, offers] = await Promise.all([
-      this.projectRepo.find({ where: { owner_id: ownerId, status: 'active' }, order: { created_at: 'DESC' } }),
-      this.offerRepo.find({ where: { author_id: ownerId, author_type: 'project_owner', status: 'approved' }, order: { created_at: 'DESC' } }),
+      this.projectRepo.find({
+        where: { owner_id: ownerId, status: 'active' },
+        order: { created_at: 'DESC' },
+      }),
+      this.offerRepo.find({
+        where: {
+          author_id: ownerId,
+          author_type: 'project_owner',
+          status: 'approved',
+        },
+        order: { created_at: 'DESC' },
+      }),
     ]);
     return {
       user_id: owner.user_id,
@@ -239,8 +290,16 @@ export class ProjectOwnerService {
     if (!q) return [];
     return this.ownerRepo
       .createQueryBuilder('o')
-      .where('LOWER(o.full_name) LIKE :q OR LOWER(o.organization) LIKE :q', { q: `%${q.toLowerCase()}%` })
-      .select(['o.user_id', 'o.full_name', 'o.photo', 'o.organization', 'o.sustainability_score'])
+      .where('LOWER(o.full_name) LIKE :q OR LOWER(o.organization) LIKE :q', {
+        q: `%${q.toLowerCase()}%`,
+      })
+      .select([
+        'o.user_id',
+        'o.full_name',
+        'o.photo',
+        'o.organization',
+        'o.sustainability_score',
+      ])
       .limit(20)
       .getMany();
   }
@@ -249,7 +308,8 @@ export class ProjectOwnerService {
     let score = 0;
 
     const identityFields = [p.full_name, p.country, p.language];
-    score += (identityFields.filter(Boolean).length / identityFields.length) * 30;
+    score +=
+      (identityFields.filter(Boolean).length / identityFields.length) * 30;
 
     if (p.organization) score += 20;
     if (p.position) score += 15;

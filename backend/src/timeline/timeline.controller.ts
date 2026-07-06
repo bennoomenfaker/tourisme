@@ -1,12 +1,23 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Put,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { Public } from '../common/decorators/public.decorator';
 import { TimelineService } from './timeline.service';
-import { CreateTimelineEntryDto, UpdateTimelineEntryDto, BulkSaveTimelineDto } from './dto/timeline.dto';
+import {
+  CreateTimelineEntryDto,
+  UpdateTimelineEntryDto,
+  BulkSaveTimelineDto,
+} from './dto/timeline.dto';
 
 @ApiTags('Timeline')
 @Controller('publications')
@@ -22,21 +33,30 @@ export class TimelineController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
   @Post(':publicationId/timeline')
-  create(@Param('publicationId') publicationId: string, @Body() dto: CreateTimelineEntryDto) {
+  create(
+    @Param('publicationId') publicationId: string,
+    @Body() dto: CreateTimelineEntryDto,
+  ) {
     return this.service.create(publicationId, dto);
   }
 
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
   @Put(':publicationId/timeline')
-  bulkSave(@Param('publicationId') publicationId: string, @Body() dto: BulkSaveTimelineDto) {
+  bulkSave(
+    @Param('publicationId') publicationId: string,
+    @Body() dto: BulkSaveTimelineDto,
+  ) {
     return this.service.bulkSave(publicationId, dto);
   }
 
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
   @Patch('timeline/:entryId')
-  update(@Param('entryId') entryId: string, @Body() dto: UpdateTimelineEntryDto) {
+  update(
+    @Param('entryId') entryId: string,
+    @Body() dto: UpdateTimelineEntryDto,
+  ) {
     return this.service.update(entryId, dto);
   }
 

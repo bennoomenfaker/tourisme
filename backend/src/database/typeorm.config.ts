@@ -12,6 +12,4 @@ export const getTypeOrmConfig = (
   database: configService.get<string>('DB_NAME'),
   autoLoadEntities: true,
   synchronize: true,
-
-  
 });

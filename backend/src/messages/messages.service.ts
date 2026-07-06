@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from './entities/conversation.entity';
@@ -53,20 +57,33 @@ export class MessagesService {
     const callerNorm = this.roleNorm(callerRole);
 
     // Resolve recipient role
-    const recipientUser = await this.userRepo.findOne({ where: { id: recipientId } });
-    if (!recipientUser) throw new NotFoundException('Destinataire introuvable.');
+    const recipientUser = await this.userRepo.findOne({
+      where: { id: recipientId },
+    });
+    if (!recipientUser)
+      throw new NotFoundException('Destinataire introuvable.');
     const recipientNorm = this.roleNorm(recipientUser.role);
 
     // Enforce allowed messaging combinations
     const allowed =
-      callerId !== recipientId && (
-        (callerNorm === 'eco_traveler' && (recipientNorm === 'eco_traveler' || recipientNorm === 'guide' || recipientNorm === 'project_owner')) ||
-        (callerNorm === 'guide' && (recipientNorm === 'eco_traveler' || recipientNorm === 'guide' || recipientNorm === 'project_owner')) ||
-        (callerNorm === 'project_owner' && (recipientNorm === 'eco_traveler' || recipientNorm === 'guide' || recipientNorm === 'project_owner'))
-      );
+      callerId !== recipientId &&
+      ((callerNorm === 'eco_traveler' &&
+        (recipientNorm === 'eco_traveler' ||
+          recipientNorm === 'guide' ||
+          recipientNorm === 'project_owner')) ||
+        (callerNorm === 'guide' &&
+          (recipientNorm === 'eco_traveler' ||
+            recipientNorm === 'guide' ||
+            recipientNorm === 'project_owner')) ||
+        (callerNorm === 'project_owner' &&
+          (recipientNorm === 'eco_traveler' ||
+            recipientNorm === 'guide' ||
+            recipientNorm === 'project_owner')));
 
     if (!allowed) {
-      throw new ForbiddenException('Cette combinaison de messagerie n\'est pas autorisée.');
+      throw new ForbiddenException(
+        "Cette combinaison de messagerie n'est pas autorisée.",
+      );
     }
 
     const existing = await this.convRepo
@@ -80,8 +97,14 @@ export class MessagesService {
     if (existing) {
       // Fix legacy 'unknown' roles
       let changed = false;
-      if (existing.participant_a_role === 'unknown') { existing.participant_a_role = callerNorm; changed = true; }
-      if (existing.participant_b_role === 'unknown') { existing.participant_b_role = recipientNorm; changed = true; }
+      if (existing.participant_a_role === 'unknown') {
+        existing.participant_a_role = callerNorm;
+        changed = true;
+      }
+      if (existing.participant_b_role === 'unknown') {
+        existing.participant_b_role = recipientNorm;
+        changed = true;
+      }
       if (changed) await this.convRepo.save(existing);
       return { id: existing.id };
     }
@@ -99,14 +122,22 @@ export class MessagesService {
   async getMyConversations(userId: string) {
     const convs = await this.convRepo
       .createQueryBuilder('c')
-      .where('c.participant_a_id = :uid OR c.participant_b_id = :uid', { uid: userId })
+      .where('c.participant_a_id = :uid OR c.participant_b_id = :uid', {
+        uid: userId,
+      })
       .orderBy('c.created_at', 'DESC')
       .getMany();
 
     return Promise.all(
       convs.map(async (c) => {
-        const otherId = c.participant_a_id === userId ? c.participant_b_id : c.participant_a_id;
-        const otherRole = c.participant_a_id === userId ? c.participant_b_role : c.participant_a_role;
+        const otherId =
+          c.participant_a_id === userId
+            ? c.participant_b_id
+            : c.participant_a_id;
+        const otherRole =
+          c.participant_a_id === userId
+            ? c.participant_b_role
+            : c.participant_a_role;
 
         const otherUser = await this.getUserInfo(otherId, otherRole);
 
@@ -123,7 +154,11 @@ export class MessagesService {
           id: c.id,
           other_user: otherUser,
           last_message: lastMsg
-            ? { content: lastMsg.content, created_at: lastMsg.created_at, is_mine: lastMsg.sender_id === userId }
+            ? {
+                content: lastMsg.content,
+                created_at: lastMsg.created_at,
+                is_mine: lastMsg.sender_id === userId,
+              }
             : null,
           unread_count: unread,
         };
@@ -137,8 +172,12 @@ export class MessagesService {
     if (c.participant_a_id !== userId && c.participant_b_id !== userId)
       throw new ForbiddenException('Accès refusé.');
 
-    const otherId = c.participant_a_id === userId ? c.participant_b_id : c.participant_a_id;
-    const otherRole = c.participant_a_id === userId ? c.participant_b_role : c.participant_a_role;
+    const otherId =
+      c.participant_a_id === userId ? c.participant_b_id : c.participant_a_id;
+    const otherRole =
+      c.participant_a_id === userId
+        ? c.participant_b_role
+        : c.participant_a_role;
     const otherUser = await this.getUserInfo(otherId, otherRole);
 
     const lastMsg = await this.msgRepo.findOne({
@@ -154,7 +193,11 @@ export class MessagesService {
       id: c.id,
       other_user: otherUser,
       last_message: lastMsg
-        ? { content: lastMsg.content, created_at: lastMsg.created_at, is_mine: lastMsg.sender_id === userId }
+        ? {
+            content: lastMsg.content,
+            created_at: lastMsg.created_at,
+            is_mine: lastMsg.sender_id === userId,
+          }
         : null,
       unread_count: unread,
     };
@@ -171,7 +214,10 @@ export class MessagesService {
       .createQueryBuilder()
       .update(Message)
       .set({ is_read: true })
-      .where('conversation_id = :convId AND sender_id != :uid AND is_read = false', { convId, uid: userId })
+      .where(
+        'conversation_id = :convId AND sender_id != :uid AND is_read = false',
+        { convId, uid: userId },
+      )
       .execute();
 
     const msgs = await this.msgRepo.find({
@@ -198,7 +244,12 @@ export class MessagesService {
     return { message: 'Conversation supprimée.' };
   }
 
-  async sendMessage(convId: string, senderId: string, senderRole: string, content: string) {
+  async sendMessage(
+    convId: string,
+    senderId: string,
+    senderRole: string,
+    content: string,
+  ) {
     const c = await this.convRepo.findOne({ where: { id: convId } });
     if (!c) throw new NotFoundException('Conversation introuvable.');
     if (c.participant_a_id !== senderId && c.participant_b_id !== senderId)
@@ -213,15 +264,18 @@ export class MessagesService {
     const saved = await this.msgRepo.save(msg);
 
     // Notifier le destinataire
-    const recipientId = c.participant_a_id === senderId ? c.participant_b_id : c.participant_a_id;
+    const recipientId =
+      c.participant_a_id === senderId ? c.participant_b_id : c.participant_a_id;
     if (recipientId !== senderId) {
-      this.notificationService.create(
-        recipientId,
-        'new_message',
-        'Nouveau message',
-        `Vous avez reçu un nouveau message.`,
-        `/messagerie?conv=${convId}`,
-      ).catch(() => {});
+      this.notificationService
+        .create(
+          recipientId,
+          'new_message',
+          'Nouveau message',
+          `Vous avez reçu un nouveau message.`,
+          `/messagerie?conv=${convId}`,
+        )
+        .catch(() => {});
     }
 
     return {

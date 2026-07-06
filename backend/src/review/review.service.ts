@@ -26,7 +26,9 @@ export class ReviewService {
       },
     });
     if (existing) {
-      throw new ConflictException('Vous avez déjà laissé un avis sur cet élément');
+      throw new ConflictException(
+        'Vous avez déjà laissé un avis sur cet élément',
+      );
     }
 
     const review = this.reviewRepo.create({
@@ -53,16 +55,18 @@ export class ReviewService {
       order: { created_at: 'DESC' },
       take: limit,
     });
-    return reviews.filter((r) => r.comment).map((r) => ({
-      id: r.id,
-      name: `Voyageur`,
-      role: 'eco_traveler',
-      text: r.comment,
-      rating: r.rating,
-      avatar: null,
-      target_type: r.target_type,
-      created_at: r.created_at,
-    }));
+    return reviews
+      .filter((r) => r.comment)
+      .map((r) => ({
+        id: r.id,
+        name: `Voyageur`,
+        role: 'eco_traveler',
+        text: r.comment,
+        rating: r.rating,
+        avatar: null,
+        target_type: r.target_type,
+        created_at: r.created_at,
+      }));
   }
 
   async findByAuthor(authorId: string): Promise<Review[]> {
@@ -72,7 +76,10 @@ export class ReviewService {
     });
   }
 
-  async getAverageRating(targetType: string, targetId: string): Promise<{ average: number; count: number }> {
+  async getAverageRating(
+    targetType: string,
+    targetId: string,
+  ): Promise<{ average: number; count: number }> {
     const result = await this.reviewRepo
       .createQueryBuilder('review')
       .select('AVG(review.rating)', 'average')
@@ -82,20 +89,29 @@ export class ReviewService {
       .getRawOne();
 
     return {
-      average: result?.average ? parseFloat(parseFloat(result.average).toFixed(1)) : 0,
+      average: result?.average
+        ? parseFloat(parseFloat(result.average).toFixed(1))
+        : 0,
       count: result?.count ? parseInt(result.count, 10) : 0,
     };
   }
 
-  async update(authorId: string, reviewId: string, dto: Partial<CreateReviewDto>): Promise<Review> {
+  async update(
+    authorId: string,
+    reviewId: string,
+    dto: Partial<CreateReviewDto>,
+  ): Promise<Review> {
     const review = await this.reviewRepo.findOne({ where: { id: reviewId } });
     if (!review) throw new NotFoundException('Avis introuvable');
     if (review.author_id !== authorId) {
-      throw new ForbiddenException('Vous ne pouvez modifier que vos propres avis');
+      throw new ForbiddenException(
+        'Vous ne pouvez modifier que vos propres avis',
+      );
     }
     if (dto.rating !== undefined) review.rating = dto.rating;
     if (dto.comment !== undefined) review.comment = dto.comment;
-    if (dto.photos !== undefined) review.photos = dto.photos.length ? dto.photos : null;
+    if (dto.photos !== undefined)
+      review.photos = dto.photos.length ? dto.photos : null;
     return this.reviewRepo.save(review);
   }
 
@@ -103,7 +119,9 @@ export class ReviewService {
     const review = await this.reviewRepo.findOne({ where: { id: reviewId } });
     if (!review) throw new NotFoundException('Avis introuvable');
     if (review.author_id !== authorId) {
-      throw new ForbiddenException('Vous ne pouvez supprimer que vos propres avis');
+      throw new ForbiddenException(
+        'Vous ne pouvez supprimer que vos propres avis',
+      );
     }
     await this.reviewRepo.remove(review);
   }

@@ -35,7 +35,11 @@ export class CircuitController {
   @Post()
   async create(@Req() req: any, @Body() dto: CreateCircuitDto) {
     const isGuide = req.user.role === Role.GUIDE;
-    return this.service.create(req.user.sub, isGuide ? 'guide' : 'project_owner', dto);
+    return this.service.create(
+      req.user.sub,
+      isGuide ? 'guide' : 'project_owner',
+      dto,
+    );
   }
 
   /**
@@ -53,8 +57,15 @@ export class CircuitController {
    */
   @Public()
   @Get()
-  findAll(@Query('status') status?: string, @Query('region') region?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
-    const pagination = page ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 } : undefined;
+  findAll(
+    @Query('status') status?: string,
+    @Query('region') region?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pagination = page
+      ? { page: parseInt(page), limit: limit ? parseInt(limit) : 20 }
+      : undefined;
     return this.service.findAll(status, region, pagination);
   }
 
@@ -73,17 +84,25 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Patch(':id')
-  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateCircuitDto) {
+  async update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateCircuitDto,
+  ) {
     const circuit = await this.service.findById(id);
     if (circuit.author_id !== req.user.sub) {
       throw new ForbiddenException('Accès refusé');
     }
     const updateData: Record<string, any> = { ...dto };
     if (typeof updateData.start_date === 'string') {
-      updateData.start_date = updateData.start_date ? new Date(updateData.start_date) : null;
+      updateData.start_date = updateData.start_date
+        ? new Date(updateData.start_date)
+        : null;
     }
     if (typeof updateData.end_date === 'string') {
-      updateData.end_date = updateData.end_date ? new Date(updateData.end_date) : null;
+      updateData.end_date = updateData.end_date
+        ? new Date(updateData.end_date)
+        : null;
     }
     return this.service.update(id, updateData as Partial<CreateCircuitDto>);
   }
@@ -105,7 +124,11 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Post(':circuitId/days')
-  addDay(@Req() req: any, @Param('circuitId') circuitId: string, @Body() dto: CreateCircuitDayDto) {
+  addDay(
+    @Req() req: any,
+    @Param('circuitId') circuitId: string,
+    @Body() dto: CreateCircuitDayDto,
+  ) {
     return this.service.addDay(circuitId, dto, req.user.sub);
   }
 
@@ -115,7 +138,12 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Patch(':circuitId/days/:dayId')
-  updateDay(@Req() req: any, @Param('circuitId') circuitId: string, @Param('dayId') dayId: string, @Body() dto: CreateCircuitDayDto) {
+  updateDay(
+    @Req() req: any,
+    @Param('circuitId') circuitId: string,
+    @Param('dayId') dayId: string,
+    @Body() dto: CreateCircuitDayDto,
+  ) {
     return this.service.updateDay(circuitId, dayId, dto, req.user.sub);
   }
 
@@ -125,7 +153,11 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Delete(':circuitId/days/:dayId')
-  removeDay(@Req() req: any, @Param('circuitId') circuitId: string, @Param('dayId') dayId: string) {
+  removeDay(
+    @Req() req: any,
+    @Param('circuitId') circuitId: string,
+    @Param('dayId') dayId: string,
+  ) {
     return this.service.removeDay(circuitId, dayId, req.user.sub);
   }
 
@@ -135,7 +167,11 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Post(':circuitId/options')
-  addOption(@Req() req: any, @Param('circuitId') circuitId: string, @Body() dto: CreateCircuitOptionDto) {
+  addOption(
+    @Req() req: any,
+    @Param('circuitId') circuitId: string,
+    @Body() dto: CreateCircuitOptionDto,
+  ) {
     return this.service.addOption(circuitId, dto, req.user.sub);
   }
 
@@ -154,7 +190,11 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Post(':circuitId/days/:dayId/program')
-  addProgramItem(@Req() req: any, @Param('dayId') dayId: string, @Body() dto: CreateCircuitProgramItemDto) {
+  addProgramItem(
+    @Req() req: any,
+    @Param('dayId') dayId: string,
+    @Body() dto: CreateCircuitProgramItemDto,
+  ) {
     return this.service.addProgramItem(dayId, dto, req.user.sub);
   }
 
@@ -164,7 +204,11 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROJECT)
   @Patch(':circuitId/days/:dayId/program/:itemId')
-  updateProgramItem(@Req() req: any, @Param('itemId') itemId: string, @Body() dto: CreateCircuitProgramItemDto) {
+  updateProgramItem(
+    @Req() req: any,
+    @Param('itemId') itemId: string,
+    @Body() dto: CreateCircuitProgramItemDto,
+  ) {
     return this.service.updateProgramItem(itemId, dto, req.user.sub);
   }
 
@@ -184,8 +228,16 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER)
   @Post(':circuitId/reserve')
-  reserve(@Req() req: any, @Param('circuitId', new (require('@nestjs/common').ParseUUIDPipe)()) circuitId: string, @Body() dto: ReserveCircuitDto) {
-    return this.service.reserve(req.user.sub, { ...dto, circuit_id: circuitId });
+  reserve(
+    @Req() req: any,
+    @Param('circuitId', new (require('@nestjs/common').ParseUUIDPipe)())
+    circuitId: string,
+    @Body() dto: ReserveCircuitDto,
+  ) {
+    return this.service.reserve(req.user.sub, {
+      ...dto,
+      circuit_id: circuitId,
+    });
   }
 
   /**
@@ -234,7 +286,11 @@ export class CircuitController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER)
   @Patch('reservations/:id')
-  updateReservation(@Req() req: any, @Param('id') id: string, @Body() body: { participants_count?: number; base_total?: number }) {
+  updateReservation(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { participants_count?: number; base_total?: number },
+  ) {
     return this.service.updateReservation(id, req.user.sub, body);
   }
 

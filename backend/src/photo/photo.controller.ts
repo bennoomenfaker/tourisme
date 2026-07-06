@@ -1,5 +1,12 @@
 import {
-  Body, Controller, Delete, Get, Param, Post, Query, Req,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -15,19 +22,34 @@ export class PhotoController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
   @Post()
-  create(@Req() req: any, @Body() body: { url: string; entity_type: string; entity_id: string; is_hero?: boolean }) {
+  create(
+    @Req() req: any,
+    @Body()
+    body: {
+      url: string;
+      entity_type: string;
+      entity_id: string;
+      is_hero?: boolean;
+    },
+  ) {
     return this.service.create({ ...body, uploaded_by: req.user.sub });
   }
 
   @Public()
   @Get()
-  findByEntity(@Query('entity_type') entityType: string, @Query('entity_id') entityId: string) {
+  findByEntity(
+    @Query('entity_type') entityType: string,
+    @Query('entity_id') entityId: string,
+  ) {
     return this.service.findByEntity(entityType, entityId);
   }
 
   @Public()
   @Get('hero')
-  getHero(@Query('entity_type') entityType: string, @Query('entity_id') entityId: string) {
+  getHero(
+    @Query('entity_type') entityType: string,
+    @Query('entity_id') entityId: string,
+  ) {
     return this.service.getHero(entityType, entityId);
   }
 

@@ -31,7 +31,11 @@ export class FavoriteController {
   }
 
   @Get('check/:targetType/:targetId')
-  check(@Req() req: any, @Param('targetType') targetType: string, @Param('targetId') targetId: string) {
+  check(
+    @Req() req: any,
+    @Param('targetType') targetType: string,
+    @Param('targetId') targetId: string,
+  ) {
     return this.service.check(req.user.sub, targetType, targetId);
   }
 
@@ -41,7 +45,11 @@ export class FavoriteController {
   }
 
   @Delete(':targetType/:targetId')
-  remove(@Req() req: any, @Param('targetType') targetType: string, @Param('targetId') targetId: string) {
+  remove(
+    @Req() req: any,
+    @Param('targetType') targetType: string,
+    @Param('targetId') targetId: string,
+  ) {
     return this.service.remove(req.user.sub, targetType, targetId);
   }
 }

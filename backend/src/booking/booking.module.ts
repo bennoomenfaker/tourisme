@@ -13,7 +13,19 @@ import { BookingController } from './booking.controller';
 import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Booking, BookingParticipant, OfferItemSession, Offer, OfferItem, OfferItemCapacity, GuideOffering, GuideOfferingSession]), NotificationModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      Booking,
+      BookingParticipant,
+      OfferItemSession,
+      Offer,
+      OfferItem,
+      OfferItemCapacity,
+      GuideOffering,
+      GuideOfferingSession,
+    ]),
+    NotificationModule,
+  ],
   providers: [BookingService],
   controllers: [BookingController],
   exports: [BookingService],

@@ -93,7 +93,9 @@ export class GuideService {
     profile.profile_completion = this.calculateCompletion(profile);
 
     const saved = await this.repo.save(profile);
-    await this.mongoService.upsertSkills(userId, { activities: dto.specialties });
+    await this.mongoService.upsertSkills(userId, {
+      activities: dto.specialties,
+    });
 
     return saved;
   }
@@ -126,7 +128,9 @@ export class GuideService {
     const profile = await this.findOrFail(userId);
     profile.score_questionnaire = scoreQuestionnaire;
     profile.sustainability_score = Math.round(
-      scoreQuestionnaire * 0.40 + profile.score_reservations * 0.40 + profile.score_feedbacks * 0.20,
+      scoreQuestionnaire * 0.4 +
+        profile.score_reservations * 0.4 +
+        profile.score_feedbacks * 0.2,
     );
     const saved = await this.repo.save(profile);
     await this.mongoService.updateScore(userId, profile.sustainability_score);
@@ -139,7 +143,9 @@ export class GuideService {
   private async findOrFail(userId: string) {
     const profile = await this.repo.findOne({ where: { user_id: userId } });
     if (!profile) {
-      throw new NotFoundException("Profil introuvable. Complétez d'abord votre profil de base.");
+      throw new NotFoundException(
+        "Profil introuvable. Complétez d'abord votre profil de base.",
+      );
     }
     return profile;
   }
@@ -173,13 +179,19 @@ export class GuideService {
     const q = query.trim();
     const builder = this.repo
       .createQueryBuilder('g')
-      .select(['g.user_id', 'g.full_name', 'g.photo', 'g.zone', 'g.guide_type', 'g.sustainability_score'])
+      .select([
+        'g.user_id',
+        'g.full_name',
+        'g.photo',
+        'g.zone',
+        'g.guide_type',
+        'g.sustainability_score',
+      ])
       .limit(20);
     if (q) {
-      builder.where(
-        '(LOWER(g.full_name) LIKE :q OR LOWER(g.zone) LIKE :q)',
-        { q: `%${q.toLowerCase()}%` },
-      );
+      builder.where('(LOWER(g.full_name) LIKE :q OR LOWER(g.zone) LIKE :q)', {
+        q: `%${q.toLowerCase()}%`,
+      });
     }
     return builder.getMany();
   }
@@ -188,13 +200,15 @@ export class GuideService {
     let score = 0;
 
     const identityFields = [p.full_name, p.country, p.language];
-    score += (identityFields.filter(Boolean).length / identityFields.length) * 30;
+    score +=
+      (identityFields.filter(Boolean).length / identityFields.length) * 30;
 
     if (p.guide_type) score += 10;
     if (p.zone) score += 10;
     if (p.specialties?.length) score += 15;
     if (p.languages_spoken?.length) score += 10;
-    if (p.years_experience !== null && p.years_experience !== undefined) score += 15;
+    if (p.years_experience !== null && p.years_experience !== undefined)
+      score += 15;
     if (p.photo) score += 10;
 
     return Math.round(score);

@@ -1,11 +1,25 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { Public } from '../common/decorators/public.decorator';
 import { ProjectOwnerService } from './project-owner.service';
 import { CompleteOwnerProfileDto } from './dto/project-owner.dto';
-import { CreateProjectDto, UpdateProjectDto, ProjectSustainabilityDto } from './dto/project.dto';
+import {
+  CreateProjectDto,
+  UpdateProjectDto,
+  ProjectSustainabilityDto,
+} from './dto/project.dto';
 
 @ApiTags('Project-Owner')
 @ApiBearerAuth('bearer')
@@ -53,12 +67,20 @@ export class ProjectOwnerController {
   }
 
   @Patch('projects/:id')
-  updateProject(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateProjectDto) {
+  updateProject(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
     return this.service.updateProject(req.user.sub, id, dto);
   }
 
   @Patch('projects/:id/sustainability')
-  updateProjectSustainability(@Req() req: any, @Param('id') id: string, @Body() dto: ProjectSustainabilityDto) {
+  updateProjectSustainability(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: ProjectSustainabilityDto,
+  ) {
     return this.service.updateProjectSustainability(req.user.sub, id, dto);
   }
 
@@ -67,13 +89,15 @@ export class ProjectOwnerController {
     return this.service.deleteProject(req.user.sub, id);
   }
 
-  @Public() @Roles()
+  @Public()
+  @Roles()
   @Get('public/search')
   searchOwners(@Query('q') q: string) {
     return this.service.searchOwners(q ?? '');
   }
 
-  @Public() @Roles()
+  @Public()
+  @Roles()
   @Get('public/:userId')
   getPublicProfile(@Param('userId') userId: string) {
     return this.service.getPublicProfile(userId);

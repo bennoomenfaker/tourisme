@@ -8,7 +8,9 @@ import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Follow, Guide, ProjectOwner, EcoTraveler])],
+  imports: [
+    TypeOrmModule.forFeature([Follow, Guide, ProjectOwner, EcoTraveler]),
+  ],
   providers: [FollowService],
   controllers: [FollowController],
   exports: [FollowService],

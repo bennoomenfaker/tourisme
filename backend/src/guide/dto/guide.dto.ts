@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, Min, Max } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class CompleteGuideProfileDto {
   @ApiProperty({ example: 'Ahmed Ben Ali' })
@@ -12,7 +20,9 @@ export class CompleteGuideProfileDto {
   @IsString()
   guide_type?: string;
 
-  @ApiProperty({ example: 'Guide spécialisé en écotourisme dans le sud tunisien.' })
+  @ApiProperty({
+    example: 'Guide spécialisé en écotourisme dans le sud tunisien.',
+  })
   @IsOptional()
   @IsString()
   bio?: string;

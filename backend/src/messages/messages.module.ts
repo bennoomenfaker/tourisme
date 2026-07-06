@@ -11,7 +11,17 @@ import { User } from '../users/entities/user.entity';
 import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message, EcoTraveler, Guide, ProjectOwner, User]), NotificationModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      Conversation,
+      Message,
+      EcoTraveler,
+      Guide,
+      ProjectOwner,
+      User,
+    ]),
+    NotificationModule,
+  ],
   providers: [MessagesService],
   controllers: [MessagesController],
 })

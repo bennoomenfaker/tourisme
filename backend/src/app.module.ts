@@ -37,10 +37,12 @@ import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     ConfigModule,
     DatabaseModule,
     UsersModule,
@@ -73,9 +75,12 @@ import { RedisModule } from './redis/redis.module';
     TimelineModule,
     RedisModule,
   ],
-  providers: [GoogleStrategy, {
-    provide: APP_GUARD,
-    useClass: FrenchThrottlerGuard,
-  }],
+  providers: [
+    GoogleStrategy,
+    {
+      provide: APP_GUARD,
+      useClass: FrenchThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

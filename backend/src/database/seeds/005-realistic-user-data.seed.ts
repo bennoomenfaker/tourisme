@@ -28,10 +28,12 @@ import { Notification } from '../../notification/entities/notification.entity';
 export class RealisticUserDataSeed {
   constructor(
     @InjectRepository(GuideOffering) private goRepo: Repository<GuideOffering>,
-    @InjectRepository(GuideOfferingAvailabilityRule) private goaRepo: Repository<GuideOfferingAvailabilityRule>,
+    @InjectRepository(GuideOfferingAvailabilityRule)
+    private goaRepo: Repository<GuideOfferingAvailabilityRule>,
     @InjectRepository(Offer) private offerRepo: Repository<Offer>,
     @InjectRepository(OfferItem) private oiRepo: Repository<OfferItem>,
-    @InjectRepository(OfferItemPrice) private oipRepo: Repository<OfferItemPrice>,
+    @InjectRepository(OfferItemPrice)
+    private oipRepo: Repository<OfferItemPrice>,
     @InjectRepository(TripPlan) private tpRepo: Repository<TripPlan>,
     @InjectRepository(TripPlanItem) private tpiRepo: Repository<TripPlanItem>,
     @InjectRepository(Review) private revRepo: Repository<Review>,
@@ -65,7 +67,8 @@ export class RealisticUserDataSeed {
     const k1 = await this.upsertGuideOffering({
       guide_id: this.GUIDE_KARIM,
       title: 'Randonnée Ksour du Sud',
-      description: 'Découverte des ksour berbères du Sud tunisien : Ksar Ouled Soltane, Ksar Hadada, Ksar Ghilane. Nuits chez l\'habitant.',
+      description:
+        "Découverte des ksour berbères du Sud tunisien : Ksar Ouled Soltane, Ksar Hadada, Ksar Ghilane. Nuits chez l'habitant.",
       languages: 'fr,ar,en',
       price: 180,
       pricing_unit: 'day',
@@ -80,7 +83,8 @@ export class RealisticUserDataSeed {
     const k2 = await this.upsertGuideOffering({
       guide_id: this.GUIDE_KARIM,
       title: 'Safari Photo Désert 2 jours',
-      description: 'Expédition photo de 2 jours dans le Grand Erg Oriental. Nuits en bivouac. Matériel photo optionnel.',
+      description:
+        'Expédition photo de 2 jours dans le Grand Erg Oriental. Nuits en bivouac. Matériel photo optionnel.',
       languages: 'fr,ar,en,es',
       price: 350,
       pricing_unit: 'trip',
@@ -103,7 +107,8 @@ export class RealisticUserDataSeed {
     const y1 = await this.upsertGuideOffering({
       guide_id: this.GUIDE_YOUSSEF,
       title: 'Tour Guidé Djerba Insolite',
-      description: 'Visite des lieux cachés de Djerba : ateliers d\'artisans, synagogues, marchés locaux, dégustation de produits du terroir.',
+      description:
+        "Visite des lieux cachés de Djerba : ateliers d'artisans, synagogues, marchés locaux, dégustation de produits du terroir.",
       languages: 'fr,ar,en',
       price: 80,
       pricing_unit: 'half_day',
@@ -131,7 +136,8 @@ export class RealisticUserDataSeed {
     const y2 = await this.upsertGuideOffering({
       guide_id: this.GUIDE_YOUSSEF,
       title: 'Expédition VTT Forêt de Kroumirie',
-      description: 'Descente VTT à travers la forêt de chênes-lièges de Kroumirie. Niveau intermédiaire à avancé. VTT et équipement fournis.',
+      description:
+        'Descente VTT à travers la forêt de chênes-lièges de Kroumirie. Niveau intermédiaire à avancé. VTT et équipement fournis.',
       languages: 'fr,en',
       price: 130,
       pricing_unit: 'day',
@@ -149,7 +155,8 @@ export class RealisticUserDataSeed {
     const y3 = await this.upsertGuideOffering({
       guide_id: this.GUIDE_YOUSSEF,
       title: 'Initiation Spéléologie Djerba',
-      description: 'Découverte des grottes et cavités naturelles de l\'île de Djerba. Matériel fourni. Débutants bienvenus.',
+      description:
+        "Découverte des grottes et cavités naturelles de l'île de Djerba. Matériel fourni. Débutants bienvenus.",
       languages: 'fr,ar',
       price: 70,
       pricing_unit: 'half_day',
@@ -173,8 +180,8 @@ export class RealisticUserDataSeed {
     // We attach these offers to one of Faker's projects: "Coopérative Artisanale Tataouine"
     const projectId = 'b1822765-564a-470c-832b-3092cc763554';
     const categoryActivity = '21a655e0-de08-4b62-b0da-7c5337fd93be'; // activity
-    const categoryCraft = '04137263-fdbc-468c-8f6b-a7c9b1cc6ae8';   // craft
-    const categorySejour = '4c50bfe4-dc54-4b5d-bfa9-308c31c8b356';   // sejour
+    const categoryCraft = '04137263-fdbc-468c-8f6b-a7c9b1cc6ae8'; // craft
+    const categorySejour = '4c50bfe4-dc54-4b5d-bfa9-308c31c8b356'; // sejour
 
     // --- Offer 1: Mobile/guided tour ---
     const o1 = await this.upsertOffer({
@@ -182,7 +189,8 @@ export class RealisticUserDataSeed {
       author_type: 'project_owner',
       project_id: projectId,
       title: 'Randonnée Guidée Ksour du Sud',
-      description: 'Randonnée accompagnée par un guide local à travers les ksour du Sud. Transport, repas et guide inclus.',
+      description:
+        'Randonnée accompagnée par un guide local à travers les ksour du Sud. Transport, repas et guide inclus.',
       price: 250,
       duration: '2 jours',
       offer_type: 'activity',
@@ -193,8 +201,16 @@ export class RealisticUserDataSeed {
       category_id: categoryActivity,
       status: 'approved',
     });
-    const o1Item = await this.upsertOfferItem(o1, { name: 'Randonnée Ksour (1 pers.)', item_type: 'guided_tour' });
-    await this.upsertPrice(o1Item, { label: 'Adulte', price: 250, pricing_unit: 'per_person', is_default: true });
+    const o1Item = await this.upsertOfferItem(o1, {
+      name: 'Randonnée Ksour (1 pers.)',
+      item_type: 'guided_tour',
+    });
+    await this.upsertPrice(o1Item, {
+      label: 'Adulte',
+      price: 250,
+      pricing_unit: 'per_person',
+      is_default: true,
+    });
 
     // --- Offer 2: Mobile craft workshop ---
     const o2 = await this.upsertOffer({
@@ -202,7 +218,8 @@ export class RealisticUserDataSeed {
       author_type: 'project_owner',
       project_id: projectId,
       title: 'Atelier Poterie Mobile Tataouine',
-      description: 'Atelier poterie qui se déplace chez vous (hôtel, gîte). Initiation aux techniques ancestrales. Matériel fourni.',
+      description:
+        'Atelier poterie qui se déplace chez vous (hôtel, gîte). Initiation aux techniques ancestrales. Matériel fourni.',
       price: 60,
       duration: '3h',
       offer_type: 'workshop',
@@ -213,8 +230,16 @@ export class RealisticUserDataSeed {
       category_id: categoryCraft,
       status: 'approved',
     });
-    const o2Item = await this.upsertOfferItem(o2, { name: 'Atelier Poterie Adulte', item_type: 'workshop' });
-    await this.upsertPrice(o2Item, { label: 'Adulte', price: 60, pricing_unit: 'per_person', is_default: true });
+    const o2Item = await this.upsertOfferItem(o2, {
+      name: 'Atelier Poterie Adulte',
+      item_type: 'workshop',
+    });
+    await this.upsertPrice(o2Item, {
+      label: 'Adulte',
+      price: 60,
+      pricing_unit: 'per_person',
+      is_default: true,
+    });
 
     // --- Offer 3: Fixed eco-tour package ---
     const o3 = await this.upsertOffer({
@@ -222,7 +247,8 @@ export class RealisticUserDataSeed {
       author_type: 'project_owner',
       project_id: projectId,
       title: 'Séjour Immersion Tataouine',
-      description: 'Séjour tout compris de 5 jours : hébergement chez l\'habitant, randonnées, ateliers artisanaux, cuisine locale.',
+      description:
+        "Séjour tout compris de 5 jours : hébergement chez l'habitant, randonnées, ateliers artisanaux, cuisine locale.",
       price: 750,
       duration: '5 jours',
       offer_type: 'sejour',
@@ -234,21 +260,41 @@ export class RealisticUserDataSeed {
       category_id: categorySejour,
       status: 'approved',
     });
-    const o3a = await this.upsertOfferItem(o3, { name: 'Séjour 5 jours (1 pers.)', item_type: 'package' });
-    await this.upsertPrice(o3a, { label: 'Adulte', price: 750, pricing_unit: 'per_person', is_default: true });
-    const o3b = await this.upsertOfferItem(o3, { name: 'Repas optionnel (végétarien)', item_type: 'meal' });
-    await this.upsertPrice(o3b, { label: 'Repas', price: 25, pricing_unit: 'per_unit', is_default: false });
+    const o3a = await this.upsertOfferItem(o3, {
+      name: 'Séjour 5 jours (1 pers.)',
+      item_type: 'package',
+    });
+    await this.upsertPrice(o3a, {
+      label: 'Adulte',
+      price: 750,
+      pricing_unit: 'per_person',
+      is_default: true,
+    });
+    const o3b = await this.upsertOfferItem(o3, {
+      name: 'Repas optionnel (végétarien)',
+      item_type: 'meal',
+    });
+    await this.upsertPrice(o3b, {
+      label: 'Repas',
+      price: 25,
+      pricing_unit: 'per_unit',
+      is_default: false,
+    });
   }
 
   // ── 3. Trip Plans for f.akerbennoomen@gmail.com  (eco_traveler) ──
 
   private async addTripPlans() {
     // Fetch all offer_items created above for reference
-    const myOfferItems = await this.oiRepo.find({ where: { offer: { author_id: this.PO_FAKER } }, relations: ['offer'] });
+    const myOfferItems = await this.oiRepo.find({
+      where: { offer: { author_id: this.PO_FAKER } },
+      relations: ['offer'],
+    });
 
     const tripPlan = await this.tpRepo.save({
       title: 'Road Trip Sud Tunisien — Juillet 2026',
-      description: 'Plan de 7 jours combinant randonnée dans les ksour, ateliers poterie, et guidage avec Karim Bouazizi.',
+      description:
+        'Plan de 7 jours combinant randonnée dans les ksour, ateliers poterie, et guidage avec Karim Bouazizi.',
       start_date: '2026-07-15',
       end_date: '2026-07-21',
       status: 'planning',
@@ -271,12 +317,14 @@ export class RealisticUserDataSeed {
         day_number: 3,
         sort_order: 1,
         offer_item_id: myOfferItems[1].id,
-        notes: 'Après-midi. L\'artisan se déplace à l\'hébergement.',
+        notes: "Après-midi. L'artisan se déplace à l'hébergement.",
       });
     }
 
     // Add guide offering items (just store as notes with guide_id)
-    const karimOfferings = await this.goRepo.find({ where: { guide_id: this.GUIDE_KARIM } });
+    const karimOfferings = await this.goRepo.find({
+      where: { guide_id: this.GUIDE_KARIM },
+    });
     if (karimOfferings.length > 0) {
       await this.tpiRepo.save({
         trip_plan_id: tripPlan.id,
@@ -287,7 +335,9 @@ export class RealisticUserDataSeed {
       });
     }
 
-    const youssefOfferings = await this.goRepo.find({ where: { guide_id: this.GUIDE_YOUSSEF } });
+    const youssefOfferings = await this.goRepo.find({
+      where: { guide_id: this.GUIDE_YOUSSEF },
+    });
     if (youssefOfferings.length > 0) {
       await this.tpiRepo.save({
         trip_plan_id: tripPlan.id,
@@ -301,7 +351,8 @@ export class RealisticUserDataSeed {
     // Also create a simpler trip for Sarah
     const sarahPlan = await this.tpRepo.save({
       title: 'Week-end Art & Nature Djerba',
-      description: '2 jours pour découvrir l\'artisanat djerbien et les paysages naturels avec un guide local.',
+      description:
+        "2 jours pour découvrir l'artisanat djerbien et les paysages naturels avec un guide local.",
       start_date: '2026-08-10',
       end_date: '2026-08-11',
       status: 'planning',
@@ -311,14 +362,16 @@ export class RealisticUserDataSeed {
       trip_plan_id: sarahPlan.id,
       day_number: 1,
       sort_order: 1,
-      notes: 'Visite guidée de Houmt Souk avec Youssef Meslek — rendez-vous 9h place de la mairie.',
+      notes:
+        'Visite guidée de Houmt Souk avec Youssef Meslek — rendez-vous 9h place de la mairie.',
       guide_id: this.GUIDE_YOUSSEF,
     });
 
     // Trip for Leila
     const leilaPlan = await this.tpRepo.save({
       title: 'Aventure Photo Désert & Ksour',
-      description: 'Safari photo de 5 jours : Matmata, Tataouine, Douz. Guidé par Karim Bouazizi.',
+      description:
+        'Safari photo de 5 jours : Matmata, Tataouine, Douz. Guidé par Karim Bouazizi.',
       start_date: '2026-10-01',
       end_date: '2026-10-05',
       status: 'planning',
@@ -328,7 +381,8 @@ export class RealisticUserDataSeed {
       trip_plan_id: leilaPlan.id,
       day_number: 2,
       sort_order: 1,
-      notes: 'Safari Photo Désert avec Karim — départ 6h de l\'hôtel. Prévoir batteries de rechange !',
+      notes:
+        "Safari Photo Désert avec Karim — départ 6h de l'hôtel. Prévoir batteries de rechange !",
       guide_id: this.GUIDE_KARIM,
     });
   }
@@ -336,8 +390,12 @@ export class RealisticUserDataSeed {
   // ── 4. Reviews ───────────────────────────────────────────────
 
   private async addReviews() {
-    const karimOfferings = await this.goRepo.find({ where: { guide_id: this.GUIDE_KARIM } });
-    const youssefOfferings = await this.goRepo.find({ where: { guide_id: this.GUIDE_YOUSSEF } });
+    const karimOfferings = await this.goRepo.find({
+      where: { guide_id: this.GUIDE_KARIM },
+    });
+    const youssefOfferings = await this.goRepo.find({
+      where: { guide_id: this.GUIDE_YOUSSEF },
+    });
 
     // Review Karim as a guide (by Ahmed)
     await this.upsertReview({
@@ -345,7 +403,8 @@ export class RealisticUserDataSeed {
       target_type: 'guide',
       target_id: this.GUIDE_KARIM,
       rating: 5,
-      comment: 'Guide exceptionnel ! Karim connaît le désert comme personne. Son safari photo était incroyable, il sait exactement où trouver les meilleurs angles au coucher du soleil.',
+      comment:
+        'Guide exceptionnel ! Karim connaît le désert comme personne. Son safari photo était incroyable, il sait exactement où trouver les meilleurs angles au coucher du soleil.',
     });
     // Review Karim's offering (by Ahmed)
     if (karimOfferings.length > 0) {
@@ -354,7 +413,8 @@ export class RealisticUserDataSeed {
         target_type: 'guide_offering',
         target_id: karimOfferings[0].id,
         rating: 5,
-        comment: 'Le trekking dans les ksour était une expérience inoubliable. Karim nous a raconté l\'histoire de chaque ksar avec passion.',
+        comment:
+          "Le trekking dans les ksour était une expérience inoubliable. Karim nous a raconté l'histoire de chaque ksar avec passion.",
       });
     }
 
@@ -364,7 +424,8 @@ export class RealisticUserDataSeed {
       target_type: 'guide',
       target_id: this.GUIDE_YOUSSEF,
       rating: 5,
-      comment: 'Youssef est un guide passionné et très professionnel. Sa visite de Djerba était riche en anecdotes et en découvertes. Je recommande à 100% !',
+      comment:
+        'Youssef est un guide passionné et très professionnel. Sa visite de Djerba était riche en anecdotes et en découvertes. Je recommande à 100% !',
     });
     if (youssefOfferings.length > 0) {
       await this.upsertReview({
@@ -372,19 +433,26 @@ export class RealisticUserDataSeed {
         target_type: 'guide_offering',
         target_id: youssefOfferings[0].id,
         rating: 4,
-        comment: 'Très belle randonnée. Les paysages étaient magnifiques. Seul bémol : prévoir plus de temps pour profiter des arrêts photo.',
+        comment:
+          'Très belle randonnée. Les paysages étaient magnifiques. Seul bémol : prévoir plus de temps pour profiter des arrêts photo.',
       });
     }
 
     // Review Faker's mobile offre "Randonnée Guidée Ksour" (by Leila)
-    const offer = await this.offerRepo.findOne({ where: { author_id: this.PO_FAKER, title: 'Randonnée Guidée Ksour du Sud' } });
+    const offer = await this.offerRepo.findOne({
+      where: {
+        author_id: this.PO_FAKER,
+        title: 'Randonnée Guidée Ksour du Sud',
+      },
+    });
     if (offer) {
       await this.upsertReview({
         author_id: this.TRAVELER_LEILA,
         target_type: 'offer',
         target_id: offer.id,
         rating: 5,
-        comment: 'Superbe randonnée organisée de A à Z. Le guide local était très connaisseur et le repas chez l\'habitant délicieux. Le transport inclus est un plus.',
+        comment:
+          "Superbe randonnée organisée de A à Z. Le guide local était très connaisseur et le repas chez l'habitant délicieux. Le transport inclus est un plus.",
       });
     }
 
@@ -394,7 +462,8 @@ export class RealisticUserDataSeed {
       target_type: 'project_owner',
       target_id: this.PO_FAKER,
       rating: 4,
-      comment: 'Très bon organisateur. Les activités étaient variées et bien planifiées. Un peu de retard le premier jour mais sinon tout était parfait.',
+      comment:
+        'Très bon organisateur. Les activités étaient variées et bien planifiées. Un peu de retard le premier jour mais sinon tout était parfait.',
     });
 
     // Notifications for the reviews
@@ -427,21 +496,33 @@ export class RealisticUserDataSeed {
   // ── Helpers ──────────────────────────────────────────────────
 
   private async upsertGuideOffering(data: any): Promise<any> {
-    const existing = await this.goRepo.findOne({ where: { guide_id: data.guide_id, title: data.title } });
+    const existing = await this.goRepo.findOne({
+      where: { guide_id: data.guide_id, title: data.title },
+    });
     if (existing) return existing;
     const saved = await this.goRepo.save(data);
     this.existingGuideOfferingIds.push(saved.id);
     return saved;
   }
 
-  private async upsertAvailabilityRule(offering: any, data: any): Promise<void> {
-    const existing = await this.goaRepo.findOne({ where: { guideOffering: { id: offering.id }, availability_type: data.availability_type } });
+  private async upsertAvailabilityRule(
+    offering: any,
+    data: any,
+  ): Promise<void> {
+    const existing = await this.goaRepo.findOne({
+      where: {
+        guideOffering: { id: offering.id },
+        availability_type: data.availability_type,
+      },
+    });
     if (existing) return;
     await this.goaRepo.save({ ...data, guideOffering: offering });
   }
 
   private async upsertOffer(data: any): Promise<any> {
-    const existing = await this.offerRepo.findOne({ where: { author_id: data.author_id, title: data.title } });
+    const existing = await this.offerRepo.findOne({
+      where: { author_id: data.author_id, title: data.title },
+    });
     if (existing) return existing;
     const saved = await this.offerRepo.save(data);
     this.existingOfferIds.push(saved.id);
@@ -449,19 +530,29 @@ export class RealisticUserDataSeed {
   }
 
   private async upsertOfferItem(offer: any, data: any): Promise<any> {
-    const existing = await this.oiRepo.findOne({ where: { offer: { id: offer.id }, name: data.name } });
+    const existing = await this.oiRepo.findOne({
+      where: { offer: { id: offer.id }, name: data.name },
+    });
     if (existing) return existing;
     return this.oiRepo.save({ ...data, offer: offer });
   }
 
   private async upsertPrice(item: any, data: any): Promise<void> {
-    const existing = await this.oipRepo.findOne({ where: { offerItem: { id: item.id }, label: data.label } });
+    const existing = await this.oipRepo.findOne({
+      where: { offerItem: { id: item.id }, label: data.label },
+    });
     if (existing) return;
     await this.oipRepo.save({ ...data, offerItem: item });
   }
 
   private async upsertReview(data: any): Promise<void> {
-    const existing = await this.revRepo.findOne({ where: { author_id: data.author_id, target_type: data.target_type, target_id: data.target_id } });
+    const existing = await this.revRepo.findOne({
+      where: {
+        author_id: data.author_id,
+        target_type: data.target_type,
+        target_id: data.target_id,
+      },
+    });
     if (existing) return;
     await this.revRepo.save(data);
   }
