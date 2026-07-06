@@ -36,16 +36,18 @@ function AuthCallbackInner() {
       : parsedUser.role === "guide" ? "/guide/profile"
       : "/project-owner/profile";
 
-    try {
-      const { apiFetch } = await import("@/lib/api");
-      const profile = await apiFetch<any>(profileApi, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (profile?.is_onboarded) {
-        router.push(storedRedirect || "/dashboard");
-        return;
-      }
-    } catch {}
+    ;(async () => {
+      try {
+        const { apiFetch } = await import("@/lib/api");
+        const profile = await apiFetch<any>(profileApi, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (profile?.is_onboarded) {
+          router.push(storedRedirect || "/dashboard");
+          return;
+        }
+      } catch {}
+    })();
 
     const onboardingRoutes: Record<string, string> = {
       eco_traveler: "/onboarding/eco-traveler",
