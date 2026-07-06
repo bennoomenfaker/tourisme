@@ -130,7 +130,7 @@ export class BookingService {
       if (offerItem && offerItem.prices?.length) {
         const priceRow =
           offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
-        const unitPrice = Number(priceRow.price);
+        const unitPrice = session?.price_override != null ? Number(session.price_override) : Number(priceRow.price);
         const pricingUnit = priceRow.pricing_unit ?? 'per_person';
         const nights = dto.nights ?? offerItem.details_json?.nights ?? 1;
 
@@ -635,15 +635,17 @@ export class BookingService {
     if (session.status === 'cancelled')
       throw new BadRequestException('Cette session est annulée');
     const sessionCapacity =
-      session.remaining_capacity ?? session.total_capacity ?? 0;
-    if (sessionCapacity <= 0)
-      throw new BadRequestException('Cette session est complète');
-
+      session.remaining_capacity ?? session.total_capacity ?? null;
     const participantCount = dto.participants?.length ?? 0;
-    if (participantCount > sessionCapacity) {
-      throw new BadRequestException(
-        `Capacité insuffisante : ${sessionCapacity} place(s) restante(s)`,
-      );
+
+    if (sessionCapacity !== null) {
+      if (sessionCapacity <= 0)
+        throw new BadRequestException('Cette session est complète');
+      if (participantCount > sessionCapacity) {
+        throw new BadRequestException(
+          `Capacité insuffisante : ${sessionCapacity} place(s) restante(s)`,
+        );
+      }
     }
 
     const total_price = participantCount * Number(offering.price);
@@ -680,8 +682,10 @@ export class BookingService {
       await this.participantRepo.save(participants);
     }
 
-    session.remaining_capacity = sessionCapacity - participantCount;
-    if (session.remaining_capacity <= 0) session.status = 'full';
+    if (session.remaining_capacity !== null) {
+      session.remaining_capacity -= participantCount;
+      if (session.remaining_capacity <= 0) session.status = 'full';
+    }
     await this.guideSessionRepo.save(session);
 
     try {

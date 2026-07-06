@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -99,11 +100,11 @@ export class CreateOfferDto {
   min_age?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['flexible', 'moderate', 'strict', 'non_refundable'])
   cancellation_policy?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['automatic', 'manual'])
   confirmation_mode?: string;
 
   @IsOptional()
@@ -111,7 +112,7 @@ export class CreateOfferDto {
   project_id?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['fixed', 'mobile', 'online'])
   location_type?: string;
 
   @IsOptional()
@@ -128,7 +129,7 @@ export class CreateOfferDto {
   production_delay_days?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['instant_stock', 'scheduled', 'recurring', 'on_request', 'mixed'])
   fulfillment_mode?: string;
 }
 
@@ -271,7 +272,7 @@ export class CreateOfferItemDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['room', 'bed', 'camping_space', 'dish', 'menu', 'equipment', 'activity', 'workshop', 'transport_service'])
   item_type?: string;
 
   @IsOptional()
@@ -282,7 +283,7 @@ export class CreateOfferItemDto {
   requires_confirmation?: boolean;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['automatic', 'manual'])
   confirmation_mode?: string;
 
   @IsOptional()
@@ -360,7 +361,7 @@ export class CreateOfferItemPriceDto {
   currency?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['per_person', 'per_night', 'per_hour', 'per_half_day', 'per_day'])
   pricing_unit?: string;
 
   @IsOptional()
@@ -379,8 +380,7 @@ export class CreateOfferItemPriceDto {
 }
 
 export class CreateAvailabilityRuleDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsIn(['weekly', 'daily', 'date_range', 'weekend_only', 'custom'])
   availability_type!: string;
 
   @IsOptional()
@@ -423,6 +423,10 @@ export class UpdateOfferItemPriceDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @IsOptional()
+  @IsIn(['per_person', 'per_night', 'per_hour', 'per_half_day', 'per_day'])
+  pricing_unit?: string;
 
   @IsOptional()
   @IsBoolean()

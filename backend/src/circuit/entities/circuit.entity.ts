@@ -2,12 +2,15 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { CircuitDay } from './circuit-day.entity';
 import { CircuitOption } from './circuit-option.entity';
+import { User } from '../../users/entities/user.entity';
 
 /**
  * Circuit / Package multi-jours organisé par un guide ou project owner
@@ -20,6 +23,10 @@ import { CircuitOption } from './circuit-option.entity';
 export class Circuit {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'author_id' })
+  author!: User | null;
 
   @Column('uuid')
   author_id!: string;

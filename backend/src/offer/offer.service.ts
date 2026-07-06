@@ -195,7 +195,7 @@ export class OfferService {
       .where('offer.status = :status', { status: 'approved' })
       .andWhere('offer.is_deleted = :isDeleted', { isDeleted: false });
 
-    if (category) qb.andWhere('offer.offer_type = :category', { category });
+    if (category) qb.andWhere('offer.category_id = :category', { category });
     if (excludeAuthor)
       qb.andWhere('offer.author_id != :ex', { ex: excludeAuthor });
     if (region) qb.andWhere('offer.region = :region', { region });
@@ -981,7 +981,7 @@ export class OfferService {
 
     const items = await this.itemRepo.find({
       where: { status: 'active' },
-      relations: ['prices'],
+      relations: ['prices', 'offer'],
     });
 
     const locations: {
@@ -993,9 +993,9 @@ export class OfferService {
     }[] = [];
 
     for (const item of items) {
-      const details = item.details_json || {};
-      const lat = details.lat || (item as any).lat;
-      const lng = details.lng || (item as any).lng;
+      const offer = item.offer;
+      const lat = offer?.latitude ?? null;
+      const lng = offer?.longitude ?? null;
       if (lat != null && lng != null) {
         const priceCount = item.prices?.length || 1;
         const weight = Math.min(1 + priceCount * 0.3, 3);

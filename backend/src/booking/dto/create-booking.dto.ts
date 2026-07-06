@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -97,7 +98,7 @@ export class CreateBookingDto {
   special_requests?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['automatic', 'manual'])
   confirmation_mode?: string;
 
   @IsOptional()

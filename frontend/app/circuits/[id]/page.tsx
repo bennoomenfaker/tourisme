@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Calendar,
   Check, DollarSign, Info, Plus, Trash2, Edit, X, Share2, Copy, Heart, ShoppingCart,
-  AlertTriangle, Timer, Tag, Search,
+  AlertTriangle, Timer, Tag, Search, Globe,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -16,7 +16,7 @@ import ImageUploader from "@/components/ImageUploader";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TimelineView from "@/components/TimelineView";
-import OfferItemSearchInline from "@/components/OfferItemSearchInline";
+import ExternalOfferModal from "@/components/ExternalOfferModal";
 import type { MyOfferItem } from "@/components/OfferItemSearchInline";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
@@ -241,6 +241,10 @@ export default function CircuitDetailPage() {
   const [progPrice, setProgPrice] = useState("");
   const [progPhotos, setProgPhotos] = useState<string[]>([]);
   const [progGuideCost, setProgGuideCost] = useState<string>("");
+  const [progExternalRef, setProgExternalRef] = useState<any>(null);
+  const [progIsExternalRef, setProgIsExternalRef] = useState(false);
+  const [showExtOfferModal, setShowExtOfferModal] = useState(false);
+  const [progSelectedOfferPrice, setProgSelectedOfferPrice] = useState<string>("");
 
   const [showEditMap, setShowEditMap] = useState(false);
   const [showDayMap, setShowDayMap] = useState(false);
@@ -586,7 +590,9 @@ export default function CircuitDetailPage() {
           guide_id: progWithGuide ? (progGuideId || null) : null,
           guide_name: progWithGuide ? (progGuideName || null) : null,
           guide_cost: progGuideCost ? parseFloat(progGuideCost) : undefined,
-          linked_offer_item_id: progLinkedOfferItemId || null,
+          linked_offer_item_id: progIsExternalRef ? null : (progLinkedOfferItemId || null),
+          is_external_reference: progIsExternalRef ? true : undefined,
+          external_reference: progIsExternalRef ? progExternalRef : undefined,
           category: progCategory || undefined,
           subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
           price: progPrice ? parseFloat(progPrice) : undefined,
@@ -633,7 +639,9 @@ export default function CircuitDetailPage() {
           guide_id: progWithGuide ? (progGuideId || undefined) : undefined,
           guide_name: progWithGuide ? (progGuideName || undefined) : undefined,
           guide_cost: progGuideCost ? parseFloat(progGuideCost) : undefined,
-          linked_offer_item_id: progLinkedOfferItemId || undefined,
+          linked_offer_item_id: progIsExternalRef ? null : (progLinkedOfferItemId || undefined),
+          is_external_reference: progIsExternalRef ? true : undefined,
+          external_reference: progIsExternalRef ? progExternalRef : undefined,
           category: progCategory || undefined,
           subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
           price: progPrice ? parseFloat(progPrice) : undefined,
@@ -905,7 +913,7 @@ export default function CircuitDetailPage() {
                                               <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0 mr-1">Requis</span>
                                             )}
                                             <button
-                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); setProgCategory(item.category ?? "activite"); setProgSubtypes(item.subtypes ?? []); setProgPrice(item.price?.toString() ?? ""); setProgPhotos(item.photos ?? []); setProgGuideCost(item.fields?.guide_cost?.toString() ?? ""); }}
+                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); setProgCategory(item.category ?? "activite"); setProgSubtypes(item.subtypes ?? []); setProgPrice(item.price?.toString() ?? ""); setProgPhotos(item.photos ?? []); setProgGuideCost(item.fields?.guide_cost?.toString() ?? ""); setProgExternalRef(item.external_reference ?? null); setProgIsExternalRef(item.is_external_reference ?? false); }}
                                               className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
                                             >
                                               <Edit size={11} />
@@ -927,7 +935,7 @@ export default function CircuitDetailPage() {
                           {isAuthor && (
                             <div className="mt-2 flex items-center gap-2 flex-wrap">
                               <button
-                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport(""); setProgLinkedOfferItemId(null); }}
+                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport(""); setProgLinkedOfferItemId(null); setProgExternalRef(null); setProgIsExternalRef(false); }}
                                 className="text-xs text-primary hover:text-primary flex items-center gap-1"
                               >
                                 <Plus size={12} /> Ajouter une activité
@@ -1289,17 +1297,28 @@ export default function CircuitDetailPage() {
           {/* ─── Offer link ──────────────────────────────── */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-500">Offre associée</label>
-            <OfferItemSearchInline
-              items={progOfferItems}
-              selectedId={progLinkedOfferItemId}
-              onSelect={(id) => setProgLinkedOfferItemId(id)}
-              onAutoFill={(title) => setProgTitle(title)}
-            />
-            {progOfferItems.length === 0 && (
-              <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1">Aucune offre trouvée. Créez d'abord des offres dans votre projet.</p>
-            )}
-            {!progLinkedOfferItemId && (
-              <p className="text-[10px] text-slate-400">Sélectionnez une offre existante pour lier cette activité à un produit réservable.</p>
+            {progLinkedOfferItemId || progIsExternalRef ? (
+              <div className="flex items-center justify-between bg-slate-50 rounded-xl p-2 border border-slate-200">
+                <div className="flex items-center gap-2 min-w-0">
+                  {progIsExternalRef ? (
+                    <Globe size={14} className="text-amber-500 shrink-0" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                  )}
+                  <span className="text-sm text-slate-700 truncate">
+                    {progIsExternalRef
+                      ? progExternalRef?.provider_name || "Référence externe"
+                      : progOfferItems.find((it) => it.id === progLinkedOfferItemId)?.name || "Offre personnelle"}
+                  </span>
+                </div>
+                <button onClick={() => setShowExtOfferModal(true)} className="text-xs text-primary hover:bg-primary/5 px-2 py-1 rounded-lg font-medium shrink-0 ml-2">
+                  Changer
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowExtOfferModal(true)} className="w-full border-2 border-dashed border-slate-200 rounded-xl p-3 text-sm text-slate-400 hover:border-primary/50 hover:text-primary transition-colors text-center">
+                + Sélectionner une offre (personnelle, externe ou référence)
+              </button>
             )}
           </div>
 
@@ -1470,17 +1489,28 @@ export default function CircuitDetailPage() {
           {/* ─── Offer link ──────────────────────────────── */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-500">Offre associée</label>
-            <OfferItemSearchInline
-              items={progOfferItems}
-              selectedId={progLinkedOfferItemId}
-              onSelect={(id) => setProgLinkedOfferItemId(id)}
-              onAutoFill={(title) => setProgTitle(title)}
-            />
-            {progOfferItems.length === 0 && (
-              <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1">Aucune offre trouvée. Créez d'abord des offres dans votre projet.</p>
-            )}
-            {!progLinkedOfferItemId && (
-              <p className="text-[10px] text-slate-400">Sélectionnez une offre existante pour lier cette activité à un produit réservable.</p>
+            {progLinkedOfferItemId || progIsExternalRef ? (
+              <div className="flex items-center justify-between bg-slate-50 rounded-xl p-2 border border-slate-200">
+                <div className="flex items-center gap-2 min-w-0">
+                  {progIsExternalRef ? (
+                    <Globe size={14} className="text-amber-500 shrink-0" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                  )}
+                  <span className="text-sm text-slate-700 truncate">
+                    {progIsExternalRef
+                      ? progExternalRef?.provider_name || "Référence externe"
+                      : progOfferItems.find((it) => it.id === progLinkedOfferItemId)?.name || "Offre personnelle"}
+                  </span>
+                </div>
+                <button onClick={() => setShowExtOfferModal(true)} className="text-xs text-primary hover:bg-primary/5 px-2 py-1 rounded-lg font-medium shrink-0 ml-2">
+                  Changer
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowExtOfferModal(true)} className="w-full border-2 border-dashed border-slate-200 rounded-xl p-3 text-sm text-slate-400 hover:border-primary/50 hover:text-primary transition-colors text-center">
+                + Sélectionner une offre (personnelle, externe ou référence)
+              </button>
             )}
           </div>
 
@@ -1697,6 +1727,38 @@ export default function CircuitDetailPage() {
           </button>
         </div>
       </Modal>
+
+      {/* ─── External Offer Modal ────────────────────── */}
+      {(() => {
+        const ctxDay = circuit?.days?.find((d) =>
+          editProgramItem ? d.id === editProgramItem.dayId :
+          showAddProgram ? d.id === showAddProgram : null
+        );
+        return (
+          <ExternalOfferModal
+            open={showExtOfferModal}
+            onClose={() => setShowExtOfferModal(false)}
+            myOfferItems={progOfferItems}
+            selectedMyOfferId={progLinkedOfferItemId}
+            onSelectMyOffer={(id, price) => {
+              setProgLinkedOfferItemId(id);
+              setProgIsExternalRef(false);
+              setProgExternalRef(null);
+              if (price) setProgSelectedOfferPrice(price);
+            }}
+            externalRef={progExternalRef}
+            onExternalRefChange={(ref) => {
+              setProgExternalRef(ref);
+              setProgIsExternalRef(!!ref);
+              if (ref?.estimated_price) setProgPrice(String(ref.estimated_price));
+            }}
+            dayLat={ctxDay?.lat ?? null}
+            dayLng={ctxDay?.lng ?? null}
+            excludeAuthorId={userId || ""}
+            dayLabel={ctxDay ? `Jour ${ctxDay.day_number} — ${ctxDay.title}` : undefined}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -64,11 +65,11 @@ export class CreateCircuitDto {
   booking_deadline_days?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['automatic', 'manual'])
   confirmation_mode?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['easy', 'moderate', 'hard', 'expert'])
   difficulty_level?: string;
 
   @IsOptional()

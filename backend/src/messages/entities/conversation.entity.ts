@@ -3,9 +3,11 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Unique,
 } from 'typeorm';
 
 @Entity('conversations')
+@Unique(['participant_a_id', 'participant_b_id'])
 export class Conversation {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

@@ -30,27 +30,27 @@ export class Booking {
   @Column({ unique: true })
   booking_ref!: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'traveler_id' })
   traveler!: User;
 
-  @ManyToOne(() => Offer, { nullable: true })
+  @ManyToOne(() => Offer, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'offer_id' })
   offer!: Offer | null;
 
-  @ManyToOne(() => OfferItem, { nullable: true })
+  @ManyToOne(() => OfferItem, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'offer_item_id' })
   offerItem!: OfferItem | null;
 
-  @ManyToOne(() => OfferItemSession, { nullable: true })
+  @ManyToOne(() => OfferItemSession, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'session_id' })
   session!: OfferItemSession | null;
 
-  @ManyToOne(() => GuideOffering, { nullable: true })
+  @ManyToOne(() => GuideOffering, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'guide_offering_id' })
   guideOffering!: GuideOffering | null;
 
-  @ManyToOne(() => GuideOfferingSession, { nullable: true })
+  @ManyToOne(() => GuideOfferingSession, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'guide_offering_session_id' })
   guideOfferingSession!: GuideOfferingSession | null;
 

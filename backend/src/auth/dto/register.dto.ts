@@ -3,7 +3,7 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
-  IsOptional,
+  Matches,
   MinLength,
 } from 'class-validator';
 import { Role } from '../../common/enums/roles.enum';
@@ -22,7 +22,10 @@ export class RegisterDto {
     minLength: 6,
   })
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/, {
+    message: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.',
+  })
   password!: string;
 
   @ApiProperty({

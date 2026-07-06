@@ -2,14 +2,22 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
+import { PlaceContribution } from '../../place-contribution/entities/place-contribution.entity';
 
 @Entity('events')
 export class Event {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  @ManyToOne(() => PlaceContribution, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'place_id' })
+  place!: PlaceContribution | null;
 
   @Column('uuid')
   place_id!: string;
@@ -37,6 +45,10 @@ export class Event {
 
   @Column({ type: 'varchar', length: 20, default: 'published' })
   status!: string;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'created_by' })
+  createdBy!: User | null;
 
   @Column('uuid')
   created_by!: string;

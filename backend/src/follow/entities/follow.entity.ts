@@ -3,9 +3,11 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Unique,
 } from 'typeorm';
 
 @Entity('follows')
+@Unique(['follower_id', 'following_id'])
 export class Follow {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

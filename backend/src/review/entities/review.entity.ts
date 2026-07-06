@@ -5,6 +5,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
@@ -13,6 +14,7 @@ import { User } from '../../users/entities/user.entity';
  * Avis / Review sur une offre, circuit, projet ou guide
  */
 @Entity('reviews')
+@Unique(['author_id', 'target_type', 'target_id'])
 export class Review {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

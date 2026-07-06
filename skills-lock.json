@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "skills": {
+    "access-control-testing": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/access-control-testing/SKILL.md",
+      "computedHash": "aee692c63dcb0210a3cf933feb142886dd762516ec1a515aa3a28f4178d3b860"
+    },
+    "active-pentest": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/active-pentest/SKILL.md",
+      "computedHash": "735f3acebd490b6e50ccb245e3e3f6991d26437babd74fd442c8bbc3246355ed"
+    },
+    "api-security-testing": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/api-security-testing/SKILL.md",
+      "computedHash": "1b9eddbc1353f0a2a025a36ea73337c9aa883530c56ee12384bcb603df0cc4df"
+    },
+    "authentication-testing": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/authentication-testing/SKILL.md",
+      "computedHash": "4bf0756bbcd0cc5bf772321c8b6625bef6bf8936d1c2c029f466721aaece9bc4"
+    },
+    "business-logic-testing": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/business-logic-testing/SKILL.md",
+      "computedHash": "c6342d21ced142bd0377331ac5fda262aa2d562029dc7fd81d5936b9ff7083e6"
+    },
+    "client-side-exploitation": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/client-side-exploitation/SKILL.md",
+      "computedHash": "cf8c4c06e269777e053cbcd730f9cf28e6daba3b81592dd212906e0927225526"
+    },
+    "file-upload-and-ssrf": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/file-upload-and-ssrf/SKILL.md",
+      "computedHash": "f39405421e6085e737e0944989a49126a3dcde1397b72ffb051d5c5b6b8758e1"
+    },
+    "injection-testing": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/injection-testing/SKILL.md",
+      "computedHash": "949dddc355734f9c15a9bf79faf3e68d02aadb1eca6bfccbf3aa975e00425527"
+    },
+    "pentest-reporting": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/pentest-reporting/SKILL.md",
+      "computedHash": "6a618a421e817a7605ae06a2d2ab92a545e26e00ae04d65390ff94fc847c7fbb"
+    },
+    "recon-and-osint": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/recon-and-osint/SKILL.md",
+      "computedHash": "ae58756f102004b46509ba21a2b08373b3aa17e876f39d03dceb6646e2225639"
+    },
+    "secrets-management-audit": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/secrets-management-audit/SKILL.md",
+      "computedHash": "71bb3de1f269b62a706e2bad7bf12f7e67ca941687e5aaf9729885d04726f6ad"
+    },
+    "security-code-audit": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-code-audit/SKILL.md",
+      "computedHash": "4b70d9356159ae3b4b03a386228c9c8ea889399b7cda7b66c936a55a93c25c45"
+    },
+    "security-hardening": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-hardening/SKILL.md",
+      "computedHash": "7b068bae820cdec783faaae8cb2b7a379d35b5b2417e5f4b75d3d87e5f10e4fb"
+    },
+    "security-testing": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-testing/SKILL.md",
+      "computedHash": "ecf187f9bea9c7831352e95744b89b84f00a95843d7b803895b78807f55e7208"
+    },
+    "threat-modeling": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/threat-modeling/SKILL.md",
+      "computedHash": "2020e5d0d4a0147a5ff1d7691e6334c62ccb21e37dc23b7abbdc3f5c826c2f8b"
+    },
+    "vulnerability-chaining": {
+      "source": "mn-youssef/security-skills",
+      "sourceType": "github",
+      "skillPath": "skills/vulnerability-chaining/SKILL.md",
+      "computedHash": "088a3f68c7fba2d91345dc9c194911292c094f53e63a56a2a848eb2d9102ef2c"
+    }
+  }
+}

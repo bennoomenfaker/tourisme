@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { CircuitDay } from './circuit-day.entity';
+import { OfferItem } from '../../offer/entities/offer-item.entity';
 
 /**
  * Activité / Étape d'une journée de circuit
@@ -44,6 +45,11 @@ export class CircuitProgramItem {
 
   @Column({ type: 'uuid', nullable: true })
   linked_offer_item_id!: string | null;
+  // FK brute vers OfferItem (permet au code d'accéder à la valeur sans charger la relation)
+
+  @ManyToOne(() => OfferItem, { nullable: true, onDelete: 'SET NULL', createForeignKeyConstraints: false })
+  @JoinColumn({ name: 'linked_offer_item_id' })
+  linkedOfferItem!: OfferItem | null;
   // Lien vers un OfferItem si cette activité correspond à un item du catalogue
 
   @Column({ type: 'uuid', nullable: true })
