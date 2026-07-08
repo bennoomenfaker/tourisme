@@ -473,9 +473,9 @@ export class OfferService {
       activity_title: string;
     }[]
   > {
-    const items = await this.itemRepo.find({
+    const items = (await this.itemRepo.find({
       where: { offer: { id: offerId } },
-    });
+    })) ?? [];
     if (!items.length) return [];
     const itemIds = items.map((i) => i.id);
 
@@ -495,9 +495,9 @@ export class OfferService {
     offerId: string,
     action: string,
   ): Promise<void> {
-    const items = await this.itemRepo.find({
+    const items = (await this.itemRepo.find({
       where: { offer: { id: offerId } },
-    });
+    })) ?? [];
     if (!items.length) return;
     const itemIds = items.map((i) => i.id);
 
