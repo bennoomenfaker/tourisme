@@ -371,7 +371,7 @@ export class AdminService {
     });
     return Promise.all(
       users.map(async (u) => {
-        let profile: { full_name?: string; photo?: string } | null = null;
+        let profile: { full_name?: string; photo?: string | null } | null = null;
         if (u.role === ('eco_traveler' as any))
           profile = await this.ecoRepo.findOne({ where: { user_id: u.id } });
         else if (u.role === ('guide' as any))
