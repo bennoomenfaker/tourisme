@@ -50,7 +50,10 @@ export class Booking {
   @JoinColumn({ name: 'guide_offering_id' })
   guideOffering!: GuideOffering | null;
 
-  @ManyToOne(() => GuideOfferingSession, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => GuideOfferingSession, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'guide_offering_session_id' })
   guideOfferingSession!: GuideOfferingSession | null;
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Publication } from '../publication/entities/publication.entity';
@@ -367,12 +371,12 @@ export class AdminService {
     });
     return Promise.all(
       users.map(async (u) => {
-        let profile: any = null;
-        if (u.role === 'eco_traveler')
+        let profile: { full_name?: string; photo?: string } | null = null;
+        if (u.role === ('eco_traveler' as any))
           profile = await this.ecoRepo.findOne({ where: { user_id: u.id } });
-        else if (u.role === 'guide')
+        else if (u.role === ('guide' as any))
           profile = await this.guideRepo.findOne({ where: { user_id: u.id } });
-        else if (u.role === 'project')
+        else if (u.role === ('project' as any))
           profile = await this.ownerRepo.findOne({ where: { user_id: u.id } });
         return {
           user_id: u.id,
@@ -398,10 +402,10 @@ export class AdminService {
       d.setHours(23, 59, 59, 999);
       user.ban_until = d;
     } else {
-      user.ban_until = null;
+      user.ban_until = null as any;
     }
-    user.refresh_token = null;
-    user.refresh_token_expires_at = null;
+    user.refresh_token = null as any;
+    user.refresh_token_expires_at = null as any;
     await this.userRepo.save(user);
     await this.mailService.sendAccountBanned(
       user.email,

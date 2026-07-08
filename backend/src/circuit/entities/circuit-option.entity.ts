@@ -30,7 +30,11 @@ export class CircuitOption {
   @JoinColumn({ name: 'circuit_id' })
   circuit!: Circuit;
 
-  @ManyToOne(() => OfferItem, { nullable: true, onDelete: 'SET NULL', createForeignKeyConstraints: false })
+  @ManyToOne(() => OfferItem, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    createForeignKeyConstraints: false,
+  })
   @JoinColumn({ name: 'offer_item_id' })
   offerItem!: OfferItem | null;
   // Lien vers un OfferItem si cette option correspond à un item du catalogue

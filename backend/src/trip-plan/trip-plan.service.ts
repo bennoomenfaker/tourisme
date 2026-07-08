@@ -255,7 +255,8 @@ export class TripPlanService {
 
           const reservationStatus =
             circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
-          const baseTotal = (Number(circuit.base_price) ?? 0) * participantCount;
+          const baseTotal =
+            (Number(circuit.base_price) ?? 0) * participantCount;
           const reservation = queryRunner.manager.create(CircuitReservation, {
             circuit: { id: circuit.id } as Circuit,
             user: { id: ecoTravelerId } as User,

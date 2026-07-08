@@ -107,8 +107,16 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Post(':id/availability/generate')
-  generateSessions(@Req() req: any, @Param('id') id: string, @Body() dto: GenerateSessionsDto) {
-    return this.service.generateSessions(id, dto.days_ahead ?? 90, req.user.sub);
+  generateSessions(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: GenerateSessionsDto,
+  ) {
+    return this.service.generateSessions(
+      id,
+      dto.days_ahead ?? 90,
+      req.user.sub,
+    );
   }
 
   @Public()

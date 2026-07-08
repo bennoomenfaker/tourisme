@@ -42,12 +42,21 @@ describe('OfferService status transitions', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OfferService,
-        { provide: getRepositoryToken(Offer), useValue: { ...mockRepo(), findOne: findOrFailMock } },
+        {
+          provide: getRepositoryToken(Offer),
+          useValue: { ...mockRepo(), findOne: findOrFailMock },
+        },
         { provide: getRepositoryToken(OfferCategory), useValue: mockRepo() },
         { provide: getRepositoryToken(OfferItem), useValue: mockRepo() },
         { provide: getRepositoryToken(OfferItemPrice), useValue: mockRepo() },
-        { provide: getRepositoryToken(OfferItemCapacity), useValue: mockRepo() },
-        { provide: getRepositoryToken(OfferItemAvailabilityRule), useValue: mockRepo() },
+        {
+          provide: getRepositoryToken(OfferItemCapacity),
+          useValue: mockRepo(),
+        },
+        {
+          provide: getRepositoryToken(OfferItemAvailabilityRule),
+          useValue: mockRepo(),
+        },
         { provide: getRepositoryToken(OfferItemSession), useValue: mockRepo() },
         { provide: getRepositoryToken(Project), useValue: mockRepo() },
         { provide: RedisService, useValue: mockRedis },
@@ -93,7 +102,14 @@ describe('OfferService status transitions', () => {
     ['archived', 'inactive'],
   ];
 
-  const allStatuses = ['draft', 'pending', 'approved', 'rejected', 'archived', 'inactive'];
+  const allStatuses = [
+    'draft',
+    'pending',
+    'approved',
+    'rejected',
+    'archived',
+    'inactive',
+  ];
 
   describe.each(validTransitions)('%s → %s (valide)', (from, to) => {
     it(`devrait accepter ${from} → ${to}`, async () => {
@@ -119,24 +135,27 @@ describe('OfferService status transitions', () => {
       });
 
       await expect(
-        service.update('user-1', 'offer-1', { status: to })
+        service.update('user-1', 'offer-1', { status: to }),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('même statut', () => {
-    it.each(allStatuses)('%s → %s devrait toujours être accepté', async (status) => {
-      findOrFailMock.mockResolvedValue({
-        id: 'offer-1',
-        author_id: 'user-1',
-        status,
-      });
-      const result = { id: 'offer-1', author_id: 'user-1', status };
-      jest.spyOn(service as any, 'findById').mockResolvedValue(result);
+    it.each(allStatuses)(
+      '%s → %s devrait toujours être accepté',
+      async (status) => {
+        findOrFailMock.mockResolvedValue({
+          id: 'offer-1',
+          author_id: 'user-1',
+          status,
+        });
+        const result = { id: 'offer-1', author_id: 'user-1', status };
+        jest.spyOn(service as any, 'findById').mockResolvedValue(result);
 
-      const output = await service.update('user-1', 'offer-1', { status });
-      expect(output.status).toBe(status);
-    });
+        const output = await service.update('user-1', 'offer-1', { status });
+        expect(output.status).toBe(status);
+      },
+    );
   });
 
   describe('sans changement de statut', () => {
@@ -146,10 +165,17 @@ describe('OfferService status transitions', () => {
         author_id: 'user-1',
         status: 'rejected',
       });
-      const result = { id: 'offer-1', author_id: 'user-1', status: 'rejected', title: 'Modifié' };
+      const result = {
+        id: 'offer-1',
+        author_id: 'user-1',
+        status: 'rejected',
+        title: 'Modifié',
+      };
       jest.spyOn(service as any, 'findById').mockResolvedValue(result);
 
-      const output = await service.update('user-1', 'offer-1', { title: 'Modifié' });
+      const output = await service.update('user-1', 'offer-1', {
+        title: 'Modifié',
+      });
       expect(output.title).toBe('Modifié');
       expect(output.status).toBe('rejected');
     });
@@ -164,7 +190,7 @@ describe('OfferService status transitions', () => {
       });
 
       await expect(
-        service.update('user-1', 'offer-1', { status: 'approved' })
+        service.update('user-1', 'offer-1', { status: 'approved' }),
       ).rejects.toThrow(ForbiddenException);
     });
   });

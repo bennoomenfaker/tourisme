@@ -90,8 +90,12 @@ export class CapacityDomainService {
 
       if (session && session.remaining_capacity !== null) {
         if (session.remaining_capacity < quantity) {
+          const dateStr =
+            date instanceof Date
+              ? date.toLocaleString()
+              : String(date ?? 'N/A');
           throw new Error(
-            `Capacité insuffisante pour la session du ${date?.toLocaleString?.() ?? date}`,
+            `Capacité insuffisante pour la session du ${dateStr}`,
           );
         }
         session.remaining_capacity -= quantity;

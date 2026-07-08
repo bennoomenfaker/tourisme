@@ -164,7 +164,10 @@ export class GuideOfferingService {
     });
   }
 
-  async removeAvailabilityRule(ruleId: string, guideId: string): Promise<{ message: string }> {
+  async removeAvailabilityRule(
+    ruleId: string,
+    guideId: string,
+  ): Promise<{ message: string }> {
     const rule = await this.ruleRepo.findOne({
       where: { id: ruleId },
       relations: ['guideOffering'],
@@ -380,7 +383,10 @@ export class GuideOfferingService {
     return this.blockRepo.save(block);
   }
 
-  async removeBlock(blockId: string, guideId: string): Promise<{ message: string }> {
+  async removeBlock(
+    blockId: string,
+    guideId: string,
+  ): Promise<{ message: string }> {
     const block = await this.blockRepo.findOne({
       where: { id: blockId },
       relations: ['guideOffering'],
@@ -421,7 +427,10 @@ export class GuideOfferingService {
     return this.priceRepo.save(price);
   }
 
-  async removePrice(priceId: string, guideId: string): Promise<{ message: string }> {
+  async removePrice(
+    priceId: string,
+    guideId: string,
+  ): Promise<{ message: string }> {
     const price = await this.priceRepo.findOne({
       where: { id: priceId },
       relations: ['guideOffering'],

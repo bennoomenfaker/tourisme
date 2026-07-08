@@ -197,13 +197,20 @@ export class OfferService {
 
     if (category) {
       // category peut être un UUID ou un slug/nom — résoudre en UUID
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(category);
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          category,
+        );
       if (isUuid) {
-        qb.andWhere('offer.category_id = :categoryId', { categoryId: category });
+        qb.andWhere('offer.category_id = :categoryId', {
+          categoryId: category,
+        });
       } else {
         // Join offer_categories et filtrer par slug/nom
-        qb.innerJoin('offer.category', 'catFilter')
-          .andWhere('LOWER(catFilter.slug) = LOWER(:catSlug) OR LOWER(catFilter.label) = LOWER(:catSlug)', { catSlug: category });
+        qb.innerJoin('offer.category', 'catFilter').andWhere(
+          'LOWER(catFilter.slug) = LOWER(:catSlug) OR LOWER(catFilter.label) = LOWER(:catSlug)',
+          { catSlug: category },
+        );
       }
     }
     if (excludeAuthor)
@@ -494,16 +501,19 @@ export class OfferService {
     if (!items.length) return;
     const itemIds = items.map((i) => i.id);
 
-    const linked: { circuit_id: string; circuit_title: string; status: string }[] =
-      await this.repo.query(
-        `SELECT DISTINCT c.id AS circuit_id, c.title AS circuit_title, c.status
+    const linked: {
+      circuit_id: string;
+      circuit_title: string;
+      status: string;
+    }[] = await this.repo.query(
+      `SELECT DISTINCT c.id AS circuit_id, c.title AS circuit_title, c.status
          FROM circuit_program_items cpi
          INNER JOIN circuit_days cd ON cd.id = cpi.circuit_day_id
          INNER JOIN circuits c ON c.id = cd.circuit_id
          WHERE cpi.linked_offer_item_id IN (${itemIds.map(() => '?').join(',')})
            AND c.status = 'approved'`,
-        itemIds,
-      );
+      itemIds,
+    );
 
     if (linked.length > 0) {
       const titles = linked.map((c) => c.circuit_title).join(', ');
@@ -520,7 +530,10 @@ export class OfferService {
     return offer;
   }
 
-  private async verifyOfferOwnership(offerId: string, userId: string): Promise<Offer> {
+  private async verifyOfferOwnership(
+    offerId: string,
+    userId: string,
+  ): Promise<Offer> {
     const offer = await this.findOrFail(offerId);
     if (offer.author_id !== userId) {
       throw new ForbiddenException('Accès refusé.');
@@ -528,7 +541,10 @@ export class OfferService {
     return offer;
   }
 
-  private async verifySessionOwnership(sessionId: string, userId: string): Promise<void> {
+  private async verifySessionOwnership(
+    sessionId: string,
+    userId: string,
+  ): Promise<void> {
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
       relations: ['offerItem', 'offerItem.offer'],
@@ -539,7 +555,10 @@ export class OfferService {
     }
   }
 
-  private async verifyCapacityOwnership(capacityId: string, userId: string): Promise<void> {
+  private async verifyCapacityOwnership(
+    capacityId: string,
+    userId: string,
+  ): Promise<void> {
     const cap = await this.capacityRepo.findOne({
       where: { id: capacityId },
       relations: ['offerItem', 'offerItem.offer'],
@@ -590,7 +609,10 @@ export class OfferService {
     return item;
   }
 
-  private async verifyItemOwnership(itemId: string, userId: string): Promise<OfferItem> {
+  private async verifyItemOwnership(
+    itemId: string,
+    userId: string,
+  ): Promise<OfferItem> {
     const item = await this.findItemById(itemId);
     if (item.offer.author_id !== userId) {
       throw new ForbiddenException('Accès refusé.');
@@ -609,7 +631,10 @@ export class OfferService {
     return this.itemRepo.save(item);
   }
 
-  async removeItem(itemId: string, userId: string): Promise<{ message: string }> {
+  async removeItem(
+    itemId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
     const item = await this.verifyItemOwnership(itemId, userId);
     // Vérifier qu'aucun circuit ne référence cet item
     if (item.offer?.id) {
@@ -664,7 +689,10 @@ export class OfferService {
     return this.priceRepo.save(price);
   }
 
-  private async verifyPriceOwnership(priceId: string, userId: string): Promise<void> {
+  private async verifyPriceOwnership(
+    priceId: string,
+    userId: string,
+  ): Promise<void> {
     const price = await this.priceRepo.findOne({
       where: { id: priceId },
       relations: ['offerItem', 'offerItem.offer'],
@@ -687,7 +715,10 @@ export class OfferService {
     return this.priceRepo.save(price);
   }
 
-  async removePrice(priceId: string, userId: string): Promise<{ message: string }> {
+  async removePrice(
+    priceId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
     await this.verifyPriceOwnership(priceId, userId);
     await this.priceRepo.delete(priceId);
     return { message: 'Prix supprimé.' };
@@ -723,7 +754,10 @@ export class OfferService {
     return caps[0] ?? null;
   }
 
-  async removeCapacity(capacityId: string, userId: string): Promise<{ message: string }> {
+  async removeCapacity(
+    capacityId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
     await this.verifyCapacityOwnership(capacityId, userId);
     const cap = await this.capacityRepo.findOne({ where: { id: capacityId } });
     if (!cap) throw new NotFoundException('Capacité introuvable.');
@@ -762,24 +796,34 @@ export class OfferService {
     });
   }
 
-  private async verifyRuleOwnership(ruleId: string, userId: string): Promise<void> {
+  private async verifyRuleOwnership(
+    ruleId: string,
+    userId: string,
+  ): Promise<void> {
     const rule = await this.ruleRepo.findOne({
       where: { id: ruleId },
       relations: ['offerItem', 'offerItem.offer'],
     });
-    if (!rule) throw new NotFoundException('Règle de disponibilité introuvable.');
+    if (!rule)
+      throw new NotFoundException('Règle de disponibilité introuvable.');
     if (rule.offerItem.offer.author_id !== userId) {
       throw new ForbiddenException('Accès refusé.');
     }
   }
 
-  async removeAvailabilityRule(ruleId: string, userId: string): Promise<{ message: string }> {
+  async removeAvailabilityRule(
+    ruleId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
     await this.verifyRuleOwnership(ruleId, userId);
     await this.ruleRepo.delete(ruleId);
     return { message: 'Règle supprimée.' };
   }
 
-  async removeAllAvailabilityRules(itemId: string, userId: string): Promise<void> {
+  async removeAllAvailabilityRules(
+    itemId: string,
+    userId: string,
+  ): Promise<void> {
     await this.verifyItemOwnership(itemId, userId);
     const rules = await this.ruleRepo.find({
       where: { offerItem: { id: itemId } },
@@ -1025,7 +1069,10 @@ export class OfferService {
     return this.sessionRepo.save(session);
   }
 
-  async removeSession(sessionId: string, userId: string): Promise<{ message: string }> {
+  async removeSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
     await this.verifySessionOwnership(sessionId, userId);
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },

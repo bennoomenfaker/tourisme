@@ -272,7 +272,17 @@ export class CreateOfferItemDto {
   description?: string;
 
   @IsOptional()
-  @IsIn(['room', 'bed', 'camping_space', 'dish', 'menu', 'equipment', 'activity', 'workshop', 'transport_service'])
+  @IsIn([
+    'room',
+    'bed',
+    'camping_space',
+    'dish',
+    'menu',
+    'equipment',
+    'activity',
+    'workshop',
+    'transport_service',
+  ])
   item_type?: string;
 
   @IsOptional()

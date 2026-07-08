@@ -32,7 +32,9 @@ export class AuthService {
     }
 
     if (dto.role === Role.ADMIN) {
-      throw new ForbiddenException('Inscription en tant qu\'administrateur non autorisée.');
+      throw new ForbiddenException(
+        "Inscription en tant qu'administrateur non autorisée.",
+      );
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -96,7 +98,18 @@ export class AuthService {
   }
 
   private sanitizeUser(user: any) {
-    const { password, verification_token, verification_token_expires_at, refresh_token, refresh_token_expires_at, reset_password_token, reset_password_token_expires_at, failed_login_attempts, locked_until, ...safe } = user;
+    const {
+      password,
+      verification_token,
+      verification_token_expires_at,
+      refresh_token,
+      refresh_token_expires_at,
+      reset_password_token,
+      reset_password_token_expires_at,
+      failed_login_attempts,
+      locked_until,
+      ...safe
+    } = user;
     return safe;
   }
 
@@ -215,7 +228,9 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     // Réponse identique que l'email existe ou non (anti-énumération)
     if (!user) {
-      return { message: 'Un lien de réinitialisation a été envoyé à votre email.' };
+      return {
+        message: 'Un lien de réinitialisation a été envoyé à votre email.',
+      };
     }
 
     const token = randomBytes(32).toString('hex');

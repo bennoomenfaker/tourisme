@@ -176,7 +176,13 @@ export class ReservationApplicationService {
     link: string,
   ): Promise<void> {
     await this.notificationService
-      .create(guideId, 'new_booking_request', 'Nouvelle réservation circuit', message, link)
+      .create(
+        guideId,
+        'new_booking_request',
+        'Nouvelle réservation circuit',
+        message,
+        link,
+      )
       .catch(() => {});
   }
 
@@ -201,12 +207,19 @@ export class ReservationApplicationService {
       exclusions: string | null;
       author_id: string;
     },
-    days: { day_number: number; date: Date | null; title: string; programItems: CircuitProgramItem[] }[],
+    days: {
+      day_number: number;
+      date: Date | null;
+      title: string;
+      programItems: CircuitProgramItem[];
+    }[],
     selectedOptions: { circuitOption: CircuitOption; quantity: number }[],
     pricing: { baseTotal: number; optionsTotal: number; finalTotal: number },
     participantsCount: number,
   ): Promise<void> {
-    const snapshotRepo = this.dataSource.getRepository(CircuitReservationSnapshot);
+    const snapshotRepo = this.dataSource.getRepository(
+      CircuitReservationSnapshot,
+    );
     await snapshotRepo.save(
       snapshotRepo.create({
         circuitReservation: { id: reservation.id },
@@ -256,7 +269,8 @@ export class ReservationApplicationService {
             option_type: sel.circuitOption.option_type,
             quantity: sel.quantity,
             unit_price: Number(sel.circuitOption.extra_price ?? 0),
-            total_price: Number(sel.circuitOption.extra_price ?? 0) * sel.quantity,
+            total_price:
+              Number(sel.circuitOption.extra_price ?? 0) * sel.quantity,
           })),
         },
       }),

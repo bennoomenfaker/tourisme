@@ -244,7 +244,11 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Patch('items/:itemId')
-  updateItem(@Req() req: any, @Param('itemId') itemId: string, @Body() dto: UpdateOfferItemDto) {
+  updateItem(
+    @Req() req: any,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateOfferItemDto,
+  ) {
     return this.service.updateItem(itemId, dto, req.user.sub);
   }
 

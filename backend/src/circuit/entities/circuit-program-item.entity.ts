@@ -47,7 +47,11 @@ export class CircuitProgramItem {
   linked_offer_item_id!: string | null;
   // FK brute vers OfferItem (permet au code d'accéder à la valeur sans charger la relation)
 
-  @ManyToOne(() => OfferItem, { nullable: true, onDelete: 'SET NULL', createForeignKeyConstraints: false })
+  @ManyToOne(() => OfferItem, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    createForeignKeyConstraints: false,
+  })
   @JoinColumn({ name: 'linked_offer_item_id' })
   linkedOfferItem!: OfferItem | null;
   // Lien vers un OfferItem si cette activité correspond à un item du catalogue

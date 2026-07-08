@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 
 export type ReservationType = 'booking' | 'circuit';
 
-export const RESERVATION_TRANSITIONS: Record<string, Record<string, ReservationType[]>> = {
+export const RESERVATION_TRANSITIONS: Record<
+  string,
+  Record<string, ReservationType[]>
+> = {
   pending: {
     confirmed: ['booking', 'circuit'],
     rejected: ['booking', 'circuit'],

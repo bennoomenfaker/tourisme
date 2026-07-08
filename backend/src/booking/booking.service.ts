@@ -102,7 +102,9 @@ export class BookingService {
         participantCount,
       );
       if (!available) {
-        throw new BadRequestException('Capacité insuffisante pour cette prestation');
+        throw new BadRequestException(
+          'Capacité insuffisante pour cette prestation',
+        );
       }
     }
 
@@ -132,7 +134,10 @@ export class BookingService {
       if (offerItem && offerItem.prices?.length) {
         const priceRow =
           offerItem.prices.find((p) => p.is_default) ?? offerItem.prices[0];
-        const unitPrice = session?.price_override != null ? Number(session.price_override) : Number(priceRow.price);
+        const unitPrice =
+          session?.price_override != null
+            ? Number(session.price_override)
+            : Number(priceRow.price);
         const pricingUnit = priceRow.pricing_unit ?? 'per_person';
         const nights = dto.nights ?? offerItem.details_json?.nights ?? 1;
 
@@ -299,7 +304,13 @@ export class BookingService {
         'Vous ne pouvez annuler que vos propres réservations',
       );
     }
-    if (!this.reservationDomain.validateTransition(booking.status, 'cancelled', 'booking')) {
+    if (
+      !this.reservationDomain.validateTransition(
+        booking.status,
+        'cancelled',
+        'booking',
+      )
+    ) {
       throw new BadRequestException(
         `Impossible d'annuler une réservation avec le statut "${booking.status}"`,
       );
@@ -385,7 +396,13 @@ export class BookingService {
         'Vous ne pouvez confirmer que les réservations de vos propres offres',
       );
     }
-    if (!this.reservationDomain.validateTransition(booking.status, 'confirmed', 'booking')) {
+    if (
+      !this.reservationDomain.validateTransition(
+        booking.status,
+        'confirmed',
+        'booking',
+      )
+    ) {
       throw new BadRequestException(
         'Cette réservation ne peut plus être confirmée',
       );
