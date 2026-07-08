@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Circuit } from './circuit.entity';
+import { OfferItem } from '../../offer/entities/offer-item.entity';
 
 /**
  * Option additionnelle pour un circuit
@@ -29,9 +30,10 @@ export class CircuitOption {
   @JoinColumn({ name: 'circuit_id' })
   circuit!: Circuit;
 
-  @Column({ type: 'uuid', nullable: true })
-  offer_item_id!: string | null;
-  // Lien vers l'OfferItem correspondant (pour stock et prix)
+  @ManyToOne(() => OfferItem, { nullable: true, onDelete: 'SET NULL', createForeignKeyConstraints: false })
+  @JoinColumn({ name: 'offer_item_id' })
+  offerItem!: OfferItem | null;
+  // Lien vers un OfferItem si cette option correspond à un item du catalogue
 
   @Column({ type: 'varchar', nullable: true })
   option_group!: string | null;

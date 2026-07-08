@@ -34,6 +34,7 @@ import { TravelCartModule } from './travel-cart/travel-cart.module';
 import { PhotoModule } from './photo/photo.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { RedisModule } from './redis/redis.module';
+import { DomainModule } from './domain/domain.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { RedisModule } from './redis/redis.module';
     PhotoModule,
     TimelineModule,
     RedisModule,
+    DomainModule,
   ],
   providers: [
     GoogleStrategy,

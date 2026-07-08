@@ -24,11 +24,15 @@ function createNumberIcon(num: number, bgColor = "#13ec49") {
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
-    if (points.length > 1) {
-      map.fitBounds(L.latLngBounds(points), { padding: [40, 40] });
-    } else if (points.length === 1) {
-      map.setView(points[0], 13);
-    }
+    // Petit délai pour laisser la carte s'initialiser correctement
+    const timer = setTimeout(() => {
+      if (points.length > 1) {
+        map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 14 });
+      } else if (points.length === 1) {
+        map.setView(points[0], 13);
+      }
+    }, 200);
+    return () => clearTimeout(timer);
   }, [points, map]);
   return null;
 }
@@ -77,9 +81,13 @@ interface PolylineDrawerProps {
   waypoints: [number, number][];
   onChange: (waypoints: [number, number][]) => void;
   color?: string;
+  anchors?: [number, number][]; // Points verrouillés du jour actif
+  allAnchors?: { pos: [number, number]; dayNumber: number; dayId: string; dayIndex: number }[]; // Tous les anchors de tous les jours
+  activeDayIndex?: number; // Index du jour actif
+  dayColors?: string[]; // Couleurs de chaque jour
 }
 
-export default function PolylineDrawer({ waypoints, onChange, color = "#13ec49" }: PolylineDrawerProps) {
+export default function PolylineDrawer({ waypoints, onChange, color = "#13ec49", anchors = [], allAnchors = [], activeDayIndex = 0, dayColors = [] }: PolylineDrawerProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -106,8 +114,13 @@ export default function PolylineDrawer({ waypoints, onChange, color = "#13ec49" 
     onChange(next);
   }, [waypoints, onChange]);
 
-  const center: [number, number] = waypoints.length > 0
-    ? waypoints[0]
+  // Points du jour actif : anchors + waypoints pour la polyline locale
+  const activePoints = [...anchors, ...waypoints];
+  // Tous les anchors globaux pour le FitBounds
+  const globalAnchors = allAnchors.map((a) => a.pos);
+  const allPoints = [...globalAnchors, ...waypoints];
+  const center: [number, number] = allPoints.length > 0
+    ? allPoints[0]
     : [33.8869, 9.5375];
 
   if (!ready) return <div className="h-[300px] bg-slate-100 animate-pulse rounded-xl" />;
@@ -123,25 +136,83 @@ export default function PolylineDrawer({ waypoints, onChange, color = "#13ec49" 
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <ClickHandler />
-          <FitBounds points={waypoints} />
+          <FitBounds points={allPoints} />
           <InvalidateSizeFix />
+          {/* Tous les anchors globaux (destinations de tous les jours) */}
+          {allAnchors.map((anchor) => {
+            const isActive = anchor.dayIndex !== undefined ? anchor.dayIndex === activeDayIndex : false;
+            const dayColor = dayColors[anchor.dayIndex ?? 0] || '#94a3b8';
+            return (
+              <Marker
+                key={`global-anchor-${anchor.dayId}-${anchor.pos[0]}-${anchor.pos[1]}`}
+                position={anchor.pos}
+                draggable={false}
+                icon={createNumberIcon(
+                  anchor.dayNumber,
+                  isActive ? dayColor : '#94a3b8'
+                )}
+              />
+            );
+          })}
+          {/* Markers waypoints du jour actif (éditables, draggables) */}
           {waypoints.map((pos, i) => (
-            <DraggableMarker key={`${i}-${pos[0]}-${pos[1]}`} pos={pos} index={i} onDrag={handleDrag} markerColor={color} />
+            <DraggableMarker
+              key={`wp-${i}-${pos[0]}-${pos[1]}`}
+              pos={pos}
+              index={i}
+              onDrag={handleDrag}
+              markerColor={color}
+            />
           ))}
-          {waypoints.length > 1 && (
+          {/* Route globale reliant tous les anchors (pointillé gris) */}
+          {globalAnchors.length > 1 && (
             <Polyline
-              positions={waypoints}
-              pathOptions={{ color, weight: 3, dashArray: "8 6" }}
+              positions={globalAnchors}
+              pathOptions={{ color: '#94a3b8', weight: 2, dashArray: '10 8', opacity: 0.5 }}
+            />
+          )}
+          {/* Route du jour actif (pleine, couleur du jour) */}
+          {activePoints.length > 1 && (
+            <Polyline
+              positions={activePoints}
+              pathOptions={{ color, weight: 3, dashArray: '8 6' }}
             />
           )}
         </MapContainer>
       </div>
+      {/* Route globale : résumé de tous les jours */}
+      {allAnchors.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Route globale</p>
+          {allAnchors.map((anchor) => {
+            const isActive = anchor.dayIndex !== undefined ? anchor.dayIndex === activeDayIndex : false;
+            const dayColor = dayColors[anchor.dayIndex ?? 0] || '#94a3b8';
+            return (
+              <div key={`global-${anchor.dayId}`}
+                className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs transition-all ${
+                  isActive ? 'bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold' : 'bg-slate-50 border border-slate-100 text-slate-500'
+                }`}>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    style={{ backgroundColor: isActive ? dayColor : '#94a3b8' }}>
+                    {anchor.dayNumber}
+                  </span>
+                  <span className="text-[10px]">🔒 Jour {anchor.dayNumber}</span>
+                  {anchor.pos[0].toFixed(4)}, {anchor.pos[1].toFixed(4)}
+                </span>
+                {isActive && <span className="text-[10px] text-primary">◄ éditer</span>}
+                {!isActive && <span className="text-[10px] text-slate-400">verrouillé</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
       {waypoints.length > 0 && (
         <div className="space-y-1 max-h-32 overflow-y-auto">
           {waypoints.map((pos, i) => (
-            <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-1.5 text-xs text-slate-600">
+            <div key={`wp-${i}`} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-1.5 text-xs text-slate-600">
               <span>
-                <strong>{i === 0 ? "Départ" : `Étape ${i}`}</strong>: {pos[0].toFixed(4)}, {pos[1].toFixed(4)}
+                ⭐ <strong>Arrêt {i + 1}</strong>: {pos[0].toFixed(4)}, {pos[1].toFixed(4)}
               </span>
               <button
                 type="button"
@@ -157,8 +228,8 @@ export default function PolylineDrawer({ waypoints, onChange, color = "#13ec49" 
           ))}
         </div>
       )}
-      {waypoints.length === 0 && (
-        <p className="text-xs text-slate-400 text-center py-2">Cliquez sur la carte pour ajouter des étapes à l&apos;itinéraire</p>
+      {allPoints.length === 0 && (
+        <p className="text-xs text-slate-400 text-center py-2">Définissez les lieux des jours dans l&apos;étape 2, puis ajoutez des arrêts ici</p>
       )}
     </div>
   );

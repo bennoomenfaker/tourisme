@@ -143,7 +143,6 @@ function NewReservationPage() {
           method: "POST",
           body: JSON.stringify({
             participants_count: participants.length,
-            base_total: totalPrice,
           }),
         });
       } else {
@@ -153,7 +152,6 @@ function NewReservationPage() {
             offer_id: offerId,
             offer_item_id: selectedItemId ?? undefined,
             session_id: selectedSessionId ?? undefined,
-            total_price: totalPrice,
             special_requests: specialRequests || undefined,
             confirmation_mode: offer?.confirmation_mode ?? "automatic",
             participants: participants.filter((p) => p.full_name.trim()),

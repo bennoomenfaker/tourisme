@@ -195,7 +195,17 @@ export class OfferService {
       .where('offer.status = :status', { status: 'approved' })
       .andWhere('offer.is_deleted = :isDeleted', { isDeleted: false });
 
-    if (category) qb.andWhere('offer.category_id = :category', { category });
+    if (category) {
+      // category peut être un UUID ou un slug/nom — résoudre en UUID
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(category);
+      if (isUuid) {
+        qb.andWhere('offer.category_id = :categoryId', { categoryId: category });
+      } else {
+        // Join offer_categories et filtrer par slug/nom
+        qb.innerJoin('offer.category', 'catFilter')
+          .andWhere('LOWER(catFilter.slug) = LOWER(:catSlug) OR LOWER(catFilter.label) = LOWER(:catSlug)', { catSlug: category });
+      }
+    }
     if (excludeAuthor)
       qb.andWhere('offer.author_id != :ex', { ex: excludeAuthor });
     if (region) qb.andWhere('offer.region = :region', { region });
@@ -311,6 +321,19 @@ export class OfferService {
         throw new BadRequestException(
           `Transition de statut interdite : ${offer.status} → ${dto.status}`,
         );
+      // Empêcher le bypass : archive/deactivate via update() doit vérifier les circuits
+      if (dto.status === 'archived') {
+        await this.assertNoPublishedCircuitLink(offerId, 'archivée');
+      }
+      if (dto.status === 'inactive' && offer.status === 'approved') {
+        const linked = await this.findLinkedCircuits(offerId);
+        if (linked.length > 0) {
+          const titles = linked.map((c) => c.circuit_title).join(', ');
+          throw new BadRequestException(
+            `Cette offre est référencée par le(s) circuit(s) publié(s) : ${titles}. Désactivez d'abord le(s) circuit(s).`,
+          );
+        }
+      }
       offer.status = dto.status;
     }
     if (dto.location_type !== undefined)
@@ -366,6 +389,9 @@ export class OfferService {
       );
     }
 
+    // Vérifier les circuits publiés qui référencent cette offre
+    await this.assertNoPublishedCircuitLink(offerId, 'supprimée');
+
     // Soft delete
     offer.is_deleted = true;
     offer.deleted_at = new Date();
@@ -381,6 +407,10 @@ export class OfferService {
       throw new ForbiddenException('Accès refusé.');
     if (offer.status === 'archived')
       throw new BadRequestException('Cette offre est déjà archivée');
+
+    // Vérifier les circuits publiés qui référencent cette offre
+    await this.assertNoPublishedCircuitLink(offerId, 'archivée');
+
     offer.status = 'archived';
     offer.is_deleted = true;
     offer.deleted_at = new Date();
@@ -397,6 +427,17 @@ export class OfferService {
       throw new BadRequestException(
         'Seules les offres approuvées peuvent être désactivées',
       );
+
+    // Vérifier les circuits publiés — avertir mais ne pas bloquer
+    const linkedCircuits = await this.findLinkedCircuits(offerId);
+    if (linkedCircuits.length > 0) {
+      const titles = linkedCircuits.map((c) => c.circuit_title).join(', ');
+      throw new BadRequestException(
+        `Cette offre est référencée par le(s) circuit(s) publié(s) : ${titles}. ` +
+          `Désactivez d'abord le(s) circuit(s) ou retirez la référence.`,
+      );
+    }
+
     offer.status = 'inactive';
     await this.repo.save(offer);
     await this.invalidateOfferCache();
@@ -443,10 +484,70 @@ export class OfferService {
     return linked;
   }
 
+  private async assertNoPublishedCircuitLink(
+    offerId: string,
+    action: string,
+  ): Promise<void> {
+    const items = await this.itemRepo.find({
+      where: { offer: { id: offerId } },
+    });
+    if (!items.length) return;
+    const itemIds = items.map((i) => i.id);
+
+    const linked: { circuit_id: string; circuit_title: string; status: string }[] =
+      await this.repo.query(
+        `SELECT DISTINCT c.id AS circuit_id, c.title AS circuit_title, c.status
+         FROM circuit_program_items cpi
+         INNER JOIN circuit_days cd ON cd.id = cpi.circuit_day_id
+         INNER JOIN circuits c ON c.id = cd.circuit_id
+         WHERE cpi.linked_offer_item_id IN (${itemIds.map(() => '?').join(',')})
+           AND c.status = 'approved'`,
+        itemIds,
+      );
+
+    if (linked.length > 0) {
+      const titles = linked.map((c) => c.circuit_title).join(', ');
+      throw new BadRequestException(
+        `Cette offre ne peut pas être ${action} car elle est référencée par le(s) circuit(s) publié(s) : ${titles}. ` +
+          `Désactivez d'abord le(s) circuit(s) ou retirez la référence.`,
+      );
+    }
+  }
+
   private async findOrFail(id: string): Promise<Offer> {
     const offer = await this.repo.findOne({ where: { id } });
     if (!offer) throw new NotFoundException('Offre introuvable.');
     return offer;
+  }
+
+  private async verifyOfferOwnership(offerId: string, userId: string): Promise<Offer> {
+    const offer = await this.findOrFail(offerId);
+    if (offer.author_id !== userId) {
+      throw new ForbiddenException('Accès refusé.');
+    }
+    return offer;
+  }
+
+  private async verifySessionOwnership(sessionId: string, userId: string): Promise<void> {
+    const session = await this.sessionRepo.findOne({
+      where: { id: sessionId },
+      relations: ['offerItem', 'offerItem.offer'],
+    });
+    if (!session) throw new NotFoundException('Session introuvable.');
+    if (session.offerItem.offer.author_id !== userId) {
+      throw new ForbiddenException('Accès refusé.');
+    }
+  }
+
+  private async verifyCapacityOwnership(capacityId: string, userId: string): Promise<void> {
+    const cap = await this.capacityRepo.findOne({
+      where: { id: capacityId },
+      relations: ['offerItem', 'offerItem.offer'],
+    });
+    if (!cap) throw new NotFoundException('Capacité introuvable.');
+    if (cap.offerItem.offer.author_id !== userId) {
+      throw new ForbiddenException('Accès refusé.');
+    }
   }
 
   // ─── OfferItem ─────────────────────────────────────────
@@ -454,8 +555,9 @@ export class OfferService {
   async createItem(
     offerId: string,
     dto: CreateOfferItemDto,
+    userId: string,
   ): Promise<OfferItem> {
-    await this.findOrFail(offerId);
+    await this.verifyOfferOwnership(offerId, userId);
     const item = this.itemRepo.create({
       offer: { id: offerId } as Offer,
       name: dto.name,
@@ -508,7 +610,16 @@ export class OfferService {
   }
 
   async removeItem(itemId: string, userId: string): Promise<{ message: string }> {
-    await this.verifyItemOwnership(itemId, userId);
+    const item = await this.verifyItemOwnership(itemId, userId);
+    // Vérifier qu'aucun circuit ne référence cet item
+    if (item.offer?.id) {
+      const linked = await this.findLinkedCircuits(item.offer.id);
+      if (linked.length > 0) {
+        throw new BadRequestException(
+          `Impossible de supprimer cet élément : il est référencé par le(s) circuit(s) : ${linked.map((l) => l.circuit_title).join(', ')}`,
+        );
+      }
+    }
     await this.itemRepo.delete(itemId);
     return { message: 'Élément supprimé.' };
   }
@@ -587,8 +698,9 @@ export class OfferService {
   async setCapacity(
     itemId: string,
     dto: { capacity_type: string; total_quantity: number },
+    userId: string,
   ): Promise<OfferItemCapacity> {
-    await this.findItemById(itemId);
+    await this.verifyItemOwnership(itemId, userId);
     // Remove existing capacity for this item
     const existing = await this.capacityRepo.find({
       where: { offerItem: { id: itemId } },
@@ -611,7 +723,8 @@ export class OfferService {
     return caps[0] ?? null;
   }
 
-  async removeCapacity(capacityId: string): Promise<{ message: string }> {
+  async removeCapacity(capacityId: string, userId: string): Promise<{ message: string }> {
+    await this.verifyCapacityOwnership(capacityId, userId);
     const cap = await this.capacityRepo.findOne({ where: { id: capacityId } });
     if (!cap) throw new NotFoundException('Capacité introuvable.');
     await this.capacityRepo.remove(cap);
@@ -681,7 +794,9 @@ export class OfferService {
   async generateSessions(
     itemId: string,
     daysAhead: number = 90,
+    userId?: string,
   ): Promise<OfferItemSession[]> {
+    if (userId) await this.verifyItemOwnership(itemId, userId);
     const rules = await this.ruleRepo.find({
       where: { offerItem: { id: itemId }, is_active: true },
     });
@@ -881,8 +996,9 @@ export class OfferService {
   async createSession(
     itemId: string,
     dto: CreateOfferItemSessionDto,
+    userId: string,
   ): Promise<OfferItemSession> {
-    await this.findItemById(itemId);
+    await this.verifyItemOwnership(itemId, userId);
     const session = this.sessionRepo.create({
       offerItem: { id: itemId } as OfferItem,
       date: dto.date,
@@ -898,7 +1014,9 @@ export class OfferService {
   async updateSession(
     sessionId: string,
     dto: UpdateOfferItemSessionDto,
+    userId: string,
   ): Promise<OfferItemSession> {
+    await this.verifySessionOwnership(sessionId, userId);
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
     });
@@ -907,7 +1025,8 @@ export class OfferService {
     return this.sessionRepo.save(session);
   }
 
-  async removeSession(sessionId: string): Promise<{ message: string }> {
+  async removeSession(sessionId: string, userId: string): Promise<{ message: string }> {
+    await this.verifySessionOwnership(sessionId, userId);
     const session = await this.sessionRepo.findOne({
       where: { id: sessionId },
     });

@@ -198,7 +198,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   const [endDate, setEndDate] = useState("");
   const [difficultyLevel, setDifficultyLevel] = useState("moderate");
   const [dateError, setDateError] = useState("");
-  const [lodgeError, setLodgeError] = useState("");
+
 
   const [days, setDays] = useState<DayForm[]>([]);
   const [offerItems, setOfferItems] = useState<MyOfferItem[]>([]);
@@ -265,6 +265,16 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
 
   useEffect(() => {
     const nd = Number(durationDays) || 1;
+    // Ne modifier que si le nombre de jours a réellement changé
+    if (nd === days.length) {
+      // Juste mettre à jour les dates si startDate a changé
+      const updated = days.map((d, idx) => ({
+        ...d,
+        date: startDate ? new Date(new Date(startDate).getTime() + idx * 86400000).toISOString().split("T")[0] : d.date,
+      }));
+      setDays(updated);
+      return;
+    }
     const nextDays = [...days];
     if (nd > nextDays.length) {
       for (let i = nextDays.length; i < nd; i++) {
@@ -343,22 +353,11 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   }, [startDate, endDate, durationDays, today]);
 
   const sortedDays = [...days].sort((a, b) => a.day_number - b.day_number);
-  const ACCOM_ITEM_TYPES = ["room","bed","camping_space","dortoir","tente","chambre","emplacement"];
-  const lodgingCount = sortedDays.reduce((sum, d) =>
-    sum + d.programItems.filter((p) => {
-      if (p.category === "hebergement") return true;
-      if (p.external_reference?.type === "hebergement") return true;
-      if (p.linked_offer_item_id && offerItems.some((it) => it.id === p.linked_offer_item_id && ACCOM_ITEM_TYPES.includes(it.item_type || ""))) return true;
-      return false;
-    }).length, 0);
+
+
 
   const goNext = () => {
     if (step === 1 && dateError) return;
-    if (step === 3 && Number(durationNights) > lodgingCount) {
-      setLodgeError(`Vous avez ${durationNights} nuit(s) mais seulement ${lodgingCount} activité(s) d'hébergement. Ajoutez un hébergement pour chaque nuit.`);
-      return;
-    }
-    setLodgeError("");
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
   const goBack = () => setStep((s) => Math.max(s - 1, 1));
@@ -452,6 +451,21 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
     return DAY_COLORS[index % DAY_COLORS.length];
   }
 
+  // Tous les points d'ancrage (destinations depuis étape 2) avec numéro de jour et index
+  function getAllAnchors(): { pos: [number, number]; dayNumber: number; dayId: string; dayIndex: number }[] {
+    return sortedDays
+      .filter((d) => d.lat !== null && d.lng !== null)
+      .map((d, idx) => ({ pos: [d.lat!, d.lng!] as [number, number], dayNumber: d.day_number, dayId: d.id, dayIndex: idx }));
+  }
+
+  // Points d'ancrage d'un seul jour
+  function getDayAnchors(dayId: string): [number, number][] {
+    const day = sortedDays.find((d) => d.id === dayId);
+    if (!day || day.lat === null || day.lng === null) return [];
+    return [[day.lat, day.lng]];
+  }
+
+  // Waypoints éditables (ajoutés par l'utilisateur dans étape 4)
   function getDayWaypoints(dayId: string): [number, number][] {
     return waypointsByDay[dayId] || [];
   }
@@ -478,8 +492,12 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
     if (!title.trim()) { setError("Le titre est requis."); return; }
     setSubmitting(true); setError(null);
     try {
+      // Inclure les anchors (destinations verrouillées depuis étape 2) + waypoints éditables
       const allWaypoints: [number, number][] = [];
       for (const d of sortedDays) {
+        // Ajouter d'abord l'anchor (destination du jour)
+        if (d.lat !== null && d.lng !== null) allWaypoints.push([d.lat, d.lng]);
+        // Puis les waypoints ajoutés par l'utilisateur
         const pts = waypointsByDay[d.id];
         if (pts && pts.length > 0) allWaypoints.push(...pts);
       }
@@ -725,12 +743,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
           {step === 3 && (
             <div className="space-y-4">
               <p className="text-xs text-slate-400">Chaque activité peut être liée à une offre personnelle, à une offre externe d&apos;un autre propriétaire, ou être une référence indépendante.</p>
-              {lodgeError && <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-700">{lodgeError}</div>}
-              {Number(durationNights) > 0 && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-2.5 text-xs text-blue-700">
-                  {durationNights} nuit{durationNights !== "1" ? "s" : ""} à couvrir — {lodgingCount} activité{durationNights !== "1" && lodgingCount !== 1 ? "s" : ""} d&apos;hébergement
-                </div>
-              )}
+
               {offerItems.length === 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
                   Vous n&apos;avez pas encore d&apos;offres. <a href="/dashboard?tab=offers" className="font-semibold underline">Créez des offres</a> avant d&apos;ajouter des activités au circuit.
@@ -957,7 +970,16 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                         placeholder={`Ex: Matmata, Gabès... pour ${dayTitle}`}
                       />
                     </div>
-                    <PolylineDrawer key={activeDayId} waypoints={dayWaypoints} onChange={(pts) => setDayWaypoints(activeDayId, pts)} color={color} />
+                    <PolylineDrawer
+                      key={activeDayId}
+                      waypoints={dayWaypoints}
+                      anchors={getDayAnchors(activeDayId)}
+                      allAnchors={getAllAnchors()}
+                      activeDayIndex={dayIdx}
+                      dayColors={sortedDays.map((_, i) => getDayColor(i))}
+                      onChange={(pts) => setDayWaypoints(activeDayId, pts)}
+                      color={color}
+                    />
                   </>
                 );
               })()}

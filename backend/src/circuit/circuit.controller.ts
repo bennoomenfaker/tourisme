@@ -289,7 +289,7 @@ export class CircuitController {
   updateReservation(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() body: { participants_count?: number; base_total?: number },
+    @Body() body: { participants_count?: number },
   ) {
     return this.service.updateReservation(id, req.user.sub, body);
   }
@@ -302,5 +302,40 @@ export class CircuitController {
   @Delete('reservations/:id')
   cancelReservation(@Req() req: any, @Param('id') id: string) {
     return this.service.cancelReservation(id, req.user.sub);
+  }
+
+  /**
+   * Snapshot figé d'une réservation (lecture seule)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Get('reservations/:id/snapshot')
+  async getSnapshot(@Req() req: any, @Param('id') id: string) {
+    const snapshot = await this.service.getReservationSnapshot(id);
+    if (!snapshot) {
+      const { NotFoundException } = require('@nestjs/common');
+      throw new NotFoundException('Snapshot introuvable');
+    }
+    return snapshot;
+  }
+
+  /**
+   * Marque les réservations circuit pending > 48h comme expirées (système)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Post('reservations/check-expired')
+  checkExpiredCircuits() {
+    return this.service.checkExpiredReservations();
+  }
+
+  /**
+   * Transition confirmed → completed pour les circuits passés (système)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Post('reservations/finalize-completed')
+  finalizeCompletedCircuits() {
+    return this.service.finalizeCompletedReservations();
   }
 }

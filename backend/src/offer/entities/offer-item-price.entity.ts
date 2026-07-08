@@ -28,6 +28,7 @@ export class OfferItemPrice {
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price!: number;
+  // CHECK: price >= 0 (appliquée via migration)
 
   @Column({ default: 'TND' })
   currency!: string;

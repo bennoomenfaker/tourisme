@@ -226,10 +226,11 @@ export class OfferController {
   @Roles(Role.PROJECT)
   @Post(':offerId/items')
   createItem(
+    @Req() req: any,
     @Param('offerId') offerId: string,
     @Body() dto: CreateOfferItemDto,
   ) {
-    return this.service.createItem(offerId, dto);
+    return this.service.createItem(offerId, dto, req.user.sub);
   }
 
   /** Détail d'un item */
@@ -330,8 +331,8 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Post('items/:itemId/availability/generate')
-  generateSessions(@Param('itemId') itemId: string) {
-    return this.service.generateSessions(itemId);
+  generateSessions(@Req() req: any, @Param('itemId') itemId: string) {
+    return this.service.generateSessions(itemId, 90, req.user.sub);
   }
 
   // ─── Capacity ──────────────────────────────────────
@@ -341,10 +342,11 @@ export class OfferController {
   @Roles(Role.PROJECT)
   @Post('items/:itemId/capacity')
   setCapacity(
+    @Req() req: any,
     @Param('itemId') itemId: string,
     @Body() dto: { capacity_type: string; total_quantity: number },
   ) {
-    return this.service.setCapacity(itemId, dto);
+    return this.service.setCapacity(itemId, dto, req.user.sub);
   }
 
   /** Récupère la capacité d'un item */
@@ -358,8 +360,8 @@ export class OfferController {
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Delete('capacity/:capacityId')
-  removeCapacity(@Param('capacityId') capacityId: string) {
-    return this.service.removeCapacity(capacityId);
+  removeCapacity(@Req() req: any, @Param('capacityId') capacityId: string) {
+    return this.service.removeCapacity(capacityId, req.user.sub);
   }
 
   // ─── Sessions ──────────────────────────────────────
@@ -369,10 +371,11 @@ export class OfferController {
   @Roles(Role.PROJECT)
   @Post('items/:itemId/sessions')
   createSession(
+    @Req() req: any,
     @Param('itemId') itemId: string,
     @Body() dto: CreateOfferItemSessionDto,
   ) {
-    return this.service.createSession(itemId, dto);
+    return this.service.createSession(itemId, dto, req.user.sub);
   }
 
   /** Modifier une session */
@@ -380,18 +383,19 @@ export class OfferController {
   @Roles(Role.PROJECT)
   @Patch('items/sessions/:sessionId')
   updateSession(
+    @Req() req: any,
     @Param('sessionId') sessionId: string,
     @Body() dto: UpdateOfferItemSessionDto,
   ) {
-    return this.service.updateSession(sessionId, dto);
+    return this.service.updateSession(sessionId, dto, req.user.sub);
   }
 
   /** Supprimer une session */
   @ApiBearerAuth('bearer')
   @Roles(Role.PROJECT)
   @Delete('items/sessions/:sessionId')
-  removeSession(@Param('sessionId') sessionId: string) {
-    return this.service.removeSession(sessionId);
+  removeSession(@Req() req: any, @Param('sessionId') sessionId: string) {
+    return this.service.removeSession(sessionId, req.user.sub);
   }
 
   /** Sessions disponibles pour un item */

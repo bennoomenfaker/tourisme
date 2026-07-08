@@ -20,6 +20,8 @@ import { OfferItemCapacity } from '../offer/entities/offer-item-capacity.entity'
 import { GuideOffering } from '../guide/entities/guide-offering.entity';
 import { GuideOfferingSession } from '../guide/entities/guide-offering-session.entity';
 import { NotificationService } from '../notification/notification.service';
+import { CapacityDomainService } from '../domain/capacity-domain.service';
+import { ReservationDomainService } from '../domain/reservation-domain.service';
 
 @Injectable()
 export class BookingService {
@@ -41,6 +43,8 @@ export class BookingService {
     @InjectRepository(GuideOfferingSession)
     private readonly guideSessionRepo: Repository<GuideOfferingSession>,
     private readonly notificationService: NotificationService,
+    private readonly capacityService: CapacityDomainService,
+    private readonly reservationDomain: ReservationDomainService,
   ) {}
 
   /**
@@ -88,19 +92,17 @@ export class BookingService {
       }
     }
 
-    // ── Vérification du stock global (items sans session) ──
-    let itemCapacity: OfferItemCapacity | null = null;
-    if (dto.offer_item_id && !dto.session_id) {
-      itemCapacity = await this.capacityRepo.findOne({
-        where: { offerItem: { id: dto.offer_item_id } },
-      });
-      if (itemCapacity?.remaining_quantity != null) {
-        const participantCount = dto.participants?.length ?? 1;
-        if (itemCapacity.remaining_quantity < participantCount) {
-          throw new BadRequestException(
-            `Stock insuffisant : ${itemCapacity.remaining_quantity} ${itemCapacity.capacity_type} restant(s) (demandé : ${participantCount})`,
-          );
-        }
+    // ── Vérification de la capacité via CapacityDomainService ──
+    if (dto.offer_item_id) {
+      const sessionDate = session?.date ?? null;
+      const participantCount = dto.participants?.length ?? 1;
+      const available = await this.capacityService.checkAvailability(
+        dto.offer_item_id,
+        sessionDate,
+        participantCount,
+      );
+      if (!available) {
+        throw new BadRequestException('Capacité insuffisante pour cette prestation');
       }
     }
 
@@ -192,25 +194,14 @@ export class BookingService {
     });
     const saved = await this.bookingRepo.save(booking);
 
-    // ── Décrémentation de la capacité ──
-    if (session && session.remaining_capacity !== null) {
-      session.remaining_capacity = Math.max(
-        0,
-        session.remaining_capacity - participantCount,
+    // ── Décrémentation de la capacité via CapacityDomainService ──
+    if (dto.offer_item_id) {
+      const sessionDate = session?.date ?? null;
+      await this.capacityService.reserve(
+        dto.offer_item_id,
+        sessionDate,
+        participantCount,
       );
-      if (session.remaining_capacity <= 0) {
-        session.status = 'full';
-      }
-      await this.sessionRepo.save(session);
-    }
-
-    // ── Décrémentation du stock global (items sans session) ──
-    if (itemCapacity && itemCapacity.remaining_quantity !== null) {
-      itemCapacity.remaining_quantity = Math.max(
-        0,
-        itemCapacity.remaining_quantity - participantCount,
-      );
-      await this.capacityRepo.save(itemCapacity);
     }
 
     if (dto.participants?.length) {
@@ -308,6 +299,11 @@ export class BookingService {
         'Vous ne pouvez annuler que vos propres réservations',
       );
     }
+    if (!this.reservationDomain.validateTransition(booking.status, 'cancelled', 'booking')) {
+      throw new BadRequestException(
+        `Impossible d'annuler une réservation avec le statut "${booking.status}"`,
+      );
+    }
 
     // ── Vérification du délai d'annulation ──
     if (booking.offerItem?.id && booking.session?.id) {
@@ -336,33 +332,15 @@ export class BookingService {
     booking.cancel_reason = reason ?? null;
     const saved = await this.bookingRepo.save(booking);
 
-    // Restaurer la capacité de la session
-    if (booking.session?.id) {
-      const session = await this.sessionRepo.findOne({
-        where: { id: booking.session.id },
-      });
-      if (session && session.remaining_capacity !== null) {
-        const participantCount = booking.participants?.length ?? 1;
-        session.remaining_capacity =
-          session.remaining_capacity + participantCount;
-        if (session.status === 'full') {
-          session.status = 'available';
-        }
-        await this.sessionRepo.save(session);
-      }
-    }
-
-    // Restaurer le stock global (items sans session)
-    if (booking.offerItem?.id && !booking.session?.id) {
-      const capacity = await this.capacityRepo.findOne({
-        where: { offerItem: { id: booking.offerItem.id } },
-      });
-      if (capacity && capacity.remaining_quantity !== null) {
-        const participantCount = booking.participants?.length ?? 1;
-        capacity.remaining_quantity =
-          capacity.remaining_quantity + participantCount;
-        await this.capacityRepo.save(capacity);
-      }
+    // Restaurer la capacité via CapacityDomainService
+    if (booking.offerItem?.id) {
+      const sessionDate = booking.session?.date ?? null;
+      const participantCount = booking.participants?.length ?? 1;
+      await this.capacityService.restore(
+        booking.offerItem.id,
+        sessionDate,
+        participantCount,
+      );
     }
 
     // Notifier le voyageur
@@ -407,7 +385,7 @@ export class BookingService {
         'Vous ne pouvez confirmer que les réservations de vos propres offres',
       );
     }
-    if (booking.status !== 'pending') {
+    if (!this.reservationDomain.validateTransition(booking.status, 'confirmed', 'booking')) {
       throw new BadRequestException(
         'Cette réservation ne peut plus être confirmée',
       );
@@ -587,27 +565,14 @@ export class BookingService {
    * Restaure la capacité d'une réservation (session + stock global)
    */
   private async restoreBookingCapacity(booking: Booking): Promise<void> {
-    const participantCount = booking.participants?.length ?? 1;
-    if (booking.session?.id) {
-      const session = await this.sessionRepo.findOne({
-        where: { id: booking.session.id },
-      });
-      if (session && session.remaining_capacity !== null) {
-        session.remaining_capacity =
-          session.remaining_capacity + participantCount;
-        if (session.status === 'full') session.status = 'available';
-        await this.sessionRepo.save(session);
-      }
-    }
-    if (booking.offerItem?.id && !booking.session?.id) {
-      const capacity = await this.capacityRepo.findOne({
-        where: { offerItem: { id: booking.offerItem.id } },
-      });
-      if (capacity && capacity.remaining_quantity !== null) {
-        capacity.remaining_quantity =
-          capacity.remaining_quantity + participantCount;
-        await this.capacityRepo.save(capacity);
-      }
+    if (booking.offerItem?.id) {
+      const sessionDate = booking.session?.date ?? null;
+      const participantCount = booking.participants?.length ?? 1;
+      await this.capacityService.restore(
+        booking.offerItem.id,
+        sessionDate,
+        participantCount,
+      );
     }
   }
 

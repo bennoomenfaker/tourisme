@@ -29,6 +29,7 @@ export class CircuitReservationOption {
   @Column({ type: 'uuid', nullable: true })
   offer_item_session_id!: string | null;
   // Session concrète choisie (ex: créneau tyrolienne de 10h)
+  // NOTE: FK vers OfferItemSession non ajoutée car la table n'est pas encore dans le module
 
   @Column({ type: 'int', nullable: true })
   quantity!: number | null;

@@ -82,10 +82,11 @@ export class GuideOfferingController {
   @Roles(Role.GUIDE)
   @Post(':id/availability')
   addAvailabilityRule(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() dto: CreateGuideOfferingAvailabilityRuleDto,
   ) {
-    return this.service.addAvailabilityRule(id, dto);
+    return this.service.addAvailabilityRule(id, dto, req.user.sub);
   }
 
   @Public()
@@ -97,8 +98,8 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Delete('availability/:ruleId')
-  removeAvailabilityRule(@Param('ruleId') ruleId: string) {
-    return this.service.removeAvailabilityRule(ruleId);
+  removeAvailabilityRule(@Req() req: any, @Param('ruleId') ruleId: string) {
+    return this.service.removeAvailabilityRule(ruleId, req.user.sub);
   }
 
   // ─── Sessions ───────────────────────────────────────
@@ -106,8 +107,8 @@ export class GuideOfferingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Post(':id/availability/generate')
-  generateSessions(@Param('id') id: string, @Body() dto: GenerateSessionsDto) {
-    return this.service.generateSessions(id, dto.days_ahead ?? 90);
+  generateSessions(@Req() req: any, @Param('id') id: string, @Body() dto: GenerateSessionsDto) {
+    return this.service.generateSessions(id, dto.days_ahead ?? 90, req.user.sub);
   }
 
   @Public()
@@ -120,10 +121,11 @@ export class GuideOfferingController {
   @Roles(Role.GUIDE)
   @Post(':id/sessions')
   createSession(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() dto: CreateGuideOfferingSessionDto,
   ) {
-    return this.service.createSession(id, dto);
+    return this.service.createSession(id, dto, req.user.sub);
   }
 
   @ApiBearerAuth('bearer')
@@ -164,17 +166,18 @@ export class GuideOfferingController {
   @Roles(Role.GUIDE)
   @Post(':id/blocks')
   createBlock(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() dto: CreateGuideOfferingBlockDto,
   ) {
-    return this.service.createBlock(id, dto);
+    return this.service.createBlock(id, dto, req.user.sub);
   }
 
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Delete('blocks/:blockId')
-  removeBlock(@Param('blockId') blockId: string) {
-    return this.service.removeBlock(blockId);
+  removeBlock(@Req() req: any, @Param('blockId') blockId: string) {
+    return this.service.removeBlock(blockId, req.user.sub);
   }
 
   // ─── Prices ─────────────────────────────────────────
@@ -189,16 +192,17 @@ export class GuideOfferingController {
   @Roles(Role.GUIDE)
   @Post(':id/prices')
   createPrice(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() dto: CreateGuideOfferingPriceDto,
   ) {
-    return this.service.createPrice(id, dto);
+    return this.service.createPrice(id, dto, req.user.sub);
   }
 
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE)
   @Delete('prices/:priceId')
-  removePrice(@Param('priceId') priceId: string) {
-    return this.service.removePrice(priceId);
+  removePrice(@Req() req: any, @Param('priceId') priceId: string) {
+    return this.service.removePrice(priceId, req.user.sub);
   }
 }

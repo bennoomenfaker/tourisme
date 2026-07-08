@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Publication } from '../publication/entities/publication.entity';
@@ -207,8 +207,25 @@ export class AdminService {
     });
   }
 
+  isValidCircuitTransition(current: string, next: string): boolean {
+    const allowed: Record<string, string[]> = {
+      draft: ['pending', 'archived'],
+      pending: ['approved', 'rejected', 'archived'],
+      approved: ['archived'],
+      rejected: ['draft', 'archived'],
+      archived: [],
+    };
+    if (current === next) return true;
+    return allowed[current]?.includes(next) ?? false;
+  }
+
   async approveCircuit(id: string, adminId: string) {
     const circuit = await this.findCircuitOrFail(id);
+    if (!this.isValidCircuitTransition(circuit.status, 'approved')) {
+      throw new BadRequestException(
+        `Transition de statut interdite : ${circuit.status} → approved`,
+      );
+    }
     circuit.status = 'approved';
     circuit.rejection_reason = null;
     const saved = await this.circuitRepo.save(circuit);
@@ -229,6 +246,11 @@ export class AdminService {
 
   async rejectCircuit(id: string, reason: string, adminId: string) {
     const circuit = await this.findCircuitOrFail(id);
+    if (!this.isValidCircuitTransition(circuit.status, 'rejected')) {
+      throw new BadRequestException(
+        `Transition de statut interdite : ${circuit.status} → rejected`,
+      );
+    }
     circuit.status = 'rejected';
     circuit.rejection_reason = reason;
     const saved = await this.circuitRepo.save(circuit);
@@ -249,6 +271,11 @@ export class AdminService {
 
   async archiveCircuit(id: string, adminId: string) {
     const circuit = await this.findCircuitOrFail(id);
+    if (!this.isValidCircuitTransition(circuit.status, 'archived')) {
+      throw new BadRequestException(
+        `Transition de statut interdite : ${circuit.status} → archived`,
+      );
+    }
     circuit.status = 'archived';
     const saved = await this.circuitRepo.save(circuit);
     if (circuit.author_id) {

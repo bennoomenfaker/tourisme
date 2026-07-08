@@ -136,8 +136,11 @@ export class GuideOfferingService {
   async addAvailabilityRule(
     offeringId: string,
     dto: CreateGuideOfferingAvailabilityRuleDto,
+    guideId: string,
   ): Promise<GuideOfferingAvailabilityRule> {
-    await this.findById(offeringId);
+    const offering = await this.findById(offeringId);
+    if (offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     const rule = this.ruleRepo.create({
       guideOffering: { id: offeringId } as GuideOffering,
       availability_type: dto.availability_type,
@@ -161,10 +164,15 @@ export class GuideOfferingService {
     });
   }
 
-  async removeAvailabilityRule(ruleId: string): Promise<{ message: string }> {
-    const rule = await this.ruleRepo.findOne({ where: { id: ruleId } });
+  async removeAvailabilityRule(ruleId: string, guideId: string): Promise<{ message: string }> {
+    const rule = await this.ruleRepo.findOne({
+      where: { id: ruleId },
+      relations: ['guideOffering'],
+    });
     if (!rule)
       throw new NotFoundException('Règle de disponibilité introuvable.');
+    if (rule.guideOffering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     await this.ruleRepo.remove(rule);
     return { message: 'Règle supprimée.' };
   }
@@ -174,12 +182,15 @@ export class GuideOfferingService {
   async generateSessions(
     offeringId: string,
     daysAhead: number = 90,
+    guideId?: string,
   ): Promise<GuideOfferingSession[]> {
     const offering = await this.repo.findOne({
       where: { id: offeringId },
       relations: ['availabilityRules'],
     });
     if (!offering) throw new NotFoundException('Offre de guidage introuvable.');
+    if (guideId && offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
 
     const rules = (offering.availabilityRules ?? []).filter((r) => r.is_active);
     if (!rules.length)
@@ -309,8 +320,11 @@ export class GuideOfferingService {
   async createSession(
     offeringId: string,
     dto: CreateGuideOfferingSessionDto,
+    guideId?: string,
   ): Promise<GuideOfferingSession> {
-    await this.findById(offeringId);
+    const offering = await this.findById(offeringId);
+    if (guideId && offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     const session = this.sessionRepo.create({
       guideOffering: { id: offeringId } as GuideOffering,
       date: dto.date,
@@ -351,9 +365,12 @@ export class GuideOfferingService {
   async createBlock(
     offeringId: string,
     dto: CreateGuideOfferingBlockDto,
+    guideId: string,
   ): Promise<GuideOfferingBlock> {
     const offering = await this.repo.findOne({ where: { id: offeringId } });
     if (!offering) throw new NotFoundException('Prestation introuvable.');
+    if (offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     const block = this.blockRepo.create({
       guideOffering: { id: offeringId } as any,
       start_date: dto.start_date,
@@ -363,9 +380,14 @@ export class GuideOfferingService {
     return this.blockRepo.save(block);
   }
 
-  async removeBlock(blockId: string): Promise<{ message: string }> {
-    const block = await this.blockRepo.findOne({ where: { id: blockId } });
+  async removeBlock(blockId: string, guideId: string): Promise<{ message: string }> {
+    const block = await this.blockRepo.findOne({
+      where: { id: blockId },
+      relations: ['guideOffering'],
+    });
     if (!block) throw new NotFoundException('Bloc introuvable.');
+    if (block.guideOffering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     await this.blockRepo.remove(block);
     return { message: 'Bloc supprimé.' };
   }
@@ -382,9 +404,12 @@ export class GuideOfferingService {
   async createPrice(
     offeringId: string,
     dto: CreateGuideOfferingPriceDto,
+    guideId: string,
   ): Promise<GuideOfferingPrice> {
     const offering = await this.repo.findOne({ where: { id: offeringId } });
     if (!offering) throw new NotFoundException('Prestation introuvable.');
+    if (offering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     const price = this.priceRepo.create({
       guideOffering: { id: offeringId } as any,
       label: dto.label,
@@ -396,9 +421,14 @@ export class GuideOfferingService {
     return this.priceRepo.save(price);
   }
 
-  async removePrice(priceId: string): Promise<{ message: string }> {
-    const price = await this.priceRepo.findOne({ where: { id: priceId } });
+  async removePrice(priceId: string, guideId: string): Promise<{ message: string }> {
+    const price = await this.priceRepo.findOne({
+      where: { id: priceId },
+      relations: ['guideOffering'],
+    });
     if (!price) throw new NotFoundException('Tarif introuvable.');
+    if (price.guideOffering.guide_id !== guideId)
+      throw new ForbiddenException('Accès refusé.');
     await this.priceRepo.remove(price);
     return { message: 'Tarif supprimé.' };
   }

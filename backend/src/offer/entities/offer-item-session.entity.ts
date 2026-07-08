@@ -35,9 +35,11 @@ export class OfferItemSession {
 
   @Column({ type: 'int', nullable: true })
   total_capacity!: number | null;
+  // CHECK: total_capacity >= 0
 
   @Column({ type: 'int', nullable: true })
   remaining_capacity!: number | null;
+  // CHECK: remaining_capacity >= 0 AND remaining_capacity <= total_capacity
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price_override!: number | null;

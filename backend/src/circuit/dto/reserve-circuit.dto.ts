@@ -2,7 +2,6 @@ import {
   IsArray,
   IsInt,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsUUID,
   Min,
@@ -23,11 +22,6 @@ export class CircuitOptionSelectionDto {
   @IsInt()
   @Min(1)
   quantity?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  unit_price?: number;
 }
 
 export class ReserveCircuitDto {
@@ -39,11 +33,6 @@ export class ReserveCircuitDto {
   @IsInt()
   @Min(1)
   participants_count?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  base_total?: number;
 
   @IsOptional()
   @IsArray()

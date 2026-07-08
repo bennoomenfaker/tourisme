@@ -81,11 +81,6 @@ export class CreateBookingDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
-  total_price?: number;
-
-  @IsOptional()
-  @IsNumber()
   @Min(1)
   nights?: number;
 

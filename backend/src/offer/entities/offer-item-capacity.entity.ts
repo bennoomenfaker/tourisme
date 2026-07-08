@@ -31,11 +31,11 @@ export class OfferItemCapacity {
 
   @Column({ type: 'int', nullable: true })
   total_quantity!: number | null;
-  // Stock total disponible
+  // Stock total disponible — CHECK: total_quantity >= 0
 
   @Column({ type: 'int', nullable: true })
   remaining_quantity!: number | null;
-  // Stock restant (decremente lors des reservations)
+  // Stock restant — CHECK: remaining_quantity >= 0 AND remaining_quantity <= total_quantity
 
   @Column({ type: 'int', nullable: true })
   max_persons!: number | null;

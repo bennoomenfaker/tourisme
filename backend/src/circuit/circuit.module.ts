@@ -6,10 +6,10 @@ import { CircuitProgramItem } from './entities/circuit-program-item.entity';
 import { CircuitOption } from './entities/circuit-option.entity';
 import { CircuitReservation } from './entities/circuit-reservation.entity';
 import { CircuitReservationOption } from './entities/circuit-reservation-option.entity';
+import { CircuitReservationSnapshot } from './entities/circuit-reservation-snapshot.entity';
 import { CircuitService } from './circuit.service';
 import { CircuitController } from './circuit.controller';
 import { NotificationModule } from '../notification/notification.module';
-import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
 import { OfferItem } from '../offer/entities/offer-item.entity';
 
 @Module({
@@ -21,7 +21,7 @@ import { OfferItem } from '../offer/entities/offer-item.entity';
       CircuitOption,
       CircuitReservation,
       CircuitReservationOption,
-      OfferItemSession,
+      CircuitReservationSnapshot,
       OfferItem,
     ]),
     NotificationModule,

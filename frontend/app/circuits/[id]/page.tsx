@@ -380,7 +380,6 @@ export default function CircuitDetailPage() {
         .map((o) => ({
           circuit_option_id: o.id,
           quantity: 1,
-          unit_price: Number(o.extra_price) || 0,
         })) ?? [];
 
       const result = await apiFetch<any>(`/circuits/${id}/reserve`, {
@@ -388,7 +387,6 @@ export default function CircuitDetailPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           participants_count: reserveParticipants,
-          base_total: effectivePrice * reserveParticipants,
           options: selectedOpts.length > 0 ? selectedOpts : undefined,
         }),
       });
@@ -411,7 +409,6 @@ export default function CircuitDetailPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           participants_count: modifyParticipants,
-          base_total: effectivePrice * modifyParticipants,
         }),
       });
       setMyReservation((prev: any) => ({ ...prev, participants_count: modifyParticipants, final_total: effectivePrice * modifyParticipants }));
