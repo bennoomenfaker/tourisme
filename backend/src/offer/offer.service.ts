@@ -13,7 +13,7 @@ import { OfferItemPrice } from './entities/offer-item-price.entity';
 import { OfferItemCapacity } from './entities/offer-item-capacity.entity';
 import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
 import { OfferItemSession } from './entities/offer-item-session.entity';
-import { Project } from '../project-owner/entities/project.entity';
+import { Venue } from '../project-owner/entities/project.entity';
 import { RedisService } from '../redis/redis.service';
 import {
   paginated,
@@ -50,8 +50,8 @@ export class OfferService {
     private readonly sessionRepo: Repository<OfferItemSession>,
     @InjectRepository(OfferItemCapacity)
     private readonly capacityRepo: Repository<OfferItemCapacity>,
-    @InjectRepository(Project)
-    private readonly projectRepo: Repository<Project>,
+    @InjectRepository(Venue)
+    private readonly venueRepo: Repository<Venue>,
     private readonly redis: RedisService,
   ) {}
 
@@ -69,33 +69,33 @@ export class OfferService {
     dto: CreateOfferDto,
     initialStatus: string = 'pending',
   ): Promise<Offer> {
-    if (authorType === 'project_owner') {
-      if (!dto.project_id) {
+    if (authorType === 'provider') {
+      if (!dto.venue_id) {
         throw new BadRequestException(
-          'Les offres doivent être liées à un projet.',
+          'Les offres doivent être liées à un établissement.',
         );
       }
     }
 
-    let projectLat: number | null = null;
-    let projectLng: number | null = null;
-    let projectRegion: string | null = null;
-    let projectAddress: string | null = null;
+    let venueLat: number | null = null;
+    let venueLng: number | null = null;
+    let venueRegion: string | null = null;
+    let venueAddress: string | null = null;
 
-    if (dto.project_id) {
-      const project = await this.projectRepo.findOne({
-        where: { id: dto.project_id },
+    if (dto.venue_id) {
+      const venue = await this.venueRepo.findOne({
+        where: { id: dto.venue_id },
       });
-      if (!project) throw new NotFoundException('Projet introuvable.');
-      if (project.status !== 'active') {
+      if (!venue) throw new NotFoundException('Établissement introuvable.');
+      if (venue.status !== 'active') {
         throw new BadRequestException(
-          "Impossible de lier une offre à un projet non encore validé par l'administrateur.",
+          "Impossible de lier une offre à un établissement non encore validé par l'administrateur.",
         );
       }
-      projectLat = project.lat;
-      projectLng = project.lng;
-      projectRegion = project.region;
-      projectAddress = project.address;
+      venueLat = venue.lat;
+      venueLng = venue.lng;
+      venueRegion = venue.region;
+      venueAddress = venue.address;
     }
 
     const locationType = dto.location_type ?? 'fixed';
@@ -114,10 +114,10 @@ export class OfferService {
         : null,
       images: dto.images?.length ? dto.images : null,
       inclusions: dto.inclusions ?? null,
-      region: isFixed ? projectRegion : (dto.region ?? null),
-      address: isFixed ? projectAddress : (dto.address ?? null),
-      latitude: isFixed ? projectLat : (dto.latitude ?? null),
-      longitude: isFixed ? projectLng : (dto.longitude ?? null),
+      region: isFixed ? venueRegion : (dto.region ?? null),
+      address: isFixed ? venueAddress : (dto.address ?? null),
+      latitude: isFixed ? venueLat : (dto.latitude ?? null),
+      longitude: isFixed ? venueLng : (dto.longitude ?? null),
       meeting_point: dto.meeting_point ?? null,
       meeting_lat: dto.meeting_lat ?? null,
       meeting_lng: dto.meeting_lng ?? null,
@@ -129,7 +129,7 @@ export class OfferService {
       deposit_percentage: dto.deposit_percentage ?? 0,
       production_delay_days: dto.production_delay_days ?? null,
       fulfillment_mode: dto.fulfillment_mode ?? null,
-      project_id: dto.project_id ?? null,
+      venue_id: dto.venue_id ?? null,
       location_type: locationType,
       status: initialStatus,
     });
@@ -141,7 +141,7 @@ export class OfferService {
   async findByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { author_id: authorId, is_deleted: false },
-      relations: ['items', 'items.prices', 'project'],
+      relations: ['items', 'items.prices', 'venue'],
       order: { created_at: 'DESC' },
     });
   }
@@ -164,7 +164,7 @@ export class OfferService {
       return this.repo.find({
         where,
         order: { created_at: 'DESC' },
-        relations: ['items', 'items.prices', 'project'],
+      relations: ['items', 'items.prices', 'venue'],
       });
     }
 
@@ -173,7 +173,7 @@ export class OfferService {
     const [data, total] = await this.repo.findAndCount({
       where,
       order: { created_at: 'DESC' },
-      relations: ['items', 'items.prices', 'project'],
+      relations: ['items', 'items.prices', 'venue'],
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -191,7 +191,7 @@ export class OfferService {
       .createQueryBuilder('offer')
       .leftJoinAndSelect('offer.items', 'items')
       .leftJoinAndSelect('items.prices', 'prices')
-      .leftJoinAndSelect('offer.project', 'project')
+      .leftJoinAndSelect('offer.venue', 'venue')
       .where('offer.status = :status', { status: 'approved' })
       .andWhere('offer.is_deleted = :isDeleted', { isDeleted: false });
 
@@ -264,7 +264,7 @@ export class OfferService {
         'items.sessions',
         'items.capacity',
         'category',
-        'project',
+        'venue',
       ],
     });
     if (!offer) throw new NotFoundException('Offre introuvable.');
@@ -273,9 +273,9 @@ export class OfferService {
     return offer;
   }
 
-  async findByProject(projectId: string): Promise<Offer[]> {
+  async findByVenue(venueId: string): Promise<Offer[]> {
     return this.repo.find({
-      where: { project_id: projectId, status: 'approved', is_deleted: false },
+      where: { venue_id: venueId, status: 'approved', is_deleted: false },
       order: { created_at: 'DESC' },
     });
   }

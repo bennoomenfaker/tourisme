@@ -22,7 +22,7 @@ export class ReviewController {
   constructor(private readonly service: ReviewService) {}
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Post()
   create(@Req() req: any, @Body() dto: CreateReviewDto) {
     return this.service.create(req.user.sub, dto);
@@ -44,7 +44,7 @@ export class ReviewController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('mine')
   findMine(@Req() req: any) {
     return this.service.findByAuthor(req.user.sub);
@@ -60,7 +60,7 @@ export class ReviewController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Patch(':id')
   update(
     @Req() req: any,
@@ -71,7 +71,7 @@ export class ReviewController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.service.remove(req.user.sub, id);

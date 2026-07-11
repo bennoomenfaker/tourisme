@@ -50,7 +50,7 @@ export class MessagesService {
   }
 
   private roleNorm(role: string) {
-    return role === 'project' ? 'project_owner' : role;
+    return role === 'provider' ? 'provider' : role;
   }
 
   async createOrGet(callerId: string, callerRole: string, recipientId: string) {
@@ -70,15 +70,15 @@ export class MessagesService {
       ((callerNorm === 'eco_traveler' &&
         (recipientNorm === 'eco_traveler' ||
           recipientNorm === 'guide' ||
-          recipientNorm === 'project_owner')) ||
+          recipientNorm === 'provider')) ||
         (callerNorm === 'guide' &&
           (recipientNorm === 'eco_traveler' ||
             recipientNorm === 'guide' ||
-            recipientNorm === 'project_owner')) ||
-        (callerNorm === 'project_owner' &&
+            recipientNorm === 'provider')) ||
+        (callerNorm === 'provider' &&
           (recipientNorm === 'eco_traveler' ||
             recipientNorm === 'guide' ||
-            recipientNorm === 'project_owner')));
+            recipientNorm === 'provider')));
 
     if (!allowed) {
       throw new ForbiddenException(

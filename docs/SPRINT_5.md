@@ -1,7 +1,7 @@
 # Sprint 5 — Amélioration Offres & Circuits
 
-> **Version :** v2.2  
-> **Date :** 3 juillet 2026  
+> **Version :** v3.0  
+> **Date :** 3 juillet 2026 (mis à jour 11 juillet 2026)  
 > **Objectif :** Enrichir les offres (champs v2), ajouter les services externes dans les circuits, ajouter cover_image
 
 ---
@@ -20,13 +20,13 @@
 
 ### Problème
 
-Quand un **Project Owner** crée un circuit multi-jours, chaque jour peut inclure :
+Quand un **Prestataire** (anciennement Project Owner) crée un circuit multi-jours, chaque jour peut inclure :
 - Hébergement (dormir dans un hôtel, écolodge, etc.)
 - Repas (restaurant, table d'hôtes)
 - Transport (navette, taxi)
 - Activités (gérées par un guide externe)
 
-Si ces services appartiennent au **même Project Owner**, pas de problème. Mais si le PO veut réserver un **hôtel externe** ou un **restaurant tiers**, il faut pouvoir chercher dans le catalogue des AUTRES prestataires.
+Si ces services appartiennent au **même Prestataire**, pas de problème. Mais si le prestataire veut réserver un **hôtel externe** ou un **restaurant tiers**, il faut pouvoir chercher dans le catalogue des AUTRES prestataires.
 
 ### Solution
 

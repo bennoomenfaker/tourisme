@@ -68,7 +68,7 @@ const TRAVEL_STYLES = [
 
 const GOALS = [
     { value: "reduce_carbon", label: "Réduire mon impact carbone" },
-    { value: "support_local_projects", label: "Soutenir des projets locaux" },
+    { value: "support_local_venues", label: "Soutenir des établissements locaux" },
     { value: "preserve_biodiversity", label: "Préserver la biodiversité" },
     { value: "avoid_mass_tourism", label: "Voyager hors tourisme de masse" },
     { value: "support_local_crafts", label: "Soutenir l'artisanat local" },

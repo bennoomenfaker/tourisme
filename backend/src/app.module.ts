@@ -35,13 +35,16 @@ import { PhotoModule } from './photo/photo.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { RedisModule } from './redis/redis.module';
 import { DomainModule } from './domain/domain.module';
+import { ProviderModule } from './provider/provider.module';
+import { OrganizationModule } from './organization/organization.module';
+import { ProviderActivityModule } from './provider-activity/provider-activity.module';
 
 @Module({
   imports: [
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 100,
+        limit: 300,
       },
     ]),
     ConfigModule,
@@ -54,6 +57,9 @@ import { DomainModule } from './domain/domain.module';
     EcoTravelerModule,
     QuestionnaireModule,
     GuideModule,
+    ProviderModule,
+    OrganizationModule,
+    ProviderActivityModule,
     ProjectOwnerModule,
     OfferModule,
     PublicationModule,

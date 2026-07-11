@@ -84,10 +84,10 @@ export default function EcoProjectsPage() {
         <div className="max-w-5xl mx-auto px-4 py-24 text-center relative">
           <motion.div initial="hidden" animate="visible" variants={fadeIn} transition={{ duration: 0.6 }}>
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-sm font-bold mb-6">
-              <Globe size={14} /> Projets Éco-responsables
+              <Globe size={14} /> Éco-Établissements
             </span>
             <h1 className="text-4xl sm:text-5xl font-extrabold mb-6 tracking-tight">
-              Éco-Projets en Tunisie
+              Éco-Établissements en Tunisie
             </h1>
             <p className="text-lg text-emerald-100 max-w-2xl mx-auto leading-relaxed">
               Découvrez les acteurs du tourisme durable : hébergements, restaurants, artisans, agriculteurs et associations.
@@ -178,7 +178,7 @@ export default function EcoProjectsPage() {
       {/* CTA */}
       <section className="bg-gradient-to-r from-primary/10 to-emerald-50 py-16">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-2xl font-extrabold text-slate-800 mb-4">Vous avez un projet éco-responsable ?</h2>
+          <h2 className="text-2xl font-extrabold text-slate-800 mb-4">Vous avez un établissement éco-responsable ?</h2>
           <p className="text-slate-500 mb-8">Rejoignez EcoVoyage et partagez votre engagement avec les voyageurs.</p>
           <button
             onClick={() => router.push("/auth/register")}

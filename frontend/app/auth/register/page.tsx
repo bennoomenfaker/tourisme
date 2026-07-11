@@ -9,7 +9,7 @@ import { registerUser } from "@/lib/auth";
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [role, setRole] = useState<"eco_traveler" | "project" | "guide">("eco_traveler");
+  const [role, setRole] = useState<"eco_traveler" | "provider" | "guide">("eco_traveler");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -164,17 +164,17 @@ export default function RegisterPage() {
                   </label>
 
                   <label className="relative flex flex-col items-center p-3 rounded-xl border-2 border-slate-100 bg-surface-container-low cursor-pointer hover:border-primary/30 transition-all group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input checked={role === "project"}
-                      onChange={() => setRole("project")}
+                    <input checked={role === "provider"}
+                      onChange={() => setRole("provider")}
                       className="sr-only"
                       name="role"
                       type="radio"
-                      value="project" />
+                      value="provider" />
                     <span className="material-symbols-outlined text-2xl text-slate-400 group-hover:text-primary transition-colors mb-1">
                       potted_plant
                     </span>
                     <span className="text-[11px] font-bold text-slate-600 group-hover:text-primary uppercase tracking-wider">
-                      Propriétaire du projet
+                      Propriétaire
                     </span>
                   </label>
 

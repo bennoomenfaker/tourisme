@@ -16,7 +16,7 @@ import { Notification } from '../../notification/entities/notification.entity';
  *
  * Creates:
  *  - Additional guide_offerings + availability rules for both guides
- *  - Mobile offers for fakerbennoomen@gmail.com  (project_owner)
+ *  - Mobile offers for fakerbennoomen@gmail.com  (provider)
  *  - Trip plans mixing guide & project offerings for f.akerbennoomen@gmail.com  (eco_traveler)
  *  - Realistic reviews for guides, guide_offerings, and offers
  *
@@ -174,11 +174,11 @@ export class RealisticUserDataSeed {
     });
   }
 
-  // ── 2. Mobile Offers for project_owner fakerbennoomen@gmail.com  ──
+  // ── 2. Mobile Offers for provider fakerbennoomen@gmail.com  ──
 
   private async addMobileOffers() {
-    // We attach these offers to one of Faker's projects: "Coopérative Artisanale Tataouine"
-    const projectId = 'b1822765-564a-470c-832b-3092cc763554';
+    // We attach these offers to one of Faker's venues: "Coopérative Artisanale Tataouine"
+    const venueId = 'b1822765-564a-470c-832b-3092cc763554';
     const categoryActivity = '21a655e0-de08-4b62-b0da-7c5337fd93be'; // activity
     const categoryCraft = '04137263-fdbc-468c-8f6b-a7c9b1cc6ae8'; // craft
     const categorySejour = '4c50bfe4-dc54-4b5d-bfa9-308c31c8b356'; // sejour
@@ -186,8 +186,8 @@ export class RealisticUserDataSeed {
     // --- Offer 1: Mobile/guided tour ---
     const o1 = await this.upsertOffer({
       author_id: this.PO_FAKER,
-      author_type: 'project_owner',
-      project_id: projectId,
+      author_type: 'provider',
+      project_id: venueId,
       title: 'Randonnée Guidée Ksour du Sud',
       description:
         'Randonnée accompagnée par un guide local à travers les ksour du Sud. Transport, repas et guide inclus.',
@@ -215,8 +215,8 @@ export class RealisticUserDataSeed {
     // --- Offer 2: Mobile craft workshop ---
     const o2 = await this.upsertOffer({
       author_id: this.PO_FAKER,
-      author_type: 'project_owner',
-      project_id: projectId,
+      author_type: 'provider',
+      project_id: venueId,
       title: 'Atelier Poterie Mobile Tataouine',
       description:
         'Atelier poterie qui se déplace chez vous (hôtel, gîte). Initiation aux techniques ancestrales. Matériel fourni.',
@@ -244,8 +244,8 @@ export class RealisticUserDataSeed {
     // --- Offer 3: Fixed eco-tour package ---
     const o3 = await this.upsertOffer({
       author_id: this.PO_FAKER,
-      author_type: 'project_owner',
-      project_id: projectId,
+      author_type: 'provider',
+      project_id: venueId,
       title: 'Séjour Immersion Tataouine',
       description:
         "Séjour tout compris de 5 jours : hébergement chez l'habitant, randonnées, ateliers artisanaux, cuisine locale.",
@@ -456,10 +456,10 @@ export class RealisticUserDataSeed {
       });
     }
 
-    // Review Faker as project_owner (by Ahmed)
+    // Review Faker as provider (by Ahmed)
     await this.upsertReview({
       author_id: this.TRAVELER_AHMED,
-      target_type: 'project_owner',
+      target_type: 'provider',
       target_id: this.PO_FAKER,
       rating: 4,
       comment:

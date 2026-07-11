@@ -91,7 +91,7 @@ const sdgs = [
 
 const impactStats = [
   { value: "2,500+", label: "Voyageurs engagés", icon: <Users size={20} /> },
-  { value: "150+", label: "Projets partenaires", icon: <Target size={20} /> },
+  { value: "150+", label: "Établissements partenaires", icon: <Target size={20} /> },
   { value: "50+", label: "Communautés bénéficiaires", icon: <Globe size={20} /> },
   { value: "85%", label: "Score de durabilité moyen", icon: <Leaf size={20} /> },
 ];

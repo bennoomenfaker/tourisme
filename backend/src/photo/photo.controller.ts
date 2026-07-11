@@ -21,7 +21,7 @@ export class PhotoController {
   constructor(private readonly service: PhotoService) {}
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post()
   create(@Req() req: any, @Body() body: CreatePhotoDto) {
     return this.service.create({ ...body, uploaded_by: req.user.sub });
@@ -46,28 +46,28 @@ export class PhotoController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post(':id/hero')
   setHero(@Param('id') id: string) {
     return this.service.setHero(id);
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post(':id/upvote')
   upvote(@Param('id') id: string) {
     return this.service.upvote(id);
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post(':id/downvote')
   downvote(@Param('id') id: string) {
     return this.service.downvote(id);
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.service.remove(id, req.user.sub);

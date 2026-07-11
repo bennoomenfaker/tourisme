@@ -31,13 +31,13 @@ export class CircuitController {
    * Crée un nouveau circuit (guide ou project owner)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Post()
   async create(@Req() req: any, @Body() dto: CreateCircuitDto) {
     const isGuide = req.user.role === Role.GUIDE;
     return this.service.create(
       req.user.sub,
-      isGuide ? 'guide' : 'project_owner',
+      isGuide ? 'guide' : 'provider',
       dto,
     );
   }
@@ -46,7 +46,7 @@ export class CircuitController {
    * Circuits de l'auteur connecté (DOIT être avant :id)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Get('mine')
   findMine(@Req() req: any) {
     return this.service.findByAuthor(req.user.sub);
@@ -82,7 +82,7 @@ export class CircuitController {
    * Modifie un circuit (auteur uniquement)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Patch(':id')
   async update(
     @Req() req: any,
@@ -111,7 +111,7 @@ export class CircuitController {
    * Supprime un circuit (auteur uniquement)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Delete(':id')
   async remove(@Req() req: any, @Param('id') id: string) {
     await this.service.remove(id, req.user.sub);
@@ -122,7 +122,7 @@ export class CircuitController {
    * Ajoute un jour au circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Post(':circuitId/days')
   addDay(
     @Req() req: any,
@@ -136,7 +136,7 @@ export class CircuitController {
    * Modifie un jour du circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Patch(':circuitId/days/:dayId')
   updateDay(
     @Req() req: any,
@@ -151,7 +151,7 @@ export class CircuitController {
    * Supprime un jour du circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Delete(':circuitId/days/:dayId')
   removeDay(
     @Req() req: any,
@@ -165,7 +165,7 @@ export class CircuitController {
    * Ajoute une option au circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Post(':circuitId/options')
   addOption(
     @Req() req: any,
@@ -188,7 +188,7 @@ export class CircuitController {
    * Ajoute un programme à un jour
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Post(':circuitId/days/:dayId/program')
   addProgramItem(
     @Req() req: any,
@@ -202,7 +202,7 @@ export class CircuitController {
    * Modifie une activité du programme
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Patch(':circuitId/days/:dayId/program/:itemId')
   updateProgramItem(
     @Req() req: any,
@@ -216,7 +216,7 @@ export class CircuitController {
    * Supprime une activité du programme
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Delete(':circuitId/days/:dayId/program/:itemId')
   removeProgramItem(@Req() req: any, @Param('itemId') itemId: string) {
     return this.service.removeProgramItem(itemId, req.user.sub);
@@ -244,7 +244,7 @@ export class CircuitController {
    * Confirme une réservation de circuit (provider, mode manuel)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Patch('reservations/:id/confirm')
   confirmReservation(@Req() req: any, @Param('id') id: string) {
     return this.service.confirmReservation(id, req.user.sub);
@@ -254,7 +254,7 @@ export class CircuitController {
    * Refuser une réservation de circuit (provider)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Patch('reservations/:id/reject')
   rejectReservation(@Req() req: any, @Param('id') id: string) {
     return this.service.rejectReservation(id, req.user.sub);
@@ -264,7 +264,7 @@ export class CircuitController {
    * Réservations reçues par le provider
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Get('reservations/incoming')
   incomingReservations(@Req() req: any) {
     return this.service.findReservationsByCircuitAuthor(req.user.sub);
@@ -308,7 +308,7 @@ export class CircuitController {
    * Snapshot figé d'une réservation (lecture seule)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('reservations/:id/snapshot')
   async getSnapshot(@Req() req: any, @Param('id') id: string) {
     const snapshot = await this.service.getReservationSnapshot(id);

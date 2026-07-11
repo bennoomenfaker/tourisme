@@ -6,7 +6,7 @@ import { NotificationService } from './notification.service';
 
 @ApiTags('Notifications')
 @ApiBearerAuth('bearer')
-@Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+@Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
 @Controller('notifications')
 export class NotificationController {
   constructor(private readonly service: NotificationService) {}

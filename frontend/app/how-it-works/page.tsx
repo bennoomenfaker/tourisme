@@ -40,7 +40,7 @@ const roles = [
   },
   {
     icon: <Globe size={28} />,
-    title: "Propriétaire de Projet",
+    title: "Propriétaire d'établissement",
     description: "Gérez votre établissement (hôtel, restaurant, artisanat) et recevez des réservations directement via la plateforme.",
     features: [
       { icon: <Shield size={16} />, text: "Gérer votre établissement" },
@@ -57,7 +57,7 @@ const steps = [
   {
     num: "01",
     title: "Créez votre profil",
-    description: "Inscrivez-vous en tant qu'Éco-Voyageur, Guide ou Propriétaire de Projet. Complétez votre profil pour une expérience personnalisée.",
+    description: "Inscrivez-vous en tant qu'Éco-Voyageur, Guide ou Propriétaire d'établissement. Complétez votre profil pour une expérience personnalisée.",
   },
   {
     num: "02",

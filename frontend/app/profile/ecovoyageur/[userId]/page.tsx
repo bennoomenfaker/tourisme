@@ -249,7 +249,7 @@ export default function PublicEcoTravelerProfile() {
       apiFetch<SocialUser[]>("/eco-traveler/friends", { headers: { Authorization: `Bearer ${tkn}` } })
         .then((list) => setMyFriendIds(new Set(list.map((f) => f.user_id)))).catch(() => {});
     }
-    if (role === "guide" || role === "project_owner") {
+    if (role === "guide" || role === "provider") {
       apiFetch<{ user_id: string }[]>("/follows/followers/profiles", { headers: { Authorization: `Bearer ${tkn}` } })
         .then((list) => setIsFollower(list.some((f) => f.user_id === userId)))
         .catch(() => {});
@@ -483,7 +483,7 @@ export default function PublicEcoTravelerProfile() {
                       )}
                     </div>
                   )}
-                  {(viewerRole === "guide" || viewerRole === "project_owner") && isFollower && (
+                  {(viewerRole === "guide" || viewerRole === "provider") && isFollower && (
                     <button onClick={async () => {
                       try {
                         await apiFetch(`/follows/follower/${userId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
@@ -758,7 +758,7 @@ export default function PublicEcoTravelerProfile() {
         const authorInitM = (name: string) => name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
         const getProfilePath = (userId: string, role: string) => {
           if (role === "guide") return `/profile/guide/${userId}`;
-          if (role === "project_owner") return `/profile/project-owner/${userId}`;
+          if (role === "provider") return `/profile/provider/${userId}`;
           return `/profile/ecovoyageur/${userId}`;
         };
 

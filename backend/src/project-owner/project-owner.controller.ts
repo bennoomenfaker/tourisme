@@ -21,10 +21,10 @@ import {
   ProjectSustainabilityDto,
 } from './dto/project.dto';
 
-@ApiTags('Project-Owner')
+@ApiTags('Provider')
 @ApiBearerAuth('bearer')
-@Roles(Role.PROJECT)
-@Controller('project-owner')
+@Roles(Role.PROVIDER)
+@Controller('provider')
 export class ProjectOwnerController {
   constructor(private readonly service: ProjectOwnerService) {}
 
@@ -32,8 +32,8 @@ export class ProjectOwnerController {
 
   @Public()
   @Roles()
-  @Get('projects/public')
-  findActiveProjects() {
+  @Get('venues/public')
+  findActiveVenues() {
     return this.service.findActiveProjects();
   }
 
@@ -54,20 +54,20 @@ export class ProjectOwnerController {
     return this.service.markOnboarded(req.user.sub);
   }
 
-  // ─── Projects ─────────────────────────────────────────────────────────────
+  // ─── Venues ─────────────────────────────────────────────────────────────
 
-  @Get('projects')
-  getProjects(@Req() req: any) {
+  @Get('venues')
+  getVenues(@Req() req: any) {
     return this.service.getProjects(req.user.sub);
   }
 
-  @Post('projects')
-  createProject(@Req() req: any, @Body() dto: CreateProjectDto) {
+  @Post('venues')
+  createVenue(@Req() req: any, @Body() dto: CreateProjectDto) {
     return this.service.createProject(req.user.sub, dto);
   }
 
-  @Patch('projects/:id')
-  updateProject(
+  @Patch('venues/:id')
+  updateVenue(
     @Req() req: any,
     @Param('id') id: string,
     @Body() dto: UpdateProjectDto,
@@ -75,8 +75,8 @@ export class ProjectOwnerController {
     return this.service.updateProject(req.user.sub, id, dto);
   }
 
-  @Patch('projects/:id/sustainability')
-  updateProjectSustainability(
+  @Patch('venues/:id/sustainability')
+  updateVenueSustainability(
     @Req() req: any,
     @Param('id') id: string,
     @Body() dto: ProjectSustainabilityDto,
@@ -84,8 +84,8 @@ export class ProjectOwnerController {
     return this.service.updateProjectSustainability(req.user.sub, id, dto);
   }
 
-  @Delete('projects/:id')
-  deleteProject(@Req() req: any, @Param('id') id: string) {
+  @Delete('venues/:id')
+  deleteVenue(@Req() req: any, @Param('id') id: string) {
     return this.service.deleteProject(req.user.sub, id);
   }
 

@@ -5,10 +5,11 @@ Enrichir le formulaire de création d'offres avec détails spécifiques par sous
 
 ## Principes
 - ✅ Architecture actuelle conservée (Offer → OfferItem → details_json)
-- ✅ Localisation héritée du projet pour hébergement/restauration
+- ✅ Localisation héritée de l'établissement pour hébergement/restauration
 - ✅ Localisation propre pour activités avec déplacement
 - ✅ Guide optionnel avec recherche
 - ✅ Formulaire en page dédiée (pas modal)
+- ✅ Aligné avec Maram (Provider/Organization/Venue) — 11 juillet 2026
 
 ---
 

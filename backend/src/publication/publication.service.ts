@@ -478,7 +478,7 @@ export class PublicationService {
   }
 
   private async getAuthorInfo(userId: string, role: string) {
-    const r = role === 'project' ? 'project_owner' : role;
+    const r = role === 'provider' ? 'provider' : role;
     let entity: any = null;
     if (r === 'eco_traveler')
       entity = await this.ecoRepo.findOne({ where: { user_id: userId } });

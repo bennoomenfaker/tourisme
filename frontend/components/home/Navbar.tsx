@@ -19,7 +19,7 @@ export default function Navbar({
   const isAuth = variant === "auth";
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isLandingPage = pathname === "/" || pathname === "/how-it-works" || pathname === "/destinations" || pathname === "/eco-projects" || pathname === "/impact" || pathname === "/auth/login" || pathname === "/auth/register" || pathname === "/onboarding/project-owner" || pathname.startsWith("/explore");
+  const isLandingPage = pathname === "/" || pathname === "/how-it-works" || pathname === "/destinations" || pathname === "/eco-projects" || pathname === "/impact" || pathname === "/auth/login" || pathname === "/auth/register" || pathname === "/onboarding/provider" || pathname.startsWith("/explore");
 
   return (
     <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-md px-6 md:px-20 lg:px-40 py-4 ${
@@ -63,7 +63,7 @@ export default function Navbar({
               Circuits
             </Link>
             <Link href="/eco-projects" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
-              Projets Éco
+              Éco-Établissements
             </Link>
             <Link href="/how-it-works" className="text-sm font-semibold text-black hover:text-primary transition-colors whitespace-nowrap">
               Comment ça marche
@@ -118,7 +118,7 @@ export default function Navbar({
             Circuits
           </Link>
           <Link href="/eco-projects" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
-            Projets Éco
+            Éco-Établissements
           </Link>
           <Link href="/how-it-works" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-slate-700 hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-50">
             Comment ça marche

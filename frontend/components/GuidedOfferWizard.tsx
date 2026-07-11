@@ -9,7 +9,7 @@ import {
   ArrowLeft, ArrowRight, X, Plus, Trash2, Loader2, Check, MapPin, Leaf, Clock, Calendar, Info, Sparkles,
 } from "lucide-react";
 import {
-  OFFER_CATEGORIES, PROJECT_TYPE_OFFERS, GUIDE_ALLOWED_OFFERS,
+  OFFER_CATEGORIES, VENUE_TYPE_OFFERS, GUIDE_ALLOWED_OFFERS,
   CATEGORY_FORM_FIELDS, ITEM_TYPES_BY_CATEGORY, ROOM_SUB_TYPES, PRICING_UNITS,
 } from "@/lib/offer-config";
 import { getSchema, type SchemaField } from "@/lib/offer-schema";
@@ -26,8 +26,8 @@ interface Props {
   token: string;
   userRole: string;
   userProjectId?: string;
-  userProjectType?: string;
-  userProjects?: { id: string; name: string; project_type?: string[] | null; status?: string }[];
+  userVenueType?: string;
+  userVenues?: { id: string; name: string; venue_type?: string[] | null; status?: string }[];
   onClose: () => void;
   onSuccess: (offer: any) => void;
   editOffer?: any;
@@ -118,7 +118,7 @@ const STEP_LABELS = [
 
 const TOTAL_STEPS = 9;
 
-const PROJECT_TYPE_MAP: Record<string, string> = {
+const VENUE_TYPE_MAP: Record<string, string> = {
   hebergement: 'accommodation', restauration: 'restaurant',
   artisanat: 'artisan', camping: 'camping', transport: 'transport',
   'centre activites': 'activity_center', 'espace evenementiel': 'event_space',
@@ -140,7 +140,7 @@ function hasDifficulty(itemType: string): boolean {
   return ["randonnee", "trekking", "vtt", "escalade", "kayak", "speleologie"].includes(itemType);
 }
 
-export default function GuidedOfferWizard({ token, userRole, userProjectId, userProjectType, userProjects, onClose, onSuccess, editOffer, variant = 'modal' }: Props) {
+export default function GuidedOfferWizard({ token, userRole, userProjectId, userVenueType, userVenues, onClose, onSuccess, editOffer, variant = 'modal' }: Props) {
   const isEdit = !!editOffer;
   const [step, setStep] = useState<number>(isEdit ? 2 : 1);
   const [loading, setLoading] = useState(false);
@@ -148,13 +148,13 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [error, setError] = useState("");
   const [publishImmediately, setPublishImmediately] = useState(true);
 
-  const normalizedProjectType = userProjectType
-    ? (PROJECT_TYPE_MAP[userProjectType.toLowerCase()] ?? userProjectType) : null;
+  const normalizedProjectType = userVenueType
+    ? (VENUE_TYPE_MAP[userVenueType.toLowerCase()] ?? userVenueType) : null;
 
   const allowedCategories = userRole === "guide"
     ? GUIDE_ALLOWED_OFFERS
-    : normalizedProjectType && PROJECT_TYPE_OFFERS[normalizedProjectType]
-      ? PROJECT_TYPE_OFFERS[normalizedProjectType]
+    : normalizedProjectType && VENUE_TYPE_OFFERS[normalizedProjectType]
+      ? VENUE_TYPE_OFFERS[normalizedProjectType]
       : OFFER_CATEGORIES.map(c => c.value);
 
   const availableCategories = OFFER_CATEGORIES.filter(c => allowedCategories.includes(c.value) && c.value !== 'circuit');
@@ -185,17 +185,17 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [cancellationDeadlineDays, setCancellationDeadlineDays] = useState("");
   const [items, setItems] = useState<OfferItemForm[]>([]);
   const [availabilityRules, setAvailabilityRules] = useState<AvailabilityRule[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(editOffer?.project_id || userProjectId || "");
-  const [fetchedProjects, setFetchedProjects] = useState(userProjects ?? []);
-  const projects = userProjects ?? fetchedProjects;
+  const [selectedVenueId, setSelectedVenueId] = useState(editOffer?.venue_id || userProjectId || "");
+  const [fetchedVenues, setFetchedVenues] = useState(userVenues ?? []);
+  const venues = userVenues ?? fetchedVenues;
 
   useEffect(() => {
-    if (userRole === "project" && (!userProjects || userProjects.length === 0) && token) {
-      apiFetch<any[]>("/project-owner/projects", { headers: { Authorization: `Bearer ${token}` } })
-        .then((data) => setFetchedProjects(Array.isArray(data) ? data : []))
+    if (userRole === "provider" && (!userVenues || userVenues.length === 0) && token) {
+      apiFetch<any[]>("/provider/venues", { headers: { Authorization: `Bearer ${token}` } })
+        .then((data) => setFetchedVenues(Array.isArray(data) ? data : []))
         .catch(() => {});
     }
-  }, [userRole, userProjects, token]);
+  }, [userRole, userVenues, token]);
 
   const normalizedCategory = category ? (OFFER_TYPE_MAP[category] ?? category) : '';
   const itemTypes = normalizedCategory ? (ITEM_TYPES_BY_CATEGORY[normalizedCategory] ?? []) : [];
@@ -431,8 +431,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   async function handleSubmit() {
     if (!title.trim()) { setError("Le titre est obligatoire."); return; }
     if (!category) { setError("Choisissez une catégorie."); return; }
-    if (userRole === "project" && !selectedProjectId) {
-      setError("Veuillez sélectionner un projet.");
+    if (userRole === "provider" && !selectedVenueId) {
+      setError("Veuillez sélectionner un établissement.");
       return;
     }
 
@@ -485,7 +485,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
-        if (selectedProjectId) offerData.project_id = selectedProjectId;
+        if (selectedVenueId) offerData.venue_id = selectedVenueId;
         resultOffer = await apiFetch<any>("/offers", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -827,20 +827,20 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800">Informations générales</h3>
 
-              {userRole === "project" && (
+              {userRole === "provider" && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Projet *</label>
-                  {projects && projects.length > 0 ? (
-                    <select className={inputClass} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-                      <option value="">Sélectionner un projet</option>
-                      {projects.map((p) => (
+                  <label className="text-xs font-bold text-slate-500">Établissement *</label>
+                  {venues && venues.length > 0 ? (
+                    <select className={inputClass} value={selectedVenueId} onChange={(e) => setSelectedVenueId(e.target.value)}>
+                      <option value="">Sélectionner un établissement</option>
+                      {venues.map((p) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
                   ) : (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-2">
-                      <p>Vous devez d&apos;abord créer un projet pour pouvoir créer des offres.</p>
-                      <a href="/dashboard" className="inline-block bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-700 text-xs">Créer un projet</a>
+                      <p>Vous devez d&apos;abord créer un établissement pour pouvoir créer des offres.</p>
+                      <a href="/dashboard" className="inline-block bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-700 text-xs">Créer un établissement</a>
                     </div>
                   )}
                 </div>

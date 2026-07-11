@@ -7,7 +7,10 @@ import { OfferItemPrice } from './entities/offer-item-price.entity';
 import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
 import { OfferItemCapacity } from './entities/offer-item-capacity.entity';
 import { OfferItemSession } from './entities/offer-item-session.entity';
-import { Project } from '../project-owner/entities/project.entity';
+import { Venue } from '../project-owner/entities/project.entity';
+import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
+import { Organization } from '../organization/entities/organization.entity';
+import { ProviderActivity } from '../provider-activity/entities/provider-activity.entity';
 import { OfferService } from './offer.service';
 import { OfferController } from './offer.controller';
 import { ProjectOwnerModule } from '../project-owner/project-owner.module';
@@ -22,7 +25,10 @@ import { ProjectOwnerModule } from '../project-owner/project-owner.module';
       OfferItemAvailabilityRule,
       OfferItemCapacity,
       OfferItemSession,
-      Project,
+      Venue,
+      ProjectOwner,
+      Organization,
+      ProviderActivity,
     ]),
     ProjectOwnerModule,
   ],

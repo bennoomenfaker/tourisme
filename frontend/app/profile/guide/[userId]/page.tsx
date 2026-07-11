@@ -288,7 +288,7 @@ export default function PublicGuideProfile() {
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  const canFollow = userRole === "eco_traveler" || userRole === "project";
+  const canFollow = userRole === "eco_traveler" || userRole === "provider";
 
   async function toggleFollow() {
     if (!token || !canFollow) return;
@@ -424,7 +424,7 @@ export default function PublicGuideProfile() {
                   </div>
                 )}
                 {/* Contacter — éco-voyageurs et project-owners peuvent contacter un guide */}
-                {(userRole === "eco_traveler" || userRole === "project") && (
+                {(userRole === "eco_traveler" || userRole === "provider") && (
                   <button onClick={handleContact} 
                     className="mt-3 w-full flex items-center justify-center gap-2 py-3 bg-primary text-slate-900 font-extrabold rounded-2xl text-sm hover:bg-primary/90 active:scale-95 transition-all shadow-sm disabled:opacity-60">
                     <Send size={15} /> Contacter
@@ -460,8 +460,8 @@ export default function PublicGuideProfile() {
                 <div className="space-y-2.5">
                   {theirFollowers.slice(0, 3).map((f) => {
                     const isCommon = myConnectionIds.has(f.user_id) && f.user_id !== viewerId;
-                    const ownPath = f._type === "guide" ? "/profile/guide" : f._type === "project" ? "/profile/project-owner" : "/profile/ecovoyageur";
-                    const pubPath = f._type === "guide" ? `/profile/guide/${f.user_id}` : f._type === "project" ? `/profile/project-owner/${f.user_id}` : `/profile/ecovoyageur/${f.user_id}`;
+                    const ownPath = f._type === "guide" ? "/profile/guide" : f._type === "provider" ? "/profile/provider" : "/profile/ecovoyageur";
+                    const pubPath = f._type === "guide" ? `/profile/guide/${f.user_id}` : f._type === "provider" ? `/profile/provider/${f.user_id}` : `/profile/ecovoyageur/${f.user_id}`;
                     const path = f.user_id === viewerId ? ownPath : pubPath;
                     return (
                       <button key={f.user_id} onClick={() => router.push(path)}
@@ -721,8 +721,8 @@ export default function PublicGuideProfile() {
             <div className="overflow-y-auto p-3 space-y-1">
               {theirFollowers.map((f) => {
                 const isCommon = myConnectionIds.has(f.user_id) && f.user_id !== viewerId;
-                const ownPath = f._type === "guide" ? "/profile/guide" : f._type === "project" ? "/profile/project-owner" : "/profile/ecovoyageur";
-                const pubPath = f._type === "guide" ? `/profile/guide/${f.user_id}` : f._type === "project" ? `/profile/project-owner/${f.user_id}` : `/profile/ecovoyageur/${f.user_id}`;
+                const ownPath = f._type === "guide" ? "/profile/guide" : f._type === "provider" ? "/profile/provider" : "/profile/ecovoyageur";
+                const pubPath = f._type === "guide" ? `/profile/guide/${f.user_id}` : f._type === "provider" ? `/profile/provider/${f.user_id}` : `/profile/ecovoyageur/${f.user_id}`;
                 const path = f.user_id === viewerId ? ownPath : pubPath;
                 return (
                   <button key={f.user_id} onClick={() => { setShowFollowersModal(false); router.push(path); }}

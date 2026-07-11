@@ -80,7 +80,7 @@ type Offer = {
   duration: string | null;
   offer_type: string | null;
   region: string | null;
-  author_type: "guide" | "project_owner";
+  author_type: "guide" | "provider";
   images: string[] | null;
   inclusions: string | null;
   meeting_point: string | null;
@@ -92,14 +92,14 @@ type Offer = {
   cancellation_policy: string | null;
   sustainability_score: number | null;
   created_at: string;
-  project?: { id: string; name: string } | null;
+  venue?: { id: string; name: string } | null;
   latitude?: number | null;
   longitude?: number | null;
   location_type?: string;
-  project_id?: string | null;
+  venue_id?: string | null;
 };
 
-type Project = {
+type Venue = {
   id: string;
   name: string;
   description: string | null;
@@ -107,7 +107,7 @@ type Project = {
   address: string | null;
   photo: string | null;
   photos: string[] | null;
-  project_type: string[] | null;
+  venue_type: string[] | null;
   services: string[] | null;
   eco_labels: string[] | null;
   website: string | null;
@@ -457,9 +457,9 @@ function OfferModal({ offer, onClose }: { offer: Offer; onClose: () => void }) {
 
 // ─── Project Detail Modal ──────────────────────────────────────────────────────
 
-function ProjectModal({ project, onClose }: { project: Project; onClose: () => void }) {
+function VenueModal({ project, onClose }: { project: Venue; onClose: () => void }) {
   const fallback = PARTNER_PLACEHOLDERS[seedFromId(project.id, PARTNER_PLACEHOLDERS.length)];
-  const types = project.project_type?.filter(Boolean) ?? [];
+  const types = project.venue_type?.filter(Boolean) ?? [];
   const services = project.services?.filter(Boolean) ?? [];
   const ecoLabels = project.eco_labels?.filter(Boolean) ?? [];
 
@@ -746,9 +746,9 @@ function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
           <span className={`px-3 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm shadow-sm ${isGuide ? "bg-primary/90 text-white" : "bg-blue-500/90 text-white"}`}>
             {isGuide ? "Guide certifié" : "Projet éco"}
           </span>
-          {!isGuide && offer.project?.name && (
+          {!isGuide && offer.venue?.name && (
             <span className="bg-amber-500/90 text-white px-3 py-1 rounded-full text-[11px] font-bold backdrop-blur-sm shadow-sm">
-              {offer.project.name}
+              {offer.venue.name}
             </span>
           )}
           {offer.location_type === "mobile" && (
@@ -828,9 +828,9 @@ function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
 
 // ─── PartnerCard ───────────────────────────────────────────────────────────────
 
-function PartnerCard({ project, onClick }: { project: Project; onClick: () => void }) {
+function PartnerCard({ project, onClick }: { project: Venue; onClick: () => void }) {
   const image = project.photos?.[0] ?? project.photo ?? PARTNER_PLACEHOLDERS[seedFromId(project.id, PARTNER_PLACEHOLDERS.length)];
-  const types = project.project_type?.filter(Boolean) ?? [];
+  const types = project.venue_type?.filter(Boolean) ?? [];
 
   return (
     <div
@@ -940,7 +940,7 @@ function ExperienceCard({ exp, onClick }: { exp: Experience; onClick: () => void
 
 export default function DestinationsPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -955,16 +955,16 @@ export default function DestinationsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
 
   useEffect(() => {
     Promise.all([
       apiFetch<Offer[]>("/offers"),
-      apiFetch<Project[]>("/project-owner/projects/public"),
+      apiFetch<Venue[]>("/provider/venues/public"),
       apiFetch<Experience[]>("/publications/experiences"),
     ])
-      .then(([o, p, e]) => { setOffers(o); setProjects(p); setExperiences(e); })
+      .then(([o, p, e]) => { setOffers(o); setVenues(p); setExperiences(e); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -1208,7 +1208,7 @@ export default function DestinationsPage() {
       </main>
 
       {/* Nos Partenaires */}
-      {!loading && projects.length > 0 && (
+      {!loading && venues.length > 0 && (
         <section className="bg-slate-50 border-t border-slate-100 py-16 px-6 md:px-20 lg:px-40">
           <div className="max-w-[1440px] mx-auto">
             <div className="flex items-center gap-3 mb-3">
@@ -1223,12 +1223,12 @@ export default function DestinationsPage() {
                 </p>
               </div>
               <span className="text-sm font-semibold text-slate-400 shrink-0">
-                {projects.length} projet{projects.length !== 1 ? "s" : ""} partenaire{projects.length !== 1 ? "s" : ""}
+                {venues.length} projet{venues.length !== 1 ? "s" : ""} partenaire{venues.length !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((project) => (
-                <PartnerCard key={project.id} project={project} onClick={() => setSelectedProject(project)} />
+              {venues.map((project) => (
+                <PartnerCard key={project.id} project={project} onClick={() => setSelectedVenue(project)} />
               ))}
             </div>
           </div>
@@ -1295,7 +1295,7 @@ export default function DestinationsPage() {
 
       {/* Detail modals */}
       {selectedOffer && <OfferModal offer={selectedOffer} onClose={() => setSelectedOffer(null)} />}
-      {selectedProject && <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />}
+      {selectedVenue && <VenueModal project={selectedVenue} onClose={() => setSelectedVenue(null)} />}
       {selectedExperience && <ExperienceModal exp={selectedExperience} onClose={() => setSelectedExperience(null)} />}
 
       <Footer />

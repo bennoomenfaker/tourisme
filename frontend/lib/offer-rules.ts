@@ -26,7 +26,7 @@ const CATEGORIES_WITH_GUIDE = new Set([
 
 /**
  * L'offre a-t-elle besoin d'une localisation propre ?
- * Si false → hérite de la localisation du projet
+ * Si false -> hérite de la localisation du venue
  */
 export function needsLocation(category: string, itemType: string): boolean {
   if (category === 'accommodation') return false;
@@ -49,8 +49,8 @@ export function canHaveGuide(category: string, itemType: string): boolean {
 /**
  * Source de la localisation
  */
-export function locationSource(category: string, itemType: string): 'offer' | 'project' {
-  return needsLocation(category, itemType) ? 'offer' : 'project';
+export function locationSource(category: string, itemType: string): 'offer' | 'venue' {
+  return needsLocation(category, itemType) ? 'offer' : 'venue';
 }
 
 /**

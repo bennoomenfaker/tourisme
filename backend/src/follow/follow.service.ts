@@ -35,9 +35,9 @@ export class FollowService {
     // Validate allowed follow combinations
     const allowed =
       (followerType === 'eco_traveler' &&
-        (followingType === 'guide' || followingType === 'project')) ||
-      (followerType === 'project' && followingType === 'guide') ||
-      (followerType === 'guide' && followingType === 'project');
+        (followingType === 'guide' || followingType === 'provider')) ||
+      (followerType === 'provider' && followingType === 'guide') ||
+      (followerType === 'guide' && followingType === 'provider');
     if (!allowed)
       throw new BadRequestException(
         "Cette relation de suivi n'est pas autorisée.",
@@ -115,7 +115,7 @@ export class FollowService {
             sub: g?.zone ?? null,
           };
         }
-        if (f.follower_type === 'project') {
+        if (f.follower_type === 'provider') {
           const o = await this.projectOwnerRepo.findOne({
             where: { user_id: f.follower_id },
           });
@@ -123,7 +123,7 @@ export class FollowService {
             user_id: f.follower_id,
             full_name: o?.full_name ?? null,
             photo: o?.photo ?? null,
-            _type: 'project',
+            _type: 'provider',
             sub: o?.organization ?? null,
           };
         }
@@ -176,7 +176,7 @@ export class FollowService {
           user_id: f.following_id,
           full_name: o?.full_name ?? null,
           photo: o?.photo ?? null,
-          _type: 'project',
+          _type: 'provider',
           sub: o?.organization ?? null,
         };
       }),
@@ -202,7 +202,7 @@ export class FollowService {
             sub: g?.zone ?? null,
           };
         }
-        if (f.follower_type === 'project') {
+        if (f.follower_type === 'provider') {
           const o = await this.projectOwnerRepo.findOne({
             where: { user_id: f.follower_id },
           });
@@ -210,7 +210,7 @@ export class FollowService {
             user_id: f.follower_id,
             full_name: o?.full_name ?? null,
             photo: o?.photo ?? null,
-            _type: 'project',
+            _type: 'provider',
             sub: o?.organization ?? null,
           };
         }

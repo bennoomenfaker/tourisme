@@ -1,9 +1,9 @@
 /**
- * Mapping project_type → allowed offer categories
- * Ensures artisan projects don't create accommodation offers, etc.
+ * Mapping venue_type → allowed offer categories
+ * Ensures artisan venues don't create accommodation offers, etc.
  */
 
-export const PROJECT_TYPES = [
+export const VENUE_TYPES = [
   { value: 'accommodation', label: 'Hébergement', icon: '🏨', description: 'Hôtel, éco-lodge, gîte' },
   { value: 'camping', label: 'Camping', icon: '⛺', description: 'Camping, espace tente' },
   { value: 'restaurant', label: 'Restaurant', icon: '🍽️', description: 'Restaurant, café, food truck' },
@@ -32,9 +32,9 @@ export const OFFER_CATEGORIES = [
 ] as const;
 
 /**
- * Which offer categories are available for each project type
+ * Which offer categories are available for each venue type
  */
-export const PROJECT_TYPE_OFFERS: Record<string, string[]> = {
+export const VENUE_TYPE_OFFERS: Record<string, string[]> = {
   accommodation: ['accommodation', 'restaurant', 'activity', 'sejour'],
   camping: ['accommodation', 'activity', 'equipment_rental', 'sejour'],
   restaurant: ['restaurant', 'event', 'craft'],
@@ -48,7 +48,7 @@ export const PROJECT_TYPE_OFFERS: Record<string, string[]> = {
 };
 
 /**
- * For guides (no project), allowed offer categories
+ * For guides (no venue), allowed offer categories
  */
 export const GUIDE_ALLOWED_OFFERS = ['activity', 'guide_service', 'workshop', 'transport', 'equipment_rental', 'event', 'craft', 'circuit'];
 

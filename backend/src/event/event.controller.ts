@@ -33,7 +33,7 @@ export class EventController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post(':placeId/events')
   create(
     @Req() req: any,
@@ -44,7 +44,7 @@ export class EventController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Patch('events/:eventId')
   update(
     @Req() req: any,
@@ -55,7 +55,7 @@ export class EventController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Delete('events/:eventId')
   remove(@Req() req: any, @Param('eventId') eventId: string) {
     return this.service.remove(eventId, req.user.sub);

@@ -109,7 +109,7 @@ export class CreateOfferDto {
 
   @IsOptional()
   @IsUUID()
-  project_id?: string;
+  venue_id?: string;
 
   @IsOptional()
   @IsIn(['fixed', 'mobile', 'online'])

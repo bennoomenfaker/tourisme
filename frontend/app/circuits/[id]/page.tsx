@@ -124,7 +124,7 @@ interface CircuitOption {
 interface CircuitDetails {
   id: string;
   author_id: string;
-  project_id: string | null;
+  venue_id: string | null;
   title: string;
   description: string | null;
   base_price: number | null;

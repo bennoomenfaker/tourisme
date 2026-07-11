@@ -10,7 +10,7 @@ import { OfferItemPrice } from './entities/offer-item-price.entity';
 import { OfferItemCapacity } from './entities/offer-item-capacity.entity';
 import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
 import { OfferItemSession } from './entities/offer-item-session.entity';
-import { Project } from '../project-owner/entities/project.entity';
+import { Venue } from '../project-owner/entities/project.entity';
 import { RedisService } from '../redis/redis.service';
 
 describe('OfferService status transitions', () => {
@@ -58,7 +58,7 @@ describe('OfferService status transitions', () => {
           useValue: mockRepo(),
         },
         { provide: getRepositoryToken(OfferItemSession), useValue: mockRepo() },
-        { provide: getRepositoryToken(Project), useValue: mockRepo() },
+        { provide: getRepositoryToken(Venue), useValue: mockRepo() },
         { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();

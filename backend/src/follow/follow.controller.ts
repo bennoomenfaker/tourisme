@@ -10,7 +10,7 @@ import { Role } from '../common/enums/roles.enum';
 export class FollowController {
   constructor(private readonly service: FollowService) {}
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Post(':targetId/:targetType')
   follow(
     @Req() req: any,
@@ -20,7 +20,7 @@ export class FollowController {
     const roleMap: Record<string, string> = {
       eco_traveler: 'eco_traveler',
       guide: 'guide',
-      project: 'project',
+      provider: 'provider',
     };
     return this.service.follow(
       req.user.sub,
@@ -30,55 +30,55 @@ export class FollowController {
     );
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Delete(':targetId')
   unfollow(@Req() req: any, @Param('targetId') targetId: string) {
     return this.service.unfollow(req.user.sub, targetId);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('following')
   getFollowing(@Req() req: any) {
     return this.service.getFollowing(req.user.sub);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('followers')
   getFollowers(@Req() req: any) {
     return this.service.getFollowers(req.user.sub);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('count')
   getFollowerCount(@Req() req: any) {
     return this.service.getFollowerCount(req.user.sub);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('status/:targetId')
   getStatus(@Req() req: any, @Param('targetId') targetId: string) {
     return this.service.getFollowStatus(req.user.sub, targetId);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('following/profiles')
   getFollowingProfiles(@Req() req: any) {
     return this.service.getFollowingWithProfiles(req.user.sub);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('followers/profiles')
   getFollowersProfiles(@Req() req: any) {
     return this.service.getFollowersWithProfiles(req.user.sub);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Delete('follower/:followerId')
   removeFollower(@Req() req: any, @Param('followerId') followerId: string) {
     return this.service.removeFollower(req.user.sub, followerId);
   }
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Get('followers/public/:userId')
   getFollowersOfUser(@Param('userId') userId: string) {
     return this.service.getFollowersOfUserWithProfiles(userId);

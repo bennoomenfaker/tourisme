@@ -1,6 +1,6 @@
-# Plan de Tests Métier — Éco-Voyage
+# Plan de Tests Métier — Tourisme Platform
 
-> **Dernière mise à jour :** 5 Juillet 2026
+> **Dernière mise à jour :** 11 Juillet 2026
 
 ## Sprint 11 — Tests Bout en Bout
 
@@ -8,11 +8,11 @@
 
 | # | Scénario | Résultat attendu | Statut |
 |---|----------|------------------|--------|
-| 1 | Project owner crée offre hébergement | Offer créée avec project_id, status=pending | ✅ |
+| 1 | Prestataire crée offre hébergement | Offer créée avec venue_id, status=pending | ✅ |
 | 2 | Guide crée prestation randonnée | GuideOffering créée avec guide_id, availability rules | ✅ |
-| 3 | Propriétaire modifie prix offre | Prix mis à jour, circuits existants inchangés | ✅ |
-| 4 | Propriétaire ajoute OfferItem + Price | Item créé, prix visible dans le catalogue | ✅ |
-| 5 | Propriétaire ajoute Session + Capacity | Session créée, capacité décrémentable | ✅ |
+| 3 | Prestataire modifie prix offre | Prix mis à jour, circuits existants inchangés | ✅ |
+| 4 | Prestataire ajoute OfferItem + Price | Item créé, prix visible dans le catalogue | ✅ |
+| 5 | Prestataire ajoute Session + Capacity | Session créée, capacité décrémentable | ✅ |
 
 ### 11.2 Réservation
 

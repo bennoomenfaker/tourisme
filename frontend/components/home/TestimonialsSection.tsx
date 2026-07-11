@@ -15,7 +15,7 @@ interface Testimonial {
 }
 
 const ROLE_LABEL: Record<string, string> = {
-  eco_traveler: "Éco-Voyageur", guide: "Guide local", project_owner: "Propriétaire de projet", admin: "Admin",
+  eco_traveler: "Éco-Voyageur", guide: "Guide local", provider: "Propriétaire", admin: "Admin",
 };
 
 const fallbackTestimonials: Testimonial[] = [
@@ -33,9 +33,9 @@ const fallbackTestimonials: Testimonial[] = [
   },
   {
     id: "3", name: "Sophie L.",
-    role: "project_owner",
+    role: "provider",
     text: "Enfin une plateforme qui valorise les projets durables. Nos réservations ont augmenté de 40% depuis que nous avons rejoint EcoVoyage.",
-    rating: 5, avatar: null, target_type: "project",
+    rating: 5, avatar: null, target_type: "venue",
   },
 ];
 

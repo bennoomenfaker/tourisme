@@ -30,9 +30,15 @@ export class Booking {
   @Column({ unique: true })
   booking_ref!: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  traveler_id!: string | null;
+
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'traveler_id' })
   traveler!: User;
+
+  @Column({ type: 'uuid', nullable: true })
+  offer_id!: string | null;
 
   @ManyToOne(() => Offer, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'offer_id' })

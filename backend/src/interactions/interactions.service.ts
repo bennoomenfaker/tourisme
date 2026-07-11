@@ -13,7 +13,7 @@ import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 import { Offer } from '../offer/entities/offer.entity';
-import { Project } from '../project-owner/entities/project.entity';
+import { Venue } from '../project-owner/entities/project.entity';
 
 @Injectable()
 export class InteractionsService {
@@ -29,8 +29,8 @@ export class InteractionsService {
     @InjectRepository(ProjectOwner)
     private readonly ownerRepo: Repository<ProjectOwner>,
     @InjectRepository(Offer) private readonly offerRepo: Repository<Offer>,
-    @InjectRepository(Project)
-    private readonly projectRepo: Repository<Project>,
+    @InjectRepository(Venue)
+    private readonly venueRepo: Repository<Venue>,
   ) {}
 
   // ─── Stats ────────────────────────────────────────────────────────────────
@@ -272,18 +272,18 @@ export class InteractionsService {
         where: { id: targetId, status: 'approved' },
       });
       if (!o) throw new NotFoundException('Offre introuvable.');
-    } else if (type === 'project') {
-      const p = await this.projectRepo.findOne({
+    } else if (type === 'venue') {
+      const p = await this.venueRepo.findOne({
         where: { id: targetId, status: 'active' },
       });
-      if (!p) throw new NotFoundException('Projet introuvable.');
+      if (!p) throw new NotFoundException('Établissement introuvable.');
     } else {
       throw new BadRequestException('Type invalide.');
     }
   }
 
   private async getAuthorInfo(userId: string, role: string) {
-    const r = role === 'project' ? 'project_owner' : role;
+    const r = role === 'provider' ? 'provider' : role;
     let entity: any = null;
     if (r === 'eco_traveler')
       entity = await this.ecoRepo.findOne({ where: { user_id: userId } });

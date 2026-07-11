@@ -61,7 +61,7 @@ export class BookingController {
    * Réservations reçues par le provider connecté
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Get('incoming')
   incoming(@Req() req: any) {
     return this.service.findByOfferAuthor(req.user.sub);
@@ -109,7 +109,7 @@ export class BookingController {
    * Confirmation par le provider (mode manuel)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROJECT)
+  @Roles(Role.GUIDE, Role.PROVIDER)
   @Patch(':id/confirm')
   confirm(@Req() req: any, @Param('id') id: string) {
     return this.service.confirm(id, req.user.sub);

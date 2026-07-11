@@ -114,7 +114,7 @@ async function main() {
   for (const t of tablesToClean) {
     await exec(`DELETE FROM ${t}`);
   }
-  await exec('DELETE FROM project_owners');
+  await exec('DELETE FROM providers');
   await exec('DELETE FROM eco_travelers');
   await exec('DELETE FROM guides');
   await exec('DELETE FROM users');
@@ -292,7 +292,7 @@ async function main() {
     'Faker Bennoomen', 'Hussein Jemal', 'Amal Trabelsi', 'Rania Belhaj', 'User3', 'User7', 'User13', 'User17', 'User21'
   ];
   for (let i = 0; i < poUids.length; i++) {
-    await insert('project_owners', {
+    await insert('providers', {
       user_id: poUids[i],
       full_name: poNames[i] || `PO ${i+1}`,
       bio: 'Promoteur de projets éco-touristiques durables.',

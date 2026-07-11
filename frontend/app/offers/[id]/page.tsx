@@ -83,8 +83,8 @@ interface Offer {
   confirmation_mode: string;
   location_type: string;
   status: string;
-  project_id: string | null;
-  project?: { id: string; name: string } | null;
+  venue_id: string | null;
+  venue?: { id: string; name: string } | null;
   author_id: string;
   author_type: string;
   items: OfferItem[];
@@ -196,7 +196,9 @@ export default function OfferDetailPage() {
     );
   }
 
-  const canReserve = user?.role === "eco_traveler" && !existingBooking;
+  const isAuthor = !!user && offer.author_id === (user.sub || user.id);
+  const canReserve = user?.role === "eco_traveler" && !existingBooking && !isAuthor;
+  const canAddToCart = user?.role === "eco_traveler" && !isAuthor;
   const images = offer.images?.filter(Boolean) ?? [];
   const allImages = images.length > 0 ? images : null;
 
@@ -279,7 +281,7 @@ export default function OfferDetailPage() {
                     <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
                   </button>
                 )}
-                {(user?.role === "guide" || user?.role === "project") && (
+                {(user?.role === "guide" || user?.role === "provider") && (
                   <button onClick={() => setShowEditWizard(true)} className="px-4 py-2 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors flex items-center gap-1.5">
                     ✏️ Modifier
                   </button>
@@ -305,7 +307,7 @@ export default function OfferDetailPage() {
 
             <div className="flex flex-wrap gap-3 text-sm text-slate-500 mb-4">
               {offer.region && <span className="flex items-center gap-1"><MapPin size={14} /> {offer.region}</span>}
-              {offer.project?.name && <span className="flex items-center gap-1"><Tag size={14} /> {offer.project.name}</span>}
+              {offer.venue?.name && <span className="flex items-center gap-1"><Tag size={14} /> {offer.venue.name}</span>}
               {offer.duration && <span className="flex items-center gap-1"><Clock size={14} /> {offer.duration}</span>}
               {(offer.min_group_size || offer.max_group_size) && (
                 <span className="flex items-center gap-1">
@@ -568,13 +570,15 @@ export default function OfferDetailPage() {
                             </div>
                           )}
 
-                          <button
-                            onClick={() => addToCart(item.id)}
-                            disabled={addingToCart === item.id}
-                            className="w-full mt-2 py-2 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
-                          >
-                            <ShoppingCart size={16} /> Ajouter au panier
-                          </button>
+                          {canAddToCart && (
+                            <button
+                              onClick={() => addToCart(item.id)}
+                              disabled={addingToCart === item.id}
+                              className="w-full mt-2 py-2 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                            >
+                              <ShoppingCart size={16} /> Ajouter au panier
+                            </button>
+                          )}
                           {!user && (
                             <button
                               onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
@@ -611,33 +615,37 @@ export default function OfferDetailPage() {
               </div>
             )}
 
-            {/* Global Add to cart + Réserver buttons */}
-            <div className="grid grid-cols-2 gap-3 mt-6">
-              <button
-                onClick={() => {
-                  const firstItem = offer.items?.find(i => i.status === "active");
-                  if (firstItem) addToCart(firstItem.id);
-                }}
-                className="py-3 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-base flex items-center justify-center gap-2 transition-colors"
-              >
-                <ShoppingCart size={18} /> Ajouter au panier
-              </button>
-              {!user && (
+            {/* Global Add to cart + Réserver buttons (only for eco_traveler, not author) */}
+            {canAddToCart && (
+              <div className="grid grid-cols-2 gap-3 mt-6">
                 <button
-                  onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
-                  className="py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"
+                  onClick={() => {
+                    const firstItem = offer.items?.find(i => i.status === "active");
+                    if (firstItem) addToCart(firstItem.id);
+                  }}
+                  className="py-3 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-base flex items-center justify-center gap-2 transition-colors"
                 >
-                  <Check size={18} /> Réserver
+                  <ShoppingCart size={18} /> Ajouter au panier
                 </button>
-              )}
-            </div>
+                {canReserve && (
+                  <button
+                    onClick={() => router.push(`/reservations/new?offerId=${offer.id}`)}
+                    className="py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"
+                  >
+                    <Check size={18} /> Réserver
+                  </button>
+                )}
+              </div>
+            )}
             {!user && (
               <button
                 onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
-                className="hidden"
-              />
+                className="w-full mt-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"
+              >
+                <Check size={18} /> Connectez-vous pour réserver
+              </button>
             )}
-            {user?.role === "eco_traveler" && !existingBooking && (
+            {canReserve && !canAddToCart && (
               <button
                 onClick={() => router.push(`/reservations/new?offerId=${offer.id}`)}
                 className="w-full mt-6 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-base flex items-center justify-center gap-2"

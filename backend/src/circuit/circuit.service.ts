@@ -94,7 +94,7 @@ export class CircuitService {
       lat: dto.lat ?? null,
       lng: dto.lng ?? null,
       address: dto.address ?? null,
-      project_id: dto.project_id ?? null,
+      venue_id: dto.project_id ?? null,
       cover_image: dto.cover_image ?? null,
       images: dto.images?.length ? dto.images : null,
       availability: dto.availability ?? null,
@@ -232,7 +232,7 @@ export class CircuitService {
     if (dto.lng !== undefined) circuit.lng = dto.lng ?? null;
     if (dto.address !== undefined) circuit.address = dto.address ?? null;
     if (dto.project_id !== undefined)
-      circuit.project_id = dto.project_id ?? null;
+      circuit.venue_id = dto.project_id ?? null;
     if (dto.images !== undefined)
       circuit.images = dto.images?.length ? dto.images : null;
     if (dto.cover_image !== undefined)
@@ -320,7 +320,9 @@ export class CircuitService {
       lng: dto.lng ?? null,
       location_name: dto.location_name ?? null,
     });
-    return this.dayRepo.save(day);
+    const saved = await this.dayRepo.save(day);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   async updateDay(
@@ -350,7 +352,9 @@ export class CircuitService {
     if (dto.lng !== undefined) day.lng = dto.lng ?? null;
     if (dto.location_name !== undefined)
       day.location_name = dto.location_name ?? null;
-    return this.dayRepo.save(day);
+    const saved = await this.dayRepo.save(day);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   async removeDay(
@@ -408,7 +412,9 @@ export class CircuitService {
       min_quantity: dto.min_quantity ?? null,
       max_quantity: dto.max_quantity ?? null,
     });
-    return this.optionRepo.save(option);
+    const saved = await this.optionRepo.save(option);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   async findOptions(circuitId: string): Promise<CircuitOption[]> {
@@ -499,7 +505,9 @@ export class CircuitService {
       is_external_reference: dto.is_external_reference ?? false,
       external_provider_name: dto.external_provider_name ?? null,
     });
-    return this.programItemRepo.save(item);
+    const saved = await this.programItemRepo.save(item);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   async updateProgramItem(
@@ -562,7 +570,9 @@ export class CircuitService {
       item.is_external_reference = dto.is_external_reference;
     if (dto.external_provider_name !== undefined)
       item.external_provider_name = dto.external_provider_name ?? null;
-    return this.programItemRepo.save(item);
+    const saved = await this.programItemRepo.save(item);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   async removeProgramItem(itemId: string, authorId?: string): Promise<void> {
@@ -581,6 +591,7 @@ export class CircuitService {
       "Impossible de supprimer une activité d'un circuit qui a des réservations confirmées.",
     );
     await this.programItemRepo.remove(item);
+    await this.invalidateCircuitCache();
   }
 
   // ─── Réservation de circuit ────────────────────────────

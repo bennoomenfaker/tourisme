@@ -165,7 +165,7 @@ export default function PlaceDetailPage() {
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState({ title: "", description: "", event_type: "festival", start_date: "", end_date: "", external_url: "" });
   const [creatingEvent, setCreatingEvent] = useState(false);
-  const canAddEvent = token && ["eco_traveler", "guide", "project_owner", "admin"].includes(userRole || "");
+  const canAddEvent = token && ["eco_traveler", "guide", "provider", "admin"].includes(userRole || "");
 
   // Active section for nav highlight
   const [activeSection, setActiveSection] = useState("overview");

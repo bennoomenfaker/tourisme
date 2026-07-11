@@ -1,13 +1,14 @@
 # Sprint 4 — Refactor Offres / Guides / Circuits
 
-**Date :** 28 Juin 2026
-**Commit :** 3aa46c5
+> **Date :** 28 Juin 2026 (mis à jour 11 juillet 2026)
+> **Commit :** 3aa46c5
+> **Note :** Renommage project-owner → provider, projects → venues (11 juillet 2026)
 
 ---
 
 ## Sommaire
 
-1. [Refactor Offres → Projets](#1-refactor-offres--projets)
+1. [Refactor Offres → Établissements](#1-refactor-offres--établissements)
 2. [Localisation des offres](#2-localisation-des-offres)
 3. [Nouveau modèle : Offre de guidage](#3-nouveau-modèle--offre-de-guidage)
 4. [Circuit : ajout d'un guide aux activités](#4-circuit--ajout-dun-guide-aux-activités)
@@ -18,13 +19,13 @@
 
 ---
 
-## 1. Refactor Offres → Projets
+## 1. Refactor Offres → Établissements
 
 ### Avant
 ```
-Propriétaire
-    ├── Projet A
-    └── Projet B
+Prestataire (anciennement Project Owner)
+    ├── Établissement A
+    └── Établissement B
           ↑
 Offres (indépendantes)
     - Kayak
@@ -34,19 +35,19 @@ Offres (indépendantes)
 
 ### Après
 ```
-Propriétaire
-    ├── Projet A
+Prestataire
+    ├── Établissement A
     │     ├── Hébergement
     │     ├── Restaurant
     │     └── Kayak
-    └── Projet B
+    └── Établissement B
           ├── Camping
           └── Vélo
 ```
 
 ### Changements
 
-**Offer entity** — `project_id` devient obligatoire pour `author_type = 'project_owner'` :
+**Offer entity** — `venue_id` devient obligatoire pour `author_type = 'provider'` :
 
 ```
 offers

@@ -8,7 +8,7 @@ import {
 @Entity('item_comments')
 export class ItemComment {
   @PrimaryGeneratedColumn('uuid') id!: string;
-  @Column({ type: 'varchar' }) target_type!: string; // 'offer' | 'project'
+  @Column({ type: 'varchar' }) target_type!: string; // 'offer' | 'venue'
   @Column('uuid') target_id!: string;
   @Column('uuid') author_id!: string;
   @Column({ type: 'varchar' }) author_role!: string;

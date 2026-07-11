@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
+import governorates from "@/lib/tunisia-governorates.json";
+
+const REGION_NAMES = governorates.map((g) => g.name);
 
 interface Circuit {
   id: string;
@@ -48,20 +51,17 @@ export default function CircuitsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
-  const [regions, setRegions] = useState<string[]>([]);
 
   useEffect(() => {
     apiFetch<Circuit[]>("/circuits")
       .then((data) => {
         setCircuits(data);
-        const uniqueRegions = [...new Set(data.map((c) => c.region).filter(Boolean))] as string[];
-        setRegions(uniqueRegions);
       })
       .finally(() => setLoading(false));
   }, []);
 
   const filtered = circuits.filter((c) => {
-    const matchesRegion = !regionFilter || c.region === regionFilter;
+    const matchesRegion = !regionFilter || (c.region && c.region.toLowerCase() === regionFilter.toLowerCase());
     const q = search.toLowerCase();
     const matchesSearch = !q ||
       c.title.toLowerCase().includes(q) ||
@@ -104,8 +104,7 @@ export default function CircuitsPage() {
               className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
             />
           </div>
-          {regions.length > 0 && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
               <Filter size={15} className="text-slate-400" />
               <select
                 value={regionFilter}
@@ -113,12 +112,11 @@ export default function CircuitsPage() {
                 className="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
               >
                 <option value="">Toutes les régions</option>
-                {regions.map((r) => (
+                {REGION_NAMES.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
             </div>
-          )}
         </div>
 
         {filtered.length === 0 ? (

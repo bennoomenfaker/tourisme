@@ -34,7 +34,13 @@ function AuthCallbackInner() {
     // Vérifier si l'utilisateur a déjà complété l'onboarding
     const profileApi = parsedUser.role === "eco_traveler" ? "/eco-traveler/profile"
       : parsedUser.role === "guide" ? "/guide/profile"
-      : "/project-owner/profile";
+      : "/provider/profile";
+
+    const onboardingRoutes: Record<string, string> = {
+      eco_traveler: "/onboarding/eco-traveler",
+      guide: "/onboarding/guide",
+      provider: "/onboarding/project-owner",
+    };
 
     ;(async () => {
       try {
@@ -47,15 +53,8 @@ function AuthCallbackInner() {
           return;
         }
       } catch {}
+      router.push(onboardingRoutes[parsedUser.role] || "/dashboard");
     })();
-
-    const onboardingRoutes: Record<string, string> = {
-      eco_traveler: "/onboarding/eco-traveler",
-      guide: "/onboarding/guide",
-      project: "/onboarding/project-owner",
-    };
-
-    router.push(onboardingRoutes[parsedUser.role] || "/dashboard");
   }, [router, searchParams]);
 
   return (

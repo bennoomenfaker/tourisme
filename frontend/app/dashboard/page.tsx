@@ -15,7 +15,7 @@ const MapPicker = dynamic(
   { ssr: false, loading: () => <div className="h-[268px] rounded-2xl bg-slate-100 animate-pulse" /> }
 );
 
-type Role = "eco_traveler" | "guide" | "project";
+type Role = "eco_traveler" | "guide" | "provider";
 
 type Badge = {
   label: string;
@@ -48,15 +48,15 @@ type Offer = {
   location_type?: string;
   status: string;
   rejection_reason: string | null;
-  project_id?: string | null;
+  venue_id?: string | null;
   created_at: string;
   items?: OfferItem[];
 };
 
-type Project = {
+type Venue = {
   id: string;
   name: string;
-  project_type: string[] | null;
+  venue_type: string[] | null;
   description: string | null;
   region: string | null;
   address: string | null;
@@ -152,7 +152,7 @@ type AnyProfile = {
   position?: string | null;
   phone?: string | null;
   total_reservations?: number;
-  projects?: Project[];
+  venues?: Venue[];
 };
 
 type DashConv = {
@@ -184,7 +184,7 @@ const PROJ_OFFER_TYPES = [
   { value: "sejour", label: "Séjour" },
 ];
 
-const PROJECT_TYPES = [
+const VENUE_TYPES = [
   { value: "hebergement", label: "Hébergement", icon: "hotel" },
   { value: "restauration", label: "Restauration", icon: "restaurant" },
   { value: "artisanat", label: "Artisanat", icon: "brush" },
@@ -197,7 +197,7 @@ const ECO_PRACTICES = [
   "Compostage", "Éco-certification", "Véhicules électriques", "Éclairage LED",
 ];
 
-const PROJECT_SERVICES = [
+const VENUE_SERVICES = [
   { value: "hebergement", label: "Hébergement", icon: "hotel" },
   { value: "restauration", label: "Restauration", icon: "restaurant" },
   { value: "transport", label: "Transport", icon: "directions_car" },
@@ -221,7 +221,7 @@ const BADGE_CONFIGS: Record<Role, { label: string; icon: string; description: st
     { label: "Guide Expert", icon: "psychology", description: "10 réservations gérées" },
     { label: "Formateur Durable", icon: "school", description: "5 évaluations reçues" },
   ],
-  project: [
+  provider: [
     { label: "Propriétaire Éco-Certifié", icon: "verified", description: "Onboarding complété" },
     { label: "Ambassadeur Éco-Voyage", icon: "stars", description: "Score ≥ 80%" },
     { label: "Projet d'Excellence", icon: "domain_verification", description: "10 réservations gérées" },
@@ -234,7 +234,7 @@ function getScoreLabel(score: number | null, role: Role): string {
   const labels: Record<Role, string[]> = {
     eco_traveler: ["Ambassadeur durable", "Écovoyageur engagé", "Voyageur sensible", "Voyageur classique"],
     guide: ["Guide Ambassadeur", "Guide Expert", "Guide Engagé", "Guide en Développement"],
-    project: ["Propriétaire Ambassadeur", "Propriétaire Engagé", "Propriétaire Sensible", "Propriétaire en Développement"],
+    provider: ["Propriétaire Ambassadeur", "Propriétaire Engagé", "Propriétaire Sensible", "Propriétaire en Développement"],
   };
   const l = labels[role];
   if (score >= 80) return l[0];
@@ -313,8 +313,8 @@ function ScoreBreakdown({ profile, role }: { profile: AnyProfile; role: Role }) 
   );
 }
 
-function ProjectTypeIcon({ types }: { types: string[] | null }) {
-  const found = PROJECT_TYPES.find((t) => t.value === types?.[0]);
+function VenueTypeIcon({ types }: { types: string[] | null }) {
+  const found = VENUE_TYPES.find((t) => t.value === types?.[0]);
   return <span className="material-symbols-outlined text-2xl text-primary">{found?.icon ?? "domain"}</span>;
 }
 
@@ -623,16 +623,16 @@ function GuideOfferModal({ onClose, onSuccess, token }: {
   );
 }
 
-function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
+function VenueOfferModal({ onClose, onSuccess, token, projects }: {
   onClose: () => void;
   onSuccess: (o: Offer) => void;
   token: string;
-  projects: Project[];
+  projects: Venue[];
 }) {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ title?: string; price?: string }>({});
-  const [form, setForm] = useState({ title: "", offer_type: "", project_id: "", description: "", price: "", duration: "", region: "", location_type: "fixed" });
+  const [form, setForm] = useState({ title: "", offer_type: "", venue_id: "", description: "", price: "", duration: "", region: "", location_type: "fixed" });
 
   const inputClass = (hasErr: boolean) =>
     `w-full px-4 py-3 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 transition-all ${hasErr ? "bg-red-50 border border-red-400 focus:ring-red-300" : "bg-slate-50 border border-transparent focus:ring-primary"}`;
@@ -654,7 +654,7 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
         body: JSON.stringify({
           title: form.title.trim(),
           offer_type: form.offer_type || undefined,
-          project_id: form.project_id || undefined,
+          venue_id: form.venue_id || undefined,
           description: form.description.trim() || undefined,
           price: form.price ? Number(form.price) : undefined,
           duration: form.duration.trim() || undefined,
@@ -692,15 +692,15 @@ function ProjectOfferModal({ onClose, onSuccess, token, projects }: {
             const activeProjects = projects.filter((p) => p.status === "active");
             return (
               <div className="space-y-1.5">
-                <label className="text-sm font-bold text-slate-700">Projet associé</label>
+                <label className="text-sm font-bold text-slate-700">Établissement associé</label>
                 {activeProjects.length === 0 ? (
                   <p className="text-xs font-medium text-amber-600 bg-amber-50 px-4 py-3 rounded-xl">
-                    Aucun projet validé. Vos projets doivent être approuvés par l'admin avant de pouvoir y lier une offre.
+                    Aucun établissement validé. Vos projets doivent être approuvés par l'admin avant de pouvoir y lier une offre.
                   </p>
                 ) : (
                   <select className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium"
-                    value={form.project_id} onChange={(e) => setForm({ ...form, project_id: e.target.value })}>
-                    <option value="">— Aucun projet spécifique —</option>
+                    value={form.venue_id} onChange={(e) => setForm({ ...form, venue_id: e.target.value })}>
+                    <option value="">— Aucun établissement spécifique —</option>
                     {activeProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 )}
@@ -798,11 +798,11 @@ async function uploadImage(file: File, token: string): Promise<string> {
   return ((await res.json()) as { url: string }).url;
 }
 
-function EditProjectModal({ onClose, onSuccess, token, project }: {
+function EditVenueModal({ onClose, onSuccess, token, project }: {
   onClose: () => void;
-  onSuccess: (p: Project) => void;
+  onSuccess: (p: Venue) => void;
   token: string;
-  project: Project;
+  project: Venue;
 }) {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -828,7 +828,7 @@ function EditProjectModal({ onClose, onSuccess, token, project }: {
     setSubmitError("");
     setLoading(true);
     try {
-      const updated = await apiFetch<Project>(`/project-owner/projects/${project.id}`, {
+      const updated = await apiFetch<Venue>(`/provider/venues/${project.id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -905,16 +905,16 @@ function EditProjectModal({ onClose, onSuccess, token, project }: {
   );
 }
 
-function AddProjectModal({ onClose, onSuccess, token }: {
+function AddVenueModal({ onClose, onSuccess, token }: {
   onClose: () => void;
-  onSuccess: (p: Project) => void;
+  onSuccess: (p: Venue) => void;
   token: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; website?: string; region?: string }>({});
   const [form, setForm] = useState({
-    name: "", project_types: [] as string[], description: "", region: "", address: "",
+    name: "", venue_types: [] as string[], description: "", region: "", address: "",
     website: "", phone: "", eco_labels: [] as string[], services: [] as string[],
     opening_hours: "", facebook: "", instagram: "",
   });
@@ -924,7 +924,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
   const [mapLat, setMapLat] = useState<number | null>(null);
   const [mapLng, setMapLng] = useState<number | null>(null);
 
-  const toggle = (key: "project_types" | "eco_labels" | "services", v: string) =>
+  const toggle = (key: "venue_types" | "eco_labels" | "services", v: string) =>
     setForm((f) => ({ ...f, [key]: f[key].includes(v) ? f[key].filter((x) => x !== v) : [...f[key], v] }));
 
   function addImages(files: FileList | null) {
@@ -939,7 +939,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
 
   function validate() {
     const errors: { name?: string; phone?: string; website?: string; region?: string } = {};
-    if (!form.name.trim()) errors.name = "Le nom du projet est obligatoire.";
+    if (!form.name.trim()) errors.name = "Le nom de l'établissement est obligatoire.";
     else if (form.name.trim().length < 2) errors.name = "Le nom doit contenir au moins 2 caractères.";
     if (form.phone && !PHONE_RE.test(form.phone.replace(/\s/g, ""))) errors.phone = "Numéro de téléphone invalide.";
     if (form.website && !URL_RE.test(form.website)) errors.website = "L'URL doit commencer par http:// ou https://";
@@ -956,12 +956,12 @@ function AddProjectModal({ onClose, onSuccess, token }: {
     try {
       const uploaded = await Promise.all(images.map((img) => uploadImage(img.file, token)));
       const ordered = uploaded.length ? [uploaded[coverIdx], ...uploaded.filter((_, i) => i !== coverIdx)] : [];
-      const created = await apiFetch<Project>("/project-owner/projects", {
+      const created = await apiFetch<Venue>("/provider/venues", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name: form.name.trim(),
-          project_type: form.project_types.length ? form.project_types : undefined,
+          venue_type: form.venue_types.length ? form.venue_types : undefined,
           description: form.description.trim() || undefined,
           region: form.region.trim() || undefined,
           address: form.address.trim() || undefined,
@@ -992,7 +992,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="modal-content bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <h2 className="text-xl font-extrabold text-slate-900">Ajouter un projet</h2>
+          <h2 className="text-xl font-extrabold text-slate-900">Ajouter un établissement</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
             <span className="material-symbols-outlined text-slate-500">close</span>
           </button>
@@ -1000,7 +1000,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-bold text-slate-700">Photos du projet</label>
+            <label className="text-sm font-bold text-slate-700">Photos de l'établissement</label>
             <label htmlFor="proj-images" className="flex flex-col items-center justify-center gap-2 w-full h-24 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all bg-slate-50/70">
               <span className="material-symbols-outlined text-slate-300 text-3xl">add_photo_alternate</span>
               <p className="text-xs font-semibold text-slate-400">Cliquez pour ajouter des photos</p>
@@ -1034,12 +1034,12 @@ function AddProjectModal({ onClose, onSuccess, token }: {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-bold text-slate-700">Type de projet <span className="ml-1.5 text-xs font-normal text-slate-400">(plusieurs choix possibles)</span></label>
+            <label className="text-sm font-bold text-slate-700">Type d'établissement <span className="ml-1.5 text-xs font-normal text-slate-400">(plusieurs choix possibles)</span></label>
             <div className="grid grid-cols-2 gap-2">
-              {PROJECT_TYPES.map((t) => {
-                const active = form.project_types.includes(t.value);
+              {VENUE_TYPES.map((t) => {
+                const active = form.venue_types.includes(t.value);
                 return (
-                  <button key={t.value} type="button" onClick={() => toggle("project_types", t.value)}
+                  <button key={t.value} type="button" onClick={() => toggle("venue_types", t.value)}
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
                     <span className="material-symbols-outlined text-base">{t.icon}</span>{t.label}
                     {active && <span className="material-symbols-outlined text-base ml-auto text-primary">check</span>}
@@ -1052,7 +1052,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Description</label>
             <textarea rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Décrivez votre projet éco-touristique..."
+              placeholder="Décrivez votre établissement éco-touristique..."
               className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-slate-900 font-medium resize-none" />
           </div>
 
@@ -1081,7 +1081,7 @@ function AddProjectModal({ onClose, onSuccess, token }: {
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700">Services proposés <span className="ml-1.5 text-xs font-normal text-slate-400">(plusieurs choix possibles)</span></label>
             <div className="grid grid-cols-2 gap-2">
-              {PROJECT_SERVICES.map((s) => {
+              {VENUE_SERVICES.map((s) => {
                 const active = form.services.includes(s.value);
                 return (
                   <button key={s.value} type="button" onClick={() => toggle("services", s.value)}
@@ -1681,7 +1681,7 @@ function CircuitsTab({ role, router, token }: { role: string; router: any; token
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [bookCircuit, setBookCircuit] = useState<any | null>(null);
-  const isProvider = role === "guide" || role === "project";
+  const isProvider = role === "guide" || role === "provider";
 
   const loadCircuits = useCallback(() => {
     setLoading(true);
@@ -1833,7 +1833,7 @@ function ParametresTab({ router, handleLogout }: { router: any; handleLogout: ()
   const rolePaths: Record<Role, string> = {
     eco_traveler: "/profile/ecovoyageur",
     guide: "/profile/guide",
-    project: "/profile/project-owner",
+    provider: "/profile/provider",
   };
 
   const raw = typeof window !== "undefined" ? localStorage.getItem("user") : null;
@@ -1894,8 +1894,8 @@ export default function DashboardPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [showAddOffer, setShowAddOffer] = useState(false);
   const [editingOffer, setEditingOffer] = useState<any>(null);
-  const [showAddProject, setShowAddProject] = useState(false);
-  const [editingProject, setEditingProject] = useState<any>(null);
+  const [showAddVenue, setShowAddVenue] = useState(false);
+  const [editingVenue, setEditingVenue] = useState<any>(null);
   const [dashConvos, setDashConvos] = useState<DashConv[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [offerTypeFilter, setOfferTypeFilter] = useState("");
@@ -1910,7 +1910,7 @@ export default function DashboardPage() {
         const parsedUser = JSON.parse(storedUser) as { role: string };
         if (parsedUser.role === "admin") { router.push("/admin"); return; }
         const userRole = parsedUser.role as Role;
-        if (!["eco_traveler", "guide", "project"].includes(userRole)) {
+        if (!["eco_traveler", "guide", "provider"].includes(userRole)) {
           router.push("/auth/login"); return;
         }
         setRole(userRole);
@@ -1920,7 +1920,7 @@ export default function DashboardPage() {
 
         const apiPath = userRole === "eco_traveler" ? "/eco-traveler/profile"
           : userRole === "guide" ? "/guide/profile"
-          : "/project-owner/profile";
+          : "/provider/profile";
         const onboardingPath = userRole === "eco_traveler" ? "/onboarding/eco-traveler"
           : userRole === "guide" ? "/onboarding/guide"
           : "/onboarding/project-owner";
@@ -2038,11 +2038,11 @@ export default function DashboardPage() {
     } catch (e: any) { alert(e.message || "Erreur lors de la récupération."); }
   }
 
-  async function handleDeleteProject(projectId: string) {
-    if (!confirm("Supprimer ce projet ?")) return;
+  async function handleDeleteVenue(venueId: string) {
+    if (!confirm("Supprimer cet établissement ?")) return;
     try {
-      await apiFetch(`/project-owner/projects/${projectId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-      setProfile((prev) => prev ? { ...prev, projects: prev.projects?.filter((p) => p.id !== projectId) } : prev);
+      await apiFetch(`/provider/venues/${venueId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      setProfile((prev) => prev ? { ...prev, venues: prev.venues?.filter((p) => p.id !== venueId) } : prev);
     } catch { alert("Erreur lors de la suppression."); }
   }
 
@@ -2068,7 +2068,7 @@ export default function DashboardPage() {
       ]
     : [
         { label: "Tableau de bord", icon: "dashboard" },
-        { label: "Mes Projets", icon: "domain" },
+        { label: "Mes Établissements", icon: "domain" },
         { label: "Mes Offres", icon: "sell" },
         { label: "Réservations", icon: "event_available" },
         { label: "Circuits", icon: "route" },
@@ -2082,7 +2082,7 @@ export default function DashboardPage() {
   const obtainedBadgeLabels = new Set((profile?.badges ?? []).map((b) => b.label));
   const profilePath = role === "eco_traveler" ? "/profile/ecovoyageur"
     : role === "guide" ? "/profile/guide"
-    : "/profile/project-owner";
+    : "/profile/provider";
   const questionnairePath = role === "eco_traveler" ? "/questionnaire/eco-traveler"
     : role === "guide" ? "/questionnaire/guide"
     : "/questionnaire/project-owner";
@@ -2114,12 +2114,12 @@ export default function DashboardPage() {
         if (role === "eco_traveler") {
           const [guides, owners] = await Promise.all([
             apiFetch<SearchResult[]>(`/guide/public/search?q=${enc}`).catch(() => []),
-            apiFetch<SearchResult[]>(`/project-owner/public/search?q=${enc}`).catch(() => []),
+            apiFetch<SearchResult[]>(`/provider/profiles/public/search?q=${enc}`).catch(() => []),
           ]);
-          setSearchRes([...guides.map((g) => ({ ...g, _type: "guide" })), ...owners.map((o) => ({ ...o, _type: "project" }))]);
+          setSearchRes([...guides.map((g) => ({ ...g, _type: "guide" })), ...owners.map((o) => ({ ...o, _type: "provider" }))]);
         } else if (role === "guide") {
-          const owners = await apiFetch<SearchResult[]>(`/project-owner/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []);
-          setSearchRes(owners.map((o) => ({ ...o, _type: "project" })));
+          const owners = await apiFetch<SearchResult[]>(`/provider/profiles/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []);
+          setSearchRes(owners.map((o) => ({ ...o, _type: "provider" })));
         } else {
           const guides = await apiFetch<SearchResult[]>(`/guide/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []);
           setSearchRes(guides.map((g) => ({ ...g, _type: "guide" })));
@@ -2220,7 +2220,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-bold text-slate-800 truncate">{profile.full_name || "Mon profil"}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">{role === "project" ? "Propriétaire" : role === "guide" ? "Guide" : "Voyageur"}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{role === "provider" ? "Propriétaire" : role === "guide" ? "Guide" : "Voyageur"}</p>
                 </div>
               </button>
             </div>
@@ -2296,7 +2296,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-bold text-slate-800 truncate">{profile.full_name || "Mon profil"}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">{role === "project" ? "Propriétaire" : role === "guide" ? "Guide" : "Voyageur"}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{role === "provider" ? "Propriétaire" : role === "guide" ? "Guide" : "Voyageur"}</p>
                 </div>
               </button>
             </div>
@@ -2309,11 +2309,11 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4 shrink-0 xl:hidden w-10" />
             <div className="flex items-center gap-3 shrink-0">
               <h2 className="text-base lg:text-lg font-bold text-slate-800 whitespace-nowrap">
-                Bonjour, {profile.full_name || (role === "guide" ? "Guide" : role === "project" ? "Propriétaire" : "Voyageur")}
+                Bonjour, {profile.full_name || (role === "guide" ? "Guide" : role === "provider" ? "Propriétaire" : "Voyageur")}
               </h2>
               <div className="hidden md:flex items-center gap-1.5 bg-slate-100 rounded-full px-3 py-1">
                 <span className="material-symbols-outlined text-emerald-500 text-sm">
-                  {role === "project" ? "domain_verification" : "verified_user"}
+                  {role === "provider" ? "domain_verification" : "verified_user"}
                 </span>
                 <span className="text-xs font-semibold text-slate-600">
                   {score !== null ? getScoreLabel(score, role) : "Évaluation en attente"}
@@ -2516,13 +2516,13 @@ export default function DashboardPage() {
                     </>
                   )}
 
-                  {role === "project" && (
+                  {role === "provider" && (
                     <>
                       <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col self-start">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Projets actifs</p>
-                            <h3 className="text-2xl font-extrabold mt-1">{profile.projects?.length ?? 0}</h3>
+                            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Établissements actifs</p>
+                            <h3 className="text-2xl font-extrabold mt-1">{profile.venues?.length ?? 0}</h3>
                           </div>
                           <div className="bg-blue-50 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined text-xl">domain</span></div>
                         </div>
@@ -2627,34 +2627,34 @@ export default function DashboardPage() {
                       </>
                     )}
 
-                    {role === "project" && (
+                    {role === "provider" && (
                       <>
                         <div className="flex items-center justify-between mb-6">
                           <h3 className="text-xl font-bold">Mes Projets</h3>
-                          <button onClick={() => setShowAddProject(true)}
+                          <button onClick={() => setShowAddVenue(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-primary text-slate-900 rounded-xl font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all">
                             <span className="material-symbols-outlined text-base">add</span>Ajouter
                           </button>
                         </div>
 
-                        {(profile.projects?.length ?? 0) === 0 ? (
+                        {(profile.venues?.length ?? 0) === 0 ? (
                           <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
                             <span className="material-symbols-outlined text-slate-300 text-5xl mb-3">domain</span>
-                            <p className="text-slate-800 font-extrabold text-lg mb-2">Aucun projet pour l'instant</p>
-                            <p className="text-slate-400 font-medium text-sm mb-5">Ajoutez votre premier projet éco-touristique.</p>
-                            <button onClick={() => setShowAddProject(true)}
+                            <p className="text-slate-800 font-extrabold text-lg mb-2">Aucun établissement pour l'instant</p>
+                            <p className="text-slate-400 font-medium text-sm mb-5">Ajoutez votre premier établissement éco-touristique.</p>
+                            <button onClick={() => setShowAddVenue(true)}
                               className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 rounded-xl font-extrabold text-sm shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all">
-                              <span className="material-symbols-outlined text-base">add</span>Créer mon premier projet
+                              <span className="material-symbols-outlined text-base">add</span>Créer mon premier établissement
                             </button>
                           </div>
                         ) : (
                           <div className="space-y-4">
-                            {profile.projects!.map((project) => (
+                            {profile.venues!.map((project) => (
                               <div key={project.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex gap-5">
                                 <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden">
                                   {project.photo
                                     ? <img src={project.photo} alt={project.name} className="w-full h-full object-cover" />
-                                    : <div className="w-full h-full flex items-center justify-center"><ProjectTypeIcon types={project.project_type} /></div>}
+                                    : <div className="w-full h-full flex items-center justify-center"><VenueTypeIcon types={project.venue_type} /></div>}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-2 mb-1">
@@ -2663,21 +2663,21 @@ export default function DashboardPage() {
                                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${project.status === "active" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
                                         {project.status === "active" ? "Actif" : "En attente"}
                                       </span>
-                                      <button onClick={() => setEditingProject(project)}
+                                      <button onClick={() => setEditingVenue(project)}
                                         className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Modifier">
                                         <span className="material-symbols-outlined text-base">edit</span>
                                       </button>
-                                      <button onClick={() => handleDeleteProject(project.id)}
+                                      <button onClick={() => handleDeleteVenue(project.id)}
                                         className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Supprimer">
                                         <span className="material-symbols-outlined text-base">close</span>
                                       </button>
                                     </div>
                                   </div>
-                                  {project.project_type?.length ? (
+                                  {project.venue_type?.length ? (
                                     <div className="flex flex-wrap gap-1 mb-2">
-                                      {project.project_type.map((pt) => (
+                                      {project.venue_type.map((pt) => (
                                         <span key={pt} className="inline-flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                          {PROJECT_TYPES.find((t) => t.value === pt)?.label ?? pt}
+                                          {VENUE_TYPES.find((t) => t.value === pt)?.label ?? pt}
                                         </span>
                                       ))}
                                     </div>
@@ -2757,10 +2757,10 @@ export default function DashboardPage() {
                             <div><p className="text-lg font-extrabold text-slate-800">{profile.reservations_handled ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Circuits</p></div>
                           </>
                         )}
-                        {role === "project" && (
+                        {role === "provider" && (
                           <>
                             <div><p className="text-lg font-extrabold text-slate-800">{profile.feedback_received ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Avis</p></div>
-                            <div><p className="text-lg font-extrabold text-slate-800">{profile.projects?.length ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Projets</p></div>
+                            <div><p className="text-lg font-extrabold text-slate-800">{profile.venues?.length ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Projets</p></div>
                             <div><p className="text-lg font-extrabold text-slate-800">{profile.total_reservations ?? 0}</p><p className="text-[10px] text-slate-400 font-bold uppercase">Réserv.</p></div>
                           </>
                         )}
@@ -2844,7 +2844,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {role === "project" && activeItem === "Mes Offres" && (
+            {role === "provider" && activeItem === "Mes Offres" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold">Mes Offres</h3>
@@ -3000,39 +3000,39 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {role === "project" && activeItem === "Mes Projets" && (
+            {role === "provider" && activeItem === "Mes Établissements" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold">Mes Projets</h3>
-                  <button onClick={() => setShowAddProject(true)}
+                  <button onClick={() => setShowAddVenue(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-primary text-slate-900 font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm">
-                    <span className="material-symbols-outlined text-base">add</span>Ajouter un projet
+                    <span className="material-symbols-outlined text-base">add</span>Ajouter un établissement
                   </button>
                 </div>
 
-                {(profile.projects?.length ?? 0) === 0 ? (
+                {(profile.venues?.length ?? 0) === 0 ? (
                   <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
                     <span className="material-symbols-outlined text-slate-300 text-5xl mb-3">domain</span>
-                    <p className="font-bold text-slate-500">Aucun projet</p>
-                    <button onClick={() => setShowAddProject(true)} className="mt-4 px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
-                      Créer mon premier projet
+                    <p className="font-bold text-slate-500">Aucun établissement</p>
+                    <button onClick={() => setShowAddVenue(true)} className="mt-4 px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors">
+                      Créer mon premier établissement
                     </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-                    {profile.projects!.map((project) => (
+                    {profile.venues!.map((project) => (
                       <div key={project.id} className="bg-white rounded-2xl border border-primary/5 p-5 flex gap-5">
                         <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 overflow-hidden">
                           {project.photo
                             ? <img src={project.photo} alt={project.name} className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center"><ProjectTypeIcon types={project.project_type} /></div>}
+                            : <div className="w-full h-full flex items-center justify-center"><VenueTypeIcon types={project.venue_type} /></div>}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <h4 className="font-extrabold text-slate-900 text-base leading-tight">{project.name}</h4>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <StatusBadge status={project.status} reason={project.rejection_reason} />
-                              <button onClick={() => handleDeleteProject(project.id)}
+                              <button onClick={() => handleDeleteVenue(project.id)}
                                 className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
                                 <span className="material-symbols-outlined text-base">close</span>
                               </button>
@@ -3104,20 +3104,20 @@ export default function DashboardPage() {
         <AddPublicationModal token={token} publication={editingPublication} onClose={() => setEditingPublication(null)}
           onSuccess={(p) => { setPublications((prev) => prev.map((pr) => pr.id === p.id ? p : pr)); setEditingPublication(null); }} />
       )}
-      {role === "project" && showAddOffer && profile && (
-        <GuidedOfferWizard token={token} userRole="project" userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} userProjects={profile.projects} onClose={() => setShowAddOffer(false)}
+      {role === "provider" && showAddOffer && profile && (
+        <GuidedOfferWizard token={token} userRole="provider" userProjectId={profile.venues?.[0]?.id} userVenueType={profile.venues?.[0]?.venue_type?.[0]} userVenues={profile.venues} onClose={() => setShowAddOffer(false)}
           onSuccess={(o) => { setOffers((prev) => [o, ...prev]); setShowAddOffer(false); }} />
       )}
-      {role === "project" && showAddProject && (
-        <AddProjectModal token={token} onClose={() => setShowAddProject(false)}
-          onSuccess={(p) => { setProfile((prev) => prev ? { ...prev, projects: [...(prev.projects ?? []), p] } : prev); setShowAddProject(false); }} />
+      {role === "provider" && showAddVenue && (
+        <AddVenueModal token={token} onClose={() => setShowAddVenue(false)}
+          onSuccess={(p) => { setProfile((prev) => prev ? { ...prev, venues: [...(prev.venues ?? []), p] } : prev); setShowAddVenue(false); }} />
       )}
-      {editingProject && (
-        <EditProjectModal token={token} project={editingProject} onClose={() => setEditingProject(null)}
-          onSuccess={(p) => { setProfile((prev) => prev ? { ...prev, projects: prev.projects?.map((pr) => pr.id === p.id ? p : pr) } : prev); setEditingProject(null); }} />
+      {editingVenue && (
+        <EditVenueModal token={token} project={editingVenue} onClose={() => setEditingVenue(null)}
+          onSuccess={(p) => { setProfile((prev) => prev ? { ...prev, venues: prev.venues?.map((pr) => pr.id === p.id ? p : pr) } : prev); setEditingVenue(null); }} />
       )}
       {editingOffer && (
-        <GuidedOfferWizard token={token} userRole={role} userProjectId={profile.projects?.[0]?.id} userProjectType={profile.projects?.[0]?.project_type?.[0]} userProjects={profile.projects} onClose={() => setEditingOffer(null)}
+        <GuidedOfferWizard token={token} userRole={role} userProjectId={profile.venues?.[0]?.id} userVenueType={profile.venues?.[0]?.venue_type?.[0]} userVenues={profile.venues} onClose={() => setEditingOffer(null)}
           onSuccess={(o) => { setOffers((prev) => prev.map((of) => of.id === o.id ? o : of)); setEditingOffer(null); }} editOffer={editingOffer} />
       )}
       {linkedCircuitsModal && (

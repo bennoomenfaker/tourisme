@@ -1,6 +1,10 @@
-# Documentation de Synthèse Globale — Éco-Voyage
+# Documentation de Synthèse Globale — Tourisme Platform
 
-Ce document regroupe l'architecture, le modèle de données, les cas d'utilisation et le plan d'intégration des améliorations du projet Maram.
+> **Date :** 11 Juillet 2026
+> **Statut :** Architecture alignée avec Maram (Provider/Organization/Venue)
+> **Dernière mise à jour :** Renommage project-owner → provider, projects → venues
+
+Ce document regroupe l'architecture, le modèle de données, les cas d'utilisation et le plan d'intégration des améliorations.
 
 ---
 
@@ -34,7 +38,7 @@ Ce document regroupe l'architecture, le modèle de données, les cas d'utilisati
 
 ## 2. Architecture Applicative
 
-### Backend (NestJS)
+### Backend (NestJS) — 37 modules
 
 ```
 backend/src/
@@ -42,7 +46,9 @@ backend/src/
 ├── users/             # CRUD utilisateurs
 ├── eco-traveler/      # Profils voyageurs + scoring MongoDB
 ├── guide/             # Profils guides + scoring MongoDB
-├── project-owner/     # Profils propriétaires + CRUD projets
+├── provider/          # Profils prestataires (anciennement project-owner)
+├── organization/      # Entités légales (CRUD complet)
+├── provider-activity/ # Liaison Provider ↔ Organization + MongoDB
 ├── offer/             # Offres (40+ schemas dynamiques)
 │   ├── entities/      # Offer, OfferItem, Price, Session, Capacity, Availability
 │   └── dto/
@@ -61,6 +67,8 @@ backend/src/
 ├── upload/            # Cloudinary SDK
 ├── mail/              # Nodemailer
 ├── database/          # TypeORM + Mongoose config
+├── redis/             # Cache Redis
+├── domain/            # Services métier (capacity, pricing, reservation)
 └── common/            # Guards, decorators, enums
 ```
 
@@ -70,13 +78,22 @@ backend/src/
 frontend/app/
 ├── (auth)/            # Login, register, forgot-password
 ├── onboarding/        # Wizard multi-étapes par rôle
-├── dashboard/         # Tableaux de bord (voyageur, guide, propriétaire)
+│   ├── provider/      # Onboarding prestataire (2 étapes)
+│   ├── guide/         # Onboarding guide (multi-étapes)
+│   └── eco-traveler/  # Onboarding voyageur (multi-étapes)
+├── dashboard/         # Tableaux de bord (voyageur, guide, prestataire)
+│   ├── provider/      # Dashboard prestataire (redirect)
+│   ├── guide/         # Dashboard guide
+│   └── admin/         # Panel admin
 ├── offers/            # Catalogue Destinations + détail
 ├── circuits/          # Circuits publics + détail avec carte
 ├── trip-plans/        # Plans de voyage
 ├── reservations/      # Réservation avec participants
 ├── notifications/     # Notifications
 ├── profile/           # Profils publics
+│   ├── provider/      # Profil prestataire (public)
+│   ├── guide/         # Profil guide (public)
+│   └── ecovoyageur/   # Profil voyageur (public)
 └── admin/             # Panel admin
 
 frontend/components/
@@ -96,9 +113,11 @@ frontend/components/
 
 frontend/lib/
 ├── offer-schema.ts    # 40+ schemas dynamiques (OFFER_SCHEMAS)
-├── offer-config.ts    # PROJECT_TYPES, OFFER_CATEGORIES, ITEM_TYPES_BY_CATEGORY
+├── offer-config.ts    # VENUE_TYPES, OFFER_CATEGORIES, ITEM_TYPES_BY_CATEGORY
 ├── offer-rules.ts     # needsLocation, canHaveGuide, guideRequirement
 ├── offer-taxonomy.ts  # 5 taxonomies (equipment, services, inclus)
+├── shared-configs.ts  # LANGS, SAISONS, REGIMES, NIVEAUX
+├── tunisia-governorates.json  # 24 governorates avec delegations
 ├── api.ts             # apiFetch utilitaire
 ├── auth.ts            # Auth helpers
 └── distance.ts        # Calculs géospatiaux
@@ -111,11 +130,21 @@ frontend/lib/
 ### Architecture 1:N — Le point clé
 
 ```
-User (role=project)
-  └── ProjectOwner (infos perso, 1:1 avec User)
-       └── Project (1:N) ← UN PROPRIÉTAIRE PEUT AVOIR PLUSIEURS PROJETS
-            ├── name, project_type[], region, lat, lng, eco_labels
-            └── offers (via PROJECT_TYPE_OFFERS mapping)
+User (role=provider)
+  └── Provider (infos perso, 1:1 avec User)
+       ├── Organization (entité légale, 1:1 ou 1:N)
+       │    nom, logo, contact, certifications, eco_labels
+       │    approval_status, approved_at, approved_by
+       │
+       ├── ProviderActivity (liaison Provider ↔ Organization)
+       │    level: primary|secondary
+       │    category, subtypes, years_experience
+       │
+       └── Venue (lieu physique, 1:N) ← UN PRESTATAIRE PEUT AVOIR PLUSIEURS LIEUX
+            ├── name, venue_type[], region, lat, lng, eco_labels
+            └── offers (via venue_id)
+                 └── OfferItem (produits réservables)
+                      └── OfferItemSession (créneaux datés)
 ```
 
 ### PostgreSQL — Tables principales
@@ -125,9 +154,11 @@ User (role=project)
 | `users` | Auth, rôles, status, tokens | — |
 | `eco_travelers` | Profils voyageurs, scores | 1:1 → users |
 | `guides` | Profils guides, spécialités | 1:1 → users |
-| `project_owners` | Profils propriétaires | 1:1 → users |
-| `projects` | Projets éco-touristiques | N:1 → project_owners |
-| `offers` | Offres éco-touristiques | N:1 → users (guide/project_owner) |
+| `providers` | Profils prestataires (anciennement project_owners) | 1:1 → users |
+| `organizations` | Entités légales (nouvelle table) | 1:1 → providers |
+| `provider_activities` | Liaison Provider ↔ Organization | N:1 → providers, N:1 → organizations |
+| `venues` | Lieux physiques (anciennement projects) | N:1 → providers |
+| `offers` | Offres éco-touristiques | N:1 → users (guide/provider) |
 | `offer_items` | Éléments vendables | N:1 → offers |
 | `offer_item_prices` | Prix par catégorie | N:1 → offer_items |
 | `offer_item_sessions` | Créneaux datés | N:1 → offer_items |
@@ -140,6 +171,10 @@ User (role=project)
 | `booking_participants` | Participants | N:1 → bookings |
 | `trip_plans` | Plans de voyage | N:1 → eco_travelers |
 | `trip_plan_items` | Items du plan | N:1 → trip_plans |
+| `reviews` | Avis 1-5 étoiles | N:1 → users |
+| `favorites` | Éléments sauvegardés | N:1 → users |
+| `notifications` | Notifications système | N:1 → users |
+| `photos` | Galerie photos polymorphique | polymorphique |
 
 ### MongoDB — Collections
 
@@ -149,8 +184,9 @@ User (role=project)
 | `traveler_engagement` | Score, badges, stats |
 | `guide_skills` | Activités, certifications, langues |
 | `guide_engagement` | Score, badges, stats |
-| `project_services` | Pratiques écologiques |
-| `user_stats` | Statistiques globales |
+| `provider_engagement` | Badges, score, venues_count |
+| `provider_services` | offered_services, eco_practices |
+| `activity_details` | Détails flexibles par activité |
 
 ---
 
@@ -267,41 +303,48 @@ PROJECT_TYPE_OFFERS = {
 
 ### Correspondance des entités
 
-| Éco-Voyage | Maram | Relation |
+| Tourisme | Maram | Relation |
 |---|---|---|
-| User (role=project) | User + Provider | Le compte |
-| ProjectOwner | Provider | La personne physique |
-| Project | Organization | L'entité juridique |
-| Project.project_type[] | ProviderActivity.category | Catégories d'activités |
+| User (role=provider) | User + Provider | Le compte |
+| Provider | Provider | La personne physique |
+| Organization | Organization | L'entité juridique |
+| Venue | — | Lieu physique (Maram n'a pas cette entité) |
+| ProviderActivity.category | ProviderActivity.category | Catégories d'activités |
 | Offer + OfferItem | Offer + OfferItem (simplifié) | Produit vendable |
 | Circuit (structured) | Circuit (JSONB etapes) | Circuit multi-jours |
 
 ### Ce que notre projet fait MIEUX
 
-| Capacité | Éco-Voyage | Maram |
-|----------|-----------|-------|
+| Capacité | Tourisme | Maram |
+|----------|---------|-------|
 | Schemas d'offres | ~40+ dynamiques | ~15 |
 | Circuits | Wizard 6 étapes, hiérarchique | JSONB simple |
 | Pricing | Multi-items, auto-fill | `price` decimal |
 | Règles métier | `offer-rules.ts` | Pas de règles |
-| Architecture | ProjectOwner → N Projects (1:N) | Provider → 1 Org (1:1) |
+| Architecture | Provider → N Venues (1:N) | Provider → 1 Org (1:1) |
 | Taxonomies | 5 taxonomies hiérarchiques | Pas de taxonomies |
+| Réservation | Booking riche + participants | Reservation simple |
+| Guide offerings | GuideOffering avec sessions/prix | Offres classiques |
 
 ### Ce que Maram fait MIEUX (à intégrer)
 
-| Élément | Description | Effort |
-|---------|-------------|--------|
-| Shared constants | LANGS, SAISONS, REGIMES, NIVEAUX réutilisables | Faible |
-| CrossValidationRule | Valider offres vs contraintes projet | Faible |
-| `repeater` field type | Listes dynamiques (horaires/jour) | Faible |
-| `dynamicOptions` | Options depuis API | Faible |
+| Élément | Description | Effort | Statut |
+|---------|-------------|--------|--------|
+| Provider riche | 25+ champs (social, GPS, certifications) | Moyen | 🔜 Phase 4 |
+| Onboarding Provider | 5 étapes wizard complet | Élevé | 🔜 Phase 5 |
+| Formulaire Organization | CRUD complet depuis l'UI | Moyen | 🔜 Phase 6 |
+| Approval workflow | approval_status sur Offers/Organizations | Faible | 🔜 Phase 7 |
+| Shared constants | LANGS, SAISONS, REGIMES, NIVEAUX | Faible | ✅ Fait |
+| CrossValidationRule | Valider offres vs contraintes projet | Faible | ✅ Fait |
+| `repeater` field type | Listes dynamiques (horaires/jour) | Faible | ✅ Fait |
+| `dynamicOptions | Options depuis API | Faible | ✅ Fait |
 
 ### Ce qu'il NE PAS prendre de Maram
 
 - ❌ Circuit en JSONB (`etapes: object[]`) — Notre structure est supérieure
 - ❌ Offre avec `price` decimal — Notre système multi-items est supérieur
 - ❌ Architecture 1:1 — Notre 1:N est plus flexible
-- ❌ provider-schema.ts — Notre `PROJECT_TYPES` + `PROJECT_TYPE_OFFERS` est suffisant
+- ❌ Provider minimal — Il faut enrichir le nôtre avec les champs de Maram
 
 ---
 
@@ -402,76 +445,143 @@ Voir le document détaillé : [AUDIT_DDD_CIRCUITS.md](./AUDIT_DDD_CIRCUITS.md)
 | GET | `/api/eco-traveler/profile` | Voyageur |
 | POST | `/api/eco-traveler/profile` | Voyageur |
 | GET | `/api/guide/profile` | Guide |
-| GET | `/api/project-owner/projects` | Propriétaire |
-| POST | `/api/project-owner/projects` | Propriétaire |
+| GET | `/api/providers/me` | Prestataire |
+| PATCH | `/api/providers/me` | Prestataire |
+| POST | `/api/providers/onboarding` | Prestataire |
+| GET | `/api/provider/profile` | Prestataire (legacy) |
+| POST | `/api/provider/profile` | Prestataire (legacy) |
+| GET | `/api/provider/venues` | Prestataire |
+| POST | `/api/provider/venues` | Prestataire |
+| PATCH | `/api/provider/venues/:id` | Prestataire |
+| DELETE | `/api/provider/venues/:id` | Prestataire |
+
+### Organizations
+| Méthode | Endpoint | Rôle |
+|---------|----------|------|
+| GET | `/api/organizations` | Public |
+| GET | `/api/organizations/:id` | Public |
+| PATCH | `/api/organizations/:id` | Prestataire |
+
+### Provider Activities
+| Méthode | Endpoint | Rôle |
+|---------|----------|------|
+| POST | `/api/provider-activities` | Prestataire |
+| GET | `/api/provider-activities/provider/:id` | Public |
+| PATCH | `/api/provider-activities/:id` | Prestataire |
+| DELETE | `/api/provider-activities/:id` | Prestataire |
 
 ### Offres
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
-| POST | `/api/offers` | Guide/Propriétaire |
+| POST | `/api/offers` | Guide/Prestataire |
 | GET | `/api/offers` | Public (support `?page=&limit=` pour pagination) |
-| GET | `/api/offers/mine` | Guide/Propriétaire |
-| GET | `/api/offers/items/mine` | Guide/Propriétaire |
+| GET | `/api/offers/mine` | Guide/Prestataire |
+| GET | `/api/offers/items/mine` | Guide/Prestataire |
 | GET | `/api/offers/public` | Public (filtres + pagination) |
-| PATCH | `/api/offers/:id` | Guide/Propriétaire |
-| POST | `/api/offers/:id/items` | Guide/Propriétaire |
-| POST | `/api/offers/items/:itemId/prices` | Guide/Propriétaire |
-| POST | `/api/offers/items/:itemId/availability` | Guide/Propriétaire |
+| GET | `/api/offers/venue/:venueId` | Public |
+| PATCH | `/api/offers/:id` | Guide/Prestataire |
+| DELETE | `/api/offers/:id` | Guide/Prestataire |
+| POST | `/api/offers/:id/items` | Guide/Prestataire |
+| POST | `/api/offers/items/:itemId/prices` | Guide/Prestataire |
+| POST | `/api/offers/items/:itemId/availability` | Guide/Prestataire |
+| POST | `/api/offers/:id/archive` | Guide/Prestataire |
+| POST | `/api/offers/:id/deactivate` | Guide/Prestataire |
+| POST | `/api/offers/:id/reactivate` | Guide/Prestataire |
 
 ### Circuits
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
-| POST | `/api/circuits` | Guide/Propriétaire |
+| POST | `/api/circuits` | Guide/Prestataire |
 | GET | `/api/circuits` | Public (support `?page=&limit=` pour pagination) |
 | GET | `/api/circuits/:id` | Public |
-| POST | `/api/circuits/:id/days` | Guide/Propriétaire |
-| POST | `/api/circuits/:id/days/:dayId/program` | Guide/Propriétaire |
-| POST | `/api/circuits/:id/options` | Guide/Propriétaire |
+| GET | `/api/circuits/mine` | Guide/Prestataire |
+| PATCH | `/api/circuits/:id` | Guide/Prestataire |
+| DELETE | `/api/circuits/:id` | Guide/Prestataire |
+| POST | `/api/circuits/:id/days` | Guide/Prestataire |
+| POST | `/api/circuits/:id/days/:dayId/program` | Guide/Prestataire |
+| POST | `/api/circuits/:id/options` | Guide/Prestataire |
 | POST | `/api/circuits/:id/reserve` | Voyageur |
+| GET | `/api/circuits/reservations/incoming` | Guide/Prestataire |
+| PATCH | `/api/circuits/reservations/:id/confirm` | Guide/Prestataire |
+| PATCH | `/api/circuits/reservations/:id/reject` | Guide/Prestataire |
 
 ### Admin
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
-| GET | `/api/admin/pending/circuits` | Admin |
-| GET | `/api/admin/pending/guide-offerings` | Admin |
-| GET | `/api/admin/moderation-log` | Admin (historique complet) |
+| GET | `/api/admin/publications/pending` | Admin |
+| PATCH | `/api/admin/publications/:id/approve` | Admin |
+| PATCH | `/api/admin/publications/:id/reject` | Admin |
+| GET | `/api/admin/offers/pending` | Admin |
+| PATCH | `/api/admin/offers/:id/approve` | Admin |
+| PATCH | `/api/admin/offers/:id/reject` | Admin |
+| GET | `/api/admin/projects/pending` | Admin |
+| PATCH | `/api/admin/projects/:id/approve` | Admin |
+| PATCH | `/api/admin/projects/:id/reject` | Admin |
+| GET | `/api/admin/circuits/pending` | Admin |
 | PATCH | `/api/admin/circuits/:id/approve` | Admin |
 | PATCH | `/api/admin/circuits/:id/reject` | Admin |
 | PATCH | `/api/admin/circuits/:id/archive` | Admin |
+| GET | `/api/admin/guide-offerings/pending` | Admin |
 | PATCH | `/api/admin/guide-offerings/:id/approve` | Admin |
 | PATCH | `/api/admin/guide-offerings/:id/reject` | Admin |
 | PATCH | `/api/admin/guide-offerings/:id/archive` | Admin |
-| PATCH | `/api/admin/offers/:id/approve` | Admin |
-| PATCH | `/api/admin/offers/:id/reject` | Admin |
-| PATCH | `/api/admin/offers/:id/archive` | Admin |
+| GET | `/api/admin/reports` | Admin |
+| PATCH | `/api/admin/reports/:id/resolve` | Admin |
+| GET | `/api/admin/users/banned` | Admin |
 | PATCH | `/api/admin/users/:id/ban` | Admin |
 | PATCH | `/api/admin/users/:id/unban` | Admin |
+| GET | `/api/admin/moderation-log` | Admin (historique complet) |
 
 ### Réservations
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
 | POST | `/api/bookings` | Voyageur |
+| POST | `/api/bookings/guide` | Voyageur |
 | GET | `/api/bookings/mine` | Voyageur |
-| GET | `/api/bookings/incoming` | Guide/Propriétaire |
+| GET | `/api/bookings/incoming` | Guide/Prestataire |
 | PATCH | `/api/bookings/:id/cancel` | Voyageur |
-| PATCH | `/api/bookings/:id/confirm` | Guide/Propriétaire |
+| PATCH | `/api/bookings/:id/confirm` | Guide/Prestataire |
+| PATCH | `/api/bookings/:id/participants` | Voyageur |
 
 ### Guide Search
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
 | GET | `/api/guide/search?q=&zone=&max_price=&lat=&lng=&date=` | Public |
 | GET | `/api/guide/public/search?q=&date=` | Public |
+| GET | `/api/guide-offerings` | Public |
+| GET | `/api/guide-offerings/mine` | Guide |
+| POST | `/api/guide-offerings` | Guide |
+| PATCH | `/api/guide-offerings/:id` | Guide |
+| DELETE | `/api/guide-offerings/:id` | Guide |
 
 ### Autres
 | Méthode | Endpoint | Rôle |
 |---------|----------|------|
-| POST | `/api/favorites` | Voyageur |
-| POST | `/api/reviews` | Voyageur |
-| GET | `/api/notifications` | Tous |
-| POST | `/api/messages` | Tous |
-| POST | `/api/upload` | Tous |
-| POST | `/api/follows/:targetId/:type` | Tous |
+| POST | `/api/favorites` | Tous authentifiés |
+| GET | `/api/favorites` | Tous authentifiés |
+| GET | `/api/favorites/check/:targetType/:targetId` | Tous authentifiés |
+| DELETE | `/api/favorites/:targetType/:targetId` | Tous authentifiés |
+| POST | `/api/reviews` | Tous authentifiés |
+| GET | `/api/reviews/target/:targetType/:targetId` | Public |
+| GET | `/api/reviews/mine` | Tous authentifiés |
+| GET | `/api/notifications` | Tous authentifiés |
+| PATCH | `/api/notifications/:id/read` | Tous authentifiés |
+| PATCH | `/api/notifications/read-all` | Tous authentifiés |
+| POST | `/api/messages` | Tous authentifiés |
+| GET | `/api/messages/conversations` | Tous authentifiés |
+| POST | `/api/upload` | Tous authentifiés |
+| POST | `/api/follows/:targetId/:targetType` | Tous authentifiés |
+| GET | `/api/follows/following` | Tous authentifiés |
+| GET | `/api/follows/followers` | Tous authentifiés |
+| POST | `/api/reports` | Tous authentifiés |
+| GET | `/api/photos` | Public |
+| POST | `/api/photos` | Tous authentifiés |
+| POST | `/api/travel-carts/me` | Tous authentifiés |
+| POST | `/api/trip-plans` | Voyageur |
+| GET | `/api/trip-plans/mine` | Voyageur |
+| GET | `/api/questionnaire/active` | Public |
+| POST | `/api/questionnaire/submit` | Tous authentifiés |
 
 ---
 
-*Dernière mise à jour : 5 Juillet 2026*
+*Dernière mise à jour : 11 Juillet 2026*

@@ -2,6 +2,7 @@
 
 > **Sprint 4-6** — Catalogue, reservation, circuits, notifications, trip plans, maps, onboarding  
 > **Pour Maram :** Tout le systeme de catalogue avance, les reservations, les circuits multi-jours, les notifications, les plans de voyage, les cartes Leaflet, et les correctifs de bugs.
+> **Note :** Renommage ProjectOwner → Provider, Project → Venue (11 juillet 2026)
 
 ---
 
@@ -25,7 +26,7 @@
 ## 1. Architecture globale
 
 ```
-Provider (Guide | ProjectOwner)
+Provider (Guide | Prestataire)
 │
 ├── Offers (catalogue)
 │   ├── OfferCategories (lookup — 10 lignes seedees)

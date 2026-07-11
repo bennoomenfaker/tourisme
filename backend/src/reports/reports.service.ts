@@ -30,7 +30,7 @@ export class ReportsService {
   ) {}
 
   private roleNorm(role: string) {
-    return role === 'project' ? 'project_owner' : role;
+    return role === 'provider' ? 'provider' : role;
   }
 
   private async getUserInfo(userId: string, role: string) {

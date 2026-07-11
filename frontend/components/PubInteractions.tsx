@@ -20,7 +20,7 @@ type Props = {
   shareUrl: string;
   pubTitle?: string;
   /** API base for item-level endpoints. Default: "/publications"
-   *  For offers: "/interactions/offer", for projects: "/interactions/project" */
+   *  For offers: "/interactions/offer", for projects: "/interactions/venue" */
   itemApiBase?: string;
   /** API base for comment-level endpoints. Default: same as itemApiBase
    *  For interactions module use "/interactions" */
@@ -34,7 +34,7 @@ type Props = {
 };
 
 const ROLE_LABEL: Record<string, string> = {
-  eco_traveler: "Éco-Voyageur", guide: "Guide", project_owner: "Propriétaire", admin: "Admin",
+  eco_traveler: "Éco-Voyageur", guide: "Guide", provider: "Propriétaire", admin: "Admin",
 };
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -278,7 +278,7 @@ export default function PubInteractions({ pubId, token, viewerId, shareUrl, pubT
       for (const f of followings) {
         if (seen.has(f.user_id)) continue;
         seen.add(f.user_id);
-        list.push({ user_id: f.user_id, full_name: f.full_name, photo: f.photo, role: f._type === "project" ? "project_owner" : f._type });
+        list.push({ user_id: f.user_id, full_name: f.full_name, photo: f.photo, role: f._type === "provider" ? "provider" : f._type });
       }
 
       setContacts(list);
@@ -305,12 +305,12 @@ export default function PubInteractions({ pubId, token, viewerId, shareUrl, pubT
             ? apiFetch<any[]>(`/eco-traveler/search?q=${q}`, { headers }).catch(() => [])
             : Promise.resolve([]),
           apiFetch<any[]>(`/guide/public/search?q=${q}`, { headers }).catch(() => []),
-          apiFetch<any[]>(`/project-owner/public/search?q=${q}`, { headers }).catch(() => []),
+          apiFetch<any[]>(`/provider/profiles/public/search?q=${q}`, { headers }).catch(() => []),
         ]);
         const raw: Contact[] = [
           ...travelers.map((u: any) => ({ user_id: u.user_id, full_name: u.full_name, photo: u.photo, role: "eco_traveler" })),
           ...guides.map((u: any) => ({ user_id: u.user_id, full_name: u.full_name, photo: u.photo, role: "guide" })),
-          ...owners.map((u: any) => ({ user_id: u.user_id, full_name: u.full_name, photo: u.photo, role: "project_owner" })),
+          ...owners.map((u: any) => ({ user_id: u.user_id, full_name: u.full_name, photo: u.photo, role: "provider" })),
         ].filter((u) => u.user_id !== viewerId);
         const seen = new Set<string>();
         setSearchResults(raw.filter((u) => { if (seen.has(u.user_id)) return false; seen.add(u.user_id); return true; }));

@@ -42,7 +42,7 @@ export class OfferController {
 
   /** Project Owner crée une offre (les guides utilisent guide-offerings) */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Post()
   async create(@Req() req: any, @Body() dto: CreateOfferDto) {
     const userId = req.user.sub;
@@ -53,7 +53,7 @@ export class OfferController {
     );
     return this.service.create(
       userId,
-      'project_owner',
+      'provider',
       dto,
       hasAmbassador ? 'approved' : 'pending',
     );
@@ -61,7 +61,7 @@ export class OfferController {
 
   /** Mes propres offres (dashboard) */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Get('mine')
   findMine(@Req() req: any) {
     return this.service.findByAuthor(req.user.sub);
@@ -69,7 +69,7 @@ export class OfferController {
 
   /** Mes propres items d'offres */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Get('items/mine')
   findMyItems(@Req() req: any) {
     return this.service.findMyItems(req.user.sub);
@@ -96,11 +96,11 @@ export class OfferController {
     return this.service.findPublishedByAuthor(authorId);
   }
 
-  /** Offres d'un projet spécifique */
+  /** Offres d'un établissement spécifique */
   @Public()
-  @Get('project/:projectId')
-  findByProject(@Param('projectId') projectId: string) {
-    return this.service.findByProject(projectId);
+  @Get('venue/:venueId')
+  findByVenue(@Param('venueId') venueId: string) {
+    return this.service.findByVenue(venueId);
   }
 
   /** Recherche publique d'offres filtrée par catégorie, géolocalisation (pour services externes circuits) */
@@ -150,7 +150,7 @@ export class OfferController {
 
   /** Score de durabilité */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch(':id/sustainability')
   updateSustainability(
     @Req() req: any,
@@ -162,7 +162,7 @@ export class OfferController {
 
   /** Modifier une offre */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch(':id')
   update(
     @Req() req: any,
@@ -174,7 +174,7 @@ export class OfferController {
 
   /** Supprimer une offre (soft delete si réservations actives) */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Delete(':id')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.service.remove(req.user.sub, id);
@@ -182,7 +182,7 @@ export class OfferController {
 
   /** Archiver une offre (masquer définitivement) */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch(':id/archive')
   archive(@Req() req: any, @Param('id') id: string) {
     return this.service.archive(req.user.sub, id);
@@ -190,7 +190,7 @@ export class OfferController {
 
   /** Désactiver une offre (masquer temporairement) */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch(':id/deactivate')
   deactivate(@Req() req: any, @Param('id') id: string) {
     return this.service.deactivate(req.user.sub, id);
@@ -198,7 +198,7 @@ export class OfferController {
 
   /** Réactiver une offre désactivée */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch(':id/reactivate')
   reactivate(@Req() req: any, @Param('id') id: string) {
     return this.service.reactivate(req.user.sub, id);
@@ -206,7 +206,7 @@ export class OfferController {
 
   /** Voir les circuits liés à une offre */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Get(':id/linked-circuits')
   linkedCircuits(@Param('id') id: string) {
     return this.service.findLinkedCircuits(id);
@@ -223,7 +223,7 @@ export class OfferController {
 
   /** Crée un item (variante) pour une offre */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Post(':offerId/items')
   createItem(
     @Req() req: any,
@@ -242,7 +242,7 @@ export class OfferController {
 
   /** Modifier un item */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch('items/:itemId')
   updateItem(
     @Req() req: any,
@@ -254,7 +254,7 @@ export class OfferController {
 
   /** Supprimer un item */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Delete('items/:itemId')
   removeItem(@Req() req: any, @Param('itemId') itemId: string) {
     return this.service.removeItem(itemId, req.user.sub);
@@ -264,7 +264,7 @@ export class OfferController {
 
   /** Ajoute un prix à un item */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Post('items/:itemId/prices')
   addPrice(
     @Req() req: any,
@@ -276,7 +276,7 @@ export class OfferController {
 
   /** Modifier un prix */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch('items/prices/:priceId')
   updatePrice(
     @Req() req: any,
@@ -288,7 +288,7 @@ export class OfferController {
 
   /** Supprimer un prix */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Delete('items/prices/:priceId')
   removePrice(@Req() req: any, @Param('priceId') priceId: string) {
     return this.service.removePrice(priceId, req.user.sub);
@@ -298,7 +298,7 @@ export class OfferController {
 
   /** Ajoute une règle de disponibilité */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Post('items/:itemId/availability')
   addAvailabilityRule(
     @Req() req: any,
@@ -317,7 +317,7 @@ export class OfferController {
 
   /** Supprime une règle de disponibilité */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Delete('availability/:ruleId')
   removeAvailabilityRule(@Req() req: any, @Param('ruleId') ruleId: string) {
     return this.service.removeAvailabilityRule(ruleId, req.user.sub);
@@ -325,7 +325,7 @@ export class OfferController {
 
   /** Supprime toutes les règles de disponibilité d'un item */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Delete('items/:itemId/availability/delete-all')
   removeAllAvailabilityRules(@Req() req: any, @Param('itemId') itemId: string) {
     return this.service.removeAllAvailabilityRules(itemId, req.user.sub);
@@ -333,7 +333,7 @@ export class OfferController {
 
   /** Génère les sessions automatiquement depuis les règles */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Post('items/:itemId/availability/generate')
   generateSessions(@Req() req: any, @Param('itemId') itemId: string) {
     return this.service.generateSessions(itemId, 90, req.user.sub);
@@ -343,7 +343,7 @@ export class OfferController {
 
   /** Définit la capacité d'un item */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Post('items/:itemId/capacity')
   setCapacity(
     @Req() req: any,
@@ -362,7 +362,7 @@ export class OfferController {
 
   /** Supprime la capacité */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Delete('capacity/:capacityId')
   removeCapacity(@Req() req: any, @Param('capacityId') capacityId: string) {
     return this.service.removeCapacity(capacityId, req.user.sub);
@@ -372,7 +372,7 @@ export class OfferController {
 
   /** Crée une session (créneau concret) */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Post('items/:itemId/sessions')
   createSession(
     @Req() req: any,
@@ -384,7 +384,7 @@ export class OfferController {
 
   /** Modifier une session */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Patch('items/sessions/:sessionId')
   updateSession(
     @Req() req: any,
@@ -396,7 +396,7 @@ export class OfferController {
 
   /** Supprimer une session */
   @ApiBearerAuth('bearer')
-  @Roles(Role.PROJECT)
+  @Roles(Role.PROVIDER)
   @Delete('items/sessions/:sessionId')
   removeSession(@Req() req: any, @Param('sessionId') sessionId: string) {
     return this.service.removeSession(sessionId, req.user.sub);

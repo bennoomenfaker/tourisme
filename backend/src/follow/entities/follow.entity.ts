@@ -15,14 +15,14 @@ export class Follow {
   @Column('uuid')
   follower_id!: string;
 
-  // eco_traveler | guide | project
+  // eco_traveler | guide | provider
   @Column({ type: 'varchar' })
   follower_type!: string;
 
   @Column('uuid')
   following_id!: string;
 
-  // guide | project
+  // guide | provider
   @Column({ type: 'varchar' })
   following_type!: string;
 

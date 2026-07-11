@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Project } from '../../project-owner/entities/project.entity';
+import { Venue } from '../../project-owner/entities/project.entity';
 import { OfferCategory } from './offer-category.entity';
 import { OfferItem } from './offer-item.entity';
 
@@ -17,24 +17,24 @@ export class Offer {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  // Qui a créé cette offre (polymorphisme guide / project_owner)
+  // Qui a créé cette offre (polymorphisme guide / provider)
   @Column('uuid')
   author_id!: string;
 
-  @Column({ type: 'varchar' })
-  author_type!: string; // 'guide' | 'project_owner'
+  @Column({ type: 'varchar', default: 'provider' })
+  author_type!: string; // 'guide' | 'provider' | 'provider' (legacy)
 
-  // FK vers le projet (nullable : les guides n'ont pas de projet)
+  // FK vers l'établissement (nullable : les guides n'ont pas d'établissement)
   @Column({ type: 'uuid', nullable: true })
-  project_id!: string | null;
+  venue_id!: string | null;
 
-  @ManyToOne(() => Project, {
+  @ManyToOne(() => Venue, {
     nullable: true,
     onDelete: 'SET NULL',
     eager: false,
   })
-  @JoinColumn({ name: 'project_id' })
-  project!: Project | null;
+  @JoinColumn({ name: 'venue_id' })
+  venue!: Venue | null;
 
   // Catégorie (remplace progressivement offer_type)
   @Column({ type: 'uuid', nullable: true })
@@ -138,6 +138,48 @@ export class Offer {
 
   @Column({ type: 'timestamp', nullable: true })
   deleted_at!: Date | null;
+
+  @Column({ type: 'varchar', default: 'single' })
+  offer_mode!: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  availability_mode!: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  availability_start!: Date | null;
+
+  @Column({ type: 'date', nullable: true })
+  availability_end!: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  offer_subtype!: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  offer_subtypes!: string[] | null;
+
+  @Column({ type: 'int', nullable: true })
+  capacity!: number | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  organization_id!: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  activity_id!: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  cover_image!: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  featured!: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  sustainability_certifications!: string[] | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  sustainability_practices!: string[] | null;
+
+  @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
+  carbon_estimate_kg!: number | null;
 
   @OneToMany(() => OfferItem, (item) => item.offer)
   items!: OfferItem[];

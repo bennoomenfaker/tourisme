@@ -33,10 +33,10 @@ export class Circuit {
 
   @Column()
   author_type!: string;
-  // 'guide' | 'project_owner'
+  // 'guide' | 'provider' | 'provider' (legacy)
 
   @Column({ type: 'uuid', nullable: true })
-  project_id!: string | null;
+  venue_id!: string | null;
 
   @Column()
   title!: string;

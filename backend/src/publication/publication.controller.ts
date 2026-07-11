@@ -93,7 +93,7 @@ export class PublicationController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post(':id/like')
   toggleLike(@Req() req: any, @Param('id') id: string) {
     return this.service.toggleLike(id, req.user.sub, req.user.role);
@@ -108,7 +108,7 @@ export class PublicationController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post(':id/comments')
   addComment(
     @Req() req: any,
@@ -121,7 +121,7 @@ export class PublicationController {
   // ─── Comment Likes & Replies ──────────────────────────────────────────────
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post('comments/:commentId/like')
   toggleCommentLike(@Req() req: any, @Param('commentId') commentId: string) {
     return this.service.toggleCommentLike(
@@ -132,7 +132,7 @@ export class PublicationController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post('comments/:commentId/reply')
   addReply(
     @Req() req: any,
@@ -147,7 +147,7 @@ export class PublicationController {
     );
   }
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Delete('comments/:commentId')
   deleteComment(@Req() req: any, @Param('commentId') commentId: string) {
     return this.service.deleteComment(commentId, req.user.sub);

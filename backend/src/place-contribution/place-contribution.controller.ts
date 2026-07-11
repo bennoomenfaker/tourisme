@@ -8,6 +8,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PlaceContributionService } from './place-contribution.service';
 import { CreateContributionDto } from './dto/place-contribution.dto';
@@ -15,7 +16,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { Public } from '../common/decorators/public.decorator';
 
-const CONTRIBUTOR_ROLES = [Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT];
+const CONTRIBUTOR_ROLES = [Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER];
 const ALL_ROLES = [...CONTRIBUTOR_ROLES, Role.ADMIN];
 
 @ApiTags('Place Contributions')
@@ -34,6 +35,7 @@ export class PlaceContributionController {
     return this.service.create(publicationId, req.user.sub, req.user.role, dto);
   }
 
+  @SkipThrottle()
   @Public()
   @Get('places/:publicationId/contributions')
   findByPublication(

@@ -29,21 +29,21 @@ export class TravelCartController {
   // ─── Cart ───────────────────────────────────────────────
 
   @ApiOperation({ summary: 'Récupérer ou créer le panier actif' })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get('me')
   getMyCart(@Req() req: any) {
     return this.service.getOrCreateActive(req.user.sub);
   }
 
   @ApiOperation({ summary: 'Détail du panier' })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Get(':id')
   findById(@Req() req: any, @Param('id') id: string) {
     return this.service.findById(id, req.user.sub);
   }
 
   @ApiOperation({ summary: 'Modifier le panier' })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Patch(':id')
   updateCart(
     @Req() req: any,
@@ -54,7 +54,7 @@ export class TravelCartController {
   }
 
   @ApiOperation({ summary: 'Supprimer le panier' })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Delete(':id')
   removeCart(@Req() req: any, @Param('id') id: string) {
     return this.service.removeCart(id, req.user.sub);
@@ -65,7 +65,7 @@ export class TravelCartController {
   @ApiOperation({
     summary: 'Ajouter un élément au panier (OfferItem ou Circuit)',
   })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Post(':id/items')
   addItem(
     @Req() req: any,
@@ -76,7 +76,7 @@ export class TravelCartController {
   }
 
   @ApiOperation({ summary: 'Modifier un élément du panier' })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Patch(':id/items/:itemId')
   updateItem(
     @Req() req: any,
@@ -88,7 +88,7 @@ export class TravelCartController {
   }
 
   @ApiOperation({ summary: 'Supprimer un élément du panier' })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Delete(':id/items/:itemId')
   removeItem(
     @Req() req: any,
@@ -105,7 +105,7 @@ export class TravelCartController {
     description:
       'Transforme le panier temporaire en plan de voyage structuré et valide.',
   })
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Post(':id/convert')
   convertToTripPlan(
     @Req() req: any,

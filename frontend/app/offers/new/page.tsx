@@ -44,7 +44,7 @@ export default function NewOfferPage() {
 
     const apiPath = role === "eco_traveler" ? "/eco-traveler/profile"
       : role === "guide" ? "/guide/profile"
-      : "/project-owner/profile";
+      : "/provider/profile";
     apiFetch<any>(apiPath, {
       headers: { Authorization: `Bearer ${tkn}` },
     })
@@ -73,8 +73,8 @@ export default function NewOfferPage() {
             token={token}
             userRole={userRole}
             userProjectId={profile?.projects?.[0]?.id}
-            userProjectType={profile?.projects?.[0]?.project_type?.[0]}
-            userProjects={profile?.projects}
+            userVenueType={profile?.projects?.[0]?.venue_type?.[0]}
+            userVenues={profile?.projects}
             onClose={() => router.push("/dashboard")}
             onSuccess={(offer) => {
               router.push(`/offers/${offer.id}`);

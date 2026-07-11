@@ -40,7 +40,7 @@ function timeAgo(iso: string) {
 function roleLabel(role: string) {
   if (role === "eco_traveler") return "Éco-Voyageur";
   if (role === "guide") return "Guide";
-  if (role === "project_owner") return "Propriétaire";
+  if (role === "provider") return "Propriétaire";
   return role;
 }
 
@@ -116,7 +116,7 @@ function MessagerieContent() {
     }
     contactsPromises.push(
       apiFetch<{ user_id: string; full_name: string | null; photo: string | null; _type: string }[]>("/follows/following/profiles", { headers })
-        .then((list) => list.map((f) => ({ user_id: f.user_id, full_name: f.full_name, photo: f.photo, role: f._type === "project" ? "project_owner" : f._type, source: "following" as const })))
+        .then((list) => list.map((f) => ({ user_id: f.user_id, full_name: f.full_name, photo: f.photo, role: f._type === "provider" ? "provider" : f._type, source: "following" as const })))
         .catch(() => [])
     );
     Promise.all(contactsPromises).then((results) => {
@@ -171,14 +171,14 @@ function MessagerieContent() {
           ? apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/eco-traveler/search?q=${q}`, { headers }).catch(() => [])
           : Promise.resolve([]),
         apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/guide/public/search?q=${q}`, { headers }).catch(() => []),
-        apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/project-owner/public/search?q=${q}`, { headers }).catch(() => []),
+        apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/provider/public/search?q=${q}`, { headers }).catch(() => []),
       ]);
       const connIds = new Set(connections.map((c) => c.user_id));
       const convIds = new Set(conversations.map((c) => c.other_user.user_id));
       const results: Contact[] = [
         ...travelers.map((u) => ({ ...u, role: "eco_traveler", source: connIds.has(u.user_id) ? "friend" as const : "suggestion" as const })),
         ...guides.map((u) => ({ ...u, role: "guide", source: connIds.has(u.user_id) ? "following" as const : "suggestion" as const })),
-        ...owners.map((u) => ({ ...u, role: "project_owner", source: connIds.has(u.user_id) ? "following" as const : "suggestion" as const })),
+        ...owners.map((u) => ({ ...u, role: "provider", source: connIds.has(u.user_id) ? "following" as const : "suggestion" as const })),
       ].filter((u) => u.user_id !== myId);
       const seen = new Set<string>();
       setSearchResults(results.filter((u) => { if (seen.has(u.user_id)) return false; seen.add(u.user_id); return true; }));

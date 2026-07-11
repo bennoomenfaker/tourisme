@@ -9,7 +9,7 @@ import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { ProjectOwner } from '../project-owner/entities/project-owner.entity';
 import { Offer } from '../offer/entities/offer.entity';
-import { Project } from '../project-owner/entities/project.entity';
+import { Venue } from '../project-owner/entities/project.entity';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { Project } from '../project-owner/entities/project.entity';
       Guide,
       ProjectOwner,
       Offer,
-      Project,
+      Venue,
     ]),
   ],
   providers: [InteractionsService],

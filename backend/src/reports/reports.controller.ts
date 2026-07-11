@@ -10,7 +10,7 @@ import { Role } from '../common/enums/roles.enum';
 export class ReportsController {
   constructor(private readonly service: ReportsService) {}
 
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER)
   @Post()
   create(
     @Req() req: any,

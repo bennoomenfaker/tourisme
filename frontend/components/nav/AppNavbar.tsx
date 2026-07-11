@@ -151,7 +151,7 @@ export default function AppNavbar({ title }: AppNavbarProps) {
             </Link>
           )}
           <Link href="/eco-projects" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-            <Leaf size={16} className="text-slate-400" /> Projets Éco
+            <Leaf size={16} className="text-slate-400" /> Éco-Établissements
           </Link>
           {user && (
             <Link href="/messagerie" onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">

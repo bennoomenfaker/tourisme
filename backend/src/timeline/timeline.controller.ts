@@ -31,7 +31,7 @@ export class TimelineController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Post(':publicationId/timeline')
   create(
     @Param('publicationId') publicationId: string,
@@ -41,7 +41,7 @@ export class TimelineController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Put(':publicationId/timeline')
   bulkSave(
     @Param('publicationId') publicationId: string,
@@ -51,7 +51,7 @@ export class TimelineController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Patch('timeline/:entryId')
   update(
     @Param('entryId') entryId: string,
@@ -61,7 +61,7 @@ export class TimelineController {
   }
 
   @ApiBearerAuth('bearer')
-  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROJECT, Role.ADMIN)
+  @Roles(Role.ECO_TRAVELER, Role.GUIDE, Role.PROVIDER, Role.ADMIN)
   @Delete('timeline/:entryId')
   remove(@Param('entryId') entryId: string) {
     return this.service.remove(entryId);
