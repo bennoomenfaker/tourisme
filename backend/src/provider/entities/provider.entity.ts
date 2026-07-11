@@ -149,13 +149,6 @@ export class Provider {
   @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;
 
-  // ── Onboarding & Completion ──────────────────────────────────────────────
-  @Column({ type: 'int', default: 0 })
-  profile_completion!: number;
-
-  @Column({ type: 'boolean', default: false })
-  is_onboarded!: boolean;
-
   @CreateDateColumn()
   created_at!: Date;
 
