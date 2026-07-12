@@ -203,7 +203,8 @@ function BanModal({ onConfirm, onClose }: { onConfirm: (days: number | null, not
 export default function AdminPage() {
   const router = useRouter();
   const [token, setToken] = useState("");
-  const [tab, setTab] = useState<Tab>("statistics");
+  const initialTab = (typeof window !== "undefined" && window.location.hash.slice(1) as Tab) || "statistics";
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   const [stats, setStats] = useState<StatsOverview | null>(null);
   const [publications, setPublications] = useState<PendingPublication[]>([]);
@@ -476,7 +477,7 @@ export default function AdminPage() {
                   {g.tabs.map((t) => {
                     const Icon = tabIcons[t];
                     return (
-                      <button key={t} onClick={() => { setTab(t); setSearchQuery(""); setRoleFilter(""); setStatusFilter(""); }}
+                      <button key={t} onClick={() => { setTab(t); window.location.hash = t; setSearchQuery(""); setRoleFilter(""); setStatusFilter(""); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 text-left group ${
                           tab === t
                             ? `${GRADIENT_PRIMARY} text-white shadow-lg shadow-emerald-500/30`
