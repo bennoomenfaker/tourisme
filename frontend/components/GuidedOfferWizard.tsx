@@ -191,7 +191,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
   useEffect(() => {
     if (userRole === "provider" && (!userVenues || userVenues.length === 0) && token) {
-      apiFetch<any[]>("/provider/venues", { headers: { Authorization: `Bearer ${token}` } })
+      apiFetch<any[]>("/providers/venues", { headers: { Authorization: `Bearer ${token}` } })
         .then((data) => setFetchedVenues(Array.isArray(data) ? data : []))
         .catch(() => {});
     }

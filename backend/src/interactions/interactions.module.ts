@@ -9,7 +9,7 @@ import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { Provider } from '../provider/entities/provider.entity';
 import { Offer } from '../offer/entities/offer.entity';
-import { Venue } from '../project-owner/entities/project.entity';
+import { Venue } from '../provider/entities/venue.entity';
 
 @Module({
   imports: [

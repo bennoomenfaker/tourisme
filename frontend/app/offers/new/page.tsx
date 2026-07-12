@@ -44,7 +44,7 @@ export default function NewOfferPage() {
 
     const apiPath = role === "eco_traveler" ? "/eco-traveler/profile"
       : role === "guide" ? "/guide/profile"
-      : "/provider/profile";
+      : "/providers/profile";
     apiFetch<any>(apiPath, {
       headers: { Authorization: `Bearer ${tkn}` },
     })

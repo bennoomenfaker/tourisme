@@ -34,12 +34,12 @@ function AuthCallbackInner() {
     // Vérifier si l'utilisateur a déjà complété l'onboarding
     const profileApi = parsedUser.role === "eco_traveler" ? "/eco-traveler/profile"
       : parsedUser.role === "guide" ? "/guide/profile"
-      : "/provider/profile";
+      : "/providers/profile";
 
     const onboardingRoutes: Record<string, string> = {
       eco_traveler: "/onboarding/eco-traveler",
       guide: "/onboarding/guide",
-      provider: "/onboarding/project-owner",
+      provider: "/onboarding/provider",
     };
 
     ;(async () => {

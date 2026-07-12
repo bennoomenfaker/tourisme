@@ -9,7 +9,7 @@ import { Publication } from '../publication/entities/publication.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { Circuit } from '../circuit/entities/circuit.entity';
 import { GuideOffering } from '../guide/entities/guide-offering.entity';
-import { Venue } from '../project-owner/entities/project.entity';
+import { Venue } from '../provider/entities/venue.entity';
 import { User } from '../users/entities/user.entity';
 import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';

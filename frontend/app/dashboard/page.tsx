@@ -828,7 +828,7 @@ function EditVenueModal({ onClose, onSuccess, token, project }: {
     setSubmitError("");
     setLoading(true);
     try {
-      const updated = await apiFetch<Venue>(`/provider/venues/${project.id}`, {
+      const updated = await apiFetch<Venue>(`/providers/venues/${project.id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -956,7 +956,7 @@ function AddVenueModal({ onClose, onSuccess, token }: {
     try {
       const uploaded = await Promise.all(images.map((img) => uploadImage(img.file, token)));
       const ordered = uploaded.length ? [uploaded[coverIdx], ...uploaded.filter((_, i) => i !== coverIdx)] : [];
-      const created = await apiFetch<Venue>("/provider/venues", {
+      const created = await apiFetch<Venue>("/providers/venues", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -1920,10 +1920,10 @@ export default function DashboardPage() {
 
         const apiPath = userRole === "eco_traveler" ? "/eco-traveler/profile"
           : userRole === "guide" ? "/guide/profile"
-          : "/provider/profile";
+          : "/providers/profile";
         const onboardingPath = userRole === "eco_traveler" ? "/onboarding/eco-traveler"
           : userRole === "guide" ? "/onboarding/guide"
-          : "/onboarding/project-owner";
+          : "/onboarding/provider";
 
         try {
           const p = await apiFetch<AnyProfile>(apiPath, { headers: { Authorization: `Bearer ${tkn}` } });
@@ -2041,7 +2041,7 @@ export default function DashboardPage() {
   async function handleDeleteVenue(venueId: string) {
     if (!confirm("Supprimer cet établissement ?")) return;
     try {
-      await apiFetch(`/provider/venues/${venueId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      await apiFetch(`/providers/venues/${venueId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       setProfile((prev) => prev ? { ...prev, venues: prev.venues?.filter((p) => p.id !== venueId) } : prev);
     } catch { alert("Erreur lors de la suppression."); }
   }
@@ -2114,11 +2114,11 @@ export default function DashboardPage() {
         if (role === "eco_traveler") {
           const [guides, owners] = await Promise.all([
             apiFetch<SearchResult[]>(`/guide/public/search?q=${enc}`).catch(() => []),
-            apiFetch<SearchResult[]>(`/provider/profiles/public/search?q=${enc}`).catch(() => []),
+            apiFetch<SearchResult[]>(`/providers/profiles/public/search?q=${enc}`).catch(() => []),
           ]);
           setSearchRes([...guides.map((g) => ({ ...g, _type: "guide" })), ...owners.map((o) => ({ ...o, _type: "provider" }))]);
         } else if (role === "guide") {
-          const owners = await apiFetch<SearchResult[]>(`/provider/profiles/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []);
+          const owners = await apiFetch<SearchResult[]>(`/providers/profiles/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []);
           setSearchRes(owners.map((o) => ({ ...o, _type: "provider" })));
         } else {
           const guides = await apiFetch<SearchResult[]>(`/guide/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []);

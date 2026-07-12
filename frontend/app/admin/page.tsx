@@ -244,7 +244,7 @@ export default function AdminPage() {
     const tkn = localStorage.getItem("access_token");
     if (!stored || !tkn) { router.push("/auth/login"); return; }
     const { role } = JSON.parse(stored) as { role: string };
-    if (role !== "admin") { router.push("/auth/login"); return; }
+    if (role !== "admin") { router.push(role === "provider" ? "/dashboard#tableau de bord" : "/auth/login"); return; }
     setToken(tkn);
   }, [router]);
 
@@ -808,6 +808,7 @@ export default function AdminPage() {
                             }`}>{b.status}</span>
                             <span className="text-xs text-slate-400 font-bold">{new Date(b.created_at).toLocaleDateString("fr-FR")}</span>
                           </div>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -901,6 +902,7 @@ export default function AdminPage() {
                               {log.reason && <p className="text-xs text-slate-400 font-bold mt-0.5">Motif : {log.reason}</p>}
                             </div>
                             <span className="text-xs text-slate-400 font-bold shrink-0">{new Date(log.created_at).toLocaleString("fr-FR")}</span>
+                          </div>
                           </div>
                         ))}
                       </div>

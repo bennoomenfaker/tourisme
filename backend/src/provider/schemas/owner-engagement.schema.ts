@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type ProjectEngagementDocument = ProjectEngagement & Document;
+export type OwnerEngagementDocument = OwnerEngagement & Document;
 
 @Schema({ collection: 'project_engagement', timestamps: true })
-export class ProjectEngagement {
+export class OwnerEngagement {
   @Prop({ required: true, index: true })
   user_id!: string;
 
@@ -27,5 +27,5 @@ export class ProjectEngagement {
   projects_count!: number;
 }
 
-export const ProjectEngagementSchema =
-  SchemaFactory.createForClass(ProjectEngagement);
+export const OwnerEngagementSchema =
+  SchemaFactory.createForClass(OwnerEngagement);

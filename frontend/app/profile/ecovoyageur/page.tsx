@@ -342,7 +342,7 @@ export default function EcoTravelerProfilePage() {
       Promise.all([
         apiFetch<Traveler[]>(`/eco-traveler/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
         apiFetch<AnyResult[]>(`/guide/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
-        apiFetch<AnyResult[]>(`/provider/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
+        apiFetch<AnyResult[]>(`/providers/public/search?q=${enc}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
       ]).then(([travelers, guides, owners]) => {
         setAllResults([
           ...travelers.map((t) => ({ user_id: t.user_id, full_name: t.full_name, photo: t.photo, _type: "traveler" as const, sub: t.country })),

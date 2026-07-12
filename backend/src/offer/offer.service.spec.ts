@@ -10,7 +10,7 @@ import { OfferItemPrice } from './entities/offer-item-price.entity';
 import { OfferItemCapacity } from './entities/offer-item-capacity.entity';
 import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
 import { OfferItemSession } from './entities/offer-item-session.entity';
-import { Venue } from '../project-owner/entities/project.entity';
+import { Venue } from '../provider/entities/venue.entity';
 import { RedisService } from '../redis/redis.service';
 
 describe('OfferService status transitions', () => {

@@ -444,7 +444,7 @@ export default function ProjectOwnerProfilePage() {
       setToken(tkn);
       try {
         const [p, myOffers] = await Promise.all([
-          apiFetch<OwnerProfile>("/provider/profile", { headers: { Authorization: `Bearer ${tkn}` } }),
+          apiFetch<OwnerProfile>("/providers/profile", { headers: { Authorization: `Bearer ${tkn}` } }),
           apiFetch<Offer[]>("/offers/mine", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => [] as Offer[]),
         ]);
         setProfile(p);
@@ -726,7 +726,7 @@ export default function ProjectOwnerProfilePage() {
   async function submitQuestionnaire() {
     setQSaving(true);
     try {
-      const updated = await apiFetch<Venue>(`/provider/venues/${qProjectId}/sustainability`, {
+      const updated = await apiFetch<Venue>(`/providers/venues/${qProjectId}/sustainability`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({ score: qScore }),
@@ -807,7 +807,7 @@ export default function ProjectOwnerProfilePage() {
         const cover = valid[projCoverIdx] ?? valid[0];
         uploadedPhotos = cover ? [cover, ...valid.filter((u) => u !== cover)] : valid;
       }
-      const created = await apiFetch<Venue>("/provider/venues", {
+      const created = await apiFetch<Venue>("/providers/venues", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -887,7 +887,7 @@ export default function ProjectOwnerProfilePage() {
       )).filter((u): u is string => u !== null);
       const cover = finalImgs[projEditCoverIdx] ?? finalImgs[0];
       const ordered = cover ? [cover, ...finalImgs.filter((u) => u !== cover)] : finalImgs;
-      const updated = await apiFetch<Venue>(`/provider/venues/${viewVenue!.id}`, {
+      const updated = await apiFetch<Venue>(`/providers/venues/${viewVenue!.id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -924,7 +924,7 @@ export default function ProjectOwnerProfilePage() {
     if (!confirm(`Supprimer le projet "${viewVenue.name}" ? Cette action est irréversible.`)) return;
     setProjDeleting(true);
     try {
-      await apiFetch(`/provider/venues/${viewVenue.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      await apiFetch(`/providers/venues/${viewVenue.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       setProfile((prev) => prev ? { ...prev, venues: prev.venues.filter((p) => p.id !== viewVenue.id) } : prev);
       closeProjDetail();
     } catch (err: any) {
@@ -975,7 +975,7 @@ export default function ProjectOwnerProfilePage() {
       if (editProfileCover?.file) coverUrl = await uploadImage(editProfileCover.file);
       else if (editProfileCover === null) coverUrl = undefined;
 
-      const updated = await apiFetch<OwnerProfile>("/provider/profile", {
+      const updated = await apiFetch<OwnerProfile>("/providers/profile", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({

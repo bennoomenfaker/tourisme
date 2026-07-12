@@ -310,7 +310,7 @@ export default function PublicOwnerProfile() {
     try { const payload = JSON.parse(atob(tkn.split(".")[1])); role = payload.role ?? ""; setUserRole(role); } catch { setUserRole(""); }
 
     Promise.all([
-      apiFetch<OwnerProfile>(`/provider/public/${userId}`),
+      apiFetch<OwnerProfile>(`/providers/public/${userId}`),
       apiFetch<{ following: boolean; followId: string | null }>(`/follows/status/${userId}`, { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => ({ following: false, followId: null })),
     ]).then(([p, status]) => {
       setProfile(p);

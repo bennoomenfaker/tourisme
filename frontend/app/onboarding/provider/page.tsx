@@ -330,7 +330,7 @@ export default function ProjectOwnerOnboardingPage() {
       setLoading(true);
 
       if (step === 1) {
-        await apiFetch("/provider/profile", {
+        await apiFetch("/providers/profile", {
           method: "POST",
           headers: { Authorization: `Bearer ${getToken()}` },
           body: JSON.stringify({
@@ -342,7 +342,7 @@ export default function ProjectOwnerOnboardingPage() {
           }),
         });
       } else if (step === 2) {
-        await apiFetch("/provider/profile", {
+        await apiFetch("/providers/profile", {
           method: "POST",
           headers: { Authorization: `Bearer ${getToken()}` },
           body: JSON.stringify({
@@ -365,7 +365,7 @@ export default function ProjectOwnerOnboardingPage() {
           }),
         });
 
-        await apiFetch("/provider/onboarded", {
+        await apiFetch("/providers/onboarded", {
           method: "POST",
           headers: { Authorization: `Bearer ${getToken()}` },
         });

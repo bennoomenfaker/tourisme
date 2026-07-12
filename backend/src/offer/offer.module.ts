@@ -7,7 +7,7 @@ import { OfferItemPrice } from './entities/offer-item-price.entity';
 import { OfferItemAvailabilityRule } from './entities/offer-item-availability-rule.entity';
 import { OfferItemCapacity } from './entities/offer-item-capacity.entity';
 import { OfferItemSession } from './entities/offer-item-session.entity';
-import { Venue } from '../project-owner/entities/project.entity';
+import { Venue } from '../provider/entities/venue.entity';
 import { Provider } from '../provider/entities/provider.entity';
 import { Organization } from '../organization/entities/organization.entity';
 import { ProviderActivity } from '../provider-activity/entities/provider-activity.entity';

@@ -171,7 +171,7 @@ function MessagerieContent() {
           ? apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/eco-traveler/search?q=${q}`, { headers }).catch(() => [])
           : Promise.resolve([]),
         apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/guide/public/search?q=${q}`, { headers }).catch(() => []),
-        apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/provider/public/search?q=${q}`, { headers }).catch(() => []),
+        apiFetch<{ user_id: string; full_name: string; photo: string | null }[]>(`/providers/public/search?q=${q}`, { headers }).catch(() => []),
       ]);
       const connIds = new Set(connections.map((c) => c.user_id));
       const convIds = new Set(conversations.map((c) => c.other_user.user_id));

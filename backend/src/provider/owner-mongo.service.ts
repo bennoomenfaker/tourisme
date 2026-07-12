@@ -2,15 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
-  ProjectEngagement,
-  ProjectEngagementDocument,
-} from './schemas/project-engagement.schema';
+  OwnerEngagement,
+  OwnerEngagementDocument,
+} from './schemas/owner-engagement.schema';
 
 @Injectable()
-export class ProjectOwnerMongoService {
+export class OwnerMongoService {
   constructor(
-    @InjectModel(ProjectEngagement.name)
-    private readonly engagementModel: Model<ProjectEngagementDocument>,
+    @InjectModel(OwnerEngagement.name)
+    private readonly engagementModel: Model<OwnerEngagementDocument>,
   ) {}
 
   async getEngagement(userId: string) {

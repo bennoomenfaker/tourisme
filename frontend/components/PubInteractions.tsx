@@ -305,7 +305,7 @@ export default function PubInteractions({ pubId, token, viewerId, shareUrl, pubT
             ? apiFetch<any[]>(`/eco-traveler/search?q=${q}`, { headers }).catch(() => [])
             : Promise.resolve([]),
           apiFetch<any[]>(`/guide/public/search?q=${q}`, { headers }).catch(() => []),
-          apiFetch<any[]>(`/provider/profiles/public/search?q=${q}`, { headers }).catch(() => []),
+          apiFetch<any[]>(`/providers/public/search?q=${q}`, { headers }).catch(() => []),
         ]);
         const raw: Contact[] = [
           ...travelers.map((u: any) => ({ user_id: u.user_id, full_name: u.full_name, photo: u.photo, role: "eco_traveler" })),

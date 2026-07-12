@@ -961,7 +961,7 @@ export default function DestinationsPage() {
   useEffect(() => {
     Promise.all([
       apiFetch<Offer[]>("/offers"),
-      apiFetch<Venue[]>("/provider/venues/public"),
+      apiFetch<Venue[]>("/providers/venues/public"),
       apiFetch<Experience[]>("/publications/experiences"),
     ])
       .then(([o, p, e]) => { setOffers(o); setVenues(p); setExperiences(e); })

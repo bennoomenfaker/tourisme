@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Venue } from '../../project-owner/entities/project.entity';
+import { Venue } from '../../provider/entities/venue.entity';
 import { OfferCategory } from './offer-category.entity';
 import { OfferItem } from './offer-item.entity';
 

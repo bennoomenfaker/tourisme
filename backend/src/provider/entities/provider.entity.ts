@@ -81,7 +81,13 @@ export class Provider {
   @Column({ type: 'varchar', nullable: true })
   instagram!: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  tiktok!: string | null;
+
   // ── Localisation ──────────────────────────────────────────────────────────
+  @Column({ type: 'varchar', nullable: true })
+  city!: string | null;
+
   @Column({ type: 'varchar', nullable: true })
   region!: string | null;
 
@@ -145,6 +151,12 @@ export class Provider {
   // pending | active | rejected
   @Column({ type: 'varchar', default: 'pending' })
   status!: string;
+
+  @Column({ type: 'int', default: 0 })
+  profile_completion!: number;
+
+  @Column({ type: 'boolean', default: false })
+  is_onboarded!: boolean;
 
   @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;

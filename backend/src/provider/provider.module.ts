@@ -2,25 +2,26 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Provider } from './entities/provider.entity';
+import { Venue } from './entities/venue.entity';
+import { Offer } from '../offer/entities/offer.entity';
 import { ProviderService } from './provider.service';
 import { ProviderController } from './provider.controller';
-import { Venue } from '../project-owner/entities/project.entity';
-import { Offer } from '../offer/entities/offer.entity';
 import {
-  ProjectEngagement,
-  ProjectEngagementSchema,
-} from '../project-owner/schemas/project-engagement.schema';
+  OwnerEngagement,
+  OwnerEngagementSchema,
+} from './schemas/owner-engagement.schema';
 import { ProviderMongoService } from './provider-mongo.service';
+import { OwnerMongoService } from './owner-mongo.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Provider, Venue, Offer]),
     MongooseModule.forFeature([
-      { name: ProjectEngagement.name, schema: ProjectEngagementSchema },
+      { name: OwnerEngagement.name, schema: OwnerEngagementSchema },
     ]),
   ],
-  providers: [ProviderService, ProviderMongoService],
+  providers: [ProviderService, ProviderMongoService, OwnerMongoService],
   controllers: [ProviderController],
-  exports: [ProviderService, ProviderMongoService],
+  exports: [ProviderService, ProviderMongoService, OwnerMongoService],
 })
 export class ProviderModule {}

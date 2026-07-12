@@ -29,7 +29,7 @@ export default function ProviderAnalytics({ token }: { token: string }) {
     async function load() {
       try {
         const [offers, incoming] = await Promise.all([
-          apiFetch<any[]>("/provider/offers", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
+          apiFetch<any[]>("/providers/offers", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
           apiFetch<any[]>("/circuits/reservations/incoming", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
         ]);
 

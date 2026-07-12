@@ -338,7 +338,7 @@ export default function GuideProfilePage() {
     if (!netSearch.trim() || !token) { setNetResults([]); return; }
     const t = setTimeout(() => {
       setNetLoading(true);
-      apiFetch<any[]>(`/provider/public/search?q=${encodeURIComponent(netSearch)}`, { headers: { Authorization: `Bearer ${token}` } })
+      apiFetch<any[]>(`/providers/public/search?q=${encodeURIComponent(netSearch)}`, { headers: { Authorization: `Bearer ${token}` } })
         .then((r) => setNetResults(r.map((o) => ({ user_id: o.user_id, full_name: o.full_name, photo: o.photo, _type: "provider", sub: o.organization ?? null }))))
         .catch(() => setNetResults([]))
         .finally(() => setNetLoading(false));
