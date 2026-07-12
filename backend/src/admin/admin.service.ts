@@ -333,7 +333,7 @@ export class AdminService {
       }),
     );
 
-    return { bookings: enriched, total, page, limit, pages: Math.ceil(total / limit) };
+    return { reservations: enriched, total, page, limit, pages: Math.ceil(total / limit) };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

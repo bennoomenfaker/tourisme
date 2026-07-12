@@ -26,7 +26,7 @@ const MapView = dynamic(() => import("@/components/map/MapView"), {
 type Tab =
   | "statistics" | "publications" | "offers" | "projects" | "circuits"
   | "guide-offerings" | "reports" | "banned" | "users" | "providers"
-  | "bookings" | "reviews" | "sustainability" | "audit-logs";
+  | "reservations" | "reviews" | "sustainability" | "audit-logs";
 
 type StatsOverview = {
   users: { total: number; by_role: Record<string, number>; recent: any[] };
@@ -36,7 +36,7 @@ type StatsOverview = {
   circuits: { total: number; by_status: Record<string, number> };
   venues: { total: number; by_status: Record<string, number> };
   guide_offerings: { total: number; by_status: Record<string, number> };
-  bookings: { total: number; by_status: Record<string, number>; today: number; this_month: number; revenue_today: number; revenue_this_month: number };
+  reservations: { total: number; by_status: Record<string, number>; today: number; this_month: number; revenue_today: number; revenue_this_month: number };
   reviews: { total: number };
   suspended_providers: number;
   pending_moderation: number;
@@ -51,7 +51,7 @@ type PendingGuideOffering = { id: string; title: string; description: string | n
 
 type UserList = { id: string; email: string; role: string; status: string; created_at: string; ban_until: string | null; full_name: string | null; photo: string | null };
 type ProviderList = { user_id: string; full_name: string; organization: string | null; city: string | null; status: string; sustainability_score: number | null; venues_count: number; offers_count: number; bookings_count: number; revenue: number; created_at: string };
-type BookingList = { id: string; booking_ref: string; status: string; total_price: number; currency: string; created_at: string; offer_title: string | null; traveler_email: string | null };
+type BookingList = { id: string; reservation_ref: string; status: string; total_price: number; currency: string; created_at: string; offer_title: string | null; traveler_email: string | null };
 type ReviewList = { id: string; author_id: string; author_email: string | null; target_type: string; target_id: string; rating: number; comment: string | null; created_at: string };
 type SustainabilityStats = { offers_with_score: number; avg_offer_score: string; top_providers: any[]; top_venues: any[]; total_carbon_kg: string };
 type AuditLog = { id: string; admin_id: string; entity_type: string; entity_id: string; action: string; reason: string | null; created_at: string };
@@ -286,12 +286,12 @@ export default function AdminPage() {
         if (searchQuery) params.set("search", searchQuery);
         const r = await apiFetch<{ providers: ProviderList[]; total: number; page: number; pages: number }>(`/admin/providers?${params}`, { headers: h });
         setProviders(r.providers); setProvidersMeta({ total: r.total, page: r.page, pages: r.pages });
-      } else if (t === "bookings") {
+      } else if (t === "reservations") {
         const params = new URLSearchParams({ page: String(page), limit: "15" });
         if (statusFilter) params.set("status", statusFilter);
         if (searchQuery) params.set("search", searchQuery);
-        const r = await apiFetch<{ bookings: BookingList[]; total: number; page: number; pages: number }>(`/admin/bookings?${params}`, { headers: h });
-        setBookings(r.bookings); setBookingsMeta({ total: r.total, page: r.page, pages: r.pages });
+        const r = await apiFetch<{ reservations: BookingList[]; total: number; page: number; pages: number }>(`/admin/reservations?${params}`, { headers: h });
+        setBookings(r.reservations); setBookingsMeta({ total: r.total, page: r.page, pages: r.pages });
       } else if (t === "reviews") {
         const r = await apiFetch<{ reviews: ReviewList[]; total: number; page: number; pages: number }>(`/admin/reviews?page=${page}&limit=15`, { headers: h });
         setReviews(r.reviews); setReviewsMeta({ total: r.total, page: r.page, pages: r.pages });
@@ -421,21 +421,21 @@ export default function AdminPage() {
   const tabLabels: Record<Tab, string> = {
     statistics: "Dashboard", publications: "Lieux", offers: "Offres", projects: "Établissements",
     circuits: "Circuits", "guide-offerings": "Offres Guide", reports: "Signalements", banned: "Bannis",
-    users: "Utilisateurs", providers: "Providers", bookings: "Réservations", reviews: "Avis",
+    users: "Utilisateurs", providers: "Providers", reservations: "Réservations", reviews: "Avis",
     sustainability: "Durabilité", "audit-logs": "Journal d'audit",
   };
 
   const tabIcons: Record<Tab, any> = {
     statistics: BarChart3, publications: MapPin, offers: Briefcase, projects: MapPin,
     circuits: CircuitBoard, "guide-offerings": Users, reports: Flag, banned: Ban,
-    users: Users, providers: Briefcase, bookings: CalendarCheck, reviews: Star,
+    users: Users, providers: Briefcase, reservations: CalendarCheck, reviews: Star,
     sustainability: LeafIcon, "audit-logs": ShieldCheck,
   };
 
   const menuGroups = [
     { label: "Supervision", tabs: ["statistics" as Tab, "users" as Tab, "providers" as Tab] },
     { label: "Contenu", tabs: ["publications" as Tab, "offers" as Tab, "projects" as Tab, "circuits" as Tab, "guide-offerings" as Tab] },
-    { label: "Opérations", tabs: ["bookings" as Tab, "reviews" as Tab, "reports" as Tab, "banned" as Tab] },
+    { label: "Opérations", tabs: ["reservations" as Tab, "reviews" as Tab, "reports" as Tab, "banned" as Tab] },
     { label: "Insights", tabs: ["sustainability" as Tab, "audit-logs" as Tab] },
   ];
 
@@ -511,7 +511,7 @@ export default function AdminPage() {
                 {tab === "statistics" && stats && (() => {
                   const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
                   const roleData = Object.entries(stats.users.by_role).map(([role, count]) => ({ name: role.replace("_", " "), value: Number(count) }));
-                  const bookingStatusData = Object.entries(stats.bookings.by_status).map(([status, count]) => ({ name: status, count: Number(count) }));
+                  const bookingStatusData = Object.entries(stats.reservations.by_status).map(([status, count]) => ({ name: status, count: Number(count) }));
                   const moderationData = [
                     { name: "Publications", value: stats.moderation.pending_publications },
                     { name: "Offres", value: stats.moderation.pending_offers },
@@ -520,8 +520,8 @@ export default function AdminPage() {
                     { name: "Offres Guide", value: stats.moderation.pending_guide_offerings },
                   ].filter((d) => d.value > 0);
                   const revenueData = [
-                    { name: "Aujourd'hui", revenue: stats.bookings.revenue_today, reservations: stats.bookings.today },
-                    { name: "Ce mois", revenue: stats.bookings.revenue_this_month, reservations: stats.bookings.this_month },
+                    { name: "Aujourd'hui", revenue: stats.reservations.revenue_today, reservations: stats.reservations.today },
+                    { name: "Ce mois", revenue: stats.reservations.revenue_this_month, reservations: stats.reservations.this_month },
                   ];
                   return (
                   <div className="space-y-6">
@@ -530,20 +530,20 @@ export default function AdminPage() {
                       <StatCard icon={Users} label="Utilisateurs" value={stats.users.total} gradient={GRADIENT_BLUE} />
                       <StatCard icon={MapPin} label="Établissements" value={stats.venues.total} gradient={GRADIENT_PRIMARY} />
                       <StatCard icon={Briefcase} label="Offres" value={stats.offers.total} gradient={GRADIENT_AMBER} />
-                      <StatCard icon={CalendarCheck} label="Réservations" value={stats.bookings.total} gradient={GRADIENT_PURPLE} />
+                      <StatCard icon={CalendarCheck} label="Réservations" value={stats.reservations.total} gradient={GRADIENT_PURPLE} />
                     </div>
                     {/* KPIs Row 2 */}
                     <div className="grid grid-cols-4 gap-5">
                       <StatCard icon={CircuitBoard} label="Circuits" value={stats.circuits.total} gradient={GRADIENT_TEAL} />
                       <StatCard icon={BookOpen} label="Offres Guide" value={stats.guide_offerings.total} gradient={GRADIENT_PINK} />
                       <StatCard icon={MessageSquare} label="Avis" value={stats.reviews.total} gradient={GRADIENT_SLATE} />
-                      <StatCard icon={TrendingUp} label="Revenu ce mois" value={`${stats.bookings.revenue_this_month.toLocaleString("fr-FR")} TND`} gradient={GRADIENT_PRIMARY} />
+                      <StatCard icon={TrendingUp} label="Revenu ce mois" value={`${stats.reservations.revenue_this_month.toLocaleString("fr-FR")} TND`} gradient={GRADIENT_PRIMARY} />
                     </div>
                     {/* KPIs Row 3 */}
                     <div className="grid grid-cols-4 gap-5">
-                      <StatCard icon={Zap} label="Résa. aujourd'hui" value={stats.bookings.today} gradient={GRADIENT_BLUE} />
-                      <StatCard icon={CalendarCheck} label="Résa. ce mois" value={stats.bookings.this_month} gradient={GRADIENT_PURPLE} />
-                      <StatCard icon={TrendingUp} label="CA aujourd'hui" value={`${stats.bookings.revenue_today.toLocaleString("fr-FR")} TND`} gradient={GRADIENT_AMBER} />
+                      <StatCard icon={Zap} label="Résa. aujourd'hui" value={stats.reservations.today} gradient={GRADIENT_BLUE} />
+                      <StatCard icon={CalendarCheck} label="Résa. ce mois" value={stats.reservations.this_month} gradient={GRADIENT_PURPLE} />
+                      <StatCard icon={TrendingUp} label="CA aujourd'hui" value={`${stats.reservations.revenue_today.toLocaleString("fr-FR")} TND`} gradient={GRADIENT_AMBER} />
                       <StatCard icon={LeafIcon} label="Modération" value={stats.pending_moderation} gradient={GRADIENT_RED} />
                     </div>
 
@@ -740,17 +740,17 @@ export default function AdminPage() {
                 {/* ═══════════════════════════════════════════════════════════ */}
                 {/* BOOKINGS */}
                 {/* ═══════════════════════════════════════════════════════════ */}
-                {tab === "bookings" && (
+                {tab === "reservations" && (
                   <div className="space-y-5">
                     <div className={`${CARD} p-5 flex items-center gap-4`}>
                       <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all" placeholder="Rechercher par référence…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchTabData("bookings")} />
+                        <input className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all" placeholder="Rechercher par référence…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchTabData("reservations")} />
                       </div>
                       <select className="px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         <option value="">Tous les statuts</option><option value="pending">En attente</option><option value="confirmed">Confirmée</option><option value="completed">Terminée</option><option value="cancelled">Annulée</option>
                       </select>
-                      <button onClick={() => fetchTabData("bookings")} className={`px-6 py-3 rounded-2xl text-sm font-bold text-white ${GRADIENT_PRIMARY} shadow-lg shadow-emerald-500/25 transition-all`}>Rechercher</button>
+                      <button onClick={() => fetchTabData("reservations")} className={`px-6 py-3 rounded-2xl text-sm font-bold text-white ${GRADIENT_PRIMARY} shadow-lg shadow-emerald-500/25 transition-all`}>Rechercher</button>
                     </div>
                     <p className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.15em]">{bookingsMeta.total} réservations</p>
                     {bookings.length === 0 ? <Empty label="Aucune réservation" /> : (
@@ -759,7 +759,7 @@ export default function AdminPage() {
                           <div key={b.id} className={`${CARD} ${CARD_HOVER} p-5 flex items-center gap-5`}>
                             <div className="w-11 h-11 rounded-2xl bg-purple-50 flex items-center justify-center border border-purple-100"><CalendarCheck size={18} className="text-purple-500" /></div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-extrabold text-slate-900">{b.booking_ref}</p>
+                              <p className="text-sm font-extrabold text-slate-900">{b.reservation_ref}</p>
                               <p className="text-xs text-slate-400 font-bold">{b.offer_title ?? "—"} · {b.traveler_email ?? "—"}</p>
                             </div>
                             <span className="text-sm font-extrabold text-emerald-600">{b.total_price} {b.currency}</span>
@@ -774,7 +774,7 @@ export default function AdminPage() {
                         ))}
                       </div>
                     )}
-                    <Pagination page={bookingsMeta.page} pages={bookingsMeta.pages} onChange={(p) => fetchTabData("bookings", p)} />
+                    <Pagination page={bookingsMeta.page} pages={bookingsMeta.pages} onChange={(p) => fetchTabData("reservations", p)} />
                   </div>
                 )}
 
