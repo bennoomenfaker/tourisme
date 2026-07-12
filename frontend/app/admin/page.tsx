@@ -101,13 +101,13 @@ function Empty({ label }: { label: string }) {
 
 function StatCard({ icon: Icon, label, value, gradient, trend }: { icon: any; label: string; value: string | number; gradient: string; trend?: string }) {
   return (
-    <div className={`${CARD} ${CARD_HOVER} p-5 relative overflow-hidden group cursor-default`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 ${gradient} opacity-10 rounded-bl-[60px] transition-all duration-500 group-hover:opacity-20 group-hover:scale-110`} />
-      <div className={`w-10 h-10 rounded-2xl ${gradient} flex items-center justify-center mb-3 shadow-lg shadow-black/10`}>
-        <Icon size={18} className="text-white" />
+    <div className={`${CARD} ${CARD_HOVER} p-3 md:p-5 relative overflow-hidden group cursor-default`}>
+      <div className={`absolute top-0 right-0 w-20 h-20 md:w-24 md:h-24 ${gradient} opacity-10 rounded-bl-[60px] transition-all duration-500 group-hover:opacity-20 group-hover:scale-110`} />
+      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-2xl ${gradient} flex items-center justify-center mb-2 md:mb-3 shadow-lg shadow-black/10`}>
+        <Icon size={16} className="text-white" />
       </div>
-      <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mb-1">{label}</p>
-      <p className="text-3xl font-extrabold text-slate-900 tracking-tight">{value}</p>
+      <p className="text-[10px] md:text-[11px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mb-1">{label}</p>
+      <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">{value}</p>
       {trend && <p className="text-xs font-bold text-emerald-500 mt-1">{trend}</p>}
     </div>
   );
@@ -227,6 +227,7 @@ export default function AdminPage() {
   const [auditMeta, setAuditMeta] = useState({ total: 0, page: 1, pages: 1 });
 
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ type: string; id: string } | null>(null);
   const [resolveTarget, setResolveTarget] = useState<Report | null>(null);
@@ -450,26 +451,44 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
       {/* Header */}
       <header className={`${GLASS} sticky top-0 z-30 border-b border-slate-200/50`}>
-        <div className="max-w-[1600px] mx-auto px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`w-11 h-11 ${GRADIENT_PRIMARY} rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30`}>
-              <Leaf className="w-5 h-5 text-white" />
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-3 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className={`w-9 h-9 md:w-11 md:h-11 ${GRADIENT_PRIMARY} rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30`}>
+              <Leaf className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </div>
             <div>
-              <p className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-[0.2em]">Administration</p>
-              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Supervision de la plateforme</h1>
+              <p className="text-[9px] md:text-[10px] font-extrabold text-emerald-600 uppercase tracking-[0.2em]">Administration</p>
+              <h1 className="text-base md:text-xl font-extrabold text-slate-900 tracking-tight">Supervision</h1>
             </div>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold text-slate-600 hover:bg-white/80 hover:shadow-lg hover:shadow-slate-200/50 border border-transparent hover:border-slate-200/80 transition-all duration-300">
-            <LogOut className="w-4 h-4" /> Déconnexion
+          <button onClick={handleLogout} className="flex items-center gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm font-bold text-slate-600 hover:bg-white/80 hover:shadow-lg hover:shadow-slate-200/50 border border-transparent hover:border-slate-200/80 transition-all duration-300">
+            <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Déconnexion</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto px-8 py-8">
-        <div className="flex gap-8">
-          {/* Sidebar */}
-          <nav className="w-60 shrink-0 space-y-7">
+      <main className="max-w-[1600px] mx-auto px-4 md:px-8 py-4 md:py-8">
+        {/* Mobile tab bar */}
+        <div className="md:hidden mb-4 flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {menuGroups.map((g) =>
+            g.tabs.map((t) => {
+              const Icon = tabIcons[t];
+              return (
+                <button key={t} onClick={() => { setTab(t); window.location.hash = t; setSearchQuery(""); setRoleFilter(""); setStatusFilter(""); }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
+                    tab === t ? `${GRADIENT_PRIMARY} text-white shadow-lg shadow-emerald-500/30` : "bg-white/80 text-slate-500 border border-slate-200/50"
+                  }`}>
+                  <Icon size={14} />
+                  <span>{tabLabels[t]}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        <div className="flex gap-6 md:gap-8">
+          {/* Sidebar — desktop only */}
+          <nav className="hidden md:block w-60 shrink-0 space-y-7">
             {menuGroups.map((g) => (
               <div key={g.label}>
                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mb-3 px-4">{g.label}</p>
@@ -527,21 +546,21 @@ export default function AdminPage() {
                   return (
                   <div className="space-y-6">
                     {/* KPIs Row 1 */}
-                    <div className="grid grid-cols-4 gap-5">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
                       <StatCard icon={Users} label="Utilisateurs" value={stats.users.total} gradient={GRADIENT_BLUE} />
                       <StatCard icon={MapPin} label="Établissements" value={stats.venues.total} gradient={GRADIENT_PRIMARY} />
                       <StatCard icon={Briefcase} label="Offres" value={stats.offers.total} gradient={GRADIENT_AMBER} />
                       <StatCard icon={CalendarCheck} label="Réservations" value={stats.reservations.total} gradient={GRADIENT_PURPLE} />
                     </div>
                     {/* KPIs Row 2 */}
-                    <div className="grid grid-cols-4 gap-5">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
                       <StatCard icon={CircuitBoard} label="Circuits" value={stats.circuits.total} gradient={GRADIENT_TEAL} />
                       <StatCard icon={BookOpen} label="Offres Guide" value={stats.guide_offerings.total} gradient={GRADIENT_PINK} />
                       <StatCard icon={MessageSquare} label="Avis" value={stats.reviews.total} gradient={GRADIENT_SLATE} />
                       <StatCard icon={TrendingUp} label="Revenu ce mois" value={`${stats.reservations.revenue_this_month.toLocaleString("fr-FR")} TND`} gradient={GRADIENT_PRIMARY} />
                     </div>
                     {/* KPIs Row 3 */}
-                    <div className="grid grid-cols-4 gap-5">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
                       <StatCard icon={Zap} label="Résa. aujourd'hui" value={stats.reservations.today} gradient={GRADIENT_BLUE} />
                       <StatCard icon={CalendarCheck} label="Résa. ce mois" value={stats.reservations.this_month} gradient={GRADIENT_PURPLE} />
                       <StatCard icon={TrendingUp} label="CA aujourd'hui" value={`${stats.reservations.revenue_today.toLocaleString("fr-FR")} TND`} gradient={GRADIENT_AMBER} />
@@ -549,7 +568,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Charts */}
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                       <div className={`${CARD} p-7`}>
                         <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-[0.15em] mb-5">Répartition des utilisateurs</h3>
                         <ResponsiveContainer width="100%" height={280}>
@@ -620,16 +639,20 @@ export default function AdminPage() {
                       <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-[0.15em] mb-5">Derniers inscrits</h3>
                       <div className="space-y-3">
                         {stats.users.recent.map((u) => (
-                          <div key={u.id} className="flex items-center gap-4 bg-slate-50/50 rounded-2xl p-4 hover:bg-white hover:shadow-md transition-all duration-300 group">
-                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-primary/20 transition-colors">
-                              <span className="material-symbols-outlined text-slate-400 text-sm group-hover:text-primary transition-colors">person</span>
+                          <div key={u.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-slate-50/50 rounded-2xl p-3 md:p-4 hover:bg-white hover:shadow-md transition-all duration-300 group">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-9 h-9 md:w-11 md:h-11 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-primary/20 transition-colors shrink-0">
+                                <span className="material-symbols-outlined text-slate-400 text-sm group-hover:text-primary transition-colors">person</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-extrabold text-slate-900 truncate">{u.email}</p>
+                                <p className="text-xs text-slate-400 font-bold capitalize">{u.role.replace("_", " ")}</p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-extrabold text-slate-900 truncate">{u.email}</p>
-                              <p className="text-xs text-slate-400 font-bold capitalize">{u.role.replace("_", " ")}</p>
+                            <div className="flex items-center gap-2 pl-12 sm:pl-0">
+                              <span className={`text-[11px] font-extrabold px-3 py-1 rounded-xl ${u.status === "banned" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}>{u.status}</span>
+                              <span className="text-xs text-slate-400 font-bold">{new Date(u.created_at).toLocaleDateString("fr-FR")}</span>
                             </div>
-                            <span className={`text-[11px] font-extrabold px-3 py-1 rounded-xl ${u.status === "banned" ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}>{u.status}</span>
-                            <span className="text-xs text-slate-400 font-bold">{new Date(u.created_at).toLocaleDateString("fr-FR")}</span>
                           </div>
                         ))}
                       </div>
@@ -643,35 +666,40 @@ export default function AdminPage() {
                 {/* ═══════════════════════════════════════════════════════════ */}
                 {tab === "users" && (
                   <div className="space-y-5">
-                    <div className={`${CARD} p-5 flex items-center gap-4`}>
+                    <div className={`${CARD} p-4 md:p-5 flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4`}>
                       <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all" placeholder="Rechercher par email…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchTabData("users")} />
                       </div>
-                      <select className="px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-                        <option value="">Tous les rôles</option><option value="eco_traveler">Éco-Voyageur</option><option value="provider">Provider</option><option value="guide">Guide</option>
-                      </select>
-                      <select className="px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="">Tous les statuts</option><option value="active">Actif</option><option value="banned">Banni</option><option value="pending">En attente</option>
-                      </select>
+                      <div className="flex gap-3">
+                        <select className="flex-1 md:flex-none px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                          <option value="">Tous les rôles</option><option value="eco_traveler">Éco-Voyageur</option><option value="provider">Provider</option><option value="guide">Guide</option>
+                        </select>
+                        <select className="flex-1 md:flex-none px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                          <option value="">Tous les statuts</option><option value="active">Actif</option><option value="banned">Banni</option><option value="pending">En attente</option>
+                        </select>
+                      </div>
                       <button onClick={() => fetchTabData("users")} className={`px-6 py-3 rounded-2xl text-sm font-bold text-white ${GRADIENT_PRIMARY} shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all`}>Rechercher</button>
                     </div>
                     <p className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.15em]">{usersMeta.total} utilisateurs trouvés</p>
                     {users.length === 0 ? <Empty label="Aucun utilisateur" /> : (
                       <div className="space-y-3">
                         {users.map((u) => (
-                          <div key={u.id} className={`${CARD} ${CARD_HOVER} p-5 flex items-center gap-5`}>
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
-                              {u.photo ? <img src={u.photo} alt="" className="w-full h-full object-cover" /> : <span className="material-symbols-outlined text-slate-400 text-sm">person</span>}
+                          <div key={u.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-5`}>
+                            <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
+                              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 overflow-hidden flex items-center justify-center shrink-0 border border-slate-100">
+                                {u.photo ? <img src={u.photo} alt="" className="w-full h-full object-cover" /> : <span className="material-symbols-outlined text-slate-400 text-sm">person</span>}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-extrabold text-slate-900 truncate">{u.full_name ?? u.email}</p>
+                                <p className="text-xs text-slate-400 font-bold truncate">{u.email} · {u.role.replace("_", " ")}</p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-extrabold text-slate-900 truncate">{u.full_name ?? u.email}</p>
-                              <p className="text-xs text-slate-400 font-bold">{u.email} · {u.role.replace("_", " ")}</p>
-                            </div>
-                            <span className={`text-[11px] font-extrabold px-3 py-1 rounded-xl ${u.status === "banned" ? "bg-red-50 text-red-600 border border-red-100" : u.status === "active" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>{u.status}</span>
-                            <span className="text-xs text-slate-400 font-bold">{new Date(u.created_at).toLocaleDateString("fr-FR")}</span>
-                            <div className="flex gap-2 shrink-0">
-                              <button onClick={() => openDetail("user", u.id)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all"><Eye size={13} /> Détails</button>
+                            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                              <span className={`text-[11px] font-extrabold px-3 py-1 rounded-xl ${u.status === "banned" ? "bg-red-50 text-red-600 border border-red-100" : u.status === "active" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>{u.status}</span>
+                              <span className="text-xs text-slate-400 font-bold">{new Date(u.created_at).toLocaleDateString("fr-FR")}</span>
+                              <div className="flex gap-2 shrink-0">
+                                <button onClick={() => openDetail("user", u.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-xs font-bold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all"><Eye size={13} /> <span className="hidden sm:inline">Détails</span></button>
                               {u.status === "banned" ? (
                                 <button onClick={() => unbanUser(u.id)} disabled={actionLoading === u.id} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 shadow-lg shadow-emerald-500/25 transition-all"><RefreshCw size={13} /> Débannir</button>
                               ) : (
@@ -694,39 +722,41 @@ export default function AdminPage() {
                 {/* ═══════════════════════════════════════════════════════════ */}
                 {tab === "providers" && (
                   <div className="space-y-5">
-                    <div className={`${CARD} p-5 flex items-center gap-4`}>
+                    <div className={`${CARD} p-4 md:p-5 flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4`}>
                       <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all" placeholder="Rechercher…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchTabData("providers")} />
                       </div>
-                      <select className="px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="">Tous les statuts</option><option value="active">Actif</option><option value="suspended">Suspendu</option><option value="pending">En attente</option>
-                      </select>
+                      <div className="flex gap-3">
+                        <select className="flex-1 md:flex-none px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                          <option value="">Tous les statuts</option><option value="active">Actif</option><option value="suspended">Suspendu</option><option value="pending">En attente</option>
+                        </select>
+                      </div>
                       <button onClick={() => fetchTabData("providers")} className={`px-6 py-3 rounded-2xl text-sm font-bold text-white ${GRADIENT_PRIMARY} shadow-lg shadow-emerald-500/25 hover:shadow-xl transition-all`}>Rechercher</button>
                     </div>
                     <p className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.15em]">{providersMeta.total} providers</p>
                     {providers.length === 0 ? <Empty label="Aucun provider" /> : (
                       <div className="space-y-3">
                         {providers.map((p) => (
-                          <div key={p.user_id} className={`${CARD} ${CARD_HOVER} p-5`}>
-                            <div className="flex items-center gap-5">
+                          <div key={p.user_id} className={`${CARD} ${CARD_HOVER} p-4 md:p-5`}>
+                            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-extrabold text-slate-900">{p.full_name}</p>
                                 <p className="text-xs text-slate-400 font-bold">{p.organization ?? "—"} · {p.city ?? "—"}</p>
                               </div>
-                              <div className="flex items-center gap-5 text-xs font-bold text-slate-500">
+                              <div className="flex items-center gap-3 md:gap-5 text-xs font-bold text-slate-500 flex-wrap">
                                 <div className="text-center"><p className="text-lg font-extrabold text-slate-900">{p.venues_count}</p><p className="text-[10px] text-slate-400">étab.</p></div>
                                 <div className="text-center"><p className="text-lg font-extrabold text-slate-900">{p.offers_count}</p><p className="text-[10px] text-slate-400">offres</p></div>
                                 <div className="text-center"><p className="text-lg font-extrabold text-slate-900">{p.bookings_count}</p><p className="text-[10px] text-slate-400">résa.</p></div>
                                 <div className="text-center"><p className="text-lg font-extrabold text-emerald-600">{p.revenue.toLocaleString("fr-FR")}</p><p className="text-[10px] text-slate-400">TND</p></div>
                                 {p.sustainability_score != null && <div className="text-center"><p className="text-lg font-extrabold text-primary">🌿 {p.sustainability_score}</p><p className="text-[10px] text-slate-400">score</p></div>}
                               </div>
-                              <span className={`text-[11px] font-extrabold px-3 py-1 rounded-xl ${p.status === "active" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : p.status === "suspended" ? "bg-red-50 text-red-600 border border-red-100" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>{p.status}</span>
-                              <div className="flex gap-2 shrink-0">
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-[11px] font-extrabold px-3 py-1 rounded-xl ${p.status === "active" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : p.status === "suspended" ? "bg-red-50 text-red-600 border border-red-100" : "bg-slate-100 text-slate-600 border border-slate-200"}`}>{p.status}</span>
                                 {p.status === "active" ? (
-                                  <button onClick={() => suspendProvider(p.user_id)} disabled={actionLoading === p.user_id} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100 disabled:opacity-50 transition-all"><Ban size={13} /> Suspendre</button>
+                                  <button onClick={() => suspendProvider(p.user_id)} disabled={actionLoading === p.user_id} className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-xs font-bold bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100 disabled:opacity-50 transition-all"><Ban size={13} /> <span className="hidden sm:inline">Suspendre</span></button>
                                 ) : (
-                                  <button onClick={() => reactivateProvider(p.user_id)} disabled={actionLoading === p.user_id} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 disabled:opacity-50 transition-all"><RefreshCw size={13} /> Réactiver</button>
+                                  <button onClick={() => reactivateProvider(p.user_id)} disabled={actionLoading === p.user_id} className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 disabled:opacity-50 transition-all"><RefreshCw size={13} /> <span className="hidden sm:inline">Réactiver</span></button>
                                 )}
                               </div>
                             </div>
@@ -743,27 +773,32 @@ export default function AdminPage() {
                 {/* ═══════════════════════════════════════════════════════════ */}
                 {tab === "reservations" && (
                   <div className="space-y-5">
-                    <div className={`${CARD} p-5 flex items-center gap-4`}>
+                    <div className={`${CARD} p-4 md:p-5 flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4`}>
                       <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all" placeholder="Rechercher par référence…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && fetchTabData("reservations")} />
                       </div>
-                      <select className="px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="">Tous les statuts</option><option value="pending">En attente</option><option value="confirmed">Confirmée</option><option value="completed">Terminée</option><option value="cancelled">Annulée</option>
-                      </select>
+                      <div className="flex gap-3">
+                        <select className="flex-1 md:flex-none px-4 py-3 rounded-2xl border-2 border-slate-200 bg-slate-50/50 text-sm font-bold focus:ring-2 focus:ring-emerald-400 focus:border-transparent" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                          <option value="">Tous les statuts</option><option value="pending">En attente</option><option value="confirmed">Confirmée</option><option value="completed">Terminée</option><option value="cancelled">Annulée</option>
+                        </select>
+                      </div>
                       <button onClick={() => fetchTabData("reservations")} className={`px-6 py-3 rounded-2xl text-sm font-bold text-white ${GRADIENT_PRIMARY} shadow-lg shadow-emerald-500/25 transition-all`}>Rechercher</button>
                     </div>
                     <p className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.15em]">{reservationsMeta.total} réservations</p>
                     {reservations.length === 0 ? <Empty label="Aucune réservation" /> : (
                       <div className="space-y-3">
                         {reservations.map((b) => (
-                          <div key={b.id} className={`${CARD} ${CARD_HOVER} p-5 flex items-center gap-5`}>
-                            <div className="w-11 h-11 rounded-2xl bg-purple-50 flex items-center justify-center border border-purple-100"><CalendarCheck size={18} className="text-purple-500" /></div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-extrabold text-slate-900">{b.reservation_ref}</p>
-                              <p className="text-xs text-slate-400 font-bold">{b.offer_title ?? "—"} · {b.traveler_email ?? "—"}</p>
+                          <div key={b.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-5`}>
+                            <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
+                              <div className="w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-purple-50 flex items-center justify-center border border-purple-100 shrink-0"><CalendarCheck size={18} className="text-purple-500" /></div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-extrabold text-slate-900">{b.reservation_ref}</p>
+                                <p className="text-xs text-slate-400 font-bold truncate">{b.offer_title ?? "—"} · {b.traveler_email ?? "—"}</p>
+                              </div>
                             </div>
-                            <span className="text-sm font-extrabold text-emerald-600">{b.total_price} {b.currency}</span>
+                            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                              <span className="text-sm font-extrabold text-emerald-600">{b.total_price} {b.currency}</span>
                             <span className={`text-[11px] font-extrabold px-3 py-1 rounded-xl ${
                               b.status === "confirmed" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
                               b.status === "completed" ? "bg-blue-50 text-blue-600 border border-blue-100" :
@@ -788,15 +823,17 @@ export default function AdminPage() {
                     {reviews.length === 0 ? <Empty label="Aucun avis" /> : (
                       <div className="space-y-3">
                         {reviews.map((r) => (
-                          <div key={r.id} className={`${CARD} ${CARD_HOVER} p-5 flex items-center gap-5`}>
-                            <div className="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center border border-amber-100">
-                              <div className="flex items-center gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} size={12} className={i < r.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"} />)}</div>
+                          <div key={r.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-5`}>
+                            <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
+                              <div className="w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-amber-50 flex items-center justify-center border border-amber-100 shrink-0">
+                                <div className="flex items-center gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} size={12} className={i < r.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"} />)}</div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-slate-800 truncate">{r.comment ?? "Sans commentaire"}</p>
+                                <p className="text-xs text-slate-400 font-bold truncate">{r.author_email} · {r.target_type} · {new Date(r.created_at).toLocaleDateString("fr-FR")}</p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-slate-800 truncate">{r.comment ?? "Sans commentaire"}</p>
-                              <p className="text-xs text-slate-400 font-bold">{r.author_email} · {r.target_type} · {new Date(r.created_at).toLocaleDateString("fr-FR")}</p>
-                            </div>
-                            <button onClick={() => deleteReview(r.id)} disabled={actionLoading === r.id} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 transition-all"><Trash2 size={13} /> Supprimer</button>
+                            <button onClick={() => deleteReview(r.id)} disabled={actionLoading === r.id} className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 transition-all shrink-0"><Trash2 size={13} /> <span className="hidden sm:inline">Supprimer</span></button>
                           </div>
                         ))}
                       </div>
@@ -810,7 +847,7 @@ export default function AdminPage() {
                 {/* ═══════════════════════════════════════════════════════════ */}
                 {tab === "sustainability" && sustainability && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5">
                       <StatCard icon={LeafIcon} label="Offres avec score" value={sustainability.offers_with_score} gradient={GRADIENT_PRIMARY} />
                       <StatCard icon={Star} label="Score moyen" value={sustainability.avg_offer_score} gradient={GRADIENT_AMBER} />
                       <StatCard icon={TrendingUp} label="CO₂ total" value={`${sustainability.total_carbon_kg} kg`} gradient={GRADIENT_TEAL} />
@@ -851,9 +888,10 @@ export default function AdminPage() {
                     {auditLogs.length === 0 ? <Empty label="Aucun journal" /> : (
                       <div className="space-y-3">
                         {auditLogs.map((log) => (
-                          <div key={log.id} className={`${CARD} ${CARD_HOVER} p-5 flex items-center gap-5`}>
-                            <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100"><ShieldCheck size={16} className="text-slate-400" /></div>
-                            <div className="flex-1 min-w-0">
+                          <div key={log.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-5`}>
+                            <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
+                              <div className="w-9 h-9 md:w-10 md:h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0"><ShieldCheck size={16} className="text-slate-400" /></div>
+                              <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-slate-800">
                                 <span className="text-slate-400">{log.admin_id.slice(0, 8)}…</span>{" "}
                                 a effectué <span className="text-emerald-600 font-extrabold">{log.action}</span> sur{" "}
@@ -877,8 +915,8 @@ export default function AdminPage() {
                   publications.length === 0 ? <Empty label="Aucun lieu en attente" /> :
                   <div className="space-y-4">
                     {publications.map((pub) => (
-                      <div key={pub.id} className={`${CARD} ${CARD_HOVER} p-6`}>
-                        <div className="flex items-start gap-5">
+                      <div key={pub.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-6`}>
+                        <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-5">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <TypeBadge label={pub.type === "place" ? "Lieu" : "Expérience"} color="emerald" />
@@ -887,10 +925,10 @@ export default function AdminPage() {
                             <h3 className="text-base font-extrabold text-slate-900">{pub.title}</h3>
                             <p className="text-xs font-bold text-slate-500 mt-1">{[pub.place_name, pub.region].filter(Boolean).join(" · ")}</p>
                           </div>
-                          <div className="flex gap-2.5 shrink-0">
-                            <button onClick={() => openDetail("publication", pub.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> Détails</button>
-                            <button onClick={() => approve("publications", pub.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> Approuver</button>
-                            <button onClick={() => setRejectTarget({ type: "publications", id: pub.id })} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> Rejeter</button>
+                          <div className="flex gap-2 md:gap-2.5 shrink-0 flex-wrap">
+                            <button onClick={() => openDetail("publication", pub.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-xs md:text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> <span className="hidden sm:inline">Détails</span></button>
+                            <button onClick={() => approve("publications", pub.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-emerald-500 text-white text-xs md:text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> <span className="hidden sm:inline">Approuver</span></button>
+                            <button onClick={() => setRejectTarget({ type: "publications", id: pub.id })} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-xs md:text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> <span className="hidden sm:inline">Rejeter</span></button>
                           </div>
                         </div>
                       </div>
@@ -902,8 +940,8 @@ export default function AdminPage() {
                   offers.length === 0 ? <Empty label="Aucune offre en attente" /> :
                   <div className="space-y-4">
                     {offers.map((offer) => (
-                      <div key={offer.id} className={`${CARD} ${CARD_HOVER} p-6`}>
-                        <div className="flex items-start gap-5">
+                      <div key={offer.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-6`}>
+                        <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-5">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <TypeBadge label={offer.author_type === "guide" ? "Guide" : "Provider"} color={offer.author_type === "guide" ? "blue" : "amber"} />
@@ -912,10 +950,10 @@ export default function AdminPage() {
                             <h3 className="text-base font-extrabold text-slate-900">{offer.title}</h3>
                             <p className="text-xs font-bold text-slate-500 mt-1">{[offer.offer_type, offer.duration, offer.price != null ? `${offer.price} TND` : null].filter(Boolean).join(" · ")}</p>
                           </div>
-                          <div className="flex gap-2.5 shrink-0">
-                            <button onClick={() => openDetail("offer", offer.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> Détails</button>
-                            <button onClick={() => approve("offers", offer.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> Approuver</button>
-                            <button onClick={() => setRejectTarget({ type: "offers", id: offer.id })} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> Rejeter</button>
+                          <div className="flex gap-2 md:gap-2.5 shrink-0 flex-wrap">
+                            <button onClick={() => openDetail("offer", offer.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-xs md:text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> <span className="hidden sm:inline">Détails</span></button>
+                            <button onClick={() => approve("offers", offer.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-emerald-500 text-white text-xs md:text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> <span className="hidden sm:inline">Approuver</span></button>
+                            <button onClick={() => setRejectTarget({ type: "offers", id: offer.id })} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-xs md:text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> <span className="hidden sm:inline">Rejeter</span></button>
                           </div>
                         </div>
                       </div>
@@ -927,17 +965,17 @@ export default function AdminPage() {
                   venues.length === 0 ? <Empty label="Aucun établissement en attente" /> :
                   <div className="space-y-4">
                     {venues.map((v) => (
-                      <div key={v.id} className={`${CARD} ${CARD_HOVER} p-6`}>
-                        <div className="flex items-start gap-5">
+                      <div key={v.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-6`}>
+                        <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-5">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2"><TypeBadge label="Établissement" color="purple" /><span className="text-xs font-bold text-slate-400">{new Date(v.created_at).toLocaleDateString("fr-FR")}</span></div>
                             <h3 className="text-base font-extrabold text-slate-900">{v.name}</h3>
                             <p className="text-xs font-bold text-slate-500 mt-1">{[v.region, v.address].filter(Boolean).join(" · ")}</p>
                           </div>
-                          <div className="flex gap-2.5 shrink-0">
-                            <button onClick={() => openDetail("venue", v.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> Détails</button>
-                            <button onClick={() => approve("projects", v.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> Approuver</button>
-                            <button onClick={() => setRejectTarget({ type: "projects", id: v.id })} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> Rejeter</button>
+                          <div className="flex gap-2 md:gap-2.5 shrink-0 flex-wrap">
+                            <button onClick={() => openDetail("venue", v.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-xs md:text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> <span className="hidden sm:inline">Détails</span></button>
+                            <button onClick={() => approve("projects", v.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-emerald-500 text-white text-xs md:text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> <span className="hidden sm:inline">Approuver</span></button>
+                            <button onClick={() => setRejectTarget({ type: "projects", id: v.id })} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-xs md:text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> <span className="hidden sm:inline">Rejeter</span></button>
                           </div>
                         </div>
                       </div>
@@ -949,17 +987,17 @@ export default function AdminPage() {
                   circuits.length === 0 ? <Empty label="Aucun circuit en attente" /> :
                   <div className="space-y-4">
                     {circuits.map((c) => (
-                      <div key={c.id} className={`${CARD} ${CARD_HOVER} p-6`}>
-                        <div className="flex items-start gap-5">
+                      <div key={c.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-6`}>
+                        <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-5">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2"><TypeBadge label="Circuit" color="teal" /><span className="text-xs font-bold text-slate-400">{new Date(c.created_at).toLocaleDateString("fr-FR")}</span></div>
                             <h3 className="text-base font-extrabold text-slate-900">{c.title}</h3>
                             <p className="text-xs font-bold text-slate-500 mt-1">{[c.region, c.duration_days != null ? `${c.duration_days} jours` : null, c.base_price != null ? `${c.base_price} TND` : null].filter(Boolean).join(" · ")}</p>
                           </div>
-                          <div className="flex gap-2.5 shrink-0">
-                            <button onClick={() => openDetail("circuit", c.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> Détails</button>
-                            <button onClick={() => approve("circuits", c.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> Approuver</button>
-                            <button onClick={() => setRejectTarget({ type: "circuits", id: c.id })} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> Rejeter</button>
+                          <div className="flex gap-2 md:gap-2.5 shrink-0 flex-wrap">
+                            <button onClick={() => openDetail("circuit", c.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-xs md:text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> <span className="hidden sm:inline">Détails</span></button>
+                            <button onClick={() => approve("circuits", c.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-emerald-500 text-white text-xs md:text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> <span className="hidden sm:inline">Approuver</span></button>
+                            <button onClick={() => setRejectTarget({ type: "circuits", id: c.id })} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-xs md:text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> <span className="hidden sm:inline">Rejeter</span></button>
                           </div>
                         </div>
                       </div>
@@ -971,17 +1009,17 @@ export default function AdminPage() {
                   guideOfferings.length === 0 ? <Empty label="Aucune offre guide en attente" /> :
                   <div className="space-y-4">
                     {guideOfferings.map((go) => (
-                      <div key={go.id} className={`${CARD} ${CARD_HOVER} p-6`}>
-                        <div className="flex items-start gap-5">
+                      <div key={go.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-6`}>
+                        <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-5">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2"><TypeBadge label="Offre Guide" color="blue" /><span className="text-xs font-bold text-slate-400">{new Date(go.created_at).toLocaleDateString("fr-FR")}</span></div>
                             <h3 className="text-base font-extrabold text-slate-900">{go.title}</h3>
                             <p className="text-xs font-bold text-slate-500 mt-1">{[go.price != null ? `${go.price} TND` : null, go.languages?.join(", ")].filter(Boolean).join(" · ")}</p>
                           </div>
-                          <div className="flex gap-2.5 shrink-0">
-                            <button onClick={() => openDetail("guide-offering", go.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> Détails</button>
-                            <button onClick={() => approve("guide-offerings", go.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> Approuver</button>
-                            <button onClick={() => setRejectTarget({ type: "guide-offerings", id: go.id })} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> Rejeter</button>
+                          <div className="flex gap-2 md:gap-2.5 shrink-0 flex-wrap">
+                            <button onClick={() => openDetail("guide-offering", go.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 text-xs md:text-sm font-bold hover:bg-blue-100 transition-all"><Eye size={14} /> <span className="hidden sm:inline">Détails</span></button>
+                            <button onClick={() => approve("guide-offerings", go.id)} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-emerald-500 text-white text-xs md:text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> <span className="hidden sm:inline">Approuver</span></button>
+                            <button onClick={() => setRejectTarget({ type: "guide-offerings", id: go.id })} className="flex items-center gap-1.5 px-3 md:px-4 py-2 md:py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-xs md:text-sm font-bold hover:bg-red-100 transition-all"><X size={14} /> <span className="hidden sm:inline">Rejeter</span></button>
                           </div>
                         </div>
                       </div>
@@ -998,8 +1036,8 @@ export default function AdminPage() {
                     {reports.map((rep) => {
                       const isPending = rep.status === "pending";
                       return (
-                        <div key={rep.id} className={`${CARD} ${CARD_HOVER} p-6 ${isPending ? "border-red-200/80 bg-red-50/30" : ""}`}>
-                          <div className="flex items-start justify-between gap-5">
+                        <div key={rep.id} className={`${CARD} ${CARD_HOVER} p-4 md:p-6 ${isPending ? "border-red-200/80 bg-red-50/30" : ""}`}>
+                          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 md:gap-5">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-2">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-xl bg-red-50 text-red-600 border border-red-100"><Flag size={11} /> {rep.reason}</span>
@@ -1031,11 +1069,11 @@ export default function AdminPage() {
                       const banDate = u.ban_until ? new Date(u.ban_until) : null;
                       const isExpired = banDate && new Date() > banDate;
                       return (
-                        <div key={u.user_id} className={`${CARD} ${CARD_HOVER} p-6 border-orange-200/80 bg-orange-50/30`}>
-                          <div className="flex items-center gap-5">
+                        <div key={u.user_id} className={`${CARD} ${CARD_HOVER} p-4 md:p-6 border-orange-200/80 bg-orange-50/30`}>
+                          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-extrabold text-slate-900">{u.full_name ?? "—"}</p>
-                              <p className="text-xs text-slate-400 font-bold">{u.email} · {u.role.replace("_", " ")}</p>
+                              <p className="text-xs text-slate-400 font-bold truncate">{u.email} · {u.role.replace("_", " ")}</p>
                               <div className="flex items-center gap-2 mt-2">
                                 {isPermanent ? <span className="text-[11px] font-extrabold px-3 py-1 rounded-xl bg-red-50 text-red-600 border border-red-100">Ban permanent</span>
                                 : isExpired ? <span className="text-[11px] font-extrabold px-3 py-1 rounded-xl bg-slate-100 text-slate-500 border border-slate-200">Expiré</span>
@@ -1067,11 +1105,11 @@ export default function AdminPage() {
 
       {resolveTarget && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setResolveTarget(null)}>
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-7 space-y-6" onClick={(e) => e.stopPropagation()}>
-            <div className="text-center"><div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4"><ShieldOff size={24} className="text-red-500" /></div><h3 className="text-lg font-extrabold text-slate-900">Résoudre le signalement</h3></div>
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-5 md:p-7 space-y-6" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center"><div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4"><ShieldOff size={24} className="text-red-500" /></div><h3 className="text-lg font-extrabold text-slate-900">Résoudre le signalement</h3></div>
             <p className="text-sm text-slate-600 text-center">Motif : <span className="font-bold">{resolveTarget.reason}</span></p>
             <p className="text-xs text-slate-400 text-center">Signalé par <strong>{resolveTarget.reporter.full_name ?? resolveTarget.reporter.email}</strong> contre <strong>{resolveTarget.reported.full_name ?? resolveTarget.reported.email}</strong></p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { key: "warn", label: "Avertir", gradient: "from-amber-400 to-orange-500 shadow-amber-500/25" },
                 { key: "ban", label: "Bannir (30j)", gradient: "from-red-400 to-rose-600 shadow-red-500/25" },
