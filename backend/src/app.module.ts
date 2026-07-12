@@ -35,6 +35,7 @@ import { TimelineModule } from './timeline/timeline.module';
 import { RedisModule } from './redis/redis.module';
 import { DomainModule } from './domain/domain.module';
 import { ProviderModule } from './provider/provider.module';
+import { ProjectOwnerModule } from './project-owner/project-owner.module';
 import { OrganizationModule } from './organization/organization.module';
 import { ProviderActivityModule } from './provider-activity/provider-activity.module';
 
@@ -57,6 +58,7 @@ import { ProviderActivityModule } from './provider-activity/provider-activity.mo
     QuestionnaireModule,
     GuideModule,
     ProviderModule,
+    ProjectOwnerModule,
     OrganizationModule,
     ProviderActivityModule,
     OfferModule,
