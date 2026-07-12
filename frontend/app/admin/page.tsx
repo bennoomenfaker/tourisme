@@ -51,7 +51,7 @@ type PendingGuideOffering = { id: string; title: string; description: string | n
 
 type UserList = { id: string; email: string; role: string; status: string; created_at: string; ban_until: string | null; full_name: string | null; photo: string | null };
 type ProviderList = { user_id: string; full_name: string; organization: string | null; city: string | null; status: string; sustainability_score: number | null; venues_count: number; offers_count: number; bookings_count: number; revenue: number; created_at: string };
-type BookingList = { id: string; reservation_ref: string; status: string; total_price: number; currency: string; created_at: string; offer_title: string | null; traveler_email: string | null };
+type ReservationList = { id: string; reservation_ref: string; status: string; total_price: number; currency: string; created_at: string; offer_title: string | null; traveler_email: string | null };
 type ReviewList = { id: string; author_id: string; author_email: string | null; target_type: string; target_id: string; rating: number; comment: string | null; created_at: string };
 type SustainabilityStats = { offers_with_score: number; avg_offer_score: string; top_providers: any[]; top_venues: any[]; total_carbon_kg: string };
 type AuditLog = { id: string; admin_id: string; entity_type: string; entity_id: string; action: string; reason: string | null; created_at: string };
@@ -217,8 +217,8 @@ export default function AdminPage() {
   const [usersMeta, setUsersMeta] = useState({ total: 0, page: 1, pages: 1 });
   const [providers, setProviders] = useState<ProviderList[]>([]);
   const [providersMeta, setProvidersMeta] = useState({ total: 0, page: 1, pages: 1 });
-  const [bookings, setBookings] = useState<BookingList[]>([]);
-  const [bookingsMeta, setBookingsMeta] = useState({ total: 0, page: 1, pages: 1 });
+  const [reservations, setReservations] = useState<ReservationList[]>([]);
+  const [reservationsMeta, setReservationsMeta] = useState({ total: 0, page: 1, pages: 1 });
   const [reviews, setReviews] = useState<ReviewList[]>([]);
   const [reviewsMeta, setReviewsMeta] = useState({ total: 0, page: 1, pages: 1 });
   const [sustainability, setSustainability] = useState<SustainabilityStats | null>(null);
@@ -290,8 +290,8 @@ export default function AdminPage() {
         const params = new URLSearchParams({ page: String(page), limit: "15" });
         if (statusFilter) params.set("status", statusFilter);
         if (searchQuery) params.set("search", searchQuery);
-        const r = await apiFetch<{ reservations: BookingList[]; total: number; page: number; pages: number }>(`/admin/reservations?${params}`, { headers: h });
-        setBookings(r.reservations); setBookingsMeta({ total: r.total, page: r.page, pages: r.pages });
+        const r = await apiFetch<{ reservations: ReservationList[]; total: number; page: number; pages: number }>(`/admin/reservations?${params}`, { headers: h });
+        setReservations(r.reservations); setReservationsMeta({ total: r.total, page: r.page, pages: r.pages });
       } else if (t === "reviews") {
         const r = await apiFetch<{ reviews: ReviewList[]; total: number; page: number; pages: number }>(`/admin/reviews?page=${page}&limit=15`, { headers: h });
         setReviews(r.reviews); setReviewsMeta({ total: r.total, page: r.page, pages: r.pages });
@@ -752,10 +752,10 @@ export default function AdminPage() {
                       </select>
                       <button onClick={() => fetchTabData("reservations")} className={`px-6 py-3 rounded-2xl text-sm font-bold text-white ${GRADIENT_PRIMARY} shadow-lg shadow-emerald-500/25 transition-all`}>Rechercher</button>
                     </div>
-                    <p className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.15em]">{bookingsMeta.total} réservations</p>
-                    {bookings.length === 0 ? <Empty label="Aucune réservation" /> : (
+                    <p className="text-xs font-extrabold text-slate-400 uppercase tracking-[0.15em]">{reservationsMeta.total} réservations</p>
+                    {reservations.length === 0 ? <Empty label="Aucune réservation" /> : (
                       <div className="space-y-3">
-                        {bookings.map((b) => (
+                        {reservations.map((b) => (
                           <div key={b.id} className={`${CARD} ${CARD_HOVER} p-5 flex items-center gap-5`}>
                             <div className="w-11 h-11 rounded-2xl bg-purple-50 flex items-center justify-center border border-purple-100"><CalendarCheck size={18} className="text-purple-500" /></div>
                             <div className="flex-1 min-w-0">
@@ -774,7 +774,7 @@ export default function AdminPage() {
                         ))}
                       </div>
                     )}
-                    <Pagination page={bookingsMeta.page} pages={bookingsMeta.pages} onChange={(p) => fetchTabData("reservations", p)} />
+                    <Pagination page={reservationsMeta.page} pages={reservationsMeta.pages} onChange={(p) => fetchTabData("reservations", p)} />
                   </div>
                 )}
 
