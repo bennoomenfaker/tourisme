@@ -11,7 +11,7 @@ import { GuideOfferingAvailabilityRule } from './entities/guide-offering-availab
 import { GuideOfferingSession } from './entities/guide-offering-session.entity';
 import { GuideOfferingBlock } from './entities/guide-offering-block.entity';
 import { GuideOfferingPrice } from './entities/guide-offering-price.entity';
-import { Booking } from '../booking/entities/booking.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 import {
   CreateGuideOfferingDto,
   UpdateGuideOfferingDto,
@@ -30,8 +30,8 @@ export class GuideOfferingService {
     private readonly ruleRepo: Repository<GuideOfferingAvailabilityRule>,
     @InjectRepository(GuideOfferingSession)
     private readonly sessionRepo: Repository<GuideOfferingSession>,
-    @InjectRepository(Booking)
-    private readonly bookingRepo: Repository<Booking>,
+    @InjectRepository(Reservation)
+    private readonly reservationRepo: Repository<Reservation>,
     @InjectRepository(GuideOfferingBlock)
     private readonly blockRepo: Repository<GuideOfferingBlock>,
     @InjectRepository(GuideOfferingPrice)
@@ -207,7 +207,7 @@ export class GuideOfferingService {
     const existing = await this.sessionRepo.find({
       where: { guideOffering: { id: offeringId } },
     });
-    const bookedSessionIds: string[] = await this.bookingRepo
+    const bookedSessionIds: string[] = await this.reservationRepo
       .createQueryBuilder()
       .select('"guide_offering_session_id"')
       .where(

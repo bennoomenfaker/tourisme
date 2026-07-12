@@ -14,7 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { Provider } from '../provider/entities/provider.entity';
-import { Booking } from '../booking/entities/booking.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 import { Review } from '../review/entities/review.entity';
 import { MailService } from '../mail/mail.service';
 import { NotificationService } from '../notification/notification.service';
@@ -50,8 +50,8 @@ export class AdminService {
     @InjectRepository(Provider)
     private readonly providerRepo: Repository<Provider>,
 
-    @InjectRepository(Booking)
-    private readonly bookingRepo: Repository<Booking>,
+    @InjectRepository(Reservation)
+    private readonly reservationRepo: Repository<Reservation>,
 
     @InjectRepository(Review)
     private readonly reviewRepo: Repository<Review>,
@@ -83,14 +83,14 @@ export class AdminService {
       circuitsByStatus,
       totalVenues,
       venuesByStatus,
-      totalBookings,
-      bookingsByStatus,
+      totalReservations,
+      reservationsByStatus,
       totalGuideOfferings,
       guideOfferingsByStatus,
       totalReviews,
       recentUsers,
-      bookingsToday,
-      bookingsThisMonth,
+      reservationsToday,
+      reservationsThisMonth,
       revenueToday,
       revenueThisMonth,
       suspendedProviders,
@@ -106,16 +106,16 @@ export class AdminService {
       this.circuitRepo.createQueryBuilder('c').select('c.status', 'status').addSelect('COUNT(*)', 'count').groupBy('c.status').getRawMany(),
       this.venueRepo.count(),
       this.venueRepo.createQueryBuilder('v').select('v.status', 'status').addSelect('COUNT(*)', 'count').groupBy('v.status').getRawMany(),
-      this.bookingRepo.count(),
-      this.bookingRepo.createQueryBuilder('b').select('b.status', 'status').addSelect('COUNT(*)', 'count').groupBy('b.status').getRawMany(),
+      this.reservationRepo.count(),
+      this.reservationRepo.createQueryBuilder('b').select('b.status', 'status').addSelect('COUNT(*)', 'count').groupBy('b.status').getRawMany(),
       this.guideOfferingRepo.count(),
       this.guideOfferingRepo.createQueryBuilder('g').select('g.status', 'status').addSelect('COUNT(*)', 'count').groupBy('g.status').getRawMany(),
       this.reviewRepo.count(),
       this.userRepo.find({ order: { created_at: 'DESC' }, take: 5, select: ['id', 'email', 'role', 'status', 'created_at'] }),
-      this.bookingRepo.createQueryBuilder('b').where('b.created_at >= :start', { start: startOfDay }).getCount(),
-      this.bookingRepo.createQueryBuilder('b').where('b.created_at >= :start', { start: startOfMonth }).getCount(),
-      this.bookingRepo.createQueryBuilder('b').select('COALESCE(SUM(b.total_price), 0)', 'total').where('b.created_at >= :start AND b.status IN (:...s)', { start: startOfDay, s: ['confirmed', 'completed'] }).getRawOne(),
-      this.bookingRepo.createQueryBuilder('b').select('COALESCE(SUM(b.total_price), 0)', 'total').where('b.created_at >= :start AND b.status IN (:...s)', { start: startOfMonth, s: ['confirmed', 'completed'] }).getRawOne(),
+      this.reservationRepo.createQueryBuilder('b').where('b.created_at >= :start', { start: startOfDay }).getCount(),
+      this.reservationRepo.createQueryBuilder('b').where('b.created_at >= :start', { start: startOfMonth }).getCount(),
+      this.reservationRepo.createQueryBuilder('b').select('COALESCE(SUM(b.total_price), 0)', 'total').where('b.created_at >= :start AND b.status IN (:...s)', { start: startOfDay, s: ['confirmed', 'completed'] }).getRawOne(),
+      this.reservationRepo.createQueryBuilder('b').select('COALESCE(SUM(b.total_price), 0)', 'total').where('b.created_at >= :start AND b.status IN (:...s)', { start: startOfMonth, s: ['confirmed', 'completed'] }).getRawOne(),
       this.providerRepo.createQueryBuilder('po').where('po.status = :s', { s: 'suspended' }).getCount(),
       this.providerRepo.count(),
     ]);
@@ -144,11 +144,11 @@ export class AdminService {
       circuits: { total: totalCircuits, by_status: toMap(circuitsByStatus) },
       venues: { total: totalVenues, by_status: toMap(venuesByStatus) },
       guide_offerings: { total: totalGuideOfferings, by_status: toMap(guideOfferingsByStatus) },
-      bookings: {
-        total: totalBookings,
-        by_status: toMap(bookingsByStatus),
-        today: bookingsToday,
-        this_month: bookingsThisMonth,
+      reservations: {
+        total: totalReservations,
+        by_status: toMap(reservationsByStatus),
+        today: reservationsToday,
+        this_month: reservationsThisMonth,
         revenue_today: Number(revenueToday?.total ?? 0),
         revenue_this_month: Number(revenueThisMonth?.total ?? 0),
       },
@@ -246,8 +246,8 @@ export class AdminService {
         const [venuesCount, offersCount, bookingsCount, revenue] = await Promise.all([
           this.venueRepo.createQueryBuilder('v').where('v.provider_id = :pid', { pid: p.user_id }).getCount(),
           this.offerRepo.createQueryBuilder('o').where("o.author_id = :pid AND o.author_type = 'provider'", { pid: p.user_id }).getCount(),
-          this.bookingRepo.createQueryBuilder('b').innerJoin('b.offer', 'o').where("o.author_id = :pid AND o.author_type = 'provider'", { pid: p.user_id }).getCount(),
-          this.bookingRepo.createQueryBuilder('b').innerJoin('b.offer', 'o').where("o.author_id = :pid AND o.author_type = 'provider' AND b.status IN (:...s)", { pid: p.user_id, s: ['confirmed', 'completed'] }).select('COALESCE(SUM(b.total_price), 0)', 'total').getRawOne(),
+          this.reservationRepo.createQueryBuilder('b').innerJoin('b.offer', 'o').where("o.author_id = :pid AND o.author_type = 'provider'", { pid: p.user_id }).getCount(),
+          this.reservationRepo.createQueryBuilder('b').innerJoin('b.offer', 'o').where("o.author_id = :pid AND o.author_type = 'provider' AND b.status IN (:...s)", { pid: p.user_id, s: ['confirmed', 'completed'] }).select('COALESCE(SUM(b.total_price), 0)', 'total').getRawOne(),
         ]);
         return {
           user_id: p.user_id,
@@ -298,13 +298,13 @@ export class AdminService {
   // 4. GESTION DES RÉSERVATIONS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getAllBookings(query: { status?: string; search?: string; page?: number; limit?: number }) {
+  async getAllReservations(query: { status?: string; search?: string; page?: number; limit?: number }) {
     const page = query.page || 1;
     const limit = Math.min(query.limit || 20, 100);
-    const qb = this.bookingRepo.createQueryBuilder('b').orderBy('b.created_at', 'DESC');
+    const qb = this.reservationRepo.createQueryBuilder('b').orderBy('b.created_at', 'DESC');
 
     if (query.status) qb.andWhere('b.status = :status', { status: query.status });
-    if (query.search) qb.andWhere('(b.booking_ref ILIKE :search)', { search: `%${query.search}%` });
+    if (query.search) qb.andWhere('(b.reservation_ref ILIKE :search)', { search: `%${query.search}%` });
 
     const [bookings, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount();
 
@@ -322,7 +322,7 @@ export class AdminService {
         }
         return {
           id: b.id,
-          booking_ref: b.booking_ref,
+          reservation_ref: b.reservation_ref,
           status: b.status,
           total_price: b.total_price,
           currency: b.currency,

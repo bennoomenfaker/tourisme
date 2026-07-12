@@ -6,12 +6,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, LessThan } from 'typeorm';
-import { Booking } from './entities/booking.entity';
-import { BookingParticipant } from './entities/booking-participant.entity';
+import { Reservation } from './entities/reservation.entity';
+import { ReservationParticipant } from './entities/reservation-participant.entity';
 import {
-  CreateBookingDto,
-  CreateGuideBookingDto,
-} from './dto/create-booking.dto';
+  CreateReservationDto,
+  CreateGuideReservationDto,
+} from './dto/create-reservation.dto';
 import { User } from '../users/entities/user.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { OfferItem } from '../offer/entities/offer-item.entity';
@@ -24,12 +24,12 @@ import { CapacityDomainService } from '../domain/capacity-domain.service';
 import { ReservationDomainService } from '../domain/reservation-domain.service';
 
 @Injectable()
-export class BookingService {
+export class ReservationService {
   constructor(
-    @InjectRepository(Booking)
-    private readonly bookingRepo: Repository<Booking>,
-    @InjectRepository(BookingParticipant)
-    private readonly participantRepo: Repository<BookingParticipant>,
+    @InjectRepository(Reservation)
+    private readonly reservationRepo: Repository<Reservation>,
+    @InjectRepository(ReservationParticipant)
+    private readonly participantRepo: Repository<ReservationParticipant>,
     @InjectRepository(OfferItemSession)
     private readonly sessionRepo: Repository<OfferItemSession>,
     @InjectRepository(Offer)
@@ -51,7 +51,7 @@ export class BookingService {
    * Crée une réservation avec ses participants
    * Génère une référence unique pour le suivi
    */
-  async create(travelerId: string, dto: CreateBookingDto): Promise<Booking> {
+  async create(travelerId: string, dto: CreateReservationDto): Promise<Reservation> {
     let session: OfferItemSession | null = null;
     if (dto.session_id) {
       session = await this.sessionRepo.findOne({
@@ -110,14 +110,14 @@ export class BookingService {
 
     // ── Vérification double réservation même session ──
     if (dto.session_id) {
-      const existingBooking = await this.bookingRepo.findOne({
+      const existingReservation = await this.reservationRepo.findOne({
         where: {
           traveler: { id: travelerId } as any,
           session: { id: dto.session_id } as any,
           status: Not('cancelled'),
         },
       });
-      if (existingBooking) {
+      if (existingReservation) {
         throw new BadRequestException('Vous avez déjà réservé cette session');
       }
     }
@@ -181,8 +181,8 @@ export class BookingService {
     }
 
     const refSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const booking = this.bookingRepo.create({
-      booking_ref: `BK-${refSuffix}`,
+    const reservation = this.reservationRepo.create({
+      reservation_ref: `BK-${refSuffix}`,
       traveler: { id: travelerId } as User,
       offer: { id: dto.offer_id } as Offer,
       offerItem: dto.offer_item_id
@@ -197,7 +197,7 @@ export class BookingService {
       confirmation_mode: dto.confirmation_mode ?? 'automatic',
       status: dto.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
     });
-    const saved = await this.bookingRepo.save(booking);
+    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
 
     // ── Décrémentation de la capacité via CapacityDomainService ──
     if (dto.offer_item_id) {
@@ -212,7 +212,7 @@ export class BookingService {
     if (dto.participants?.length) {
       const participants = dto.participants.map((p) =>
         this.participantRepo.create({
-          booking: { id: saved.id } as Booking,
+          reservation: { id: saved.id } as Reservation,
           full_name: p.full_name,
           age: p.age ?? null,
           document_type: p.document_type ?? null,
@@ -224,15 +224,15 @@ export class BookingService {
     }
 
     const notifType =
-      booking.status === 'confirmed' ? 'booking_confirmed' : 'booking_request';
+      reservation.status === 'confirmed' ? 'booking_confirmed' : 'booking_request';
     const notifTitle =
-      booking.status === 'confirmed'
+      reservation.status === 'confirmed'
         ? 'Réservation confirmée'
         : 'Demande de réservation';
     const travelerMsg =
-      booking.status === 'confirmed'
-        ? `Votre réservation ${saved.booking_ref} pour "${offer.title}" a été confirmée.`
-        : `Votre demande de réservation ${saved.booking_ref} pour "${offer.title}" a été envoyée. Le prestataire va la confirmer.`;
+      reservation.status === 'confirmed'
+        ? `Votre réservation ${saved.reservation_ref} pour "${offer.title}" a été confirmée.`
+        : `Votre demande de réservation ${saved.reservation_ref} pour "${offer.title}" a été envoyée. Le prestataire va la confirmer.`;
     this.notificationService
       .create(
         travelerId,
@@ -245,9 +245,9 @@ export class BookingService {
 
     if (offer.author_id && offer.author_id !== travelerId) {
       const providerMsg =
-        booking.status === 'confirmed'
-          ? `Nouvelle réservation ${saved.booking_ref} confirmée pour "${offer.title}" par un voyageur.`
-          : `Nouvelle demande de réservation ${saved.booking_ref} pour "${offer.title}" en attente de votre confirmation.`;
+        reservation.status === 'confirmed'
+          ? `Nouvelle réservation ${saved.reservation_ref} confirmée pour "${offer.title}" par un voyageur.`
+          : `Nouvelle demande de réservation ${saved.reservation_ref} pour "${offer.title}" en attente de votre confirmation.`;
       this.notificationService
         .create(
           offer.author_id,
@@ -259,15 +259,15 @@ export class BookingService {
         .catch(() => {});
     }
 
-    return this.bookingRepo.findOne({
+    return this.reservationRepo.findOne({
       where: { id: saved.id },
       relations: ['participants', 'offer'],
-    }) as Promise<Booking>;
+    }) as Promise<Reservation>;
   }
 
   /** Récupère les réservations d'un voyageur */
-  async findByTraveler(travelerId: string): Promise<Booking[]> {
-    return this.bookingRepo.find({
+  async findByTraveler(travelerId: string): Promise<Reservation[]> {
+    return this.reservationRepo.find({
       where: { traveler: { id: travelerId } },
       relations: ['offer', 'offerItem', 'session', 'participants'],
       order: { created_at: 'DESC' },
@@ -275,8 +275,8 @@ export class BookingService {
   }
 
   /** Récupère une réservation par son ID */
-  async findById(id: string): Promise<Booking> {
-    const booking = await this.bookingRepo.findOne({
+  async findById(id: string): Promise<Reservation> {
+    const reservation = await this.reservationRepo.findOne({
       where: { id },
       relations: [
         'offer',
@@ -288,8 +288,8 @@ export class BookingService {
         'traveler',
       ],
     });
-    if (!booking) throw new NotFoundException('Réservation introuvable');
-    return booking;
+    if (!reservation) throw new NotFoundException('Réservation introuvable');
+    return reservation;
   }
 
   /** Annule une réservation (par le voyageur) */
@@ -297,32 +297,32 @@ export class BookingService {
     id: string,
     travelerId: string,
     reason?: string,
-  ): Promise<Booking> {
-    const booking = await this.findById(id);
-    if (booking.traveler.id !== travelerId) {
+  ): Promise<Reservation> {
+    const reservation = await this.findById(id);
+    if (reservation.traveler.id !== travelerId) {
       throw new ForbiddenException(
         'Vous ne pouvez annuler que vos propres réservations',
       );
     }
     if (
       !this.reservationDomain.validateTransition(
-        booking.status,
+        reservation.status,
         'cancelled',
         'booking',
       )
     ) {
       throw new BadRequestException(
-        `Impossible d'annuler une réservation avec le statut "${booking.status}"`,
+        `Impossible d'annuler une réservation avec le statut "${reservation.status}"`,
       );
     }
 
     // ── Vérification du délai d'annulation ──
-    if (booking.offerItem?.id && booking.session?.id) {
+    if (reservation.offerItem?.id && reservation.session?.id) {
       const offerItem = await this.offerItemRepo.findOne({
-        where: { id: booking.offerItem.id },
+        where: { id: reservation.offerItem.id },
       });
       const session = await this.sessionRepo.findOne({
-        where: { id: booking.session.id },
+        where: { id: reservation.session.id },
       });
       if (offerItem?.cancellation_deadline_days != null && session?.date) {
         const sessionDate = new Date(session.date);
@@ -338,17 +338,17 @@ export class BookingService {
       }
     }
 
-    booking.status = 'cancelled';
-    booking.cancelled_at = new Date();
-    booking.cancel_reason = reason ?? null;
-    const saved = await this.bookingRepo.save(booking);
+    reservation.status = 'cancelled';
+    reservation.cancelled_at = new Date();
+    reservation.cancel_reason = reason ?? null;
+    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
 
     // Restaurer la capacité via CapacityDomainService
-    if (booking.offerItem?.id) {
-      const sessionDate = booking.session?.date ?? null;
-      const participantCount = booking.participants?.length ?? 1;
+    if (reservation.offerItem?.id) {
+      const sessionDate = reservation.session?.date ?? null;
+      const participantCount = reservation.participants?.length ?? 1;
       await this.capacityService.restore(
-        booking.offerItem.id,
+        reservation.offerItem.id,
         sessionDate,
         participantCount,
       );
@@ -360,15 +360,15 @@ export class BookingService {
         travelerId,
         'booking_cancelled',
         'Réservation annulée',
-        `Votre réservation ${saved.booking_ref} a été annulée.${reason ? ` Motif : ${reason}` : ''}`,
+        `Votre réservation ${saved.reservation_ref} a été annulée.${reason ? ` Motif : ${reason}` : ''}`,
         `/bookings/${saved.id}`,
       )
       .catch(() => {});
 
     // Notifier le provider
-    if (booking.offer) {
+    if (reservation.offer) {
       const offer = await this.offerRepo.findOne({
-        where: { id: booking.offer.id },
+        where: { id: reservation.offer.id },
       });
       if (offer?.author_id && offer.author_id !== travelerId) {
         this.notificationService
@@ -376,7 +376,7 @@ export class BookingService {
             offer.author_id,
             'booking_cancelled',
             'Réservation annulée',
-            `La réservation ${saved.booking_ref} pour "${offer.title}" a été annulée par le voyageur.${reason ? ` Motif : ${reason}` : ''}`,
+            `La réservation ${saved.reservation_ref} pour "${offer.title}" a été annulée par le voyageur.${reason ? ` Motif : ${reason}` : ''}`,
             `/dashboard/incoming`,
           )
           .catch(() => {});
@@ -386,10 +386,10 @@ export class BookingService {
   }
 
   /** Confirme une réservation (par le provider, mode manual) */
-  async confirm(id: string, providerId: string): Promise<Booking> {
-    const booking = await this.findById(id);
-    const offer = booking.offer
-      ? await this.offerRepo.findOne({ where: { id: booking.offer.id } })
+  async confirm(id: string, providerId: string): Promise<Reservation> {
+    const reservation = await this.findById(id);
+    const offer = reservation.offer
+      ? await this.offerRepo.findOne({ where: { id: reservation.offer.id } })
       : null;
     if (!offer || offer.author_id !== providerId) {
       throw new ForbiddenException(
@@ -398,7 +398,7 @@ export class BookingService {
     }
     if (
       !this.reservationDomain.validateTransition(
-        booking.status,
+        reservation.status,
         'confirmed',
         'booking',
       )
@@ -407,14 +407,14 @@ export class BookingService {
         'Cette réservation ne peut plus être confirmée',
       );
     }
-    booking.status = 'confirmed';
-    const saved = await this.bookingRepo.save(booking);
+    reservation.status = 'confirmed';
+    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
     this.notificationService
       .create(
-        booking.traveler.id,
+        reservation.traveler.id,
         'booking_confirmed',
         'Réservation confirmée',
-        `Votre réservation ${saved.booking_ref} pour "${offer.title}" a été confirmée par le prestataire.`,
+        `Votre réservation ${saved.reservation_ref} pour "${offer.title}" a été confirmée par le prestataire.`,
         `/bookings/${saved.id}`,
       )
       .catch(() => {});
@@ -422,13 +422,13 @@ export class BookingService {
   }
 
   /** Récupère les réservations pour les offres d'un provider */
-  async findByOfferAuthor(authorId: string): Promise<Booking[]> {
-    return this.bookingRepo
-      .createQueryBuilder('booking')
-      .leftJoinAndSelect('booking.offer', 'offer')
+  async findByOfferAuthor(authorId: string): Promise<Reservation[]> {
+    return this.reservationRepo
+      .createQueryBuilder('reservation')
+      .leftJoinAndSelect('reservation.offer', 'offer')
       .leftJoinAndSelect('booking.guideOffering', 'guideOffering')
-      .leftJoinAndSelect('booking.traveler', 'traveler')
-      .leftJoinAndSelect('booking.participants', 'participants')
+      .leftJoinAndSelect('reservation.traveler', 'traveler')
+      .leftJoinAndSelect('reservation.participants', 'participants')
       .where('offer.author_id = :authorId', { authorId })
       .orWhere('guideOffering.guide_id = :authorId', { authorId })
       .orderBy('booking.created_at', 'DESC')
@@ -437,7 +437,7 @@ export class BookingService {
 
   /** Ajoute des participants à une réservation existante et recalcule le prix */
   async addParticipants(
-    bookingId: string,
+    reservationId: string,
     travelerId: string,
     participants: {
       full_name: string;
@@ -446,21 +446,21 @@ export class BookingService {
       document_number?: string;
       is_group_leader?: boolean;
     }[],
-  ): Promise<Booking> {
-    const booking = await this.findById(bookingId);
-    if (booking.traveler.id !== travelerId) {
+  ): Promise<Reservation> {
+    const reservation = await this.findById(reservationId);
+    if (reservation.traveler.id !== travelerId) {
       throw new ForbiddenException(
         'Vous ne pouvez modifier que vos propres réservations',
       );
     }
-    if (booking.status === 'cancelled') {
+    if (reservation.status === 'cancelled') {
       throw new ForbiddenException(
         "Impossible d'ajouter des participants à une réservation annulée",
       );
     }
     const entities = participants.map((p) =>
       this.participantRepo.create({
-        booking: { id: bookingId } as Booking,
+        reservation: { id: reservationId } as Reservation,
         full_name: p.full_name,
         age: p.age ?? null,
         document_type: p.document_type ?? null,
@@ -471,13 +471,13 @@ export class BookingService {
     await this.participantRepo.save(entities);
 
     // Recalculer le prix avec le nouveau nombre total de participants
-    const updatedBooking = await this.findById(bookingId);
-    const totalCount = updatedBooking.participants?.length ?? 1;
+    const updatedReservation = await this.findById(reservationId);
+    const totalCount = updatedReservation.participants?.length ?? 1;
     let totalPrice = 0;
 
-    if (updatedBooking.offerItem) {
+    if (updatedReservation.offerItem) {
       const offerItem = await this.offerItemRepo.findOne({
-        where: { id: updatedBooking.offerItem.id },
+        where: { id: updatedReservation.offerItem.id },
         relations: ['prices'],
       });
       if (offerItem && offerItem.prices?.length) {
@@ -506,12 +506,12 @@ export class BookingService {
             break;
         }
       }
-    } else if (updatedBooking.offer?.price) {
-      totalPrice = Number(updatedBooking.offer.price) * totalCount;
-    } else if (updatedBooking.offer) {
+    } else if (updatedReservation.offer?.price) {
+      totalPrice = Number(updatedReservation.offer.price) * totalCount;
+    } else if (updatedReservation.offer) {
       // Offre avec items : somme des prix par defaut
       const allItems = await this.offerItemRepo.find({
-        where: { offer: { id: updatedBooking.offer.id } },
+        where: { offer: { id: updatedReservation.offer.id } },
         relations: ['prices'],
       });
       if (allItems.length) {
@@ -524,10 +524,10 @@ export class BookingService {
       }
     }
 
-    updatedBooking.total_price = totalPrice;
-    await this.bookingRepo.save(updatedBooking);
+    updatedReservation.total_price = totalPrice;
+    await this.reservationRepo.save(updatedReservation);
 
-    return this.findById(bookingId);
+    return this.findById(reservationId);
   }
 
   // ── Gestion du cycle de vie ──────────────────────────────────────
@@ -535,23 +535,23 @@ export class BookingService {
   /**
    * Marque les réservations pending > 48h comme expired
    */
-  async checkExpiredBookings(): Promise<number> {
+  async checkExpiredReservations(): Promise<number> {
     const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const expired = await this.bookingRepo.find({
+    const expired = await this.reservationRepo.find({
       where: { status: 'pending', created_at: LessThan(cutoff) },
       relations: ['offerItem', 'session', 'participants'],
     });
-    for (const booking of expired) {
-      booking.status = 'expired';
-      await this.bookingRepo.save(booking);
-      await this.restoreBookingCapacity(booking);
+    for (const reservation of expired) {
+      reservation.status = 'expired';
+      await this.reservationRepo.save(reservation);
+      await this.restoreReservationCapacity(reservation);
       this.notificationService
         .create(
-          booking.traveler.id,
+          reservation.traveler.id,
           'booking_expired',
           'Réservation expirée',
-          `Votre réservation ${booking.booking_ref} a expirée faute de confirmation dans les 48h.`,
-          `/bookings/${booking.id}`,
+          `Votre réservation ${reservation.reservation_ref} a expirée faute de confirmation dans les 48h.`,
+          `/reservations/${reservation.id}`,
         )
         .catch(() => {});
     }
@@ -561,17 +561,17 @@ export class BookingService {
   /**
    * Transition automatique confirmed → completed quand la session est passée
    */
-  async finalizeCompletedBookings(): Promise<number> {
+  async finalizeCompletedReservations(): Promise<number> {
     const now = new Date();
-    const completed = await this.bookingRepo.find({
+    const completed = await this.reservationRepo.find({
       where: { status: 'confirmed' },
       relations: ['session', 'participants'],
     });
     let count = 0;
-    for (const booking of completed) {
-      if (booking.session?.date && new Date(booking.session.date) < now) {
-        booking.status = 'completed';
-        await this.bookingRepo.save(booking);
+    for (const reservation of completed) {
+      if (reservation.session?.date && new Date(reservation.session.date) < now) {
+        reservation.status = 'completed';
+        await this.reservationRepo.save(reservation);
         count++;
       }
     }
@@ -581,12 +581,12 @@ export class BookingService {
   /**
    * Restaure la capacité d'une réservation (session + stock global)
    */
-  private async restoreBookingCapacity(booking: Booking): Promise<void> {
-    if (booking.offerItem?.id) {
-      const sessionDate = booking.session?.date ?? null;
-      const participantCount = booking.participants?.length ?? 1;
+  private async restoreReservationCapacity(reservation: Reservation): Promise<void> {
+    if (reservation.offerItem?.id) {
+      const sessionDate = reservation.session?.date ?? null;
+      const participantCount = reservation.participants?.length ?? 1;
       await this.capacityService.restore(
-        booking.offerItem.id,
+        reservation.offerItem.id,
         sessionDate,
         participantCount,
       );
@@ -595,10 +595,10 @@ export class BookingService {
 
   // ── Guide Offering Booking ──────────────────────────────────────
 
-  async createGuideBooking(
+  async createGuideReservation(
     travelerId: string,
-    dto: CreateGuideBookingDto,
-  ): Promise<Booking> {
+    dto: CreateGuideReservationDto,
+  ): Promise<Reservation> {
     const offering = await this.guideOfferingRepo.findOne({
       where: { id: dto.guide_offering_id },
       relations: ['guide'],
@@ -635,8 +635,8 @@ export class BookingService {
     const bookingRef =
       'BK-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    const booking = this.bookingRepo.create({
-      booking_ref: bookingRef,
+    const reservation = this.reservationRepo.create({
+      reservation_ref: bookingRef,
       traveler: { id: travelerId } as any,
       guideOffering: offering,
       guideOfferingSession: session,
@@ -648,12 +648,12 @@ export class BookingService {
       confirmation_mode: offering.confirmation_mode,
     });
 
-    const saved = await this.bookingRepo.save(booking);
+    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
 
     if (dto.participants?.length) {
       const participants = dto.participants.map((p, i) =>
         this.participantRepo.create({
-          booking: saved,
+          reservation: saved,
           full_name: p.full_name,
           age: p.age ?? null,
           document_type: p.document_type ?? null,

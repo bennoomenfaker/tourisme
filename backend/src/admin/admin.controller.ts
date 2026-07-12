@@ -213,16 +213,16 @@ export class AdminController {
     return this.service.reactivateProvider(id);
   }
 
-  // ─── Bookings ─────────────────────────────────────────────────────────────
+  // ─── Reservations ──────────────────────────────────────────────────────────
 
-  @Get('bookings')
-  getAllBookings(
+  @Get('reservations')
+  getAllReservations(
     @Query('status') status?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.service.getAllBookings({ status, search, page: page ? +page : undefined, limit: limit ? +limit : undefined });
+    return this.service.getAllReservations({ status, search, page: page ? +page : undefined, limit: limit ? +limit : undefined });
   }
 
   // ─── Reviews ──────────────────────────────────────────────────────────────

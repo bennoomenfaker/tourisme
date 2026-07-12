@@ -23,8 +23,8 @@ import { Circuit } from '../circuit/entities/circuit.entity';
 import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 import { GuideOffering } from '../guide/entities/guide-offering.entity';
 import { GuideOfferingSession } from '../guide/entities/guide-offering-session.entity';
-import { Booking } from '../booking/entities/booking.entity';
-import { BookingParticipant } from '../booking/entities/booking-participant.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
+import { ReservationParticipant } from '../reservation/entities/reservation-participant.entity';
 import { NotificationService } from '../notification/notification.service';
 import { EcoTravelerMongoService } from '../eco-traveler/eco-traveler-mongo.service';
 
@@ -35,10 +35,10 @@ export class TripPlanService {
     private readonly tripPlanRepo: Repository<TripPlan>,
     @InjectRepository(TripPlanItem)
     private readonly itemRepo: Repository<TripPlanItem>,
-    @InjectRepository(Booking)
-    private readonly bookingRepo: Repository<Booking>,
-    @InjectRepository(BookingParticipant)
-    private readonly participantRepo: Repository<BookingParticipant>,
+    @InjectRepository(Reservation)
+    private readonly reservationRepo: Repository<Reservation>,
+    @InjectRepository(ReservationParticipant)
+    private readonly participantRepo: Repository<ReservationParticipant>,
     @InjectRepository(OfferItemSession)
     private readonly sessionRepo: Repository<OfferItemSession>,
     @InjectRepository(Offer)
@@ -209,7 +209,7 @@ export class TripPlanService {
     tripPlanId: string,
     ecoTravelerId: string,
     dto: BookTripPlanDto,
-  ): Promise<Booking[]> {
+  ): Promise<Reservation[]> {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
     const fullPlan = await this.tripPlanRepo.findOne({
       where: { id: tripPlanId },
@@ -237,7 +237,7 @@ export class TripPlanService {
     await queryRunner.startTransaction();
 
     try {
-      const bookings: Booking[] = [];
+      const reservations: Reservation[] = [];
       let circuitReservationsCount = 0;
 
       for (const item of fullPlan.items) {
@@ -339,7 +339,7 @@ export class TripPlanService {
             .toString(36)
             .substring(2, 8)
             .toUpperCase();
-          const booking = queryRunner.manager.create(Booking, {
+          const booking = queryRunner.manager.create(Reservation, {
             booking_ref: `BK-${refSuffix}`,
             traveler: { id: ecoTravelerId } as User,
             guideOffering: { id: guideOffering.id } as any,
@@ -354,12 +354,12 @@ export class TripPlanService {
                 : 'pending',
           });
 
-          const saved = await queryRunner.manager.save(Booking, booking);
+          const saved = await queryRunner.manager.save(Reservation, booking);
 
           if (dto.participants?.length) {
             const participants = dto.participants.map((p) =>
-              queryRunner.manager.create(BookingParticipant, {
-                booking: { id: saved.id } as Booking,
+              queryRunner.manager.create(ReservationParticipant, {
+                reservation: { id: saved.id } as Reservation,
                 full_name: p.full_name,
                 age: p.age ?? null,
                 document_type: p.document_type ?? null,
@@ -367,7 +367,7 @@ export class TripPlanService {
                 is_group_leader: p.is_group_leader ?? false,
               }),
             );
-            await queryRunner.manager.save(BookingParticipant, participants);
+            await queryRunner.manager.save(ReservationParticipant, participants);
           }
 
           // Décrémenter capacité session
@@ -381,7 +381,7 @@ export class TripPlanService {
               newRemaining !== null && newRemaining <= 0 ? 'full' : sess.status,
           });
 
-          bookings.push(saved);
+          reservations.push(saved);
 
           this.notificationService
             .create(
@@ -453,7 +453,7 @@ export class TripPlanService {
           .toString(36)
           .substring(2, 8)
           .toUpperCase();
-        const booking = queryRunner.manager.create(Booking, {
+        const booking = queryRunner.manager.create(Reservation, {
           booking_ref: `BK-${refSuffix}`,
           traveler: { id: ecoTravelerId } as User,
           offer: { id: offer.id } as any,
@@ -465,12 +465,12 @@ export class TripPlanService {
             offer.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
         });
 
-        const saved = await queryRunner.manager.save(Booking, booking);
+        const saved = await queryRunner.manager.save(Reservation, booking);
 
         if (dto.participants?.length) {
           const participants = dto.participants.map((p) =>
-            queryRunner.manager.create(BookingParticipant, {
-              booking: { id: saved.id } as Booking,
+            queryRunner.manager.create(ReservationParticipant, {
+              reservation: { id: saved.id } as Reservation,
               full_name: p.full_name,
               age: p.age ?? null,
               document_type: p.document_type ?? null,
@@ -478,10 +478,10 @@ export class TripPlanService {
               is_group_leader: p.is_group_leader ?? false,
             }),
           );
-          await queryRunner.manager.save(BookingParticipant, participants);
+          await queryRunner.manager.save(ReservationParticipant, participants);
         }
 
-        bookings.push(saved);
+        reservations.push(saved);
 
         if (offer.author_id) {
           const notifType =
@@ -518,7 +518,7 @@ export class TripPlanService {
         .incrementStat(ecoTravelerId, 'reservations_made')
         .catch(() => {});
 
-      const offerCount = bookings.length;
+      const offerCount = reservations.length;
       const totalCount = offerCount + circuitReservationsCount;
       this.notificationService
         .create(
@@ -530,8 +530,8 @@ export class TripPlanService {
         )
         .catch(() => {});
 
-      return this.bookingRepo.find({
-        where: { id: In(bookings.map((b) => b.id)) },
+      return this.reservationRepo.find({
+        where: { id: In(reservations.map((b) => b.id)) },
         relations: [
           'offer',
           'offerItem',

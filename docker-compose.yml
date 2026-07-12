@@ -14,22 +14,6 @@ services:
       - tourisme_net
     # port 5432 is NOT exposed to the host (internal only)
 
-  # ── MinIO (S3-compatible object storage) ────────────────────────────────────
-  minio:
-    image: minio/minio:latest
-    restart: unless-stopped
-    ports:
-      - "9000:9000"   # API
-      - "9001:9001"   # Console
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
-    volumes:
-      - tourisme_miniodata:/data
-    command: server /data --console-address ":9001"
-    networks:
-      - tourisme_net
-
   # ── Redis (Cache) ──────────────────────────────────────────
   redis:
     image: redis:7-alpine
@@ -63,7 +47,6 @@ services:
     depends_on:
       - db
       - mongo
-      - minio
       - redis
     networks:
       - tourisme_net
@@ -92,4 +75,3 @@ networks:
 volumes:
   tourisme_pgdata:
   tourisme_mongodata:
-  tourisme_miniodata:

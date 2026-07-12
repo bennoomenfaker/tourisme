@@ -7,7 +7,7 @@ import { PricingDomainService } from './pricing-domain.service';
 import { NotificationService } from '../notification/notification.service';
 import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 import { CircuitReservationSnapshot } from '../circuit/entities/circuit-reservation-snapshot.entity';
-import { Booking } from '../booking/entities/booking.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 import { CircuitOption } from '../circuit/entities/circuit-option.entity';
 import { CircuitProgramItem } from '../circuit/entities/circuit-program-item.entity';
 

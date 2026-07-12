@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { Guide } from './entities/guide.entity';
 import { GuideOffering } from './entities/guide-offering.entity';
-import { Booking } from '../booking/entities/booking.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 import { GuideOfferingAvailabilityRule } from './entities/guide-offering-availability-rule.entity';
 import { GuideOfferingSession } from './entities/guide-offering-session.entity';
 import { GuideOfferingBlock } from './entities/guide-offering-block.entity';
@@ -20,7 +20,7 @@ import {
   GuideEngagement,
   GuideEngagementSchema,
 } from './schemas/guide-engagement.schema';
-import { BookingModule } from '../booking/booking.module';
+import { ReservationModule } from '../reservation/reservation.module';
 
 @Module({
   imports: [
@@ -31,13 +31,13 @@ import { BookingModule } from '../booking/booking.module';
       GuideOfferingSession,
       GuideOfferingBlock,
       GuideOfferingPrice,
-      Booking,
+      Reservation,
     ]),
     MongooseModule.forFeature([
       { name: GuideSkills.name, schema: GuideSkillsSchema },
       { name: GuideEngagement.name, schema: GuideEngagementSchema },
     ]),
-    forwardRef(() => BookingModule),
+    forwardRef(() => ReservationModule),
   ],
   providers: [
     GuideService,

@@ -9,7 +9,7 @@ import { EcoTraveler } from '../eco-traveler/entities/eco-traveler.entity';
 import { Guide } from '../guide/entities/guide.entity';
 import { Provider } from '../provider/entities/provider.entity';
 import { GuideOffering } from '../guide/entities/guide-offering.entity';
-import { Booking } from '../booking/entities/booking.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 import { Review } from '../review/entities/review.entity';
 import { ModerationLog } from './entities/moderation-log.entity';
 import { AdminService } from './admin.service';
@@ -30,7 +30,7 @@ import { NotificationModule } from '../notification/notification.module';
       EcoTraveler,
       Guide,
       Provider,
-      Booking,
+      Reservation,
       Review,
       ModerationLog,
     ]),

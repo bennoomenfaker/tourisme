@@ -7,7 +7,20 @@ import {
   IsString,
   Min,
   Max,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CertificationDto {
+  @ApiProperty({ example: 'Guide certifié Éco-Voyage' })
+  @IsString()
+  label!: string;
+
+  @ApiProperty({ example: 'https://example.com/cert.pdf' })
+  @IsString()
+  @IsOptional()
+  proof?: string;
+}
 
 export class CompleteGuideProfileDto {
   @ApiProperty({ example: 'Ahmed Ben Ali' })
@@ -77,8 +90,9 @@ export class UpdateGuideExperienceDto {
   @IsString({ each: true })
   landscapes!: string[];
 
-  @ApiProperty({ example: ['Guide certifié AFRATIM', 'Premiers secours'] })
+  @ApiProperty({ example: [{ label: 'Guide certifié AFRATIM', proof: 'https://...' }] })
   @IsArray()
-  @IsString({ each: true })
-  certifications!: string[];
+  @ValidateNested({ each: true })
+  @Type(() => CertificationDto)
+  certifications!: CertificationDto[];
 }

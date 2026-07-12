@@ -42,7 +42,7 @@ export class ParticipantDto {
 /**
  * Création d'une réservation
  */
-export class CreateGuideBookingDto {
+export class CreateGuideReservationDto {
   @IsUUID()
   @IsNotEmpty()
   guide_offering_id!: string;
@@ -66,7 +66,7 @@ export class CreateGuideBookingDto {
   participants?: ParticipantDto[];
 }
 
-export class CreateBookingDto {
+export class CreateReservationDto {
   @IsUUID()
   @IsNotEmpty()
   offer_id!: string;

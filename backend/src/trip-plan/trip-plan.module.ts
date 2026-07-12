@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TripPlan } from './entities/trip-plan.entity';
 import { TripPlanItem } from './entities/trip-plan-item.entity';
-import { Booking } from '../booking/entities/booking.entity';
-import { BookingParticipant } from '../booking/entities/booking-participant.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
+import { ReservationParticipant } from '../reservation/entities/reservation-participant.entity';
 import { OfferItemSession } from '../offer/entities/offer-item-session.entity';
 import { GuideOffering } from '../guide/entities/guide-offering.entity';
 import { GuideOfferingSession } from '../guide/entities/guide-offering-session.entity';
@@ -20,8 +20,8 @@ import { CircuitReservation } from '../circuit/entities/circuit-reservation.enti
     TypeOrmModule.forFeature([
       TripPlan,
       TripPlanItem,
-      Booking,
-      BookingParticipant,
+      Reservation,
+      ReservationParticipant,
       OfferItemSession,
       GuideOffering,
       GuideOfferingSession,

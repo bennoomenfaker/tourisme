@@ -1,7 +1,7 @@
 import { IsArray, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ParticipantDto } from '../../booking/dto/create-booking.dto';
+import { ParticipantDto } from '../../reservation/dto/create-reservation.dto';
 
 export class BookTripPlanDto {
   @ApiPropertyOptional({

@@ -11,18 +11,18 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
-import { BookingService } from './booking.service';
+import { ReservationService } from './reservation.service';
 import {
-  CreateBookingDto,
-  CreateGuideBookingDto,
-} from './dto/create-booking.dto';
+  CreateReservationDto,
+  CreateGuideReservationDto,
+} from './dto/create-reservation.dto';
 import { AddParticipantsDto } from './dto/add-participants.dto';
 import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Réservations')
-@Controller('bookings')
-export class BookingController {
-  constructor(private readonly service: BookingService) {}
+@Controller('reservations')
+export class ReservationController {
+  constructor(private readonly service: ReservationService) {}
 
   /**
    * Crée une réservation (éco-voyageur)
@@ -30,7 +30,7 @@ export class BookingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER)
   @Post()
-  async create(@Req() req: any, @Body() dto: CreateBookingDto) {
+  async create(@Req() req: any, @Body() dto: CreateReservationDto) {
     return this.service.create(req.user.sub, dto);
   }
 
@@ -40,11 +40,11 @@ export class BookingController {
   @ApiBearerAuth('bearer')
   @Roles(Role.ECO_TRAVELER)
   @Post('guide')
-  async createGuideBooking(
+  async createGuideReservation(
     @Req() req: any,
-    @Body() dto: CreateGuideBookingDto,
+    @Body() dto: CreateGuideReservationDto,
   ) {
-    return this.service.createGuideBooking(req.user.sub, dto);
+    return this.service.createGuideReservation(req.user.sub, dto);
   }
 
   /**
@@ -136,7 +136,7 @@ export class BookingController {
   @Roles(Role.ADMIN)
   @Post('check-expired')
   checkExpired() {
-    return this.service.checkExpiredBookings();
+    return this.service.checkExpiredReservations();
   }
 
   /**
@@ -146,6 +146,6 @@ export class BookingController {
   @Roles(Role.ADMIN)
   @Post('finalize-completed')
   finalizeCompleted() {
-    return this.service.finalizeCompletedBookings();
+    return this.service.finalizeCompletedReservations();
   }
 }

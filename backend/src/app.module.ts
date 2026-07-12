@@ -22,7 +22,7 @@ import { MessagesModule } from './messages/messages.module';
 import { ReportsModule } from './reports/reports.module';
 import { InteractionsModule } from './interactions/interactions.module';
 import { PlaceContributionModule } from './place-contribution/place-contribution.module';
-import { BookingModule } from './booking/booking.module';
+import { ReservationModule } from './reservation/reservation.module';
 import { CircuitModule } from './circuit/circuit.module';
 import { EventModule } from './event/event.module';
 import { NotificationModule } from './notification/notification.module';
@@ -68,7 +68,7 @@ import { ProviderActivityModule } from './provider-activity/provider-activity.mo
     ReportsModule,
     InteractionsModule,
     PlaceContributionModule,
-    BookingModule,
+    ReservationModule,
     CircuitModule,
     EventModule,
     NotificationModule,

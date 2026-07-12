@@ -14,7 +14,7 @@ import { OfferItem } from '../../offer/entities/offer-item.entity';
 import { OfferItemSession } from '../../offer/entities/offer-item-session.entity';
 import { GuideOffering } from '../../guide/entities/guide-offering.entity';
 import { GuideOfferingSession } from '../../guide/entities/guide-offering-session.entity';
-import { BookingParticipant } from './booking-participant.entity';
+import { ReservationParticipant } from './reservation-participant.entity';
 
 /**
  * Réservation effectuée par un éco-voyageur
@@ -22,13 +22,13 @@ import { BookingParticipant } from './booking-participant.entity';
  * C'est le document central du cycle de réservation
  * Soit offer/offerItem/session (offres classiques) soit guideOffering/guideOfferingSession (prestations guide)
  */
-@Entity('bookings')
-export class Booking {
+@Entity('reservations')
+export class Reservation {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ unique: true })
-  booking_ref!: string;
+  reservation_ref!: string;
 
   @Column({ type: 'uuid', nullable: true })
   traveler_id!: string | null;
@@ -84,8 +84,8 @@ export class Booking {
   @Column({ type: 'text', nullable: true })
   cancel_reason!: string | null;
 
-  @OneToMany(() => BookingParticipant, (p) => p.booking)
-  participants!: BookingParticipant[];
+  @OneToMany(() => ReservationParticipant, (p) => p.reservation)
+  participants!: ReservationParticipant[];
 
   @CreateDateColumn()
   created_at!: Date;

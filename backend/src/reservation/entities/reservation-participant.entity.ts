@@ -6,21 +6,21 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Booking } from './booking.entity';
+import { Reservation } from './reservation.entity';
 
 /**
  * Participant individuel d'une réservation de groupe
  * Permet de connaître la composition exacte d'un groupe
  * Un booking peut avoir plusieurs participants (ex: famille de 4 personnes)
  */
-@Entity('booking_participants')
-export class BookingParticipant {
+@Entity('reservation_participants')
+export class ReservationParticipant {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Booking, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'booking_id' })
-  booking!: Booking;
+  @ManyToOne(() => Reservation, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'reservation_id' })
+  reservation!: Reservation;
 
   @Column()
   full_name!: string;

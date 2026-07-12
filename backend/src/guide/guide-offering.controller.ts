@@ -14,8 +14,8 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/roles.enum';
 import { Public } from '../common/decorators/public.decorator';
 import { GuideOfferingService } from './guide-offering.service';
-import { BookingService } from '../booking/booking.service';
-import { CreateGuideBookingDto } from '../booking/dto/create-booking.dto';
+import { ReservationService } from '../reservation/reservation.service';
+import { CreateGuideReservationDto } from '../reservation/dto/create-reservation.dto';
 import {
   CreateGuideOfferingDto,
   UpdateGuideOfferingDto,
@@ -31,7 +31,7 @@ import {
 export class GuideOfferingController {
   constructor(
     private readonly service: GuideOfferingService,
-    private readonly bookingService: BookingService,
+    private readonly reservationService: ReservationService,
   ) {}
 
   @ApiBearerAuth('bearer')
@@ -155,11 +155,11 @@ export class GuideOfferingController {
     @Req() req: any,
     @Param('id') id: string,
     @Param('sessionId') sessionId: string,
-    @Body() dto: CreateGuideBookingDto,
+    @Body() dto: CreateGuideReservationDto,
   ) {
     dto.guide_offering_id = id;
     dto.guide_offering_session_id = sessionId;
-    return this.bookingService.createGuideBooking(req.user.sub, dto);
+    return this.reservationService.createGuideReservation(req.user.sub, dto);
   }
 
   // ─── Blocks ─────────────────────────────────────────

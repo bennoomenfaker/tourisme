@@ -6,7 +6,7 @@ import { EcoTraveler } from './entities/eco-traveler.entity';
 import { Friendship } from './entities/friendship.entity';
 import { Publication } from '../publication/entities/publication.entity';
 import { TripPlan } from '../trip-plan/entities/trip-plan.entity';
-import { Booking } from '../booking/entities/booking.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 import { EcoTravelerService } from './eco-traveler.service';
 import { EcoTravelerController } from './eco-traveler.controller';
@@ -29,7 +29,7 @@ import {
       Publication,
       Friendship,
       TripPlan,
-      Booking,
+      Reservation,
       CircuitReservation,
     ]),
 

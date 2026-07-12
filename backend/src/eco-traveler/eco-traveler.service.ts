@@ -10,7 +10,7 @@ import { EcoTraveler } from './entities/eco-traveler.entity';
 import { Friendship } from './entities/friendship.entity';
 import { Publication } from '../publication/entities/publication.entity';
 import { TripPlan } from '../trip-plan/entities/trip-plan.entity';
-import { Booking } from '../booking/entities/booking.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 import {
   CompleteProfileDto,
@@ -32,8 +32,8 @@ export class EcoTravelerService {
     private readonly friendRepo: Repository<Friendship>,
     @InjectRepository(TripPlan)
     private readonly tripPlanRepo: Repository<TripPlan>,
-    @InjectRepository(Booking)
-    private readonly bookingRepo: Repository<Booking>,
+    @InjectRepository(Reservation)
+    private readonly reservationRepo: Repository<Reservation>,
     @InjectRepository(CircuitReservation)
     private readonly circuitResRepo: Repository<CircuitReservation>,
     private readonly mongoService: EcoTravelerMongoService,
@@ -46,7 +46,7 @@ export class EcoTravelerService {
       mongoEngagement,
       pubCount,
       tripPlanCount,
-      bookingCount,
+      reservationCount,
       circuitResCount,
     ] = await Promise.all([
       this.repo.findOne({ where: { user_id: userId } }),
@@ -56,7 +56,7 @@ export class EcoTravelerService {
       this.tripPlanRepo.count({
         where: { ecoTraveler: { id: userId } as any },
       }),
-      this.bookingRepo.count({ where: { traveler: { id: userId } as any } }),
+      this.reservationRepo.count({ where: { traveler: { id: userId } as any } }),
       this.circuitResRepo.count({ where: { user: { id: userId } as any } }),
     ]);
 
@@ -120,7 +120,7 @@ export class EcoTravelerService {
       feedback_given: mongoEngagement?.feedback_given ?? 0,
       plans_shared: tripPlanCount || (mongoEngagement?.plans_shared ?? 0),
       reservations_made:
-        bookingCount + circuitResCount ||
+        reservationCount + circuitResCount ||
         (mongoEngagement?.reservations_made ?? 0),
     };
   }
