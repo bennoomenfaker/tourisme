@@ -665,6 +665,7 @@ export class OfferService {
     // Transitions allowed for ANY role (provider can do these)
     const common: Record<string, string[]> = {
       draft: ['pending', 'archived'],
+      pending: ['archived'],
       approved: ['inactive', 'archived'],
       inactive: ['approved'],
       rejected: ['pending', 'archived'],

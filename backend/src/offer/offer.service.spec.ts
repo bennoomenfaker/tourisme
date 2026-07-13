@@ -68,10 +68,7 @@ describe('OfferService status transitions', () => {
 
   const validTransitions: [string, string][] = [
     ['draft', 'pending'],
-    ['draft', 'approved'],
     ['draft', 'archived'],
-    ['pending', 'approved'],
-    ['pending', 'rejected'],
     ['pending', 'archived'],
     ['approved', 'inactive'],
     ['approved', 'archived'],
@@ -83,8 +80,11 @@ describe('OfferService status transitions', () => {
   const invalidTransitions: [string, string][] = [
     ['draft', 'rejected'],
     ['draft', 'inactive'],
+    ['draft', 'approved'],
     ['pending', 'draft'],
     ['pending', 'inactive'],
+    ['pending', 'approved'],
+    ['pending', 'rejected'],
     ['approved', 'draft'],
     ['approved', 'pending'],
     ['approved', 'rejected'],
