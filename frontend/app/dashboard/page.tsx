@@ -1173,9 +1173,9 @@ function MyReservationsTab() {
   const [newParticipants, setNewParticipants] = useState<{ full_name: string }[]>([]);
 
   const fetchBookings = () => {
-    apiFetch<Booking[]>("/bookings/mine")
+    apiFetch<Booking[]>("/reservations/mine")
       .then(setBookings)
-      .catch(() => {})
+      .catch((err) => console.error("Erreur chargement réservations", err))
       .finally(() => setLoading(false));
   };
 
@@ -1184,7 +1184,7 @@ function MyReservationsTab() {
   const handleCancel = async (id: string) => {
     if (!confirm("Annuler cette réservation ?")) return;
     try {
-      await apiFetch(`/bookings/${id}/cancel`, { method: "PATCH" });
+      await apiFetch(`/reservations/${id}/cancel`, { method: "PATCH" });
       fetchBookings();
     } catch (err: any) { alert(err.message); }
   };
@@ -1193,7 +1193,7 @@ function MyReservationsTab() {
     const valid = newParticipants.filter((p) => p.full_name.trim());
     if (!valid.length) return;
     try {
-      await apiFetch(`/bookings/${id}/participants`, {
+      await apiFetch(`/reservations/${id}/participants`, {
         method: "PATCH",
         body: JSON.stringify({ participants: valid }),
       });
@@ -1268,9 +1268,9 @@ function IncomingReservationsTab() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch<Booking[]>("/bookings/incoming")
+    apiFetch<Booking[]>("/reservations/incoming")
       .then(setBookings)
-      .catch(() => {})
+      .catch((err) => console.error("Erreur chargement réservations entrantes", err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -1281,11 +1281,11 @@ function IncomingReservationsTab() {
   }
 
   const handleConfirm = async (id: string) => {
-    try { await apiFetch(`/bookings/${id}/confirm`, { method: "PATCH" }); setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: "confirmed" } : b)); } catch {}
+    try { await apiFetch(`/reservations/${id}/confirm`, { method: "PATCH" }); setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: "confirmed" } : b)); } catch (err) { console.error("Erreur confirmation réservation", err); }
   };
 
   const handleCancel = async (id: string) => {
-    try { await apiFetch(`/bookings/${id}/cancel`, { method: "PATCH" }); setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: "cancelled" } : b)); setConfirmDeleteId(null); } catch {}
+    try { await apiFetch(`/reservations/${id}/cancel`, { method: "PATCH" }); setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: "cancelled" } : b)); setConfirmDeleteId(null); } catch (err) { console.error("Erreur annulation réservation", err); }
   };
 
   return (
@@ -1598,7 +1598,7 @@ function EcoTravelerOffersSection({ router }: { router: any }) {
     const token = localStorage.getItem("access_token");
     Promise.all([
       apiFetch<any[]>("/offers").catch(() => []),
-      token ? apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []) : Promise.resolve([]),
+      token ? apiFetch<any[]>("/reservations/mine", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []) : Promise.resolve([]),
     ]).then(([allOffers, bookings]) => {
       setOffers(allOffers);
       const activeBookings = bookings.filter((b: any) => b.status !== "cancelled" && b.status !== "rejected");
@@ -1736,7 +1736,22 @@ function CircuitsTab({ role, router, token }: { role: string; router: any; token
             <div key={c.id} className="bg-white rounded-2xl border border-slate-100 p-4">
               <h4 className="font-semibold text-slate-800 mb-1">{c.title}</h4>
               <p className="text-xs text-slate-400 mb-3 line-clamp-2">{c.description}</p>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mb-3">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-3 flex-wrap">
+                {c.status && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    c.status === "approved" ? "bg-emerald-100 text-emerald-700" :
+                    c.status === "pending" ? "bg-amber-100 text-amber-700" :
+                    c.status === "draft" ? "bg-slate-100 text-slate-500" :
+                    c.status === "rejected" ? "bg-red-100 text-red-600" :
+                    "bg-slate-100 text-slate-400"
+                  }`}>
+                    {c.status === "approved" ? "✅ Approuvé" :
+                     c.status === "pending" ? "⏳ En attente" :
+                     c.status === "draft" ? "📝 Brouillon" :
+                     c.status === "rejected" ? "❌ Rejeté" :
+                     c.status}
+                  </span>
+                )}
                 {c.difficulty_level && (
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${c.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : c.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : c.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
                     {c.difficulty_level === "easy" ? "🟢 Facile" : c.difficulty_level === "moderate" ? "🟡 Modéré" : c.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
@@ -1746,7 +1761,7 @@ function CircuitsTab({ role, router, token }: { role: string; router: any; token
               </div>
               <div className="flex gap-2">
                   <button onClick={() => router.push(`/circuits/${c.id}`)} className="text-xs text-primary border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-50">Détails</button>
-                  {role === "eco_traveler" && (
+                  {role === "eco_traveler" && c.status === "approved" && (
                     <button onClick={() => setBookCircuit(c)} className="text-xs text-white bg-primary rounded-lg px-3 py-1.5 hover:bg-emerald-600">Réserver</button>
                   )}
                   {isProvider && (

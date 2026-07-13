@@ -35,8 +35,6 @@ export default function RegisterPage() {
       errs.password = "Le mot de passe doit contenir au moins une minuscule.";
     } else if (!/(?=.*[A-Z])/.test(password)) {
       errs.password = "Le mot de passe doit contenir au moins une majuscule.";
-    } else if (!/(?=.*\d)/.test(password)) {
-      errs.password = "Le mot de passe doit contenir au moins un chiffre.";
     }
     if (!confirmPassword) {
       errs.confirmPassword = "La confirmation est requise.";

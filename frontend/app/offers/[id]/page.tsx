@@ -132,7 +132,7 @@ export default function OfferDetailPage() {
     if (u.role !== "eco_traveler") return;
     const token = localStorage.getItem("access_token");
     if (!token) return;
-    apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch<any[]>("/reservations/mine", { headers: { Authorization: `Bearer ${token}` } })
       .then((bookings) => setExistingBooking(bookings.some((b) => b.offer?.id === id && b.status !== "cancelled" && b.status !== "rejected")))
       .catch(() => {});
     apiFetch<any>(`/favorites/check/offer/${id}`, { headers: { Authorization: `Bearer ${token}` } })

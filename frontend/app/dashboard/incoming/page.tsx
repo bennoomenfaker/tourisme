@@ -46,7 +46,7 @@ export default function IncomingReservationsPage() {
 
   const fetchBookings = () => {
     Promise.all([
-      apiFetch<Booking[]>("/bookings/incoming").catch(() => []),
+      apiFetch<Booking[]>("/reservations/incoming").catch(() => []),
       apiFetch<CircuitReservation[]>("/circuits/reservations/incoming").catch(() => []),
     ]).then(([b, c]) => {
       setBookings(b);
@@ -59,7 +59,7 @@ export default function IncomingReservationsPage() {
   const handleConfirmBooking = async (id: string) => {
     setProcessingId(id);
     try {
-      await apiFetch(`/bookings/${id}/confirm`, { method: "PATCH" });
+      await apiFetch(`/reservations/${id}/confirm`, { method: "PATCH" });
       fetchBookings();
     } catch (err: any) {
       alert(err.message);
@@ -72,7 +72,7 @@ export default function IncomingReservationsPage() {
     if (!confirm("Refuser cette réservation ?")) return;
     setProcessingId(id);
     try {
-      await apiFetch(`/bookings/${id}/cancel`, { method: "PATCH" });
+      await apiFetch(`/reservations/${id}/cancel`, { method: "PATCH" });
       fetchBookings();
     } catch (err: any) {
       alert(err.message);

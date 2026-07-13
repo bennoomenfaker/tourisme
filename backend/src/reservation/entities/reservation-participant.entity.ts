@@ -19,7 +19,7 @@ export class ReservationParticipant {
   id!: string;
 
   @ManyToOne(() => Reservation, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'reservation_id' })
+  @JoinColumn({ name: 'booking_id' })
   reservation!: Reservation;
 
   @Column()

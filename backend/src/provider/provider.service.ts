@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { Provider } from './entities/provider.entity';
 import { Venue } from './entities/venue.entity';
 import { Offer } from '../offer/entities/offer.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
+import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
 import { CreateProviderDto, UpdateProviderDto } from './dto/provider.dto';
 import { CompleteOwnerProfileDto } from './dto/owner-profile.dto';
 import {
@@ -27,6 +29,10 @@ export class ProviderService {
     private readonly venueRepo: Repository<Venue>,
     @InjectRepository(Offer)
     private readonly offerRepo: Repository<Offer>,
+    @InjectRepository(Reservation)
+    private readonly reservationRepo: Repository<Reservation>,
+    @InjectRepository(CircuitReservation)
+    private readonly circuitReservationRepo: Repository<CircuitReservation>,
     private readonly mongoService: ProviderMongoService,
     private readonly ownerMongoService: OwnerMongoService,
   ) {}
@@ -61,9 +67,19 @@ export class ProviderService {
   // ─── Profile (merged from project-owner) ──────────────────────────────────
 
   async getProfile(userId: string) {
-    const [sqlProfile, mongoEngagement] = await Promise.all([
+    const [sqlProfile, mongoEngagement, offerReservationCount, circuitReservationCount] = await Promise.all([
       this.repo.findOne({ where: { user_id: userId } }),
       this.ownerMongoService.getEngagement(userId),
+      this.reservationRepo
+        .createQueryBuilder('r')
+        .innerJoin('r.offer', 'offer')
+        .where('offer.author_id = :userId', { userId })
+        .getCount(),
+      this.circuitReservationRepo
+        .createQueryBuilder('cr')
+        .innerJoin('cr.circuit', 'circuit')
+        .where('circuit.author_id = :userId', { userId })
+        .getCount(),
     ]);
 
     if (sqlProfile) {
@@ -97,7 +113,7 @@ export class ProviderService {
       score_feedbacks: sqlProfile?.score_feedbacks ?? 0,
       // MongoDB
       badges: mongoEngagement?.badges ?? [],
-      total_reservations: mongoEngagement?.total_reservations ?? 0,
+      total_reservations: offerReservationCount + circuitReservationCount,
       feedback_received: mongoEngagement?.feedback_received ?? 0,
       projects_count: mongoEngagement?.projects_count ?? 0,
       // Venues

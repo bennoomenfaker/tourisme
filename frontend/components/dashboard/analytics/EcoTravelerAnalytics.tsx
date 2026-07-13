@@ -28,7 +28,7 @@ export default function EcoTravelerAnalytics({ token }: { token: string }) {
     async function load() {
       try {
         const [bookings, reviews] = await Promise.all([
-          apiFetch<any[]>("/bookings/mine", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
+          apiFetch<any[]>("/reservations/mine", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
           apiFetch<any[]>("/reviews/mine", { headers: { Authorization: `Bearer ${token}` } }).catch(() => []),
         ]);
 

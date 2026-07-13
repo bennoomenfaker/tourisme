@@ -74,8 +74,8 @@ export class CircuitController {
    */
   @Public()
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.service.findById(id);
+  findById(@Param('id') id: string, @Req() req?: any) {
+    return this.service.findById(id, req?.user);
   }
 
   /**
@@ -89,7 +89,7 @@ export class CircuitController {
     @Param('id') id: string,
     @Body() dto: UpdateCircuitDto,
   ) {
-    const circuit = await this.service.findById(id);
+    const circuit = await this.service.findById(id, req.user);
     if (circuit.author_id !== req.user.sub) {
       throw new ForbiddenException('Accès refusé');
     }
@@ -105,6 +105,16 @@ export class CircuitController {
         : null;
     }
     return this.service.update(id, updateData as Partial<CreateCircuitDto>);
+  }
+
+  /**
+   * Soumet un circuit pour validation admin (draft → pending)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Patch(':id/submit')
+  async submitForReview(@Req() req: any, @Param('id') id: string) {
+    return this.service.submitForReview(id, req.user.sub);
   }
 
   /**

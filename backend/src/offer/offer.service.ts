@@ -129,6 +129,7 @@ export class OfferService {
       deposit_percentage: dto.deposit_percentage ?? 0,
       production_delay_days: dto.production_delay_days ?? null,
       fulfillment_mode: dto.fulfillment_mode ?? null,
+      price_type: dto.price_type ?? null,
       venue_id: dto.venue_id ?? null,
       location_type: locationType,
       status: initialStatus,
@@ -284,6 +285,7 @@ export class OfferService {
     authorId: string,
     offerId: string,
     dto: UpdateOfferDto,
+    userRole?: string,
   ): Promise<Offer> {
     const offer = await this.findOrFail(offerId);
     if (offer.author_id !== authorId)
@@ -322,7 +324,7 @@ export class OfferService {
       const valid = this.isValidOfferTransition(
         offer.status,
         dto.status,
-        authorId,
+        userRole ?? 'provider',
       );
       if (!valid)
         throw new BadRequestException(
@@ -351,6 +353,8 @@ export class OfferService {
       offer.production_delay_days = dto.production_delay_days;
     if (dto.fulfillment_mode !== undefined)
       offer.fulfillment_mode = dto.fulfillment_mode;
+    if (dto.price_type !== undefined)
+      offer.price_type = dto.price_type;
 
     await this.repo.save(offer);
     await this.invalidateOfferCache();
@@ -654,18 +658,33 @@ export class OfferService {
   private isValidOfferTransition(
     current: string,
     next: string,
-    authorId: string,
+    role: string,
   ): boolean {
     if (current === next) return true;
-    const allowed: Record<string, string[]> = {
-      draft: ['pending', 'approved', 'archived'],
-      pending: ['approved', 'rejected', 'archived'],
+
+    // Transitions allowed for ANY role (provider can do these)
+    const common: Record<string, string[]> = {
+      draft: ['pending', 'archived'],
       approved: ['inactive', 'archived'],
       inactive: ['approved'],
       rejected: ['pending', 'archived'],
       archived: [],
     };
-    return allowed[current]?.includes(next) ?? false;
+
+    // Transitions allowed for ADMIN only
+    const adminOnly: Record<string, string[]> = {
+      draft: ['approved'],
+      pending: ['approved', 'rejected'],
+    };
+
+    if (role === 'admin') {
+      const adminTransitions = adminOnly[current] ?? [];
+      const commonTransitions = common[current] ?? [];
+      return [...commonTransitions, ...adminTransitions].includes(next);
+    }
+
+    const allowed = common[current] ?? [];
+    return allowed.includes(next);
   }
 
   // ─── OfferItem Prices ──────────────────────────────────

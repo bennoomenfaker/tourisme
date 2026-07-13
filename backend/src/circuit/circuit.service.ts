@@ -111,18 +111,19 @@ export class CircuitService {
     region?: string,
     pagination?: PaginationParams,
   ): Promise<PaginatedResult<Circuit> | Circuit[]> {
-    const where: any = {};
-    if (status) where.status = status;
+    const where: any = { is_deleted: false };
+    if (status) {
+      where.status = status;
+    } else {
+      where.status = 'approved';
+    }
     if (region) where.region = region;
 
     if (!pagination?.page) {
-      const circuits =
-        !status && !region
-          ? await this.circuitRepo.find({ order: { created_at: 'DESC' } })
-          : await this.circuitRepo.find({
-              where,
-              order: { created_at: 'DESC' },
-            });
+      const circuits = await this.circuitRepo.find({
+        where,
+        order: { created_at: 'DESC' },
+      });
       return circuits;
     }
 
@@ -137,16 +138,26 @@ export class CircuitService {
     return paginated(data, total, page, limit);
   }
 
-  async findById(id: string): Promise<Circuit> {
+  async findById(id: string, user?: any): Promise<Circuit> {
     const cacheKey = `${this.CIRCUIT_CACHE_PREFIX}detail:${id}`;
     const cached = await this.redis.get<Circuit>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      if (cached.status === 'approved') return cached;
+      if (user && (cached.author_id === user.sub || user.role === 'admin')) return cached;
+      throw new NotFoundException('Circuit introuvable');
+    }
 
     const circuit = await this.circuitRepo.findOne({
-      where: { id },
+      where: { id, is_deleted: false },
       relations: ['days', 'days.programItems', 'options'],
     });
     if (!circuit) throw new NotFoundException('Circuit introuvable');
+
+    if (circuit.status !== 'approved') {
+      if (!user || (circuit.author_id !== user.sub && user.role !== 'admin')) {
+        throw new NotFoundException('Circuit introuvable');
+      }
+    }
 
     await this.redis.set(cacheKey, circuit);
     return circuit;
@@ -154,13 +165,18 @@ export class CircuitService {
 
   async findByAuthor(authorId: string): Promise<Circuit[]> {
     return this.circuitRepo.find({
-      where: { author_id: authorId },
+      where: { author_id: authorId, is_deleted: false },
       order: { created_at: 'DESC' },
     });
   }
 
-  validateCircuitTransition(current: string, next: string): boolean {
-    const allowed: Record<string, string[]> = {
+  validateCircuitTransition(current: string, next: string, role?: string): boolean {
+    const providerAllowed: Record<string, string[]> = {
+      draft: ['pending', 'archived'],
+      approved: ['archived'],
+      rejected: ['draft'],
+    };
+    const adminAllowed: Record<string, string[]> = {
       draft: ['pending', 'archived'],
       pending: ['approved', 'rejected', 'archived'],
       approved: ['archived'],
@@ -168,7 +184,20 @@ export class CircuitService {
       archived: [],
     };
     if (current === next) return true;
+    const allowed = role === 'admin' ? adminAllowed : providerAllowed;
     return allowed[current]?.includes(next) ?? false;
+  }
+
+  async submitForReview(id: string, userId: string): Promise<Circuit> {
+    const circuit = await this.findById(id);
+    if (circuit.author_id !== userId) {
+      throw new ForbiddenException('Vous ne pouvez soumettre que vos propres circuits');
+    }
+    if (!this.validateCircuitTransition(circuit.status, 'pending', 'provider')) {
+      throw new BadRequestException(`Transition de "${circuit.status}" vers "pending" non autorisée`);
+    }
+    circuit.status = 'pending';
+    return this.circuitRepo.save(circuit);
   }
 
   private async assertNoConfirmedReservations(
@@ -507,7 +536,19 @@ export class CircuitService {
     });
     const saved = await this.programItemRepo.save(item);
     await this.invalidateCircuitCache();
+    await this.recalculateCircuitPrice(day.circuit.id);
     return saved;
+  }
+
+  private async recalculateCircuitPrice(circuitId: string): Promise<void> {
+    const circuit = await this.circuitRepo.findOne({ where: { id: circuitId } });
+    if (!circuit) return;
+    const items = await this.programItemRepo.find({
+      where: { circuitDay: { circuit: { id: circuitId } }, is_included: true },
+    });
+    const activitiesTotal = items.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
+    circuit.base_price = activitiesTotal > 0 ? activitiesTotal : circuit.base_price;
+    await this.circuitRepo.save(circuit);
   }
 
   async updateProgramItem(
@@ -572,6 +613,7 @@ export class CircuitService {
       item.external_provider_name = dto.external_provider_name ?? null;
     const saved = await this.programItemRepo.save(item);
     await this.invalidateCircuitCache();
+    await this.recalculateCircuitPrice(item.circuitDay.circuit.id);
     return saved;
   }
 
@@ -592,6 +634,7 @@ export class CircuitService {
     );
     await this.programItemRepo.remove(item);
     await this.invalidateCircuitCache();
+    await this.recalculateCircuitPrice(item.circuitDay.circuit.id);
   }
 
   // ─── Réservation de circuit ────────────────────────────
@@ -929,7 +972,40 @@ export class CircuitService {
     if (!circuit) throw new NotFoundException('Circuit introuvable');
     if (circuit.author_id !== authorId)
       throw new ForbiddenException('Accès refusé');
-    await this.circuitRepo.remove(circuit);
+
+    // Vérifier les réservations actives (pending/confirmed)
+    const activeReservations = await this.reservationRepo.count({
+      where: {
+        circuit: { id },
+        status: 'confirmed',
+      },
+    });
+    const pendingReservations = await this.reservationRepo.count({
+      where: {
+        circuit: { id },
+        status: 'pending',
+      },
+    });
+
+    if (activeReservations > 0) {
+      throw new BadRequestException(
+        `${activeReservations} réservation(s) confirmée(s) liée(s) à ce circuit. ` +
+          `Annulez les réservations ou archivez le circuit.`,
+      );
+    }
+
+    if (pendingReservations > 0) {
+      throw new BadRequestException(
+        `${pendingReservations} réservation(s) en attente liée(s) à ce circuit. ` +
+          `Annulez les réservations ou archivez le circuit.`,
+      );
+    }
+
+    // Soft delete
+    circuit.is_deleted = true;
+    circuit.deleted_at = new Date();
+    circuit.status = 'archived';
+    await this.circuitRepo.save(circuit);
     await this.invalidateCircuitCache();
   }
 

@@ -169,7 +169,7 @@ export class OfferController {
     @Param('id') id: string,
     @Body() dto: UpdateOfferDto,
   ) {
-    return this.service.update(req.user.sub, id, dto);
+    return this.service.update(req.user.sub, id, dto, req.user.role);
   }
 
   /** Supprimer une offre (soft delete si réservations actives) */

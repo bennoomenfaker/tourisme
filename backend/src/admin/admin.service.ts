@@ -503,6 +503,10 @@ export class AdminService {
 
   async approveCircuit(id: string, adminId: string) {
     const circuit = await this.findCircuitOrFail(id);
+    const allowed = ['pending'];
+    if (!allowed.includes(circuit.status)) {
+      throw new BadRequestException(`Transition de "${circuit.status}" vers "approved" non autorisée — seul un circuit "pending" peut être approuvé`);
+    }
     circuit.status = 'approved';
     circuit.rejection_reason = null;
     const saved = await this.circuitRepo.save(circuit);
@@ -515,6 +519,10 @@ export class AdminService {
 
   async rejectCircuit(id: string, reason: string, adminId: string) {
     const circuit = await this.findCircuitOrFail(id);
+    const allowed = ['pending'];
+    if (!allowed.includes(circuit.status)) {
+      throw new BadRequestException(`Transition de "${circuit.status}" vers "rejected" non autorisée — seul un circuit "pending" peut être rejeté`);
+    }
     circuit.status = 'rejected';
     circuit.rejection_reason = reason;
     const saved = await this.circuitRepo.save(circuit);

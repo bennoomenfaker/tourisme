@@ -139,4 +139,10 @@ export class Circuit {
 
   @UpdateDateColumn()
   updated_at!: Date;
+
+  @Column({ type: 'boolean', default: false })
+  is_deleted!: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at!: Date | null;
 }

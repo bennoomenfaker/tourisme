@@ -131,6 +131,10 @@ export class CreateOfferDto {
   @IsOptional()
   @IsIn(['instant_stock', 'scheduled', 'recurring', 'on_request', 'mixed'])
   fulfillment_mode?: string;
+
+  @IsOptional()
+  @IsIn(['per_person', 'per_group', 'per_night', 'per_unit', 'on_request'])
+  price_type?: string;
 }
 
 export class OfferSustainabilityDto {
@@ -227,19 +231,19 @@ export class UpdateOfferDto {
   min_age?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['flexible', 'moderate', 'strict', 'non_refundable'])
   cancellation_policy?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['automatic', 'manual'])
   confirmation_mode?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['draft', 'pending', 'archived'])
   status?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['fixed', 'mobile', 'online'])
   location_type?: string;
 
   @IsOptional()
@@ -256,8 +260,12 @@ export class UpdateOfferDto {
   production_delay_days?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['instant_stock', 'scheduled', 'recurring', 'on_request', 'mixed'])
   fulfillment_mode?: string;
+
+  @IsOptional()
+  @IsIn(['per_person', 'per_group', 'per_night', 'per_unit', 'on_request'])
+  price_type?: string;
 }
 
 // ─── OfferItem DTOs ──────────────────────────────────────
@@ -322,7 +330,7 @@ export class UpdateOfferItemDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['room', 'bed', 'camping_space', 'dish', 'menu', 'equipment', 'activity', 'workshop', 'transport_service'])
   item_type?: string;
 
   @IsOptional()
@@ -333,7 +341,7 @@ export class UpdateOfferItemDto {
   requires_confirmation?: boolean;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['automatic', 'manual'])
   confirmation_mode?: string;
 
   @IsOptional()
@@ -352,7 +360,7 @@ export class UpdateOfferItemDto {
   production_delay_days?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['draft', 'active', 'archived'])
   status?: string;
 }
 
@@ -473,7 +481,7 @@ export class UpdateOfferItemSessionDto {
   price_override?: number;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['available', 'cancelled', 'full', 'completed'])
   status?: string;
 }
 

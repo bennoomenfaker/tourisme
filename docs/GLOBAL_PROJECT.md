@@ -208,18 +208,28 @@ Score Final = Questionnaire × 20% + Réservations × 40% + Feedbacks × 20% + P
 ### 4.2 Workflow d'Offres
 
 ```
-Création → status = "pending"
+Création → status = "draft"
               │
-      ┌───────┴───────┐
-      │               │
-   Ambassadeur     Non-ambassadeur
-      │               │
-   approved      Admin examine
-                     │
-              ┌──────┴──────┐
-              │             │
-          approved      rejected
+       Soumettre (provider)
+              │
+           pending ──→ Admin examine
+                          │
+                   ┌──────┴──────┐
+                   │             │
+               approved      rejected
+                   │             │
+           ┌───────┴───────┐     │
+           │               │     └─→ pending (resoumettre)
+        inactive        archived
+           │
+        archived
 ```
+
+**Transitions autorisées (provider)** : `draft→pending`, `draft→archived`, `approved→inactive`, `approved→archived`, `inactive→approved`, `rejected→pending`, `rejected→archived`
+
+**Transitions autorisées (admin)** : `pending→approved`, `pending→rejected`
+
+**price_type** : `per_person` | `per_group` | `per_night` | `per_unit` | `on_request`
 
 ### 4.3 Réservations
 
@@ -234,6 +244,10 @@ Création → status = "pending"
 - 4 types d'activités : own, other, guide, standalone reference
 - Options additionnelles (transport, hébergement, équipement)
 - Hébergement configurable (same/per_day, own/other/external)
+- **Cycle de vie** : `draft → pending → approved → published → archived`
+- **Validation admin obligatoire** avant publication
+- **Soft delete** : `is_deleted=true`, `deleted_at=new Date()` — pas de suppression définitive si réservations actives
+- **Transition contrôlée** : provider ne peut soumettre que `draft→pending`, admin valide `pending→approved/rejected`
 
 ### 4.5 Plans de Voyage
 
@@ -333,7 +347,7 @@ PROJECT_TYPE_OFFERS = {
 | Provider riche | 25+ champs (social, GPS, certifications) | Moyen | 🔜 Phase 4 |
 | Onboarding Provider | 5 étapes wizard complet | Élevé | 🔜 Phase 5 |
 | Formulaire Organization | CRUD complet depuis l'UI | Moyen | 🔜 Phase 6 |
-| Approval workflow | approval_status sur Offers/Organizations | Faible | 🔜 Phase 7 |
+| Approval workflow | Transitions controlées admin/provider | Faible | ✅ Fait (Sprint 1) |
 | Shared constants | LANGS, SAISONS, REGIMES, NIVEAUX | Faible | ✅ Fait |
 | CrossValidationRule | Valider offres vs contraintes projet | Faible | ✅ Fait |
 | `repeater` field type | Listes dynamiques (horaires/jour) | Faible | ✅ Fait |

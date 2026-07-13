@@ -29,7 +29,7 @@ export default function GuideAnalytics({ token, userId }: { token: string; userI
           apiFetch<any[]>("/circuits/mine", { headers }).catch(() => []),
           apiFetch<{ average: number; count: number }>(`/reviews/average/guide/${userId}`, { headers }).catch(() => ({ average: 0, count: 0 })),
           apiFetch<any[]>(`/reviews/target/guide/${userId}`, { headers }).catch(() => []),
-          apiFetch<any[]>("/bookings/incoming", { headers }).catch(() => []),
+          apiFetch<any[]>("/reservations/incoming", { headers }).catch(() => []),
           apiFetch<{ count: number }>("/follows/count", { headers }).catch(() => ({ count: 0 })),
           apiFetch<any[]>("/follows/followers/profiles", { headers }).catch(() => []),
           apiFetch<any[]>("/follows/following/profiles", { headers }).catch(() => []),

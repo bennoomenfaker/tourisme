@@ -54,6 +54,11 @@ export class Offer {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price!: number | null;
 
+  // Type de tarification
+  @Column({ type: 'varchar', nullable: true })
+  price_type!: string | null;
+  // 'per_person' | 'per_group' | 'per_night' | 'per_unit' | 'on_request'
+
   // Durée en texte libre : "2h", "1 journée", "3 jours"
   @Column({ type: 'varchar', nullable: true })
   duration!: string | null;

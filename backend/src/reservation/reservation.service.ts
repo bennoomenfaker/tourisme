@@ -426,12 +426,12 @@ export class ReservationService {
     return this.reservationRepo
       .createQueryBuilder('reservation')
       .leftJoinAndSelect('reservation.offer', 'offer')
-      .leftJoinAndSelect('booking.guideOffering', 'guideOffering')
+      .leftJoinAndSelect('reservation.guideOffering', 'guideOffering')
       .leftJoinAndSelect('reservation.traveler', 'traveler')
       .leftJoinAndSelect('reservation.participants', 'participants')
       .where('offer.author_id = :authorId', { authorId })
       .orWhere('guideOffering.guide_id = :authorId', { authorId })
-      .orderBy('booking.created_at', 'DESC')
+      .orderBy('reservation.created_at', 'DESC')
       .getMany();
   }
 

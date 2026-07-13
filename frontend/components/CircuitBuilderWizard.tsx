@@ -54,6 +54,52 @@ const EMOJIS_LIST = ["📍", "🚐", "🥾", "🛶", "🏛️", "🍽️", "🏕
 
 const TRANSPORTS_LIST = [{ value: "", label: "Aucun" }, { value: "Van", label: "🚐 Van" }, { value: "À pied", label: "🥾 À pied" }, { value: "Vélo", label: "🚲 Vélo" }, { value: "Chameau", label: "🐪 Chameau" }, { value: "Voiture", label: "🚗 Voiture" }, { value: "Kayak", label: "🛶 Kayak" }, { value: "Cheval", label: "🐴 Cheval" }, { value: "Bus", label: "🚌 Bus" }, { value: "Vol", label: "✈️ Vol" }, { value: "Barque", label: "🚣 Barque" }];
 
+const PROG_CATEGORIES = [
+  { value: "hebergement", label: "🏨 Hébergement" },
+  { value: "activite", label: "🥾 Activité" },
+  { value: "restauration", label: "🍽️ Restauration" },
+  { value: "transport", label: "🚌 Transport" },
+  { value: "workshop", label: "🎨 Atelier" },
+];
+
+const PROG_SUBTYPES: Record<string, { value: string; label: string }[]> = {
+  activite: [
+    { value: "randonnee", label: "🥾 Randonnée" },
+    { value: "kayak", label: "🛶 Kayak" },
+    { value: "velo", label: "🚲 Vélo" },
+    { value: "visite", label: "🏛️ Visite culturelle" },
+    { value: "plage", label: "🏖️ Plage / Baignade" },
+    { value: "observation", label: "🦅 Observation nature" },
+    { value: "quad", label: "🏎️ Quad / 4x4" },
+    { value: "plongee", label: "🤿 Plongée" },
+    { value: "equitation", label: "🐴 Équitation" },
+  ],
+  restauration: [
+    { value: "petit_dejeuner", label: "🥐 Petit-déjeuner" },
+    { value: "dejeuner", label: "🍱 Déjeuner" },
+    { value: "diner", label: "🍷 Dîner" },
+    { value: "degustation", label: "🧀 Dégustation" },
+  ],
+  hebergement: [
+    { value: "hotel", label: "🏨 Hôtel" },
+    { value: "ecolodge", label: "🌿 Écolodge" },
+    { value: "camping", label: "⛺ Camping" },
+    { value: "gite", label: "🏡 Gîte / Maison d'hôte" },
+  ],
+  transport: [
+    { value: "van", label: "🚐 Van privé" },
+    { value: "bus", label: "🚌 Bus" },
+    { value: "bateau", label: "⛵ Bateau" },
+    { value: "vol", label: "✈️ Vol" },
+  ],
+  workshop: [
+    { value: "cuisine", label: "👨‍🍳 Cuisine" },
+    { value: "artisanat", label: "🎨 Artisanat" },
+    { value: "yoga", label: "🧘 Yoga / Bien-être" },
+    { value: "musique", label: "🎵 Musique / Danse" },
+  ],
+};
+
 const STEP_LABELS = ["", "Général", "Jours", "Activités", "Itinéraire", "Tarifs & Options", "Aperçu"];
 const TOTAL_STEPS = 6;
 
@@ -856,6 +902,25 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                                 ))}
                               </select>
                             </div>
+                            {/* Category + Subtypes */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-medium text-slate-400 shrink-0">Catégorie</label>
+                              <select value={prog.category || "activite"} onChange={(e) => updateProgramItem(day.id, prog.id, { category: e.target.value, subtypes: [] })} className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary">
+                                {PROG_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                              </select>
+                            </div>
+                            {PROG_SUBTYPES[prog.category || "activite"] && PROG_SUBTYPES[prog.category || "activite"].length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {PROG_SUBTYPES[prog.category || "activite"].map((st) => (
+                                  <button key={st.value} type="button" onClick={() => {
+                                    const current = prog.subtypes || [];
+                                    updateProgramItem(day.id, prog.id, { subtypes: current.includes(st.value) ? current.filter((v) => v !== st.value) : [...current, st.value] });
+                                  }} className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${(prog.subtypes || []).includes(st.value) ? "bg-primary/10 border-primary text-primary" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"}`}>
+                                    {st.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             {/* Guide search per activity */}
                             <div className="flex items-center gap-2">
                               <label className="text-[10px] font-medium text-slate-400 shrink-0">Guide</label>
@@ -888,28 +953,34 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                                 <div className="relative">
                                   <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                                   <input type="number" min={0} value={prog.price} onChange={(e) => updateProgramItem(day.id, prog.id, { price: e.target.value })}
-                                    placeholder="0" className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    placeholder={prog.linked_offer_item_id && offerItems.find((it) => it.id === prog.linked_offer_item_id)?.prices?.[0] ? String(offerItems.find((it) => it.id === prog.linked_offer_item_id)!.prices![0].price) : "0"}
+                                    className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
                                 </div>
                               </div>
-                              {prog.guide_id && prog.guide_cost && (
-                                <div className="text-[10px] text-slate-400 bg-slate-50 rounded-lg px-2 py-1.5 shrink-0">
-                                  Coût guide: <span className="font-medium text-slate-600">{Number(prog.guide_cost).toLocaleString()} TND</span>
-                                </div>
-                              )}
-                              {prog.linked_offer_item_id && offerItems.find((it) => it.id === prog.linked_offer_item_id)?.prices?.[0] && (
-                                <div className="text-[10px] text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1.5 shrink-0">
-                                  Offre à {Number(offerItems.find((it) => it.id === prog.linked_offer_item_id)!.prices![0].price).toLocaleString()} TND
-                                </div>
-                              )}
-                              {prog.is_external_reference && prog.external_reference && (
-                                <div className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1.5 shrink-0 max-w-[200px]">
-                                  {prog.external_reference.provider_name && <span>{prog.external_reference.provider_name}</span>}
-                                  {prog.external_reference.estimated_price && (
-                                    <span> · <span className="font-medium">{Number(prog.external_reference.estimated_price).toLocaleString()} TND</span></span>
-                                  )}
+                              {prog.guide_id && (
+                                <div className="flex-1">
+                                  <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Coût guide</label>
+                                  <div className="relative">
+                                    <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input type="number" min={0} value={prog.guide_cost} onChange={(e) => updateProgramItem(day.id, prog.id, { guide_cost: e.target.value })}
+                                      placeholder="0" className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                                  </div>
                                 </div>
                               )}
                             </div>
+                            {/* is_included / is_required toggles */}
+                            <div className="flex items-center gap-3">
+                              <label className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 cursor-pointer">
+                                <input type="checkbox" checked={prog.is_included} onChange={(e) => updateProgramItem(day.id, prog.id, { is_included: e.target.checked })} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+                                Inclus dans le prix
+                              </label>
+                              <label className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 cursor-pointer">
+                                <input type="checkbox" checked={prog.is_required} onChange={(e) => updateProgramItem(day.id, prog.id, { is_required: e.target.checked })} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+                                Obligatoire
+                              </label>
+                            </div>
+                            {/* Photos */}
+                            <ImageUploader images={prog.photos || []} onChange={(photos) => updateProgramItem(day.id, prog.id, { photos })} maxImages={5} label="Photos de l'activité" />
                           </div>
                           <button type="button" onClick={() => removeProgramItem(day.id, prog.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0 mt-1"><Trash2 size={14} /></button>
                         </div>

@@ -20,14 +20,21 @@ interface MapRadius {
   label?: string;
 }
 
+interface MapWaypoint {
+  lat: number;
+  lng: number;
+  label?: string;
+}
+
 interface CircuitMapInnerProps {
   circuitLat: number | null;
   circuitLng: number | null;
   days: MapDay[];
   radii?: MapRadius[];
+  waypoints?: MapWaypoint[];
 }
 
-export default function CircuitMapInner({ circuitLat, circuitLng, days, radii }: CircuitMapInnerProps) {
+export default function CircuitMapInner({ circuitLat, circuitLng, days, radii, waypoints }: CircuitMapInnerProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -61,6 +68,7 @@ export default function CircuitMapInner({ circuitLat, circuitLng, days, radii }:
   const allPoints: [number, number][] = [];
   if (hasCircuitLocation) allPoints.push([circuitLat!, circuitLng!]);
   locatedDays.forEach((d) => allPoints.push([d.lat!, d.lng!]));
+  waypoints?.forEach((w) => allPoints.push([w.lat, w.lng]));
 
   const center: [number, number] = locatedDays.length > 0
     ? [locatedDays[0].lat!, locatedDays[0].lng!]
@@ -125,12 +133,41 @@ export default function CircuitMapInner({ circuitLat, circuitLng, days, radii }:
         );
       })}
 
-      {locatedDays.length > 1 && (
-        <Polyline
-          positions={locatedDays.map((d) => [d.lat!, d.lng!])}
-          pathOptions={{ color: "#13ec49", weight: 3, dashArray: "8 6" }}
-        />
-      )}
+      {/* Waypoints markers */}
+      {waypoints?.map((w, i) => (
+        <Marker
+          key={`wp-${i}`}
+          position={[w.lat, w.lng]}
+          icon={L.divIcon({
+            className: "custom-marker",
+            html: `<div style="background:#f59e0b;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">w</div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+          })}
+        >
+          <Popup><b>{w.label || `Étape ${i + 1}`}</b></Popup>
+        </Marker>
+      ))}
+
+      {/* Polyline: days + waypoints in order */}
+      {(() => {
+        const routePoints: [number, number][] = [];
+        if (hasCircuitLocation) routePoints.push([circuitLat!, circuitLng!]);
+        const sortedAll = [
+          ...locatedDays.map((d) => ({ lat: d.lat!, lng: d.lng!, day: d.day_number, idx: 0 })),
+          ...(waypoints?.map((w, i) => ({ lat: w.lat, lng: w.lng, day: 0, idx: i + 1 })) || []),
+        ].sort((a, b) => a.day - b.day || a.idx - b.idx);
+        sortedAll.forEach((p) => routePoints.push([p.lat, p.lng]));
+        if (routePoints.length > 1) {
+          return (
+            <Polyline
+              positions={routePoints}
+              pathOptions={{ color: "#13ec49", weight: 3, dashArray: "8 6" }}
+            />
+          );
+        }
+        return null;
+      })()}
     </MapContainer>
   );
 }

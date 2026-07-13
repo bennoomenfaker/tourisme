@@ -18,6 +18,17 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TimelineView from "@/components/TimelineView";
 import ExternalOfferModal from "@/components/ExternalOfferModal";
 import type { MyOfferItem } from "@/components/OfferItemSearchInline";
+import governorates from "@/lib/tunisia-governorates.json";
+
+const TUNISIA_REGIONS = governorates.map((g) => g.name);
+
+const OPTION_GROUP_LABELS: Record<string, string> = {
+  transport: "Transport",
+  accommodation: "Hébergement",
+  equipment: "Équipement",
+  activity: "Activité",
+  food: "Repas",
+};
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   ssr: false,
@@ -146,6 +157,7 @@ interface CircuitDetails {
   currency: string;
   images: string[] | null;
   cover_image: string | null;
+  waypoints: string | null;
   days: CircuitDay[];
   options: CircuitOption[];
 }
@@ -245,6 +257,8 @@ export default function CircuitDetailPage() {
   const [progIsExternalRef, setProgIsExternalRef] = useState(false);
   const [showExtOfferModal, setShowExtOfferModal] = useState(false);
   const [progSelectedOfferPrice, setProgSelectedOfferPrice] = useState<string>("");
+  const [progIsIncluded, setProgIsIncluded] = useState(true);
+  const [progIsRequired, setProgIsRequired] = useState(false);
 
   const [showEditMap, setShowEditMap] = useState(false);
   const [showDayMap, setShowDayMap] = useState(false);
@@ -271,7 +285,8 @@ export default function CircuitDetailPage() {
   const [confirmCancelReservation, setConfirmCancelReservation] = useState(false);
 
   const loadCircuit = () => {
-    apiFetch<CircuitDetails>(`/circuits/${id}`)
+    const t = localStorage.getItem("access_token");
+    apiFetch<CircuitDetails>(`/circuits/${id}`, t ? { headers: { Authorization: `Bearer ${t}` } } : {})
       .then(setCircuit)
       .catch(() => setCircuit(null))
       .finally(() => setLoading(false));
@@ -586,7 +601,6 @@ export default function CircuitDetailPage() {
           transport_mode: progTransport || undefined,
           guide_id: progWithGuide ? (progGuideId || null) : null,
           guide_name: progWithGuide ? (progGuideName || null) : null,
-          guide_cost: progGuideCost ? parseFloat(progGuideCost) : undefined,
           linked_offer_item_id: progIsExternalRef ? null : (progLinkedOfferItemId || null),
           is_external_reference: progIsExternalRef ? true : undefined,
           external_reference: progIsExternalRef ? progExternalRef : undefined,
@@ -594,6 +608,11 @@ export default function CircuitDetailPage() {
           subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
           price: progPrice ? parseFloat(progPrice) : undefined,
           photos: progPhotos.length > 0 ? progPhotos : undefined,
+          is_included: progIsIncluded,
+          is_required: progIsRequired,
+          fields: {
+            ...(progGuideCost ? { guide_cost: parseFloat(progGuideCost) } : {}),
+          },
         }),
       });
       setEditProgramItem(null);
@@ -635,7 +654,6 @@ export default function CircuitDetailPage() {
           transport_mode: progTransport || undefined,
           guide_id: progWithGuide ? (progGuideId || undefined) : undefined,
           guide_name: progWithGuide ? (progGuideName || undefined) : undefined,
-          guide_cost: progGuideCost ? parseFloat(progGuideCost) : undefined,
           linked_offer_item_id: progIsExternalRef ? null : (progLinkedOfferItemId || undefined),
           is_external_reference: progIsExternalRef ? true : undefined,
           external_reference: progIsExternalRef ? progExternalRef : undefined,
@@ -643,6 +661,11 @@ export default function CircuitDetailPage() {
           subtypes: progSubtypes.length > 0 ? progSubtypes : undefined,
           price: progPrice ? parseFloat(progPrice) : undefined,
           photos: progPhotos.length > 0 ? progPhotos : undefined,
+          is_included: progIsIncluded,
+          is_required: progIsRequired,
+          fields: {
+            ...(progGuideCost ? { guide_cost: parseFloat(progGuideCost) } : {}),
+          },
         }),
       });
       setShowAddProgram(null);
@@ -674,7 +697,10 @@ export default function CircuitDetailPage() {
   if (!circuit) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 flex items-center justify-center">
-        <p className="text-slate-500">Circuit introuvable</p>
+        <div className="text-center">
+          <p className="text-slate-500 text-lg font-semibold">Circuit introuvable</p>
+          <p className="text-slate-400 text-sm mt-1">Ce circuit n&apos;existe pas ou n&apos;est pas encore publié.</p>
+        </div>
       </div>
     );
   }
@@ -737,7 +763,7 @@ export default function CircuitDetailPage() {
                 <button onClick={() => { setEditTitle(circuit.title); setEditDesc(circuit.description ?? ""); setEditPrice(String(circuit.base_price ?? "")); setEditRegion(circuit.region ?? ""); setEditDays(String(circuit.duration_days ?? "")); setEditNights(String(circuit.duration_nights ?? "")); setEditMax(String(circuit.max_participants ?? "")); setEditStartDate(circuit.start_date?.slice(0, 10) ?? ""); setEditEndDate(circuit.end_date?.slice(0, 10) ?? ""); setEditLat(circuit.lat ? Number(circuit.lat) : null); setEditLng(circuit.lng ? Number(circuit.lng) : null); setEditAddress(circuit.address ?? ""); setEditImages(circuit.images ?? []); setEditCoverImage(circuit.cover_image ?? ""); setEditInclusions(circuit.inclusions ?? ""); setEditExclusions(circuit.exclusions ?? ""); setEditConfirmationMode(circuit.confirmation_mode ?? "automatic"); setEditDifficultyLevel(circuit.difficulty_level ?? "moderate"); setEditBookingDeadlineDays(String(circuit.booking_deadline_days ?? "")); setEditCurrency(circuit.currency ?? "TND"); setShowEdit(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100">
                   <Edit size={14} /> Modifier
                 </button>
-                <button onClick={() => setShowAddDay(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-primary border border-emerald-200 hover:bg-emerald-100">
+                <button onClick={() => { setShowAddDay(true); setDayTitle(""); setDayDesc(""); setDayNum(""); setDayDate(""); setDayLat(null); setDayLng(null); setDayLocationName(""); setShowDayMap(false); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-primary border border-emerald-200 hover:bg-emerald-100">
                   <Plus size={14} /> Ajouter un jour
                 </button>
                 <button onClick={handleDelete} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100">
@@ -861,6 +887,10 @@ export default function CircuitDetailPage() {
                     lng: d.lng ? Number(d.lng) : null,
                     location_name: d.location_name,
                   }))}
+                  waypoints={(() => {
+                    try { return circuit.waypoints ? JSON.parse(circuit.waypoints) : []; }
+                    catch { return []; }
+                  })()}
                 />
               </div>
             )}
@@ -910,7 +940,7 @@ export default function CircuitDetailPage() {
                                               <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-1.5 py-0 mr-1">Requis</span>
                                             )}
                                             <button
-                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); setProgCategory(item.category ?? "activite"); setProgSubtypes(item.subtypes ?? []); setProgPrice(item.price?.toString() ?? ""); setProgPhotos(item.photos ?? []); setProgGuideCost(item.fields?.guide_cost?.toString() ?? ""); setProgExternalRef(item.external_reference ?? null); setProgIsExternalRef(item.is_external_reference ?? false); }}
+                                              onClick={() => { setEditProgramItem({ dayId: day.id, item }); setProgTitle(item.title); setProgDesc(item.description ?? ""); setProgStart(item.start_time ?? ""); setProgEnd(item.end_time ?? ""); setProgEmoji(item.emoji ?? "📍"); setProgDuration(item.duration_minutes?.toString() ?? ""); setProgDistance(item.distance_km?.toString() ?? ""); setProgTransport(item.transport_mode ?? ""); setProgGuideId(item.guide_id ?? null); setProgGuideName(item.guide_name ?? null); setProgWithGuide(!!item.guide_id); setProgLinkedOfferItemId(item.linked_offer_item_id ?? null); setProgCategory(item.category ?? "activite"); setProgSubtypes(item.subtypes ?? []); setProgPrice(item.price?.toString() ?? ""); setProgPhotos(item.photos ?? []); setProgGuideCost(item.fields?.guide_cost?.toString() ?? ""); setProgExternalRef(item.external_reference ?? null); setProgIsExternalRef(item.is_external_reference ?? false); setProgIsIncluded(item.is_included ?? true); setProgIsRequired(item.is_required ?? false); }}
                                               className="w-6 h-6 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors"
                                             >
                                               <Edit size={11} />
@@ -932,7 +962,7 @@ export default function CircuitDetailPage() {
                           {isAuthor && (
                             <div className="mt-2 flex items-center gap-2 flex-wrap">
                               <button
-                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport(""); setProgLinkedOfferItemId(null); setProgExternalRef(null); setProgIsExternalRef(false); }}
+                                onClick={() => { setShowAddProgram(day.id); setProgTitle(""); setProgDesc(""); setProgStart(""); setProgEnd(""); setProgEmoji("📍"); setProgDuration(""); setProgDistance(""); setProgTransport(""); setProgLinkedOfferItemId(null); setProgExternalRef(null); setProgIsExternalRef(false); setProgCategory("activite"); setProgSubtypes([]); setProgPrice(""); setProgPhotos([]); setProgGuideId(null); setProgGuideName(null); setProgWithGuide(false); setProgGuideCost(""); }}
                                 className="text-xs text-primary hover:text-primary flex items-center gap-1"
                               >
                                 <Plus size={12} /> Ajouter une activité
@@ -980,7 +1010,7 @@ export default function CircuitDetailPage() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-sm text-slate-800">
-                            {option.option_group ?? "Option"}
+                            {OPTION_GROUP_LABELS[option.option_group ?? ""] ?? "Option"}
                           </span>
                           <div className="flex items-center gap-2">
                             {option.is_required && (
@@ -1020,7 +1050,7 @@ export default function CircuitDetailPage() {
                   </div>
                   {selectedOptionIds.length > 0 && circuit.options?.filter(o => selectedOptionIds.includes(o.id) && o.status === "active").map(o => (
                     <div key={o.id} className="flex justify-between text-slate-500">
-                      <span className="text-xs">{o.option_group ?? "Option"}</span>
+                      <span className="text-xs">{OPTION_GROUP_LABELS[o.option_group ?? ""] ?? "Option"}</span>
                       <span className="text-primary">+{Number(o.extra_price ?? 0).toLocaleString()} {circuit.currency}</span>
                     </div>
                   ))}
@@ -1111,10 +1141,7 @@ export default function CircuitDetailPage() {
             <input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} placeholder="Prix" type="number" min={0} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             <select value={editRegion} onChange={(e) => setEditRegion(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
               <option value="">Région</option>
-              <option value="Tunis">Tunis</option><option value="Sousse">Sousse</option><option value="Nabeul">Nabeul</option>
-              <option value="Hammamet">Hammamet</option><option value="Bizerte">Bizerte</option><option value="Gabès">Gabès</option>
-              <option value="Médenine">Médenine</option><option value="Tataouine">Tataouine</option><option value="Tozeur">Tozeur</option>
-              <option value="Djerba">Djerba</option><option value="Sfax">Sfax</option><option value="Kairouan">Kairouan</option>
+              {TUNISIA_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -1382,6 +1409,18 @@ export default function CircuitDetailPage() {
 
           <ImageUploader images={progPhotos} onChange={setProgPhotos} maxImages={5} label="Photos" />
 
+          {/* ─── is_included / is_required ──────────────── */}
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={progIsIncluded} onChange={(e) => setProgIsIncluded(e.target.checked)} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+              Inclus dans le prix
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={progIsRequired} onChange={(e) => setProgIsRequired(e.target.checked)} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+              Obligatoire
+            </label>
+          </div>
+
           {/* ─── Guide optionnel (inline) ──────────────── */}
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
             <input type="checkbox" checked={progWithGuide} onChange={(e) => { setProgWithGuide(e.target.checked); if (!e.target.checked) { setProgGuideId(null); setProgGuideName(null); } }} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
@@ -1574,6 +1613,18 @@ export default function CircuitDetailPage() {
 
           <ImageUploader images={progPhotos} onChange={setProgPhotos} maxImages={5} label="Photos" />
 
+          {/* ─── is_included / is_required ──────────────── */}
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={progIsIncluded} onChange={(e) => setProgIsIncluded(e.target.checked)} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+              Inclus dans le prix
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={progIsRequired} onChange={(e) => setProgIsRequired(e.target.checked)} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
+              Obligatoire
+            </label>
+          </div>
+
           {/* ─── Guide optionnel (inline) ──────────────── */}
           <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
             <input type="checkbox" checked={progWithGuide} onChange={(e) => { setProgWithGuide(e.target.checked); if (!e.target.checked) { setProgGuideId(null); setProgGuideName(null); } }} className="rounded border-slate-300 text-primary focus:ring-primary/30" />
@@ -1708,7 +1759,7 @@ export default function CircuitDetailPage() {
                   ?.filter((o) => selectedOptionIds.includes(o.id) && o.status === "active")
                   .map((o) => (
                     <div key={o.id} className="flex justify-between text-xs text-slate-500">
-                      <span>{o.option_group ?? "Option"}</span>
+                      <span>{OPTION_GROUP_LABELS[o.option_group ?? ""] ?? "Option"}</span>
                       <span>+{Number(o.extra_price ?? 0).toLocaleString()} {circuit?.currency}</span>
                     </div>
                   ))}
@@ -1741,7 +1792,10 @@ export default function CircuitDetailPage() {
               setProgLinkedOfferItemId(id);
               setProgIsExternalRef(false);
               setProgExternalRef(null);
-              if (price) setProgSelectedOfferPrice(price);
+              if (price) {
+                setProgSelectedOfferPrice(price);
+                setProgPrice(price);
+              }
             }}
             externalRef={progExternalRef}
             onExternalRefChange={(ref) => {

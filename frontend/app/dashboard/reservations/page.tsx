@@ -34,7 +34,7 @@ export default function MyReservationsPage() {
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   const fetchBookings = () => {
-    apiFetch<Booking[]>("/bookings/mine")
+    apiFetch<Booking[]>("/reservations/mine")
       .then(setBookings)
       .finally(() => setLoading(false));
   };
@@ -45,7 +45,7 @@ export default function MyReservationsPage() {
     if (!confirm("Annuler cette réservation ?")) return;
     setCancelling(id);
     try {
-      await apiFetch(`/bookings/${id}/cancel`, { method: "PATCH" });
+      await apiFetch(`/reservations/${id}/cancel`, { method: "PATCH" });
       fetchBookings();
     } catch (err: any) {
       alert(err.message);

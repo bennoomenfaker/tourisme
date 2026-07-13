@@ -481,7 +481,81 @@ Sources de date :
    └── Compilation sans erreur
 
 4. Documentation
-   └── Ce fichier (SPRINT_1.md)
+    └── Ce fichier (SPRINT_1.md)
 ```
+
+---
+
+## 10. Sprint 1 — Corrections de sécurité (July 2026)
+
+### 10.1 Auto-approbation des offres (Sprint 1.1)
+
+**Problème** : Un provider pouvait approuver sa propre offre (`pending → approved`).
+
+**Fix** : `isValidOfferTransition()` dans `offer.service.ts` prend maintenant un paramètre `role` :
+- `pending → approved` et `pending → rejected` : **admin uniquement**
+- Provider peut faire : `draft→pending`, `draft→archived`, `approved→inactive`, `approved→archived`, `inactive→approved`, `rejected→pending`, `rejected→archived`
+- Le controller transmet `req.user.role` au service
+
+### 10.2 Hard delete des circuits (Sprint 1.2)
+
+**Problème** : Le `DELETE /circuits/:id` supprimait définitivement le circuit de la base, même s'il avait des réservations.
+
+**Fix** : `remove()` dans `circuit.service.ts` effectue maintenant un soft delete :
+- Vérifie les réservations actives (`pending` ou `confirmed`) avant suppression
+- Si réservations existent → `BadRequestException`
+- Sinon → `is_deleted = true`, `deleted_at = new Date()`, `status = 'archived'`
+- Toutes les requêtes (`findAll`, `findById`, `findByAuthor`) filtrent `is_deleted: false`
+- Nouvelles colonnes DB : `is_deleted` (BOOLEAN DEFAULT false), `deleted_at` (TIMESTAMP NULL)
+
+### 10.3 Validation des enums (Sprint 1.3)
+
+**Problème** : Les DTOs utilisaient `@IsString()` pour des champs avec des valeurs finies, permettant n'importe quelle valeur.
+
+**Fix** : `@IsIn([...])` sur les champs suivants dans `UpdateOfferDto` et `UpdateOfferItemDto` :
+| Champ | Valeurs autorisées |
+|-------|-------------------|
+| `cancellation_policy` | `flexible`, `moderate`, `strict`, `non_refundable` |
+| `confirmation_mode` | `automatic`, `manual` |
+| `location_type` | `meeting_point`, `exact_address`, `gps_coordinates`, `custom` |
+| `fulfillment_mode` | `instant_stock`, `scheduled`, `recurring`, `on_request`, `mixed` |
+| `status` (offer update) | `draft`, `pending`, `archived` |
+| `price_type` | `per_person`, `per_group`, `per_night`, `per_unit`, `on_request` |
+| `item_type` (item update) | `room`, `bed`, `camping_space`, `dish`, `menu`, `equipment`, `activity`, `workshop`, `transport_service` |
+| `confirmation_mode` (item) | `automatic`, `manual` |
+| `status` (item) | `draft`, `active`, `archived` |
+| `status` (session) | `available`, `cancelled`, `full`, `completed` |
+
+Ajout de `price_type` sur l'entité `Offer` (colonne `VARCHAR NULL` en DB).
+
+### 10.4 Circuit validation admin (Sprint 1.4)
+
+**Problème** : Le `validateCircuitTransition()` existait mais n'était jamais appelé. L'admin approuvait sans vérifier la transition.
+
+**Fix** :
+- `validateCircuitTransition()` prend un paramètre `role` (provider vs admin)
+- Provider ne peut faire que : `draft → pending`, `draft → archived`, `approved → archived`, `rejected → draft`
+- Admin peut faire toutes les transitions valides
+- Nouvel endpoint `PATCH /circuits/:id/submit` pour soumettre un circuit (draft → pending)
+- `approveCircuit()` et `rejectCircuit()` dans `admin.service.ts` vérifient que le circuit est bien en `pending` avant transition
+
+**Cycle de vie du circuit** :
+```
+draft ──(provider)──→ pending ──(admin)──→ approved → archived
+  ↑                      │
+  └───── rejected ───────┘
+```
+
+### 10.5 Colonnes DB ajoutées
+
+```sql
+ALTER TABLE offers ADD COLUMN price_type VARCHAR NULL;
+
+ALTER TABLE circuits ADD COLUMN is_deleted BOOLEAN DEFAULT false;
+ALTER TABLE circuits ADD COLUMN deleted_at TIMESTAMP NULL;
+
+UPDATE users SET is_onboarded = true WHERE id = '92a3ba7f-6bb3-4a57-bbb8-c70ff253a15e';
+```
+
 
 
