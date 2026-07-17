@@ -30,6 +30,8 @@ interface TripPlanItem {
   day_number: number | null;
   sort_order: number;
   notes: string | null;
+  lat: number | null;
+  lng: number | null;
   created_at: string;
   offerItem: OfferItem | null;
   circuit: CircuitBrief | null;
@@ -46,6 +48,7 @@ interface CircuitBrief {
   duration_days: number | null;
   max_participants: number | null;
   description: string | null;
+  cover_image: string | null;
 }
 
 interface OfferItem {

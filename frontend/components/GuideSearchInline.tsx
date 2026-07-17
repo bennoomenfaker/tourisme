@@ -32,22 +32,6 @@ export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, d
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(false);
 
-  /* Auto-populate zone from dayLocation */
-  useEffect(() => {
-    if (dayLocation && !zoneFilter) {
-      const match = TUNISIA_REGIONS.find(r => dayLocation.toLowerCase().includes(r.toLowerCase()));
-      if (match) setZoneFilter(match);
-    }
-  }, [dayLocation]);
-
-  /* Auto-search closest guides on mount when we have coordinates */
-  useEffect(() => {
-    if (!mountedRef.current && dayLat != null && dayLng != null) {
-      mountedRef.current = true;
-      doSearch("", zoneFilter || "", "", dayLat, dayLng);
-    }
-  }, [dayLat, dayLng]);
-
   async function doSearch(q: string, z: string, p: string, lat?: number | null, lng?: number | null) {
     setLoading(true); setHasSearched(true);
     try {
@@ -67,6 +51,22 @@ export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, d
     } catch { setResults([]); }
     setLoading(false);
   }
+
+  /* Auto-populate zone from dayLocation */
+  useEffect(() => {
+    if (dayLocation && !zoneFilter) {
+      const match = TUNISIA_REGIONS.find(r => dayLocation.toLowerCase().includes(r.toLowerCase()));
+      if (match) setZoneFilter(match);
+    }
+  }, [dayLocation]);
+
+  /* Auto-search closest guides on mount when we have coordinates */
+  useEffect(() => {
+    if (!mountedRef.current && dayLat != null && dayLng != null) {
+      mountedRef.current = true;
+      doSearch("", zoneFilter || "", "", dayLat, dayLng);
+    }
+  }, [dayLat, dayLng]);
 
   function triggerSearch() {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
