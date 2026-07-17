@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import GuidedOfferWizard from "@/components/GuidedOfferWizard";
 import CircuitBuilderWizard from "@/components/CircuitBuilderWizard";
 import ImageUploader from "@/components/ImageUploader";
+import CertificationUploader from "@/components/CertificationUploader";
 import Modal from "@/components/ui/Modal";
 
 const MapPicker = dynamic(
@@ -180,16 +181,20 @@ const PROJ_OFFER_TYPES = [
   { value: "workshop", label: "Atelier" },
   { value: "event", label: "Événement" },
   { value: "craft", label: "Artisanat" },
-  { value: "circuit", label: "Circuit" },
   { value: "sejour", label: "Séjour" },
 ];
 
 const VENUE_TYPES = [
-  { value: "hebergement", label: "Hébergement", icon: "hotel" },
-  { value: "restauration", label: "Restauration", icon: "restaurant" },
-  { value: "artisanat", label: "Artisanat", icon: "brush" },
-  { value: "agence", label: "Agence de voyage", icon: "luggage" },
-  { value: "centre_loisir", label: "Centre de loisirs", icon: "sports" },
+  { value: "accommodation", label: "Hébergement", icon: "hotel", description: "Hôtel, éco-lodge, gîte" },
+  { value: "camping", label: "Camping", icon: "camping", description: "Camping, espace tente" },
+  { value: "restaurant", label: "Restaurant", icon: "restaurant", description: "Restaurant, café, food truck" },
+  { value: "activity_center", label: "Centre d'activités", icon: "sports", description: "Sports, loisirs, plein air" },
+  { value: "artisan", label: "Artisanat", icon: "brush", description: "Artisanat local, artisan" },
+  { value: "farm", label: "Ferme écologique", icon: "eco", description: "Agrotourisme, ferme" },
+  { value: "transport", label: "Transport", icon: "directions_car", description: "Transport, transfert, location" },
+  { value: "event_space", label: "Espace événementiel", icon: "celebration", description: "Événements, séminaires" },
+  { value: "tourism_association", label: "Association tourisme", icon: "groups", description: "Association, guide local" },
+  { value: "eco_park", label: "Parc écologique", icon: "eco", description: "Parc naturel, réserve" },
 ];
 
 const ECO_PRACTICES = [
@@ -201,11 +206,11 @@ const VENUE_SERVICES = [
   { value: "hebergement", label: "Hébergement", icon: "hotel" },
   { value: "restauration", label: "Restauration", icon: "restaurant" },
   { value: "transport", label: "Transport", icon: "directions_car" },
-  { value: "excursions", label: "Excursions", icon: "hiking" },
-  { value: "artisanat", label: "Artisanat", icon: "brush" },
+  { value: "activite", label: "Activités", icon: "hiking" },
+  { value: "guide", label: "Guide", icon: "person" },
+  { value: "atelier", label: "Ateliers", icon: "brush" },
+  { value: "location_materiel", label: "Location matériel", icon: "backpack" },
   { value: "spa_bien_etre", label: "Spa & Bien-être", icon: "spa" },
-  { value: "location", label: "Location matériel", icon: "backpack" },
-  { value: "animation", label: "Animation culturelle", icon: "celebration" },
 ];
 
 const BADGE_CONFIGS: Record<Role, { label: string; icon: string; description: string }[]> = {
@@ -438,7 +443,7 @@ function AddPublicationModal({ onClose, onSuccess, token, publication }: {
                     Cliquez sur la carte pour placer le lieu
                   </label>
                   <div className="overflow-hidden rounded-xl">
-                    <MapPicker lat={form.lat ?? 36.8065} lng={form.lng ?? 10.1815} onPick={(lat, lng) => setForm({ ...form, lat: Number(lat), lng: Number(lng) })} />
+                    <MapPicker lat={form.lat ?? 36.8065} lng={form.lng ?? 10.1815} onPick={(lat, lng, address, region) => setForm({ ...form, lat: Number(lat), lng: Number(lng) })} />
                    </div>
                    {form.lat != null && <p className="text-xs text-slate-400 font-medium">📍 {Number(form.lat).toFixed(5)}, {Number(form.lng ?? 0).toFixed(5)}</p>}
                 </div>
@@ -808,6 +813,7 @@ function EditVenueModal({ onClose, onSuccess, token, project }: {
   const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState({
     name: project.name ?? "",
+    venue_types: (project.venue_type ?? []) as string[],
     description: project.description ?? "",
     region: project.region ?? "",
     address: project.address ?? "",
@@ -816,6 +822,8 @@ function EditVenueModal({ onClose, onSuccess, token, project }: {
     opening_hours: project.opening_hours ?? "",
     facebook: project.facebook ?? "",
     instagram: project.instagram ?? "",
+    services: (project.services ?? []) as string[],
+    eco_labels: (project.eco_labels ?? []) as string[],
   });
   const [mapLat, setMapLat] = useState<number | null>(project.lat ?? null);
   const [mapLng, setMapLng] = useState<number | null>(project.lng ?? null);
@@ -833,6 +841,7 @@ function EditVenueModal({ onClose, onSuccess, token, project }: {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name: form.name.trim(),
+          project_type: form.venue_types.length ? form.venue_types : undefined,
           description: form.description.trim() || undefined,
           region: form.region.trim() || undefined,
           address: form.address.trim() || undefined,
@@ -843,6 +852,8 @@ function EditVenueModal({ onClose, onSuccess, token, project }: {
           instagram: form.instagram.trim() || undefined,
           lat: mapLat ?? undefined,
           lng: mapLng ?? undefined,
+          services: form.services.length ? form.services : undefined,
+          eco_labels: form.eco_labels.length ? form.eco_labels : undefined,
         }),
       });
       onSuccess(updated);
@@ -864,6 +875,40 @@ function EditVenueModal({ onClose, onSuccess, token, project }: {
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Nom *</label>
             <input className={inputClass} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Type d'établissement</label>
+            <div className="grid grid-cols-2 gap-2">
+              {VENUE_TYPES.map((t) => {
+                const active = form.venue_types.includes(t.value);
+                return (
+                  <button key={t.value} type="button" onClick={() => {
+                    setForm((f) => ({ ...f, venue_types: active ? f.venue_types.filter((v) => v !== t.value) : [...f.venue_types, t.value] }));
+                  }}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                    <span className="material-symbols-outlined text-base">{t.icon}</span>{t.label}
+                    {active && <span className="material-symbols-outlined text-base ml-auto text-primary">check</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-bold text-slate-700">Services proposés</label>
+            <div className="grid grid-cols-2 gap-2">
+              {VENUE_SERVICES.map((s) => {
+                const active = form.services.includes(s.value);
+                return (
+                  <button key={s.value} type="button" onClick={() => {
+                    setForm((f) => ({ ...f, services: active ? f.services.filter((v) => v !== s.value) : [...f.services, s.value] }));
+                  }}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-200 text-slate-600 hover:border-primary/30"}`}>
+                    <span className="material-symbols-outlined text-base">{s.icon}</span>{s.label}
+                    {active && <span className="material-symbols-outlined text-base ml-auto text-primary">check</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Description</label>
@@ -889,7 +934,23 @@ function EditVenueModal({ onClose, onSuccess, token, project }: {
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-bold text-slate-700">Localisation</label>
-            <MapPicker lat={mapLat ?? 36.8065} lng={mapLng ?? 10.1815} onPick={(la: number, ln: number) => { setMapLat(la); setMapLng(ln); }} />
+            <MapPicker lat={mapLat ?? 36.8065} lng={mapLng ?? 10.1815} onPick={(la: number, ln: number, address: string, region: string) => { setMapLat(la); setMapLng(ln); setForm((f) => ({ ...f, address: address ?? f.address, region: region ?? f.region })); }} />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">Pratiques éco-responsables</label>
+            <div className="flex flex-wrap gap-2">
+              {ECO_PRACTICES.map((p) => {
+                const active = form.eco_labels.includes(p);
+                return (
+                  <button key={p} type="button" onClick={() => {
+                    setForm((f) => ({ ...f, eco_labels: active ? f.eco_labels.filter((v) => v !== p) : [...f.eco_labels, p] }));
+                  }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${active ? "bg-green-50 border-green-400 text-green-700" : "border-slate-200 text-slate-500 hover:border-green-300"}`}>
+                    {active && <span className="material-symbols-outlined text-sm">check</span>}{p}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           {submitError && <p className="text-sm text-red-500 font-semibold">{submitError}</p>}
           <div className="flex gap-3 pt-2">
@@ -961,7 +1022,7 @@ function AddVenueModal({ onClose, onSuccess, token }: {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           name: form.name.trim(),
-          venue_type: form.venue_types.length ? form.venue_types : undefined,
+          project_type: form.venue_types.length ? form.venue_types : undefined,
           description: form.description.trim() || undefined,
           region: form.region.trim() || undefined,
           address: form.address.trim() || undefined,
@@ -1105,9 +1166,9 @@ function AddVenueModal({ onClose, onSuccess, token }: {
               className="w-full px-4 py-3 bg-slate-50 border border-transparent rounded-xl text-slate-500 font-medium cursor-default" />
             {showMap && (
               <div className="overflow-hidden rounded-xl">
-                <MapPicker lat={mapLat} lng={mapLng} onPick={(lat, lng, address) => {
+                <MapPicker lat={mapLat} lng={mapLng} onPick={(lat, lng, address, region) => {
                   setMapLat(lat); setMapLng(lng);
-                  setForm((f) => ({ ...f, address: address ?? "" }));
+                  setForm((f) => ({ ...f, address: address ?? "", region: region ?? f.region }));
                 }} />
               </div>
             )}
@@ -2076,6 +2137,7 @@ export default function DashboardPage() {
     ? [
         { label: "Tableau de bord", icon: "dashboard" },
         { label: "Mes Prestations", icon: "badge" },
+        { label: "Certifications", icon: "school" },
         { label: "Réservations", icon: "event_available" },
         { label: "Circuits", icon: "route" },
         { label: "Notifications", icon: "notifications" },
@@ -2085,6 +2147,7 @@ export default function DashboardPage() {
         { label: "Tableau de bord", icon: "dashboard" },
         { label: "Mes Établissements", icon: "domain" },
         { label: "Mes Offres", icon: "sell" },
+        { label: "Certifications", icon: "school" },
         { label: "Réservations", icon: "event_available" },
         { label: "Circuits", icon: "route" },
         { label: "Notifications", icon: "notifications" },
@@ -2100,7 +2163,7 @@ export default function DashboardPage() {
     : "/profile/provider";
   const questionnairePath = role === "eco_traveler" ? "/questionnaire/eco-traveler"
     : role === "guide" ? "/questionnaire/guide"
-    : "/questionnaire/project-owner";
+    : "/questionnaire/provider";
   const searchPlaceholder = role === "eco_traveler" ? "Rechercher un guide, un projet éco..."
     : role === "guide" ? "Rechercher un projet éco-touristique..."
     : "Rechercher un guide certifié...";
@@ -2618,10 +2681,10 @@ export default function DashboardPage() {
                             <div className="bg-white rounded-2xl p-5 border border-primary/5">
                               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Certifications</p>
                               <div className="space-y-2">
-                                {profile.certifications!.map((cert) => (
-                                  <div key={cert} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                                {profile.certifications!.map((cert: any, i: number) => (
+                                  <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                                     <span className="material-symbols-outlined text-primary text-xl">verified</span>
-                                    <span className="text-sm font-bold text-slate-800">{cert}</span>
+                                    <span className="text-sm font-bold text-slate-800">{typeof cert === "string" ? cert : cert.label}</span>
                                   </div>
                                 ))}
                               </div>
@@ -3097,6 +3160,12 @@ export default function DashboardPage() {
 
             {activeItem === "Circuits" && (
               <CircuitsTab role={role} router={router} token={token} />
+            )}
+
+            {(role === "provider" || role === "guide") && activeItem === "Certifications" && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <CertificationUploader token={token} />
+              </div>
             )}
 
             {activeItem === "Notifications" && (

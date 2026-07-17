@@ -138,6 +138,18 @@ export class ProviderService {
     profile.organization = dto.organization ?? null;
     profile.position = dto.position ?? null;
     profile.phone = dto.phone ?? null;
+    profile.whatsapp = dto.whatsapp ?? null;
+    profile.website = dto.website ?? null;
+    profile.facebook = dto.facebook ?? null;
+    profile.instagram = dto.instagram ?? null;
+    profile.tiktok = dto.tiktok ?? null;
+    profile.city = dto.city ?? null;
+    profile.region = dto.region ?? null;
+    profile.years_experience = dto.years_experience ?? null;
+    profile.address = dto.address ?? null;
+    if (dto.lat !== undefined) profile.lat = dto.lat;
+    if (dto.lng !== undefined) profile.lng = dto.lng;
+    profile.eco_labels = dto.certifications ?? null;
     profile.profile_completion = this.calculateCompletion(profile);
 
     return await this.repo.save(profile);

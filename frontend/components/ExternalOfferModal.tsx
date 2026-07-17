@@ -12,6 +12,7 @@ const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
 
 type MyOfferItem = {
   id: string; name: string; item_type: string | null; offer_id: string; offer_title: string;
+  category_slug?: string;
   prices?: { id: string; label: string; price: string; pricing_unit: string }[];
 };
 
@@ -24,9 +25,23 @@ type ExternalRef = {
   estimated_price: number;
   currency: string;
   notes: string;
-  type: 'hebergement' | 'restaurant' | 'activite' | 'transport' | 'workshop';
+  type: 'hebergement' | 'restaurant' | 'activite' | 'transport' | 'atelier' | 'guide_service' | 'equipment_rental' | 'evenement' | 'artisanat' | 'sejour';
   lat: number | null;
   lng: number | null;
+};
+
+/** Maps circuit program categories → offer category slugs */
+const CIRCUIT_TO_OFFER_CATEGORY: Record<string, string> = {
+  sejour: "sejour",
+  hebergement: "accommodation",
+  activite: "activity",
+  restauration: "restaurant",
+  transport: "transport",
+  atelier: "workshop",
+  guide_service: "guide_service",
+  equipment_rental: "equipment_rental",
+  evenement: "event",
+  artisanat: "craft",
 };
 
 type Props = {
@@ -41,6 +56,8 @@ type Props = {
   dayLng: number | null;
   excludeAuthorId: string;
   dayLabel?: string;
+  programCategory?: string;
+  region?: string;
 };
 
 const TABS = [
@@ -50,16 +67,24 @@ const TABS = [
 ];
 
 const PROV_ITEMS = [
+  { value: "sejour", label: "🌅 Séjour" },
   { value: "hebergement", label: "🏕️ Hébergement" },
-  { value: "restaurant", label: "🍽️ Restaurant" },
   { value: "activite", label: "🎯 Activité" },
+  { value: "restaurant", label: "🍽️ Restaurant" },
   { value: "transport", label: "🚐 Transport" },
-  { value: "workshop", label: "🎨 Atelier / Artisanat" },
+  { value: "atelier", label: "🎨 Atelier" },
+  { value: "guide_service", label: "🧭 Guide" },
+  { value: "equipment_rental", label: "🎿 Équipement" },
+  { value: "evenement", label: "🎉 Événement" },
+  { value: "artisanat", label: "🏺 Artisanat" },
 ];
+
+const PROG_CATEGORY_LABELS: Record<string, string> = Object.fromEntries(PROV_ITEMS.map((p) => [p.value, p.label]));
 
 export default function ExternalOfferModal({
   open, onClose, myOfferItems, selectedMyOfferId, onSelectMyOffer,
   externalRef, onExternalRefChange, dayLat, dayLng, excludeAuthorId, dayLabel,
+  programCategory, region,
 }: Props) {
   const [tab, setTab] = useState("my_offers");
   const [query, setQuery] = useState("");
@@ -78,12 +103,19 @@ export default function ExternalOfferModal({
 
   if (!open) return null;
 
-  const filteredMyItems = query.trim()
-    ? myOfferItems.filter((it) =>
+  const offerCategorySlug = programCategory ? CIRCUIT_TO_OFFER_CATEGORY[programCategory] : undefined;
+
+  const filteredMyItems = (() => {
+    let items = myOfferItems;
+    if (query.trim()) {
+      items = items.filter((it) =>
         it.name.toLowerCase().includes(query.toLowerCase()) ||
         it.offer_title.toLowerCase().includes(query.toLowerCase()) ||
-        it.item_type?.toLowerCase().includes(query.toLowerCase()))
-    : myOfferItems;
+        it.item_type?.toLowerCase().includes(query.toLowerCase()) ||
+        it.category_slug?.toLowerCase().includes(query.toLowerCase()));
+    }
+    return items;
+  })();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -127,7 +159,9 @@ export default function ExternalOfferModal({
           {tab === "my_offers" && (
             <div className="space-y-3">
               <p className="text-xs text-slate-500">
-                Sélectionne une de tes offres existantes à associer à cette activité.
+                {offerCategorySlug
+                  ? `Offres de type "${PROG_CATEGORY_LABELS[programCategory || ""] || programCategory}" uniquement.`
+                  : "Sélectionne une de tes offres existantes à associer à cette activité."}
               </p>
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -189,8 +223,10 @@ export default function ExternalOfferModal({
               <ExternalOfferItemSearch
                 lat={dayLat}
                 lng={dayLng}
+                category={offerCategorySlug}
                 excludeAuthorId={excludeAuthorId}
                 dayLabel={dayLabel}
+                region={region}
                 onSelect={(offerItemId, offerTitle, itemName, providerName, price) => {
                   onSelectMyOffer(offerItemId, price);
                   onClose();

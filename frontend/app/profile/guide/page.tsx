@@ -296,6 +296,7 @@ export default function GuideProfilePage() {
   const [editLangsSpoken,    setEditLangsSpoken]    = useState<string[]>([]);
   const [editLandscapes,     setEditLandscapes]     = useState<string[]>([]);
   const [editCertifications, setEditCertifications] = useState<string>("");
+  const [structuredCerts, setStructuredCerts] = useState<any[]>([]);
   const [editProfileSaving,  setEditProfileSaving]  = useState(false);
   const [editProfileError,   setEditProfileError]   = useState("");
 
@@ -317,6 +318,8 @@ export default function GuideProfilePage() {
         });
         setOffers(offersWithCover);
         setCircuits(myCircuits);
+        // Fetch structured certifications from API
+        apiFetch<any[]>(`/certifications/user/${p.user_id}`).then((c) => setStructuredCerts(c)).catch(() => {});
         // Load network in background
         Promise.all([
           apiFetch<NetUser[]>("/follows/following/profiles", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => []),
@@ -741,7 +744,7 @@ export default function GuideProfilePage() {
               <p className="text-[11px] font-bold text-slate-400">
                 {new Date(offer.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
               </p>
-              <button onClick={() => openEditModal(offer)}
+              <button onClick={() => router.push(`/offers/${offer.id}`)}
                 className="text-primary hover:text-primary/80 font-extrabold text-xs inline-flex items-center gap-1 hover:translate-x-1 transition-transform duration-200">
                 <span>Voir les détails</span><ArrowRight size={14} strokeWidth={2.5} />
               </button>
@@ -2180,6 +2183,25 @@ export default function GuideProfilePage() {
                             <Check size={12} className="text-primary" />
                           </div>
                           <p className="text-sm font-semibold text-slate-700">{c}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Certifications structurées (API) */}
+                {structuredCerts.length > 0 && (
+                  <div className="bg-white p-6 rounded-3xl border border-slate-100/80 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-4">Certifications vérifiées</p>
+                    <div className="space-y-2">
+                      {structuredCerts.map((cert) => (
+                        <div key={cert.id} className="flex items-center gap-3 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                          <span className="material-symbols-outlined text-emerald-600 text-lg">verified</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800">{cert.name}</p>
+                            {cert.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{cert.description}</p>}
+                            {cert.issued_by && <p className="text-[10px] text-slate-400 mt-0.5">{cert.issued_by}</p>}
+                          </div>
                         </div>
                       ))}
                     </div>

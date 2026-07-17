@@ -55,11 +55,16 @@ const EMOJIS_LIST = ["📍", "🚐", "🥾", "🛶", "🏛️", "🍽️", "🏕
 const TRANSPORTS_LIST = [{ value: "", label: "Aucun" }, { value: "Van", label: "🚐 Van" }, { value: "À pied", label: "🥾 À pied" }, { value: "Vélo", label: "🚲 Vélo" }, { value: "Chameau", label: "🐪 Chameau" }, { value: "Voiture", label: "🚗 Voiture" }, { value: "Kayak", label: "🛶 Kayak" }, { value: "Cheval", label: "🐴 Cheval" }, { value: "Bus", label: "🚌 Bus" }, { value: "Vol", label: "✈️ Vol" }, { value: "Barque", label: "🚣 Barque" }];
 
 const PROG_CATEGORIES = [
+  { value: "sejour", label: "🌅 Séjour" },
   { value: "hebergement", label: "🏨 Hébergement" },
   { value: "activite", label: "🥾 Activité" },
-  { value: "restauration", label: "🍽️ Restauration" },
+  { value: "restauration", label: "🍽️ Restaurant" },
   { value: "transport", label: "🚌 Transport" },
-  { value: "workshop", label: "🎨 Atelier" },
+  { value: "atelier", label: "🎨 Atelier" },
+  { value: "guide_service", label: "🧭 Guide" },
+  { value: "equipment_rental", label: "🎿 Équipement" },
+  { value: "evenement", label: "🎉 Événement" },
+  { value: "artisanat", label: "🏺 Artisanat" },
 ];
 
 const PROG_SUBTYPES: Record<string, { value: string; label: string }[]> = {
@@ -92,11 +97,40 @@ const PROG_SUBTYPES: Record<string, { value: string; label: string }[]> = {
     { value: "bateau", label: "⛵ Bateau" },
     { value: "vol", label: "✈️ Vol" },
   ],
-  workshop: [
+  atelier: [
     { value: "cuisine", label: "👨‍🍳 Cuisine" },
-    { value: "artisanat", label: "🎨 Artisanat" },
     { value: "yoga", label: "🧘 Yoga / Bien-être" },
     { value: "musique", label: "🎵 Musique / Danse" },
+    { value: "peinture", label: "🖌️ Peinture / Art" },
+  ],
+  sejour: [
+    { value: "all_inclusive", label: "🌟 All inclusive" },
+    { value: "demi_pension", label: "🍽️ Demi-pension" },
+    { value: "pension_complete", label: "🛏️ Pension complète" },
+    { value: "sejour_luxe", label: "✨ Séjour luxe" },
+  ],
+  evenement: [
+    { value: "festival", label: "🎶 Festival" },
+    { value: "conference", label: "🎤 Conférence" },
+    { value: "celebration", label: "🎊 Célébration" },
+    { value: "exposition", label: "🖼️ Exposition" },
+  ],
+  artisanat: [
+    { value: "poterie", label: "🏺 Poterie" },
+    { value: "tissage", label: "🧶 Tissage" },
+    { value: "bijouterie", label: "💎 Bijouterie" },
+    { value: "product", label: "🧴 Produit local" },
+  ],
+  guide_service: [
+    { value: "guide_touristique", label: "🗺️ Guide touristique" },
+    { value: "guide_nature", label: "🌿 Guide nature" },
+    { value: "guide_culturel", label: "🏛️ Guide culturel" },
+  ],
+  equipment_rental: [
+    { value: "velo_location", label: "🚲 Vélo" },
+    { value: "kayak_location", label: "🛶 Kayak" },
+    { value: "surf_location", label: "🏄 Surf / Planche" },
+    { value: "materiel_location", label: "🎿 Matériel outdoor" },
   ],
 };
 
@@ -586,46 +620,54 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
         }),
       });
       const circuitId = circuit.id;
-      for (const day of sortedDays) {
-        if (!day.title.trim()) continue;
-        const createdDay = await apiFetch<any>(`/circuits/${circuitId}/days`, {
-          method: "POST", headers: { Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ day_number: day.day_number, title: day.title.trim(), description: day.description || undefined, date: day.date || undefined, lat: day.lat ?? undefined, lng: day.lng ?? undefined, location_name: day.location_name || undefined }),
-        });
-        for (const prog of day.programItems) {
-          if (!prog.title.trim()) continue;
-          await apiFetch(`/circuits/${circuitId}/days/${createdDay.id}/program`, {
+      try {
+        for (const day of sortedDays) {
+          if (!day.title.trim()) continue;
+          const createdDay = await apiFetch<any>(`/circuits/${circuitId}/days`, {
             method: "POST", headers: { Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              title: prog.title.trim(), description: prog.description || undefined,
-              start_time: prog.start_time || undefined, end_time: prog.end_time || undefined,
-              is_included: prog.is_included, is_required: prog.is_required,
-              linked_offer_item_id: prog.linked_offer_item_id || undefined,
-              emoji: prog.emoji || undefined,
-              duration_minutes: prog.duration_minutes ? Number(prog.duration_minutes) : undefined,
-              distance_km: prog.distance_km ? Number(prog.distance_km) : undefined,
-              transport_mode: prog.transport_mode || undefined,
-              guide_id: prog.guide_id || undefined,
-              category: prog.category || undefined,
-              subtypes: prog.subtypes?.length ? prog.subtypes : undefined,
-              price: prog.price ? Number(prog.price) : undefined,
-              photos: prog.photos?.length ? prog.photos : undefined,
-              fields: {
-                ...(prog.fields || {}),
-                ...(prog.guide_cost ? { guide_cost: Number(prog.guide_cost) } : {}),
-                ...(prog.guide_offering_id ? { guide_offering_id: prog.guide_offering_id } : {}),
-              } as any,
-              external_reference: prog.external_reference || undefined,
-              is_external_reference: prog.is_external_reference || false,
-            }),
+            body: JSON.stringify({ day_number: day.day_number, title: day.title.trim(), description: day.description || undefined, date: day.date || undefined, lat: day.lat ?? undefined, lng: day.lng ?? undefined, location_name: day.location_name || undefined }),
+          });
+          for (const prog of day.programItems) {
+            if (!prog.title.trim()) continue;
+            await apiFetch(`/circuits/${circuitId}/days/${createdDay.id}/program`, {
+              method: "POST", headers: { Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                title: prog.title.trim(), description: prog.description || undefined,
+                start_time: prog.start_time || undefined, end_time: prog.end_time || undefined,
+                is_included: prog.is_included, is_required: prog.is_required,
+                linked_offer_item_id: prog.linked_offer_item_id || undefined,
+                emoji: prog.emoji || undefined,
+                duration_minutes: prog.duration_minutes ? Number(prog.duration_minutes) : undefined,
+                distance_km: prog.distance_km ? Number(prog.distance_km) : undefined,
+                transport_mode: prog.transport_mode || undefined,
+                guide_id: prog.guide_id || undefined,
+                category: prog.category || undefined,
+                subtypes: prog.subtypes?.length ? prog.subtypes : undefined,
+                price: prog.price ? Number(prog.price) : undefined,
+                photos: prog.photos?.length ? prog.photos : undefined,
+                fields: {
+                  ...(prog.fields || {}),
+                  ...(prog.guide_cost ? { guide_cost: Number(prog.guide_cost) } : {}),
+                  ...(prog.guide_offering_id ? { guide_offering_id: prog.guide_offering_id } : {}),
+                } as any,
+                external_reference: prog.external_reference || undefined,
+                is_external_reference: prog.is_external_reference || false,
+              }),
+            });
+          }
+        }
+        for (const opt of options) {
+          await apiFetch(`/circuits/${circuitId}/options`, {
+            method: "POST", headers: { Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ option_group: opt.option_group || undefined, option_type: opt.option_type, extra_price: opt.extra_price ? Number(opt.extra_price) : undefined, is_included: opt.is_included, is_required: opt.is_required, offer_item_id: opt.external_offer_item_id || undefined }),
           });
         }
-      }
-      for (const opt of options) {
-        await apiFetch(`/circuits/${circuitId}/options`, {
-          method: "POST", headers: { Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ option_group: opt.option_group || undefined, option_type: opt.option_type, extra_price: opt.extra_price ? Number(opt.extra_price) : undefined, is_included: opt.is_included, is_required: opt.is_required, offer_item_id: opt.external_offer_item_id || undefined }),
-        });
+      } catch (dayErr: any) {
+        // Cleanup: delete the circuit if day/program creation failed
+        await apiFetch(`/circuits/${circuitId}`, {
+          method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+        throw dayErr;
       }
       onSuccess(); onClose();
       setTimeout(() => router.push(`/circuits/${circuitId}`), 150);
@@ -941,7 +983,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                                     dayDate={day.date || undefined}
                                     dayLat={day.lat}
                                     dayLng={day.lng}
-                                    dayLocation={day.location_name}
+                                    dayLocation={day.location_name || region}
                                   />
                                 </div>
                               )}
@@ -1504,6 +1546,8 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
             dayLng={currentDay.lng}
             excludeAuthorId={user?.sub || user?.id || ""}
             dayLabel={`Jour ${currentDay.day_number} — ${currentDay.title}`}
+            programCategory={currentProg.category || "activite"}
+            region={region}
           />
         );
       })()}

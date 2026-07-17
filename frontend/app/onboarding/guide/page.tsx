@@ -295,16 +295,20 @@ function StepExperience({ data, setData }: any) {
         <label className="text-sm font-bold text-slate-700 ml-1">Années d'expérience</label>
         <div className="flex items-center gap-4">
           <input
-            type="range"
+            type="number"
             min={0}
-            max={30}
+            max={50}
             value={data.years_experience}
-            onChange={(e) => setData({ ...data, years_experience: parseInt(e.target.value) })}
-            className="flex-1 accent-primary"
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "" || (/^\d{0,2}$/.test(v) && Number(v) <= 50)) {
+                setData({ ...data, years_experience: v === "" ? 0 : parseInt(v) });
+              }
+            }}
+            className="flex-1 pl-4 pr-4 py-3.5 bg-surface-container border-none rounded-xl focus:ring-2 focus:ring-primary text-slate-900 placeholder:text-slate-400 font-medium"
+            placeholder="0"
           />
-          <span className="text-2xl font-extrabold text-primary w-16 text-center">
-            {data.years_experience} an{data.years_experience > 1 ? "s" : ""}
-          </span>
+          <span className="text-sm font-bold text-slate-500 w-12">ans</span>
         </div>
       </div>
 
@@ -335,6 +339,7 @@ function StepExperience({ data, setData }: any) {
             );
           })}
         </div>
+        <p className="text-xs text-slate-400 font-medium mt-2">Ces labels sont indicatifs. Téléversez la preuve depuis /dashboard#certifications</p>
       </div>
     </div>
   );
@@ -438,7 +443,7 @@ export default function GuideOnboardingPage() {
           body: JSON.stringify({
             years_experience: data.years_experience,
             landscapes: data.landscapes,
-            certifications: data.certifications,
+            certifications: data.certifications.map((c: string) => ({ label: c, proof: "" })),
           }),
         });
 

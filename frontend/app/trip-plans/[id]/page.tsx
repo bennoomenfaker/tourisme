@@ -131,6 +131,7 @@ export default function TripPlanDetailPage() {
   const [showAddItem, setShowAddItem] = useState(false);
   const [showBook, setShowBook] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [galleryIdx, setGalleryIdx] = useState(0);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
@@ -180,9 +181,42 @@ export default function TripPlanDetailPage() {
     } catch (e: any) { alert(e.message); }
   };
 
+  const planImages = useMemo(() => {
+    if (!plan?.items) return [];
+    const imgs: string[] = [];
+    for (const item of plan.items) {
+      const offerImgs = item.offerItem?.offer?.images;
+      if (offerImgs && offerImgs.length > 0) {
+        for (const img of offerImgs) { if (!imgs.includes(img)) imgs.push(img); }
+      }
+      if (item.circuit?.cover_image && !imgs.includes(item.circuit.cover_image)) imgs.push(item.circuit.cover_image);
+    }
+    return imgs.slice(0, 6);
+  }, [plan]);
+
+  const totalBudget = useMemo(() => {
+    if (!plan?.items) return 0;
+    let total = 0;
+    for (const item of plan.items) {
+      if (item.offerItem?.prices?.length) {
+        const price = item.offerItem.prices.find((p) => p.is_default)?.price ?? item.offerItem.prices[0]?.price;
+        if (price) total += Number(price);
+      } else if (item.circuit?.base_price) {
+        total += Number(item.circuit.base_price);
+      }
+    }
+    return total;
+  }, [plan]);
+
+  const dayCount = useMemo(() => {
+    if (!plan?.items) return 0;
+    const days = new Set(plan.items.filter((i) => i.day_number).map((i) => i.day_number));
+    return days.size;
+  }, [plan]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 pb-12">
-      <AppNavbar title="Trip Plan" />
+      <AppNavbar title={plan?.title ?? "Plan de voyage"} />
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <BackToDashboard />
@@ -195,122 +229,185 @@ export default function TripPlanDetailPage() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 animate-pulse space-y-3">
-            <div className="h-8 bg-slate-100 rounded w-1/2" />
-            <div className="h-4 bg-slate-100 rounded w-3/4" />
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-pulse">
+            <div className="h-64 bg-slate-100" />
+            <div className="p-6 space-y-3">
+              <div className="h-8 bg-slate-100 rounded w-1/2" />
+              <div className="h-4 bg-slate-100 rounded w-3/4" />
+            </div>
           </div>
         ) : !plan ? (
-          <div className="text-center py-20 text-slate-400">
-            <Leaf size={40} className="mx-auto mb-2 opacity-30" />
-            Plan introuvable
+          <div className="text-center py-20">
+            <Leaf size={48} className="mx-auto mb-3 text-emerald-300 opacity-50" />
+            <p className="text-slate-500 text-lg font-semibold">Plan introuvable</p>
+            <p className="text-slate-400 text-sm mt-1">Ce plan de voyage n&apos;existe pas ou a été supprimé.</p>
           </div>
         ) : (
-          <>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  {editingTitle ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="flex-1 text-xl font-bold border-b-2 border-emerald-300 bg-transparent focus:outline-none py-0.5"
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-                      />
-                      <button onClick={handleSaveTitle} disabled={savingTitle} className="text-primary hover:text-emerald-700">
-                        {savingTitle ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
-                      </button>
-                      <button onClick={() => setEditingTitle(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            {/* ─── Hero Gallery ────────────────────────────── */}
+            {planImages.length > 0 ? (
+              <div className="relative h-64 bg-slate-900">
+                <img src={planImages[galleryIdx]} alt={plan.title} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                {planImages.length > 1 && (
+                  <>
+                    <button onClick={() => setGalleryIdx((i) => (i - 1 + planImages.length) % planImages.length)} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"><ArrowLeft size={18} /></button>
+                    <button onClick={() => setGalleryIdx((i) => (i + 1) % planImages.length)} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"><ArrowLeft size={18} className="rotate-180" /></button>
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {planImages.map((_, i) => (
+                        <button key={i} onClick={() => setGalleryIdx(i)} className={`w-2 h-2 rounded-full transition-all ${i === galleryIdx ? "bg-white scale-125" : "bg-white/50"}`} />
+                      ))}
                     </div>
-                  ) : (
-                    <h1
-                      className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-primary transition-colors"
-                      onClick={() => setEditingTitle(true)}
-                      title="Cliquer pour modifier"
-                    >
-                      {plan.title}
-                    </h1>
-                  )}
-                  {plan.description && <p className="text-slate-500 mt-1">{plan.description}</p>}
-                  <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-slate-400">
-                    {plan.start_date && (
-                      <span className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        {new Date(plan.start_date).toLocaleDateString("fr-FR")}
-                        {plan.end_date && ` — ${new Date(plan.end_date).toLocaleDateString("fr-FR")}`}
-                      </span>
-                    )}
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${STATUS_COLORS[plan.status] ?? "bg-slate-100 text-slate-500"}`}>
-                      {STATUS_LABELS[plan.status] ?? plan.status}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Tag size={14} />
-                      {plan.items?.length ?? 0} élément{(plan.items?.length ?? 0) !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => setShowBook(true)}
-                    disabled={!plan.items?.length}
-                    className="px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-                  >
-                    <Check size={16} /> Réserver
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const url = `${window.location.origin}/trip-plans/${plan.id}`;
-                      const text = `Découvrez mon plan de voyage: ${plan.title} ${url}`;
-                      router.push(`/messagerie?share=${encodeURIComponent(text)}`);
-                    }}
-                    className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-primary hover:border-emerald-200 transition-colors"
-                  >
-                    <Share2 size={16} />
-                  </button>
+                  </>
+                )}
+                <div className="absolute bottom-4 left-4 right-4">
+                  <h1 className="text-2xl font-bold text-white drop-shadow-lg">{plan.title}</h1>
                 </div>
               </div>
+            ) : (
+              <div className="h-48 bg-gradient-to-br from-emerald-100 to-teal-200 flex items-center justify-center relative">
+                <Leaf size={48} className="text-emerald-400 opacity-50" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <h1 className="text-2xl font-bold text-slate-800">{plan.title}</h1>
+                </div>
+              </div>
+            )}
 
-              {/* Budget summary */}
-              {plan.items && plan.items.length > 0 && (() => {
-                let totalBudget = 0;
-                for (const item of plan.items) {
-                  if (item.offerItem?.prices?.length) {
-                    const price = item.offerItem.prices.find((p) => p.is_default)?.price ?? item.offerItem.prices[0]?.price;
-                    if (price) totalBudget += Number(price);
-                  } else if (item.circuit?.base_price) {
-                    totalBudget += Number(item.circuit.base_price);
-                  }
-                }
-                if (totalBudget > 0) {
-                  return (
-                    <div className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Budget estimé</p>
-                          <p className="text-2xl font-black text-emerald-700">{totalBudget.toLocaleString()} TND</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-emerald-500">{plan.items.length} activité{plan.items.length > 1 ? "s" : ""}</p>
-                          <p className="text-xs text-emerald-400">~{Math.round(totalBudget / (plan.items.length || 1))} TND/activité</p>
-                        </div>
+            {/* ─── Content ────────────────────────────────── */}
+            <div className="p-6">
+              {/* Title row (mobile fallback if no hero) */}
+              {planImages.length === 0 && (
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex-1 min-w-0">
+                    {editingTitle ? (
+                      <div className="flex items-center gap-2">
+                        <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                          className="flex-1 text-xl font-bold border-b-2 border-emerald-300 bg-transparent focus:outline-none py-0.5" autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") handleSaveTitle(); if (e.key === "Escape") setEditingTitle(false); }} />
+                        <button onClick={handleSaveTitle} disabled={savingTitle} className="text-primary hover:text-emerald-700">
+                          {savingTitle ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
+                        </button>
+                        <button onClick={() => setEditingTitle(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
                       </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+                    ) : (
+                      <h1 className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-primary transition-colors" onClick={() => setEditingTitle(true)} title="Cliquer pour modifier">
+                        {plan.title}
+                      </h1>
+                    )}
+                  </div>
+                </div>
+              )}
 
-              {/* Timeline grouped by day */}
-              {plan.items && plan.items.length > 1 && (() => {
+              {/* Editable title overlay for hero images */}
+              {planImages.length > 0 && (
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div className="flex-1 min-w-0">
+                    {editingTitle ? (
+                      <div className="flex items-center gap-2">
+                        <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                          className="flex-1 text-xl font-bold border-b-2 border-emerald-300 bg-transparent focus:outline-none py-0.5" autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") handleSaveTitle(); if (e.key === "Escape") setEditingTitle(false); }} />
+                        <button onClick={handleSaveTitle} disabled={savingTitle} className="text-primary hover:text-emerald-700">
+                          {savingTitle ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
+                        </button>
+                        <button onClick={() => setEditingTitle(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                      </div>
+                    ) : (
+                      <h1 className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-primary transition-colors" onClick={() => setEditingTitle(true)} title="Cliquer pour modifier">
+                        {plan.title}
+                      </h1>
+                    )}
+                    {plan.description && <p className="text-slate-500 mt-1">{plan.description}</p>}
+                  </div>
+                </div>
+              )}
+
+              {plan.description && planImages.length === 0 && (
+                <p className="text-slate-500 mb-4">{plan.description}</p>
+              )}
+
+              {/* ─── Status + Dates row ─────────────────── */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${STATUS_COLORS[plan.status] ?? "bg-slate-100 text-slate-500"}`}>
+                  {STATUS_LABELS[plan.status] ?? plan.status}
+                </span>
+                {plan.start_date && (
+                  <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full">
+                    <Calendar size={12} />
+                    {new Date(plan.start_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    {plan.end_date && ` — ${new Date(plan.end_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`}
+                  </span>
+                )}
+                <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full">
+                  <Tag size={12} />
+                  {plan.items?.length ?? 0} activité{(plan.items?.length ?? 0) !== 1 ? "s" : ""}
+                </span>
+                {dayCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full">
+                    <Clock size={12} />
+                    {dayCount} jour{dayCount > 1 ? "s" : ""}
+                  </span>
+                )}
+                {totalBudget > 0 && (
+                  <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                    {totalBudget.toLocaleString()} TND
+                  </span>
+                )}
+              </div>
+
+              {/* ─── Action buttons ────────────────────── */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                <button
+                  onClick={() => setShowBook(true)}
+                  disabled={!plan.items?.length}
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20 transition-all"
+                >
+                  <Check size={16} /> Réserver
+                </button>
+                <button
+                  onClick={() => setShowAddItem(true)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors"
+                >
+                  <Plus size={16} /> Ajouter
+                </button>
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/trip-plans/${plan.id}`;
+                    const text = `Découvrez mon plan de voyage: ${plan.title} ${url}`;
+                    router.push(`/messagerie?share=${encodeURIComponent(text)}`);
+                  }}
+                  className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-primary hover:border-emerald-200 transition-colors"
+                >
+                  <Share2 size={16} />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {/* ─── Budget Summary ────────────────────── */}
+              {totalBudget > 0 && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100 mb-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-base">payments</span> Budget estimé
+                      </p>
+                      <p className="text-2xl font-black text-emerald-700 mt-1">{totalBudget.toLocaleString()} <span className="text-sm font-normal text-emerald-500">TND</span></p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-emerald-500">{plan.items?.length ?? 0} activité{(plan.items?.length ?? 0) !== 1 ? "s" : ""}</p>
+                      <p className="text-xs text-emerald-400 mt-0.5">~{Math.round(totalBudget / (plan.items?.length || 1))} TND/activité</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Timeline grouped by day ──────────── */}
+              {plan.items && plan.items.length > 0 && (() => {
                 const sorted = [...plan.items].sort((a, b) => (a.day_number ?? 999) - (b.day_number ?? 999) || a.sort_order - b.sort_order);
                 const grouped: Record<number, typeof sorted> = {};
                 const unassigned: typeof sorted = [];
@@ -323,74 +420,70 @@ export default function TripPlanDetailPage() {
                   }
                 }
                 const days = Object.keys(grouped).map(Number).sort((a, b) => a - b);
-                const totalDays = days.length + (unassigned.length > 0 ? 1 : 0);
 
                 return (
-                  <div className="mt-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Itinéraire jour par jour</h3>
+                  <div className="mb-5">
+                    <h2 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <Calendar size={20} className="text-primary" /> Itinéraire jour par jour
+                    </h2>
                     <div className="relative">
-                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200" />
+                      <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-emerald-200" />
                       <div className="space-y-4">
                         {days.map((dayNum) => (
                           <div key={dayNum}>
                             <div className="flex items-center gap-3 relative mb-2">
-                              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold z-10 shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold z-10 shrink-0 shadow-md shadow-emerald-500/20">
                                 {dayNum}
                               </div>
                               <div className="flex-1">
-                                <h4 className="text-sm font-bold text-slate-700">Jour {dayNum}</h4>
-                                <p className="text-[10px] text-slate-400">
-                                  {grouped[dayNum].length} activité{grouped[dayNum].length > 1 ? "s" : ""}
-                                </p>
+                                <h3 className="text-sm font-bold text-slate-700">Jour {dayNum}</h3>
+                                <p className="text-[10px] text-slate-400">{grouped[dayNum].length} activité{grouped[dayNum].length > 1 ? "s" : ""}</p>
                               </div>
                             </div>
-                            <div className="ml-[18px] space-y-2 border-l-2 border-dashed border-slate-200 pl-5 mb-3">
-                              {grouped[dayNum].map((item) => (
-                                <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-5 relative">
-                                  <div className="absolute -left-[9px] top-3 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white" />
-                                  <p className="text-sm font-semibold text-slate-800">
-                                    {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
-                                  </p>
-                                  {item.offerItem?.offer && (
-                                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                      <MapPin size={10} />
-                                      {item.offerItem.offer.title}
-                                      {item.offerItem.offer.region && ` — ${item.offerItem.offer.region}`}
-                                    </p>
-                                  )}
-                                  {item.circuit && (
-                                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                      <MapPin size={10} />
-                                      {item.circuit.title}
-                                      {item.circuit.region && ` — ${item.circuit.region}`}
-                                    </p>
-                                  )}
-                                  {item.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{item.notes}</p>}
-                                </div>
-                              ))}
+                            <div className="ml-[15px] space-y-2 border-l-2 border-dashed border-emerald-200 pl-5 mb-3">
+                              {grouped[dayNum].map((item) => {
+                                const img = item.offerItem?.offer?.images?.[0] ?? item.circuit?.cover_image;
+                                return (
+                                  <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-[22px] relative hover:border-emerald-200 hover:shadow-sm transition-all">
+                                    <div className="absolute -left-[9px] top-3 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white" />
+                                    <div className="flex items-start gap-3">
+                                      {img && <img src={img} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-slate-800 truncate">{item.offerItem?.name ?? item.circuit?.title ?? "Activité"}</p>
+                                        {item.offerItem?.offer && (
+                                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{item.offerItem.offer.title}{item.offerItem.offer.region && ` — ${item.offerItem.offer.region}`}</p>
+                                        )}
+                                        {item.circuit && (
+                                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{item.circuit.title}{item.circuit.region && ` — ${item.circuit.region}`}</p>
+                                        )}
+                                        {item.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{item.notes}</p>}
+                                        {(item.offerItem?.prices?.length ?? 0) > 0 && (
+                                          <span className="inline-block text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-1">
+                                            {Number(item.offerItem!.prices.find((p) => p.is_default)?.price ?? item.offerItem!.prices[0]?.price ?? 0).toLocaleString()} TND
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         ))}
                         {unassigned.length > 0 && (
                           <div>
                             <div className="flex items-center gap-3 relative mb-2">
-                              <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold z-10 shrink-0">
-                                ?
-                              </div>
+                              <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-bold z-10 shrink-0">?</div>
                               <div className="flex-1">
-                                <h4 className="text-sm font-bold text-slate-500">Non assigné</h4>
-                                <p className="text-[10px] text-slate-400">
-                                  {unassigned.length} activité{unassigned.length > 1 ? "s" : ""}
-                                </p>
+                                <h3 className="text-sm font-bold text-slate-500">Non assigné</h3>
+                                <p className="text-[10px] text-slate-400">{unassigned.length} activité{unassigned.length > 1 ? "s" : ""}</p>
                               </div>
                             </div>
-                            <div className="ml-[18px] space-y-2 border-l-2 border-dashed border-slate-200 pl-5">
+                            <div className="ml-[15px] space-y-2 border-l-2 border-dashed border-slate-200 pl-5">
                               {unassigned.map((item) => (
-                                <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-5 relative">
+                                <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-[22px] relative">
                                   <div className="absolute -left-[9px] top-3 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white" />
-                                  <p className="text-sm font-semibold text-slate-800">
-                                    {item.offerItem?.name ?? item.circuit?.title ?? "Activité"}
-                                  </p>
+                                  <p className="text-sm font-semibold text-slate-800">{item.offerItem?.name ?? item.circuit?.title ?? "Activité"}</p>
                                   {item.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{item.notes}</p>}
                                 </div>
                               ))}
@@ -402,180 +495,102 @@ export default function TripPlanDetailPage() {
                   </div>
                 );
               })()}
-            </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-slate-800 text-lg">Activités</h2>
-                <button
-                  onClick={() => setShowAddItem(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-medium text-sm hover:bg-slate-200 transition-colors"
-                >
-                  <Plus size={16} /> Ajouter
-                </button>
-              </div>
-
-              {!plan.items?.length ? (
-                <div className="text-center py-12 text-slate-400">
-                  <MapPin size={32} className="mx-auto mb-2 opacity-30" />
-                  <p className="font-medium">Aucune activité dans ce plan</p>
-                  <p className="text-sm mt-1">Ajoutez des offres depuis le catalogue pour commencer</p>
-                  <button
-                    onClick={() => setShowAddItem(true)}
-                    className="mt-3 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-emerald-600"
-                  >
-                    Ajouter une activité
-                  </button>
-                </div>
-              ) : (
+              {/* ─── Map + Activity Cards ──────────────── */}
+              {plan.items && plan.items.length > 0 && (
                 <>
                   <TripMap
-                    className="mb-4"
-                    items={[
-                      ...plan.items
-                        .filter((item) => item.offerItem?.offer?.latitude && item.offerItem?.offer?.longitude)
-                        .map((item) => ({
-                          label: item.offerItem?.name ?? item.offerItem?.offer?.title ?? "",
-                          lat: Number(item.offerItem!.offer!.latitude),
-                          lng: Number(item.offerItem!.offer!.longitude),
-                          day_number: item.day_number,
-                          type: "offer" as const,
-                        })),
-                      ...plan.items
-                        .filter((item) => item.circuit?.lat && item.circuit?.lng)
-                        .map((item) => ({
-                          label: item.circuit!.title,
-                          lat: Number(item.circuit!.lat),
-                          lng: Number(item.circuit!.lng),
-                          day_number: item.day_number,
-                          type: "circuit" as const,
-                        })),
-                    ]}
+                    className="mb-5"
+                    items={plan.items
+                      .filter((item) => item.lat != null && item.lng != null)
+                      .map((item) => ({
+                        label: item.offerItem?.name ?? item.circuit?.title ?? item.notes ?? `Jour ${item.day_number ?? "?"}`,
+                        lat: Number(item.lat),
+                        lng: Number(item.lng),
+                        day_number: item.day_number,
+                      }))}
                   />
-                  <div className="space-y-3">
-                  {plan.items.map((item) => (
-                    <div key={item.id} className="border border-slate-100 rounded-xl p-4 hover:border-slate-200 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <h4 className="font-semibold text-slate-800">
-                              {item.offerItem?.name ?? item.circuit?.title ?? item.notes ?? "Élément supprimé"}
-                            </h4>
-                            {item.offerItem?.item_type && (
-                              <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">
-                                {item.offerItem.item_type}
-                              </span>
-                            )}
-                            {item.circuit && (
-                              <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
-                                Circuit {item.circuit.duration_days ? `(${item.circuit.duration_days}j)` : ""}
-                              </span>
-                            )}
-                            {item.day_number && (
-                              <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                                Jour {item.day_number}
-                              </span>
-                            )}
+
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <MapPin size={20} className="text-primary" /> Toutes les activités
+                    </h2>
+                    <div className="space-y-3">
+                      {plan.items.map((item) => {
+                        const img = item.offerItem?.offer?.images?.[0] ?? item.circuit?.cover_image;
+                        return (
+                          <div key={item.id} className="border border-slate-100 rounded-xl p-4 hover:border-emerald-200 hover:shadow-sm transition-all">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0 flex items-start gap-3">
+                                {img && <img src={img} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                    <h4 className="font-semibold text-slate-800 truncate">{item.offerItem?.name ?? item.circuit?.title ?? item.notes ?? "Élément supprimé"}</h4>
+                                    {item.offerItem?.item_type && <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">{item.offerItem.item_type}</span>}
+                                    {item.circuit && <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Circuit{item.circuit.duration_days ? ` (${item.circuit.duration_days}j)` : ""}</span>}
+                                    {item.day_number && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">Jour {item.day_number}</span>}
+                                  </div>
+                                  {item.offerItem?.offer && (
+                                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{item.offerItem.offer.title}{item.offerItem.offer.region && ` — ${item.offerItem.offer.region}`}</p>
+                                  )}
+                                  {item.circuit && (
+                                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{item.circuit.title}{item.circuit.region && ` — ${item.circuit.region}`}</p>
+                                  )}
+                                  {(item.offerItem?.details_json?.room_sub_type || item.offerItem?.details_json?.bed_count || item.offerItem?.details_json?.tent_capacity) && (
+                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                      {item.offerItem.details_json?.room_sub_type && (
+                                        <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">
+                                          {item.offerItem.details_json.room_sub_type === 'shared' ? 'Dortoir' : item.offerItem.details_json.room_sub_type === 'private' ? 'Privé' : item.offerItem.details_json.room_sub_type === 'double' ? 'Double' : item.offerItem.details_json.room_sub_type === 'family' ? 'Famille' : item.offerItem.details_json.room_sub_type === 'suite' ? 'Suite' : item.offerItem.details_json.room_sub_type}
+                                        </span>
+                                      )}
+                                      {item.offerItem.details_json?.bed_count != null && (
+                                        <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full">{item.offerItem.details_json.bed_count} lit{item.offerItem.details_json.bed_count > 1 ? 's' : ''}</span>
+                                      )}
+                                      {item.offerItem.details_json?.tent_capacity != null && (
+                                        <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded-full">{item.offerItem.details_json.tent_capacity} pers.</span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {item.notes && (item.offerItem?.name || item.circuit?.title) && <p className="text-xs text-slate-500 mt-1 italic">{item.notes}</p>}
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    {item.offerItem?.prices?.filter((p) => p.is_default || item.offerItem!.prices.length === 1).map((p) => (
+                                      <span key={p.id} className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">{Number(p.price).toLocaleString()} {p.currency}</span>
+                                    ))}
+                                    {item.circuit?.base_price != null && (
+                                      <span className="text-xs bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">{Number(item.circuit.base_price).toLocaleString()} {item.circuit.currency}</span>
+                                    )}
+                                    {item.circuit?.duration_days && (
+                                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{item.circuit.duration_days} jour{item.circuit.duration_days > 1 ? "s" : ""}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button onClick={() => { setEditingItem(item.id); setEditItemDay(String(item.day_number ?? "")); setEditItemNotes(item.notes ?? ""); }} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"><Edit size={14} /></button>
+                                <button onClick={async () => { if (!confirm("Retirer cette activité du plan ?")) return; try { await apiFetch(`/trip-plans/${id}/items/${item.id}`, { method: "DELETE" }); loadPlan(); } catch (e: any) { alert(e.message); } }} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={14} /></button>
+                              </div>
+                            </div>
                           </div>
-                          {item.offerItem?.offer && (
-                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                              <MapPin size={10} />
-                              {item.offerItem.offer.title}
-                              {item.offerItem.offer.region && ` — ${item.offerItem.offer.region}`}
-                            </p>
-                          )}
-                          {item.circuit && (
-                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                              <MapPin size={10} />
-                              {item.circuit.title}
-                              {item.circuit.region && ` — ${item.circuit.region}`}
-                            </p>
-                          )}
-                            {(item.offerItem?.details_json?.room_sub_type || item.offerItem?.details_json?.bed_count || item.offerItem?.details_json?.tent_capacity) && (
-                            <div className="flex flex-wrap gap-2 mt-1.5">
-                              {item.offerItem.details_json?.room_sub_type && (
-                                <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">
-                                  {item.offerItem.details_json.room_sub_type === 'shared' ? '🛏 Dortoir' :
-                                   item.offerItem.details_json.room_sub_type === 'private' ? '🏠 Privé' :
-                                   item.offerItem.details_json.room_sub_type === 'double' ? '👫 Double' :
-                                   item.offerItem.details_json.room_sub_type === 'family' ? '👨‍👩‍👧‍👦 Famille' :
-                                   item.offerItem.details_json.room_sub_type === 'suite' ? '👑 Suite' :
-                                   item.offerItem.details_json.room_sub_type === 'studio' ? '🏢 Studio' :
-                                   item.offerItem.details_json.room_sub_type}
-                                </span>
-                              )}
-                              {item.offerItem.details_json?.bed_count != null && (
-                                <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full">
-                                  🛏 {item.offerItem.details_json.bed_count} lit{item.offerItem.details_json.bed_count > 1 ? 's' : ''}
-                                </span>
-                              )}
-                              {item.offerItem.details_json?.tent_capacity != null && (
-                                <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded-full">
-                                  ⛺ {item.offerItem.details_json.tent_capacity} pers.
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {item.notes && (item.offerItem?.name || item.circuit?.title) && (
-                            <p className="text-xs text-slate-500 mt-1 italic">{item.notes}</p>
-                          )}
-                          {item.offerItem?.prices && item.offerItem.prices.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {item.offerItem.prices.filter((p) => p.is_default || item.offerItem!.prices.length === 1).map((p) => (
-                                <span key={p.id} className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
-                                  {Number(p.price).toLocaleString()} {p.currency}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {item.circuit && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {item.circuit.base_price != null && (
-                                <span className="text-xs bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
-                                  {Number(item.circuit.base_price).toLocaleString()} {item.circuit.currency}
-                                </span>
-                              )}
-                              {item.circuit.duration_days && (
-                                <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                                  {item.circuit.duration_days} jour{item.circuit.duration_days > 1 ? "s" : ""}
-                                </span>
-                              )}
-                              {item.circuit.max_participants && (
-                                <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
-                                  Max {item.circuit.max_participants} pers.
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => { setEditingItem(item.id); setEditItemDay(String(item.day_number ?? "")); setEditItemNotes(item.notes ?? ""); }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50"
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Retirer cette activité du plan ?")) return;
-                              try {
-                                await apiFetch(`/trip-plans/${id}/items/${item.id}`, { method: "DELETE" });
-                                loadPlan();
-                              } catch (e: any) { alert(e.message); }
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
-                  ))}
                   </div>
                 </>
               )}
+
+              {/* ─── Empty state ──────────────────────── */}
+              {(!plan.items || plan.items.length === 0) && (
+                <div className="text-center py-12 text-slate-400">
+                  <MapPin size={40} className="mx-auto mb-3 opacity-30" />
+                  <p className="font-semibold text-slate-500">Aucune activité dans ce plan</p>
+                  <p className="text-sm mt-1">Ajoutez des offres depuis le catalogue pour commencer</p>
+                  <button onClick={() => setShowAddItem(true)} className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all">
+                    <Plus size={16} className="inline mr-1" /> Ajouter une activité
+                  </button>
+                </div>
+              )}
             </div>
-          </>
+          </div>
         )}
       </div>
 

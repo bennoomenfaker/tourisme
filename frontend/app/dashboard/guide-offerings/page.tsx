@@ -184,14 +184,14 @@ function OfferingForm({ token, offering, onClose, onSuccess }: {
 
             {zoneType === "point" && (
               <div>
-                <MapPicker lat={lat ?? 36.8065} lng={lng ?? 10.1815} onPick={(la, ln, addr) => { setLat(la); setLng(ln); }} />
+                <MapPicker lat={lat ?? 36.8065} lng={lng ?? 10.1815} onPick={(la, ln, addr, region) => { setLat(la); setLng(ln); }} />
                 {lat !== null && <p className="text-xs text-slate-400 mt-1">{lat.toFixed(5)}, {lng?.toFixed(5)}</p>}
               </div>
             )}
 
             {zoneType === "radius" && (
               <div className="space-y-2">
-                <MapPicker lat={lat ?? 36.8065} lng={lng ?? 10.1815} radiusKm={radiusKm ? Number(radiusKm) : null} onPick={(la, ln, addr) => { setLat(la); setLng(ln); }} />
+                <MapPicker lat={lat ?? 36.8065} lng={lng ?? 10.1815} radiusKm={radiusKm ? Number(radiusKm) : null} onPick={(la, ln, addr, region) => { setLat(la); setLng(ln); }} />
                 {lat !== null && <p className="text-xs text-slate-400">{lat.toFixed(5)}, {lng?.toFixed(5)}</p>}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500">Rayon (km)</label>

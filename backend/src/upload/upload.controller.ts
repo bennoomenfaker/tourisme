@@ -25,8 +25,9 @@ export class UploadController {
   )
   async upload(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Aucun fichier fourni.');
-    if (!file.mimetype.startsWith('image/'))
-      throw new BadRequestException('Seules les images sont acceptées.');
+    const allowed = ['image/', 'application/pdf'];
+    if (!allowed.some((t) => file.mimetype.startsWith(t)))
+      throw new BadRequestException('Seules les images et PDF sont acceptés.');
     const url = await this.uploadService.uploadBuffer(
       file.buffer,
       file.mimetype,

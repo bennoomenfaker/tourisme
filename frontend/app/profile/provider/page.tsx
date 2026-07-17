@@ -79,6 +79,7 @@ type OwnerProfile = {
   country: string | null; phone: string | null; language: string | null;
   sustainability_score: number | null; total_reservations: number;
   feedback_received: number;   venues: Venue[];
+  certifications?: any[];
 };
 
 type Offer = {
@@ -356,6 +357,7 @@ export default function ProjectOwnerProfilePage() {
   const [netMenuId,       setNetMenuId]        = useState<string | null>(null);
   const [netReport,       setNetReport]        = useState<{ id: string; name: string } | null>(null);
   const [netReportReason, setNetReportReason]  = useState("");
+  const [structuredCerts, setStructuredCerts]  = useState<any[]>([]);
   const [netReportSending,setNetReportSending] = useState(false);
   const NET_REPORT_REASONS = ["Contenu inapproprié", "Faux profil", "Harcèlement ou spam", "Informations trompeuses", "Autre"];
 
@@ -457,6 +459,8 @@ export default function ProjectOwnerProfilePage() {
           };
         });
         setOffers(offersWithCover);
+        // Fetch structured certifications from API
+        apiFetch<any[]>(`/certifications/user/${p.user_id}`).then((c) => setStructuredCerts(c)).catch(() => {});
         // Load network in background
         Promise.all([
           apiFetch<NetUser[]>("/follows/following/profiles", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => []),
@@ -1114,7 +1118,7 @@ export default function ProjectOwnerProfilePage() {
                 {new Date(offer.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
               </p>
               <button
-                onClick={() => openEditModal(offer)}
+                onClick={() => router.push(`/offers/${offer.id}`)}
                 className="text-primary hover:text-primary/80 font-extrabold text-xs inline-flex items-center gap-1 hover:translate-x-1 transition-transform duration-200"
               >
                 <span>Voir les détails</span>
@@ -3187,6 +3191,40 @@ export default function ProjectOwnerProfilePage() {
                     <p className="text-xs font-bold text-slate-500 mt-2">
                       {profile.sustainability_score >= 80 ? "Propriétaire Ambassadeur Éco Voyage" : scoreLabel(profile.sustainability_score)}
                     </p>
+                  </div>
+                )}
+
+                {/* Certifications */}
+                {profile.certifications && profile.certifications.length > 0 && (
+                  <div className="bg-white p-6 rounded-3xl border border-slate-100/80 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">Certifications</p>
+                    <div className="space-y-2">
+                      {profile.certifications.map((cert: any, i: number) => (
+                        <div key={i} className="flex items-center gap-3 p-2 bg-emerald-50/50 rounded-xl">
+                          <span className="material-symbols-outlined text-emerald-600 text-lg">verified</span>
+                          <span className="text-sm font-bold text-slate-700">{typeof cert === "string" ? cert : cert.name || cert}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Certifications structurées (API) */}
+                {structuredCerts.length > 0 && (
+                  <div className="bg-white p-6 rounded-3xl border border-slate-100/80 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-3">Certifications vérifiées</p>
+                    <div className="space-y-2">
+                      {structuredCerts.map((cert) => (
+                        <div key={cert.id} className="flex items-center gap-3 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                          <span className="material-symbols-outlined text-emerald-600 text-lg">verified</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800">{cert.name}</p>
+                            {cert.description && <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{cert.description}</p>}
+                            {cert.issued_by && <p className="text-[10px] text-slate-400 mt-0.5">{cert.issued_by}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

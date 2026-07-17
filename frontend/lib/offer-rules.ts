@@ -16,8 +16,10 @@ export function hasItemTypesWithoutLocation(category: string, itemTypeValues: st
 }
 
 const ITEMS_WITH_GUIDE = new Set([
-  'hiking', 'randonnee', 'kayak', 'vtt', 'escalade', 'equitation',
-  'speleologie', 'observation', 'photographie', 'guided_tour',
+  'hiking', 'randonnee', 'kayak', 'paddle', 'vtt', 'escalade', 'equitation',
+  'speleologie', 'tyrolienne', 'observation', 'astronomie', 'photographie', 'guided_tour',
+  'yoga', 'meditation', 'poterie', 'cuisine', 'musique',
+  'surfing', 'diving', 'paragliding',
 ]);
 
 const CATEGORIES_WITH_GUIDE = new Set([
@@ -75,19 +77,25 @@ export interface ActivitySubType {
 export function getActivitySubTypes(): ActivitySubType[] {
   return [
     { value: 'randonnee', label: 'Randonnée', icon: '🥾' },
-    { value: 'kayak', label: 'Kayak / Canoë', icon: '🛶' },
     { value: 'trekking', label: 'Trekking', icon: '🏔️' },
+    { value: 'kayak', label: 'Kayak', icon: '🛶' },
+    { value: 'paddle', label: 'Paddle', icon: '🏄' },
     { value: 'vtt', label: 'VTT', icon: '🚵' },
     { value: 'escalade', label: 'Escalade', icon: '🧗' },
-    { value: 'equitation', label: 'Équitation', icon: '🐴' },
-    { value: 'yoga', label: 'Yoga', icon: '🧘' },
-    { value: 'plongee', label: 'Plongée', icon: '🤿' },
-    { value: 'surf', label: 'Surf / Windsurf', icon: '🏄' },
-    { value: 'observation', label: 'Observation nature', icon: '🔭' },
-    { value: 'cuisine', label: 'Atelier cuisine', icon: '👨‍🍳' },
-    { value: 'poterie', label: 'Atelier poterie', icon: '🏺' },
-    { value: 'photographie', label: 'Photographie', icon: '📷' },
+    { value: 'tyrolienne', label: 'Tyrolienne', icon: '🪢' },
     { value: 'speleologie', label: 'Spéléologie', icon: '⛰️' },
+    { value: 'equitation', label: 'Équitation', icon: '🐴' },
+    { value: 'observation', label: 'Observation nature', icon: '🔭' },
+    { value: 'astronomie', label: 'Astronomie', icon: '🌟' },
+    { value: 'photographie', label: 'Photographie', icon: '📷' },
+    { value: 'yoga', label: 'Yoga', icon: '🧘' },
+    { value: 'meditation', label: 'Méditation', icon: '🧘‍♀️' },
+    { value: 'poterie', label: 'Poterie', icon: '🏺' },
+    { value: 'cuisine', label: 'Cuisine', icon: '👨‍🍳' },
+    { value: 'musique', label: 'Musique', icon: '🎵' },
+    { value: 'surfing', label: 'Surf', icon: '🏄‍♂️' },
+    { value: 'diving', label: 'Plongée', icon: '🤿' },
+    { value: 'paragliding', label: 'Parapente', icon: '🪂' },
     { value: 'other', label: 'Autre activité', icon: '🎯' },
   ];
 }
@@ -96,7 +104,7 @@ export function getActivitySubTypes(): ActivitySubType[] {
  * Vérifie si un item_type a des champs de difficulté
  */
 export function hasDifficulty(itemType: string): boolean {
-  return ['randonnee', 'trekking', 'vtt', 'escalade', 'kayak', 'speleologie'].includes(itemType);
+  return ['randonnee', 'trekking', 'vtt', 'escalade', 'kayak', 'speleologie', 'equitation', 'surfing', 'diving', 'paragliding', 'tyrolienne'].includes(itemType);
 }
 
 /**

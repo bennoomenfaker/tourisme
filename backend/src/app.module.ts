@@ -37,6 +37,7 @@ import { DomainModule } from './domain/domain.module';
 import { ProviderModule } from './provider/provider.module';
 import { OrganizationModule } from './organization/organization.module';
 import { ProviderActivityModule } from './provider-activity/provider-activity.module';
+import { CertificationModule } from './certification/certification.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { ProviderActivityModule } from './provider-activity/provider-activity.mo
     TimelineModule,
     RedisModule,
     DomainModule,
+    CertificationModule,
   ],
   providers: [
     GoogleStrategy,

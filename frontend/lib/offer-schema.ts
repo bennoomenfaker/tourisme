@@ -52,20 +52,20 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     sections: [
       { id: 'general', label: 'Informations', fields: ['surface_m2', 'vue', 'etage', 'bed_count'] },
       { id: 'bathroom', label: 'Salle de bain', fields: ['sdb_type', 'sdb_equipements'] },
-      { id: 'capacity', label: 'Capacité', fields: ['nb_couchages', 'type_lit', 'pmr_chambre'] },
+      { id: 'capacity', label: 'Capacité', fields: ['capacite_accueil', 'type_lit', 'accessible_pmr'] },
       { id: 'schedule', label: 'Horaires', fields: ['checkin_debut', 'checkin_fin', 'checkout', 'couvre_feu'] },
       { id: 'services', label: 'Services', fields: ['formule_restauration', 'equipements_chambre', 'inclus'] },
     ],
     fields: {
       surface_m2: { type: 'number', label: 'Surface (m²)', placeholder: '25', unit: 'm²' },
-      vue: { type: 'select', label: 'Vue', options: [
+      vue: { type: 'multiselect', label: 'Vue', options: [
         { value: 'jardin', label: 'Jardin' }, { value: 'piscine', label: 'Piscine' },
         { value: 'mer', label: 'Mer' }, { value: 'montagne', label: 'Montagne' },
         { value: 'ville', label: 'Ville' }, { value: 'aucune', label: 'Aucune' },
       ]},
-      etage: { type: 'number', label: 'Étage', placeholder: 'Rez-de-chaussée' },
+      etage: { type: 'number', label: 'Étage', placeholder: '0 = rez-de-chaussée', min: 0, max: 20 },
       bed_count: { type: 'number', required: true, label: 'Nombre de lits', min: 1 },
-      nb_couchages: { type: 'number', required: true, label: 'Nombre de couchages', min: 1 },
+      capacite_accueil: { type: 'number', required: true, label: 'Capacité d\'accueil (personnes)', min: 1 },
       type_lit: { type: 'select', label: 'Type de lit', options: [
         { value: 'simple', label: 'Lit simple' }, { value: 'double', label: 'Lit double' },
         { value: 'king', label: 'Lit king size' }, { value: 'superpose', label: 'Lit superposé' },
@@ -85,14 +85,14 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'sans', label: 'Sans restauration' }, { value: 'petit_dej', label: 'Petit-déjeuner' },
         { value: 'demi_pension', label: 'Demi-pension' }, { value: 'pension_complete', label: 'Pension complète' },
       ]},
-      inclus: { type: 'hierarchy', label: 'Inclus dans le prix', taxonomy: 'inclus' },
-      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
-      checkin_fin: { type: 'time', label: 'Check-in jusqu\'à' },
-      checkout: { type: 'time', required: true, label: 'Check-out avant' },
-      couvre_feu: { type: 'time', label: 'Couvre-feu' },
-      pmr_chambre: { type: 'boolean', label: 'Chambre accessible PMR' },
+      inclus: { type: 'hierarchy', label: 'Services inclus (pour filtres)', taxonomy: 'inclus' },
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de (heure)' },
+      checkin_fin: { type: 'time', label: 'Check-in jusqu\'à (heure)' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant (heure)' },
+      couvre_feu: { type: 'time', label: 'Couvre-feu (heure)' },
+      accessible_pmr: { type: 'boolean', label: 'Accessible PMR (fauteuil roulant)' },
     },
-    display: { cardFields: ['surface_m2', 'bed_count', 'vue'], filterable: ['vue', 'pmr_chambre', 'equipements_chambre'] },
+    display: { cardFields: ['surface_m2', 'bed_count', 'vue'], filterable: ['vue', 'accessible_pmr', 'equipements_chambre'] },
   },
 
   accommodation_bed: {
@@ -113,12 +113,12 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'mixte', label: 'Mixte' }, { value: 'hommes', label: 'Hommes' },
         { value: 'femmes', label: 'Femmes' },
       ]},
-      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
-      checkin_fin: { type: 'time', label: 'Check-in jusqu\'à' },
-      checkout: { type: 'time', required: true, label: 'Check-out avant' },
-      couvre_feu: { type: 'time', label: 'Couvre-feu' },
-      silence_partir_de: { type: 'time', label: 'Silence à partir de' },
-      inclus: { type: 'hierarchy', label: 'Inclus dans le prix', taxonomy: 'inclus' },
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de (heure)' },
+      checkin_fin: { type: 'time', label: 'Check-in jusqu\'à (heure)' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant (heure)' },
+      couvre_feu: { type: 'time', label: 'Couvre-feu (heure)' },
+      silence_partir_de: { type: 'time', label: 'Silence à partir de (heure)' },
+      inclus: { type: 'hierarchy', label: 'Services inclus (pour filtres)', taxonomy: 'inclus' },
     },
     display: { cardFields: ['nb_lits_offre', 'type_lit', 'dortoir_genre'], filterable: ['dortoir_genre'] },
   },
@@ -155,8 +155,8 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'communs', label: 'Communs (bloc)' },
       ]},
       distance_sanitaires_m: { type: 'number', label: 'Distance sanitaires (m)', unit: 'm', conditionalOn: { field: 'sanitaires_offre', value: 'partages' } },
-      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
-      checkout: { type: 'time', required: true, label: 'Check-out avant' },
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de (heure)' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant (heure)' },
       experiences_incluses: { type: 'multiselect', label: 'Expériences incluses', options: [
         { value: 'feu_camp', label: 'Feu de camp' }, { value: 'petit_dej', label: 'Petit-déjeuner' },
         { value: 'etoiles', label: 'Observation étoiles' }, { value: 'randonnee', label: 'Randonnée' },
@@ -178,7 +178,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     ],
     fields: {
       surface_m2: { type: 'number', label: 'Surface (m²)', unit: 'm²' },
-      vue: { type: 'select', label: 'Vue', options: [
+      vue: { type: 'multiselect', label: 'Vue', options: [
         { value: 'jardin', label: 'Jardin' }, { value: 'piscine', label: 'Piscine' },
         { value: 'mer', label: 'Mer' }, { value: 'montagne', label: 'Montagne' },
       ]},
@@ -198,13 +198,9 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'seche_cheveux', label: 'Sèche-cheveux' },
       ]},
       services_offre: { type: 'hierarchy', label: 'Services premium', taxonomy: 'services_offre' },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'linge', label: 'Linge de lit' }, { value: 'serviettes', label: 'Serviettes' },
-        { value: 'petit_dej', label: 'Petit-déjeuner' }, { value: 'parking', label: 'Parking' },
-        { value: 'wifi', label: 'WiFi' },
-      ]},
-      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
-      checkout: { type: 'time', required: true, label: 'Check-out avant' },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de (heure)' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant (heure)' },
     },
     display: { cardFields: ['surface_m2', 'nb_pieces', 'vue'], filterable: ['vue', 'privatisation_offre', 'services_offre'] },
   },
@@ -221,7 +217,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     ],
     fields: {
       surface_m2: { type: 'number', label: 'Surface (m²)', unit: 'm²' },
-      vue: { type: 'select', label: 'Vue', options: [
+      vue: { type: 'multiselect', label: 'Vue', options: [
         { value: 'jardin', label: 'Jardin' }, { value: 'mer', label: 'Mer' },
         { value: 'montagne', label: 'Montagne' }, { value: 'piscine', label: 'Piscine' },
         { value: 'nature', label: 'Nature' },
@@ -238,12 +234,9 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       ]},
       equipements_offre: { type: 'hierarchy', label: 'Équipements', taxonomy: 'equipment_accommodation' },
       animaux_offre: { type: 'boolean', label: 'Animaux acceptés' },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'linge', label: 'Linge de lit' }, { value: 'serviettes', label: 'Serviettes' },
-        { value: 'petit_dej', label: 'Petit-déjeuner' }, { value: 'parking', label: 'Parking' },
-      ]},
-      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
-      checkout: { type: 'time', required: true, label: 'Check-out avant' },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de (heure)' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant (heure)' },
     },
     display: { cardFields: ['capacite_offre', 'surface_m2', 'vue'], filterable: ['sdb_type', 'animaux_offre', 'equipements_offre'] },
   },
@@ -293,8 +286,8 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'demi_pension', label: 'Demi-pension' }, { value: 'pension', label: 'Pension complète' },
         { value: 'table_hotes', label: 'Table d\'hôtes' },
       ]},
-      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de' },
-      checkout: { type: 'time', required: true, label: 'Check-out avant' },
+      checkin_debut: { type: 'time', required: true, label: 'Check-in à partir de (heure)' },
+      checkout: { type: 'time', required: true, label: 'Check-out avant (heure)' },
     },
     display: { cardFields: ['type_unite', 'capacite_offre', 'surface_m2'], filterable: ['type_unite', 'materiaux', 'certifications', 'restauration_offre'] },
   },
@@ -331,11 +324,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       encadrement_guide: { type: 'boolean', label: 'Encadrement par un guide' },
       langues_guides: { type: 'multiselect', label: "Langues du guide", conditionalOn: { field: 'encadrement_guide', value: true }, options: LANGS },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide' }, { value: 'repas', label: 'Repas' },
-        { value: 'transport', label: 'Transport aller-retour' }, { value: 'assurance', label: 'Assurance' },
-        { value: 'baton_marche', label: 'Bâtons de marche' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
       equipement_obligatoire: { type: 'textarea', label: 'Équipement obligatoire' },
       points_interet: { type: 'textarea', label: "Points d'intérêt" },
     },
@@ -373,10 +362,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'gilet', label: 'Gilet de sauvetage' }, { value: 'pagaie', label: 'Pagaie' },
         { value: 'combinaison', label: 'Combinaison' }, { value: 'sac_etanche', label: 'Sac étanche' },
       ]},
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide' }, { value: 'initiation', label: 'Initiation' },
-        { value: 'assurance', label: 'Assurance' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['type_embarcation_offre', 'distance_km', 'duree', 'niveau_offre'], filterable: ['niveau_offre', 'type_embarcation_offre', 'savoir_nager'] },
   },
@@ -416,10 +402,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       points_interet: { type: 'textarea', label: "Points d'intérêt" },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide' }, { value: 'casque', label: 'Casque' },
-        { value: 'assurance', label: 'Assurance' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['type_velo_offre', 'distance_km', 'duree', 'niveau_offre'], filterable: ['niveau_offre', 'type_velo_offre', 'type_terrain'] },
   },
@@ -491,10 +474,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'casque', label: 'Casque' }, { value: 'mousquetons', label: 'Mousquetons' },
         { value: 'chaussons', label: "Chaussons d'escalade" }, { value: 'magnesium', label: 'Magnésie' },
       ]},
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'moniteur', label: 'Moniteur diplômé' }, { value: 'assurance', label: 'Assurance' },
-        { value: 'transport', label: 'Transport' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['nom_site', 'type_site', 'hauteur_max', 'niveau_offre'], filterable: ['niveau_offre', 'type_site', 'encadrement_guide'] },
   },
@@ -538,10 +518,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'casque', label: 'Casque' }, { value: 'bombe', label: "Bombe d'équitation" },
         { value: 'bottes', label: 'Bottes' }, { value: 'gilet', label: 'Gilet de protection' },
       ]},
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide équestre' }, { value: 'assurance', label: 'Assurance' },
-        { value: 'initiation', label: "Séance d'initiation" },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['type_balade', 'duree', 'niveau_offre', 'type_monture'], filterable: ['niveau_offre', 'type_balade', 'type_terrain', 'type_monture'] },
   },
@@ -567,10 +544,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       encadrement_guide: { type: 'boolean', label: 'Guide naturaliste' },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide naturaliste' }, { value: 'jumelles', label: 'Jumelles' },
-        { value: 'longue_vue', label: 'Longue-vue' }, { value: 'transport', label: 'Transport' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['type_observation', 'duree', 'saison_ideale'], filterable: ['type_observation', 'encadrement_guide'] },
   },
@@ -644,10 +618,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'boitier', label: 'Boîtier reflex/miroir' }, { value: 'objectif', label: 'Objectifs' },
         { value: 'trepied', label: 'Trépied' }, { value: 'filtres', label: 'Filtres' },
       ]},
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide photographe' }, { value: 'edition', label: 'Post-traitement' },
-        { value: 'impression', label: "Tirage d'une photo" },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['type_photo', 'duree', 'niveau_offre', 'theme_photo'], filterable: ['niveau_offre', 'type_photo', 'theme_photo'] },
   },
@@ -679,12 +650,342 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       langues_guides: { type: 'multiselect', required: true, label: "Langues du guide", options: LANGS },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       points_interet: { type: 'textarea', label: "Points d'intérêt" },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide conférencier' }, { value: 'entree', label: "Billets d'entrée" },
-        { value: 'degustation', label: 'Dégustation' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['type_visite', 'duree', 'themes_visite'], filterable: ['type_visite', 'langues_guides', 'themes_visite'] },
+  },
+
+  activity_paddle: {
+    key: 'activity_paddle',
+    label: 'Paddle',
+    category: 'activity',
+    sections: [
+      { id: 'course', label: 'Parcours', fields: ['parcours', 'distance_km', 'duree'] },
+      { id: 'equipment', label: 'Matériel', fields: ['type_planche', 'nb_planches_offre', 'equipement_fourni'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'savoir_nager', 'age_minimum', 'nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      parcours: { type: 'text', required: true, label: 'Parcours / itinéraire', placeholder: 'Côte Est Djerba, lagune...' },
+      distance_km: { type: 'number', label: 'Distance (km)', unit: 'km', min: 0 },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '1h30, 2h...' },
+      type_planche: { type: 'select', required: true, label: 'Type de planche', options: [
+        { value: 'stand_up_paddle', label: 'Stand-up paddle' }, { value: 'paddle_a_voile', label: 'Paddle à voile' },
+        { value: 'paddle_surf', label: 'Paddle surf' },
+      ]},
+      nb_planches_offre: { type: 'number', required: true, label: 'Nombre de planches', min: 1 },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'planche', label: 'Planche' }, { value: 'pagaie', label: 'Pagaie' },
+        { value: 'gilet', label: 'Gilet de sauvetage' }, { value: 'sac_etanche', label: 'Sac étanche' },
+      ]},
+      niveau_offre: { type: 'select', required: true, label: 'Niveau requis', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'confirme', label: 'Confirmé' },
+      ]},
+      savoir_nager: { type: 'boolean', label: 'Savoir nager obligatoire' },
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['parcours', 'duree', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
+  activity_tyrolienne: {
+    key: 'activity_tyrolienne',
+    label: 'Tyrolienne',
+    category: 'activity',
+    sections: [
+      { id: 'course', label: 'Parcours', fields: ['nom_site', 'nb_ziplines', 'hauteur_max', 'distance_totale', 'duree'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'age_minimum', 'poids_max', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['equipement_fourni', 'inclus'] },
+    ],
+    fields: {
+      nom_site: { type: 'text', required: true, label: 'Nom du site', placeholder: 'Tyrolienne de Zaghouan...' },
+      nb_ziplines: { type: 'number', label: 'Nombre de tyroliennes', min: 1 },
+      hauteur_max: { type: 'number', label: 'Hauteur maximale (m)', unit: 'm' },
+      distance_totale: { type: 'number', label: 'Distance totale (m)', unit: 'm' },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '1h, 2h...' },
+      niveau_offre: { type: 'select', required: true, label: 'Niveau', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' },
+      ]},
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      poids_max: { type: 'number', label: 'Poids maximum (kg)', unit: 'kg' },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'casque', label: 'Casque' }, { value: 'baudrier', label: 'Baudrier' },
+        { value: 'gants', label: 'Gants' },
+      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_site', 'duree', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
+  activity_speleologie: {
+    key: 'activity_speleologie',
+    label: 'Spéléologie',
+    category: 'activity',
+    sections: [
+      { id: 'site', label: 'Site', fields: ['nom_grotte', 'profondeur_max', 'nb_galeries', 'duree'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'age_minimum', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['equipement_fourni', 'inclus'] },
+    ],
+    fields: {
+      nom_grotte: { type: 'text', required: true, label: 'Nom de la grotte', placeholder: 'Grotte de Cerné...' },
+      profondeur_max: { type: 'number', label: 'Profondeur maximale (m)', unit: 'm' },
+      nb_galeries: { type: 'number', label: 'Nombre de galeries', min: 1 },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '3h, demi-journée...' },
+      niveau_offre: { type: 'select', required: true, label: 'Niveau', options: [
+        { value: 'facile', label: 'Facile' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'difficile', label: 'Difficile' }, { value: 'tres_difficile', label: 'Très difficile' },
+      ]},
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'casque', label: 'Casque' }, { value: 'baudrier', label: 'Baudrier' },
+        { value: 'luciole', label: 'Lampe frontale' }, { value: 'corde', label: 'Corde' },
+      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_grotte', 'duree', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
+  activity_astronomie: {
+    key: 'activity_astronomie',
+    label: 'Astronomie',
+    category: 'activity',
+    sections: [
+      { id: 'session', label: 'Session', fields: ['type_observation', 'duree', 'meilleurs_horaires', 'saison_ideale'] },
+      { id: 'equipment', label: 'Matériel', fields: ['materiel_fourni'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      type_observation: { type: 'select', required: true, label: "Type d'observation", options: [
+        { value: 'etoiles', label: 'Étoiles' }, { value: 'planetes', label: 'Planètes' },
+        { value: 'lune', label: 'Lune' }, { value: 'constellations', label: 'Constellations' },
+        { value: 'aurore', label: 'Aurore boréale' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '2h, 3h...' },
+      meilleurs_horaires: { type: 'text', label: 'Meilleurs horaires', placeholder: '21h-23h, minuit...' },
+      saison_ideale: { type: 'text', label: 'Saison idéale', placeholder: 'Toute l\'année, été...' },
+      materiel_fourni: { type: 'multiselect', label: 'Matériel fourni', options: [
+        { value: 'telescope', label: 'Télescope' }, { value: 'jumelles', label: 'Jumelles' },
+        { value: 'longue_vue', label: 'Longue-vue' }, { value: 'planisphere', label: 'Planisphère' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['type_observation', 'duree', 'meilleurs_horaires'], filterable: ['type_observation'] },
+  },
+
+  activity_poterie: {
+    key: 'activity_poterie',
+    label: 'Atelier poterie',
+    category: 'activity',
+    sections: [
+      { id: 'session', label: 'Atelier', fields: ['type_poterie', 'duree', 'niveau_offre', 'techniques'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['materiel_fourni', 'inclus'] },
+    ],
+    fields: {
+      type_poterie: { type: 'select', required: true, label: 'Type de poterie', options: [
+        { value: 'tournage', label: 'Tournage' }, { value: 'modelage', label: 'Modelage' },
+        { value: 'cuite', label: 'Cuite' }, { value: 'decoration', label: 'Décoration' },
+        { value: 'initiation', label: 'Initiation complète' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '2h, 3h, journée...' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      techniques: { type: 'multiselect', label: 'Techniques enseignées', options: [
+        { value: 'tournage', label: 'Tournage' }, { value: 'modelage', label: 'Modelage' },
+        { value: 'colombin', label: 'Colombin' }, { value: 'cuite', label: 'Cuite' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      materiel_fourni: { type: 'multiselect', label: 'Matériel fourni', options: [
+        { value: 'argile', label: 'Argile' }, { value: 'outils', label: 'Outils' },
+        { value: 'tabouret', label: 'Tabouret' }, { value: 'four', label: 'Four inclus' },
+      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['type_poterie', 'duree', 'niveau_offre'], filterable: ['type_poterie', 'niveau_offre'] },
+  },
+
+  activity_cuisine: {
+    key: 'activity_cuisine',
+    label: 'Atelier cuisine',
+    category: 'activity',
+    sections: [
+      { id: 'session', label: 'Atelier', fields: ['type_cuisine', 'duree', 'niveau_offre', 'regimes_offre'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['materiel_fourni', 'inclus'] },
+    ],
+    fields: {
+      type_cuisine: { type: 'select', required: true, label: 'Type de cuisine', options: [
+        { value: 'traditionnelle', label: 'Traditionnelle tunisienne' }, { value: 'mediterraneenne', label: 'Méditerranéenne' },
+        { value: 'patisserie', label: 'Pâtisserie' }, { value: 'pain', label: 'Pain / Boulangerie' },
+        { value: 'conserves', label: 'Conserves / Tajines' }, { value: 'autre', label: 'Autre' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '3h, 4h, journée...' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      regimes_offre: { type: 'multiselect', label: 'Régimes proposés', options: [
+        { value: 'vegetarien', label: 'Végétarien' }, { value: 'vegan', label: 'Vegan' },
+        { value: 'halal', label: 'Halal' }, { value: 'sans_gluten', label: 'Sans gluten' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      materiel_fourni: { type: 'multiselect', label: 'Matériel fourni', options: [
+        { value: 'tablier', label: 'Tablier' }, { value: 'ustensiles', label: 'Ustensiles' },
+        { value: 'ingrédients', label: 'Ingrédients' }, { value: 'recettes', label: 'Recettes à emporter' },
+      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['type_cuisine', 'duree', 'niveau_offre'], filterable: ['type_cuisine', 'niveau_offre'] },
+  },
+
+  activity_musique: {
+    key: 'activity_musique',
+    label: 'Atelier musique',
+    category: 'activity',
+    sections: [
+      { id: 'session', label: 'Atelier', fields: ['type_musique', 'instrument', 'duree', 'niveau_offre'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['materiel_fourni', 'inclus'] },
+    ],
+    fields: {
+      type_musique: { type: 'select', required: true, label: 'Type de musique', options: [
+        { value: 'traditionnelle', label: 'Traditionnelle tunisienne' }, { value: 'andalouse', label: 'Andalouse' },
+        { value: 'mediterraneenne', label: 'Méditerranéenne' }, { value: 'contemporaine', label: 'Contemporaine' },
+      ]},
+      instrument: { type: 'multiselect', label: 'Instruments', options: [
+        { value: 'darbouka', label: 'Darbouka' }, { value: 'oud', label: 'Oud' },
+        { value: 'ney', label: 'Ney' }, { value: 'violine', label: 'Violon' },
+        { value: 'guitare', label: 'Guitare' }, { value: 'autre', label: 'Autre' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '1h30, 2h...' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      materiel_fourni: { type: 'multiselect', label: 'Matériel fourni', options: [
+        { value: 'instruments', label: 'Instruments' }, { value: 'partition', label: 'Partitions' },
+        { value: 'accordeur', label: 'Accordeur' },
+      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['type_musique', 'duree', 'niveau_offre'], filterable: ['type_musique'] },
+  },
+
+  activity_surfing: {
+    key: 'activity_surfing',
+    label: 'Surf',
+    category: 'activity',
+    sections: [
+      { id: 'course', label: 'Parcours', fields: ['spot', 'duree', 'vague_type'] },
+      { id: 'equipment', label: 'Matériel', fields: ['type_planche', 'equipement_fourni'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'savoir_nager', 'age_minimum', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      spot: { type: 'text', required: true, label: 'Spot de surf', placeholder: 'Plage de La Marsa, Sidi Bou Said...' },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '2h, 3h, journée...' },
+      vague_type: { type: 'select', label: 'Type de vagues', options: [
+        { value: 'petites', label: 'Petites (débutant)' }, { value: 'moyennes', label: 'Moyennes' },
+        { value: 'grandes', label: 'Grandes (expert)' },
+      ]},
+      type_planche: { type: 'select', required: true, label: 'Type de planche', options: [
+        { value: 'longboard', label: 'Longboard' }, { value: 'shortboard', label: 'Shortboard' },
+        { value: 'foam', label: 'Mousse (foam)' }, { value: 'funboard', label: 'Funboard' },
+      ]},
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'planche', label: 'Planche' }, { value: 'combinaison', label: 'Combinaison' },
+        { value: 'leash', label: 'Leash' }, { value: 'wax', label: 'Wax' },
+      ]},
+      niveau_offre: { type: 'select', required: true, label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'confirme', label: 'Confirmé' },
+      ]},
+      savoir_nager: { type: 'boolean', label: 'Savoir nager obligatoire' },
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['spot', 'duree', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
+  activity_diving: {
+    key: 'activity_diving',
+    label: 'Plongée',
+    category: 'activity',
+    sections: [
+      { id: 'dive', label: 'Plongée', fields: ['site_plongee', 'profondeur_max', 'type_plongee', 'duree'] },
+      { id: 'equipment', label: 'Équipement', fields: ['equipement_fourni'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'certification_requise', 'age_minimum', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      site_plongee: { type: 'text', required: true, label: 'Site de plongée', placeholder: 'Récif de Djerba, Zembra...' },
+      profondeur_max: { type: 'number', label: 'Profondeur maximale (m)', unit: 'm' },
+      type_plongee: { type: 'select', required: true, label: 'Type de plongée', options: [
+        { value: 'decouverte', label: 'Découverte (sans diplôme)' }, { value: 'initiation', label: 'Initiation' },
+        { value: 'brevet', label: 'Avec brevet (PADI/CMAS)' }, { value: 'nuit', label: 'Plongée de nuit' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '2h, 3h, journée...' },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'bouteille', label: 'Bouteille' }, { value: 'combinaison', label: 'Combinaison' },
+        { value: 'masque', label: 'Masque / tuba' }, { value: 'stabilisateurs', label: 'Stabilisateur' },
+        { value: 'palmes', label: 'Palmes' },
+      ]},
+      niveau_offre: { type: 'select', required: true, label: 'Niveau requis', options: [
+        { value: 'aucun', label: 'Aucun (découverte)' }, { value: 'debutant', label: 'Débutant (initiation)' },
+        { value: 'brevet', label: 'Brevet requis' },
+      ]},
+      certification_requise: { type: 'text', label: 'Certification requise', placeholder: 'PADI Open Water, CMAS 1★...' },
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['site_plongee', 'duree', 'type_plongee'], filterable: ['type_plongee', 'niveau_offre'] },
+  },
+
+  activity_paragliding: {
+    key: 'activity_paragliding',
+    label: 'Parapente',
+    category: 'activity',
+    sections: [
+      { id: 'flight', label: 'Vol', fields: ['site_decollage', 'altitude_decollage', 'duree_vol', 'duree_totale'] },
+      { id: 'level', label: 'Niveau & Sécurité', fields: ['niveau_offre', 'age_minimum', 'poids_max', 'nb_participants_max'] },
+      { id: 'equipment', label: 'Équipement', fields: ['equipement_fourni', 'inclus'] },
+    ],
+    fields: {
+      site_decollage: { type: 'text', required: true, label: 'Site de décollage', placeholder: 'Zaghouan, Djebel Chambi...' },
+      altitude_decollage: { type: 'number', label: 'Altitude de décollage (m)', unit: 'm' },
+      duree_vol: { type: 'text', required: true, label: 'Durée de vol', placeholder: '15min, 30min, 1h...' },
+      duree_totale: { type: 'text', label: 'Durée totale', placeholder: '2h (avec montée)...' },
+      niveau_offre: { type: 'select', required: true, label: 'Type de vol', options: [
+        { value: 'bapteme', label: 'Baptême (sans expérience)' }, { value: 'initiation', label: 'Initiation' },
+        { value: 'vol_integral', label: 'Vol intégral (pilote)' },
+      ]},
+      age_minimum: { type: 'number', label: 'Âge minimum', min: 0 },
+      poids_max: { type: 'number', label: 'Poids maximum (kg)', unit: 'kg' },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      equipement_fourni: { type: 'multiselect', label: 'Équipement fourni', options: [
+        { value: 'parapente', label: 'Parapente' }, { value: 'harnais', label: 'Harnais' },
+        { value: 'casque', label: 'Casque' }, { value: 'combinaison', label: 'Combinaison' },
+      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['site_decollage', 'duree_vol', 'niveau_offre'], filterable: ['niveau_offre'] },
   },
 
   activity_other: {
@@ -707,12 +1008,305 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       equipement_fourni: { type: 'textarea', label: 'Équipement fourni' },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'guide', label: 'Guide' }, { value: 'assurance', label: 'Assurance' },
-        { value: 'equipement', label: 'Équipement' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['activity_custom_name', 'duree', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
+  // ───────── ÉVÉNEMENT ─────────
+
+  event_festival: {
+    key: 'event_festival',
+    label: 'Festival',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Événement', fields: ['nom_event', 'duree', 'thematique'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'logistics', label: 'Logistique', fields: ['lieu_externe', 'inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: "Nom de l'événement" },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '1 journée, 3 jours...' },
+      thematique: { type: 'text', label: 'Thématique', placeholder: 'Musique, gastronomie, culture...' },
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      lieu_externe: { type: 'text', label: "Lieu externe (si pas à l'établissement)" },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'duree', 'thematique'], filterable: ['thematique'] },
+  },
+
+  event_concert: {
+    key: 'event_concert',
+    label: 'Concert',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Concert', fields: ['nom_event', 'artiste_groupe', 'duree', 'genre_musical'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: 'Nom du concert' },
+      artiste_groupe: { type: 'text', label: 'Artiste / Groupe' },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '2h, soirée...' },
+      genre_musical: { type: 'select', label: 'Genre musical', options: [
+        { value: 'traditionnel', label: 'Traditionnel' }, { value: 'andalouse', label: 'Andalouse' },
+        { value: 'moderne', label: 'Moderne' }, { value: 'jazz', label: 'Jazz' },
+        { value: 'autre', label: 'Autre' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'artiste_groupe', 'duree'], filterable: ['genre_musical'] },
+  },
+
+  event_conference: {
+    key: 'event_conference',
+    label: 'Conférence',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Conférence', fields: ['nom_event', 'duree', 'theme'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: 'Nom de la conférence' },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '2h, demi-journée...' },
+      theme: { type: 'text', label: 'Thème', placeholder: 'Écologie, innovation...' },
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'duree', 'theme'], filterable: ['theme'] },
+  },
+
+  event_workshop: {
+    key: 'event_workshop',
+    label: 'Atelier spécial',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Atelier', fields: ['nom_event', 'duree', 'niveau_offre'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: "Nom de l'atelier" },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '2h, 3h...' },
+      niveau_offre: { type: 'select', label: 'Niveau', options: [
+        { value: 'debutant', label: 'Débutant' }, { value: 'intermediaire', label: 'Intermédiaire' },
+        { value: 'tous', label: 'Tous niveaux' },
+      ]},
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'duree', 'niveau_offre'], filterable: ['niveau_offre'] },
+  },
+
+  event_celebration: {
+    key: 'event_celebration',
+    label: 'Célébration',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Célébration', fields: ['nom_event', 'type_celebration', 'duree'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: 'Nom de la célébration' },
+      type_celebration: { type: 'select', label: 'Type', options: [
+        { value: 'mariage', label: 'Mariage' }, { value: 'anniversaire', label: 'Anniversaire' },
+        { value: 'fete', label: 'Fête' }, { value: 'autre', label: 'Autre' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '1 journée, soirée...' },
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'type_celebration', 'duree'], filterable: ['type_celebration'] },
+  },
+
+  event_exposition: {
+    key: 'event_exposition',
+    label: 'Exposition',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Exposition', fields: ['nom_event', 'duree', 'theme'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: "Nom de l'exposition" },
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '1 semaine, 1 mois...' },
+      theme: { type: 'text', label: 'Thème', placeholder: 'Artisanat, photo, peinture...' },
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'duree', 'theme'], filterable: ['theme'] },
+  },
+
+  event_food_tasting: {
+    key: 'event_food_tasting',
+    label: 'Dégustation',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Dégustation', fields: ['nom_event', 'type_degustation', 'duree'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: 'Nom de la dégustation' },
+      type_degustation: { type: 'select', label: 'Type', options: [
+        { value: 'huile_olive', label: 'Huile d\'olive' }, { value: 'vin', label: 'Vin' },
+        { value: 'epices', label: 'Épices' }, { value: 'fromage', label: 'Fromage' },
+        { value: 'autre', label: 'Autre' },
+      ]},
+      duree: { type: 'text', required: true, label: 'Durée', placeholder: '1h30, 2h...' },
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'type_degustation', 'duree'], filterable: ['type_degustation'] },
+  },
+
+  event_other: {
+    key: 'event_other',
+    label: 'Autre événement',
+    category: 'event',
+    sections: [
+      { id: 'general', label: 'Événement', fields: ['nom_event', 'duree', 'description_event'] },
+      { id: 'group', label: 'Groupe', fields: ['nb_participants_min', 'nb_participants_max'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+    ],
+    fields: {
+      nom_event: { type: 'text', required: true, label: "Nom de l'événement" },
+      duree: { type: 'text', required: true, label: 'Durée' },
+      description_event: { type: 'textarea', label: 'Description' },
+      nb_participants_min: { type: 'number', label: 'Participants minimum', min: 1 },
+      nb_participants_max: { type: 'number', required: true, label: 'Participants maximum', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+    },
+    display: { cardFields: ['nom_event', 'duree'], filterable: [] },
+  },
+
+  // ───────── ARTISANAT ─────────
+
+  craft_product: {
+    key: 'craft_product',
+    label: 'Produit artisanal',
+    category: 'craft',
+    sections: [
+      { id: 'general', label: 'Produit', fields: ['nom_produit', 'type_produit', 'description_produit'] },
+      { id: 'sale', label: 'Vente', fields: ['prix_unitaire', 'quantite_min', 'livraison'] },
+    ],
+    fields: {
+      nom_produit: { type: 'text', required: true, label: 'Nom du produit' },
+      type_produit: { type: 'select', label: 'Type', options: [
+        { value: 'poterie', label: 'Poterie' }, { value: 'tissage', label: 'Tissage' },
+        { value: 'bijoux', label: 'Bijoux' }, { value: 'bois', label: 'Bois' },
+        { value: 'cuir', label: 'Cuir' }, { value: 'autre', label: 'Autre' },
+      ]},
+      description_produit: { type: 'textarea', label: 'Description' },
+      prix_unitaire: { type: 'number', required: true, label: 'Prix unitaire (DT)', unit: 'DT' },
+      quantite_min: { type: 'number', label: 'Quantité minimum', min: 1 },
+      livraison: { type: 'boolean', label: 'Livraison possible' },
+    },
+    display: { cardFields: ['nom_produit', 'type_produit', 'prix_unitaire'], filterable: ['type_produit'] },
+  },
+
+  craft_poterie: {
+    key: 'craft_poterie',
+    label: 'Poterie artisanale',
+    category: 'craft',
+    sections: [
+      { id: 'general', label: 'Poterie', fields: ['nom_produit', 'style', 'dimensions', 'description_produit'] },
+      { id: 'sale', label: 'Vente', fields: ['prix_unitaire', 'quantite_min', 'livraison'] },
+    ],
+    fields: {
+      nom_produit: { type: 'text', required: true, label: 'Nom du produit' },
+      style: { type: 'select', label: 'Style', options: [
+        { value: 'traditionnel', label: 'Traditionnel' }, { value: 'moderne', label: 'Moderne' },
+        { value: 'berbere', label: 'Berbère' },
+      ]},
+      dimensions: { type: 'text', label: 'Dimensions', placeholder: 'H 20cm x L 15cm' },
+      description_produit: { type: 'textarea', label: 'Description' },
+      prix_unitaire: { type: 'number', required: true, label: 'Prix unitaire (DT)', unit: 'DT' },
+      quantite_min: { type: 'number', label: 'Quantité minimum', min: 1 },
+      livraison: { type: 'boolean', label: 'Livraison possible' },
+    },
+    display: { cardFields: ['nom_produit', 'style', 'prix_unitaire'], filterable: ['style'] },
+  },
+
+  craft_tissage: {
+    key: 'craft_tissage',
+    label: 'Textile tissé',
+    category: 'craft',
+    sections: [
+      { id: 'general', label: 'Textile', fields: ['nom_produit', 'technique', 'materiau', 'description_produit'] },
+      { id: 'sale', label: 'Vente', fields: ['prix_unitaire', 'quantite_min', 'livraison'] },
+    ],
+    fields: {
+      nom_produit: { type: 'text', required: true, label: 'Nom du produit' },
+      technique: { type: 'select', label: 'Technique', options: [
+        { value: 'tapis', label: 'Tapis' }, { value: 'kilim', label: 'Kilim' },
+        { value: 'margoum', label: 'Margoum' }, { value: 'broderie', label: 'Broderie' },
+      ]},
+      materiau: { type: 'select', label: 'Matériau', options: [
+        { value: 'laine', label: 'Laine' }, { value: 'coton', label: 'Coton' },
+        { value: 'soie', label: 'Soie' },
+      ]},
+      description_produit: { type: 'textarea', label: 'Description' },
+      prix_unitaire: { type: 'number', required: true, label: 'Prix unitaire (DT)', unit: 'DT' },
+      quantite_min: { type: 'number', label: 'Quantité minimum', min: 1 },
+      livraison: { type: 'boolean', label: 'Livraison possible' },
+    },
+    display: { cardFields: ['nom_produit', 'technique', 'prix_unitaire'], filterable: ['technique', 'materiau'] },
+  },
+
+  craft_bijouterie: {
+    key: 'craft_bijouterie',
+    label: 'Bijouterie',
+    category: 'craft',
+    sections: [
+      { id: 'general', label: 'Bijou', fields: ['nom_produit', 'type_bijou', 'materiau', 'description_produit'] },
+      { id: 'sale', label: 'Vente', fields: ['prix_unitaire', 'quantite_min', 'livraison'] },
+    ],
+    fields: {
+      nom_produit: { type: 'text', required: true, label: 'Nom du bijou' },
+      type_bijou: { type: 'select', label: 'Type', options: [
+        { value: 'collier', label: 'Collier' }, { value: 'bague', label: 'Bague' },
+        { value: 'bracelet', label: 'Bracelet' }, { value: 'boucle_oreille', label: "Boucle d'oreille" },
+      ]},
+      materiau: { type: 'select', label: 'Matériau', options: [
+        { value: 'argent', label: 'Argent' }, { value: 'or', label: 'Or' },
+        { value: 'cuivre', label: 'Cuivre' }, { value: 'perles', label: 'Perles' },
+      ]},
+      description_produit: { type: 'textarea', label: 'Description' },
+      prix_unitaire: { type: 'number', required: true, label: 'Prix unitaire (DT)', unit: 'DT' },
+      quantite_min: { type: 'number', label: 'Quantité minimum', min: 1 },
+      livraison: { type: 'boolean', label: 'Livraison possible' },
+    },
+    display: { cardFields: ['nom_produit', 'type_bijou', 'prix_unitaire'], filterable: ['type_bijou', 'materiau'] },
+  },
+
+  craft_other: {
+    key: 'craft_other',
+    label: 'Autre artisanat',
+    category: 'craft',
+    sections: [
+      { id: 'general', label: 'Produit', fields: ['nom_produit', 'description_produit'] },
+      { id: 'sale', label: 'Vente', fields: ['prix_unitaire', 'quantite_min', 'livraison'] },
+    ],
+    fields: {
+      nom_produit: { type: 'text', required: true, label: 'Nom du produit' },
+      description_produit: { type: 'textarea', label: 'Description' },
+      prix_unitaire: { type: 'number', required: true, label: 'Prix unitaire (DT)', unit: 'DT' },
+      quantite_min: { type: 'number', label: 'Quantité minimum', min: 1 },
+      livraison: { type: 'boolean', label: 'Livraison possible' },
+    },
+    display: { cardFields: ['nom_produit', 'prix_unitaire'], filterable: [] },
   },
 
   // ───────── RESTAURATION ─────────
@@ -722,21 +1316,23 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     label: 'Menu complet',
     category: 'restaurant',
     sections: [
-      { id: 'general', label: 'Informations', fields: ['nb_plats', 'formule', 'regimes_offre'] },
+      { id: 'general', label: 'Informations', fields: ['nb_plats', 'formule', 'regimes_offre', 'niveau_epicerie'] },
       { id: 'capacity', label: 'Capacité', fields: ['nb_couverts_offre'] },
-      { id: 'inclus', label: 'Inclus', fields: ['inclus'] },
+      { id: 'inclus', label: 'Inclus', fields: ['inclus', 'boissons_incluses'] },
     ],
     fields: {
       nb_plats: { type: 'number', required: true, label: 'Nombre de plats', min: 1 },
       formule: { type: 'text', label: 'Formule', placeholder: 'Entrée + Plat + Dessert' },
       regimes_offre: { type: 'multiselect', label: 'Régimes proposés', options: REGIMES },
-      nb_couverts_offre: { type: 'number', required: true, label: 'Nombre de couverts', min: 1 },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'boisson', label: 'Boisson' }, { value: 'pain', label: 'Pain' },
-        { value: 'the', label: 'Thé' }, { value: 'cafe', label: 'Café' },
+      niveau_epicerie: { type: 'select', label: 'Niveau épicé', options: [
+        { value: 'doux', label: 'Doux' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'epice', label: 'Épicé' }, { value: 'tres_epice', label: 'Très épicé' },
       ]},
+      nb_couverts_offre: { type: 'number', required: true, label: 'Nombre de couverts', min: 1 },
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
+      boissons_incluses: { type: 'boolean', label: 'Boissons incluses' },
     },
-    display: { cardFields: ['nb_plats', 'formule', 'nb_couverts_offre'], filterable: ['regimes_offre'] },
+    display: { cardFields: ['nb_plats', 'formule', 'nb_couverts_offre'], filterable: ['regimes_offre', 'niveau_epicerie'] },
   },
 
   restaurant_dish: {
@@ -744,19 +1340,33 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
     label: 'Plat',
     category: 'restaurant',
     sections: [
-      { id: 'general', label: 'Informations', fields: ['type_plat', 'regimes_offre'] },
+      { id: 'general', label: 'Informations', fields: ['type_plat', 'nom_plat', 'description_plat', 'regimes_offre', 'niveau_epicerie'] },
+      { id: 'ingredients', label: 'Ingrédients', fields: ['ingredients', 'allergenes'] },
     ],
     fields: {
       type_plat: { type: 'select', required: true, label: 'Type de plat', options: [
         { value: 'entree', label: 'Entrée' }, { value: 'plat', label: 'Plat principal' },
-        { value: 'dessert', label: 'Dessert' },
+        { value: 'dessert', label: 'Dessert' }, { value: 'accompagnement', label: 'Accompagnement' },
+        { value: 'boisson', label: 'Boisson' },
       ]},
-      regimes_offre: { type: 'multiselect', label: 'Régimes proposés', options: [
-        { value: 'vegetarien', label: 'Végétarien' }, { value: 'vegan', label: 'Vegan' },
-        { value: 'halal', label: 'Halal' }, { value: 'sans_gluten', label: 'Sans gluten' },
+      nom_plat: { type: 'text', label: 'Nom du plat', placeholder: 'Couscous aux fruits de mer' },
+      description_plat: { type: 'textarea', label: 'Description du plat', placeholder: 'Décrivez le plat...' },
+      regimes_offre: { type: 'multiselect', label: 'Régimes proposés', options: REGIMES },
+      niveau_epicerie: { type: 'select', label: 'Niveau épicé', options: [
+        { value: 'doux', label: 'Doux' }, { value: 'moyen', label: 'Moyen' },
+        { value: 'epice', label: 'Épicé' }, { value: 'tres_epice', label: 'Très épicé' },
+      ]},
+      ingredients: { type: 'textarea', label: 'Ingrédients', placeholder: 'Tomates, oignons, épices...' },
+      allergenes: { type: 'multiselect', label: 'Allergènes', options: [
+        { value: 'gluten', label: 'Gluten' }, { value: 'lait', label: 'Lait' },
+        { value: 'oeuf', label: 'Œuf' }, { value: 'poisson', label: 'Poisson' },
+        { value: 'crustaces', label: 'Crustacés' }, { value: 'fruits_coques', label: 'Fruits à coque' },
+        { value: 'arachides', label: 'Arachides' }, { value: 'soja', label: 'Soja' },
+        { value: 'celeri', label: 'Céleri' }, { value: 'moutarde', label: 'Moutarde' },
+        { value: 'sesame', label: 'Sésame' }, { value: 'sulfites', label: 'Sulfites' },
       ]},
     },
-    display: { cardFields: ['type_plat'], filterable: ['regimes_offre', 'type_plat'] },
+    display: { cardFields: ['type_plat', 'nom_plat'], filterable: ['regimes_offre', 'type_plat', 'niveau_epicerie'] },
   },
 
   // ───────── ATELIER ─────────
@@ -785,10 +1395,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       vente_sur_place: { type: 'boolean', label: 'Vente sur place' },
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'terre', label: 'Terre' }, { value: 'emaux', label: 'Émaux' },
-        { value: 'cuisson', label: 'Cuisson' }, { value: 'outils', label: 'Outils' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['technique_enseignee', 'duree', 'niveau_offre'], filterable: ['niveau_offre', 'technique_enseignee'] },
   },
@@ -814,10 +1421,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       enfants_acceptes: { type: 'boolean', label: 'Adapté aux enfants' },
       visite_marche: { type: 'boolean', label: 'Visite du marché incluse' },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'ingredients', label: 'Ingrédients' }, { value: 'tablier', label: 'Tablier' },
-        { value: 'recette', label: 'Fiche recette' }, { value: 'degustation', label: 'Dégustation' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['nb_recettes', 'duree_heures', 'niveau_offre', 'plats_prepares'], filterable: ['niveau_offre', 'enfants_acceptes'] },
   },
@@ -885,10 +1489,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       instrument_fourni: { type: 'boolean', label: 'Instrument fourni' },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'instrument', label: 'Instrument' }, { value: 'partition', label: 'Partitions' },
-        { value: 'enregistrement', label: "Enregistrement audio" },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['instrument_enseigne', 'duree_heures', 'niveau_offre'], filterable: ['niveau_offre', 'instrument_enseigne', 'style_musical'] },
   },
@@ -913,9 +1514,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
       materiel_fourni: { type: 'text', label: 'Matériel fourni' },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'materiel', label: 'Matériel' }, { value: 'gouter', label: 'Goûter' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['workshop_custom_name', 'duree_heures', 'niveau_offre'], filterable: ['niveau_offre'] },
   },
@@ -1036,10 +1635,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       ]},
       nb_participants_min: { type: 'number', label: 'Nombre minimum', min: 1 },
       nb_participants_max: { type: 'number', required: true, label: 'Nombre maximum', min: 1 },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'audioguide', label: 'Audioguide' }, { value: 'entree', label: "Billet d'entrée" },
-        { value: 'transport', label: 'Transport' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['zone_offre', 'duree', 'specialite_offre'], filterable: ['langues', 'specialite_offre'] },
   },
@@ -1082,7 +1678,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
         { value: 'tout', label: 'Tout inclus' },
       ]},
       guide_inclus: { type: 'boolean', label: 'Guide accompagnateur inclus' },
-      inclus: { type: 'hierarchy', label: 'Inclus', taxonomy: 'inclus' },
+      inclus: { type: 'hierarchy', label: 'Services inclus (pour filtres)', taxonomy: 'inclus' },
     },
     display: { cardFields: ['zone_circuit', 'duree_jours', 'niveau_offre', 'nb_participants_max'], filterable: ['zone_circuit', 'niveau_offre', 'duree_jours'] },
   },
@@ -1402,10 +1998,7 @@ export const OFFER_SCHEMAS: Record<string, OfferTypeSchema> = {
       bagages_autorises: { type: 'boolean', label: 'Bagages autorisés' },
       aller_retour: { type: 'boolean', label: 'Aller-retour' },
       arrets_intermediaires: { type: 'text', label: "Arrêts intermédiaires" },
-      inclus: { type: 'multiselect', label: 'Inclus', options: [
-        { value: 'chauffeur', label: 'Chauffeur' }, { value: 'guide', label: 'Guide accompagnateur' },
-        { value: 'assurance', label: 'Assurance voyage' }, { value: 'rafraichissements', label: 'Rafraîchissements' },
-      ]},
+      inclus: { type: 'textarea', label: 'Inclus', placeholder: 'Guide, repas, transport, assurance...' },
     },
     display: { cardFields: ['type_vehicule', 'duree_trajet', 'nb_places'], filterable: ['type_vehicule', 'aller_retour'] },
   },

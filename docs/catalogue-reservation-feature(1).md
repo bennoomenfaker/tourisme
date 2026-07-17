@@ -439,6 +439,82 @@ Un **TripPlan** permet a un eco-voyageur de rassembler plusieurs offres/activite
 | DELETE | `/trip-plans/:id/items/:itemId` | Proprietaire — supprimer un item |
 | POST | `/trip-plans/:id/book` | Proprietaire — reserver tout le plan |
 
+### Certifications
+
+| Methode | Endpoint | Role |
+|---------|----------|------|
+| POST | `/certifications` | Provider/Guide — creer une certification |
+| GET | `/certifications` | Provider/Guide — mes certifications |
+| DELETE | `/certifications/:id` | Provider/Guide — supprimer |
+| GET | `/certifications/all` | Admin — toutes les certifications |
+| GET | `/certifications/pending` | Admin — en attente uniquement |
+| PATCH | `/certifications/:id/status` | Admin — approuver/rejeter |
+| GET | `/certifications/user/:userId` | Public — certifications approuvees d'un utilisateur |
+
+**DTO CreateCertificationDto :**
+`name` (required), `category` (formation|iso|quality|eco_label|safety|first_aid|other), `description`, `proof_url`, `file_url`, `issued_by`, `issued_at` (date), `expires_at` (date)
+
+**DTO UpdateCertificationStatusDto :**
+`status` (approved|rejected), `rejection_reason`
+
+### Exemples de certifications reelles
+
+#### ISO 21401 — Hebergement durable
+
+| Champ | Valeur |
+|-------|--------|
+| `name` | `ISO 21401 — Hebergement touristique durable` |
+| `category` | `iso` |
+| `description` | `Certification internationale de durabilite pour les etablissements d'hebergement touristique, garantissant la performance environnementale, sociale et economique.` |
+| `issued_by` | `Bureau Veritas` |
+| `issued_at` | `2025-03-15` |
+| `expires_at` | `2027-03-14` |
+| `proof_url` | `https://www.bureauveritas.com/certification/iso-21401` |
+
+#### Green Key — Label eco-tourisme
+
+| Champ | Valeur |
+|-------|--------|
+| `name` | `Green Key — Label international eco-tourisme` |
+| `category` | `eco_label` |
+| `description` | `Label international reconnu pour les etablissements engages dans une demarche environnementale et de developpement durable.` |
+| `issued_by` | `Foundation for Environmental Education` |
+| `issued_at` | `2024-06-01` |
+| `expires_at` | `2026-05-31` |
+
+#### Guide certifie Eco-Voyage
+
+| Champ | Valeur |
+|-------|--------|
+| `name` | `Guide certifie Eco-Voyage — Niveau 2` |
+| `category` | `formation` |
+| `description` | `Formation de 120h en eco-tourisme, gestion durable des sites naturels et mediation environnementale.` |
+| `issued_by` | `Institut Tunisien du Tourisme` |
+| `issued_at` | `2024-09-10` |
+| `expires_at` | `2027-09-09` |
+
+#### PSC1 — Premiers secours
+
+| Champ | Valeur |
+|-------|--------|
+| `name` | `PSC1 — Premiers Secours Civiques` |
+| `category` | `first_aid` |
+| `description` | `Formation aux gestes de premiers secours en milieu civique, obligatoire pour les guides touristiques.` |
+| `issued_by` | `Croix-Rouge Tunisienne` |
+| `issued_at` | `2025-01-20` |
+| `expires_at` | `2027-01-19` |
+
+#### Securite en milieu montagne
+
+| Champ | Valeur |
+|-------|--------|
+| `name` | `Habilitation securite — Randonnee en montagne` |
+| `category` | `safety` |
+| `description` | `Certification de securite pour l'encadrement de randonnees en milieu montagneux (BAES, secours en zone isolee).` |
+| `issued_by` | `Club Alpin Tunisien` |
+| `issued_at` | `2024-11-05` |
+| `expires_at` | `2026-11-04` |
+
 ---
 
 ## 9. Seed `offer_categories`

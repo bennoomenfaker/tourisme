@@ -26,7 +26,7 @@ const MapView = dynamic(() => import("@/components/map/MapView"), {
 type Tab =
   | "statistics" | "publications" | "offers" | "projects" | "circuits"
   | "guide-offerings" | "reports" | "banned" | "users" | "providers"
-  | "reservations" | "reviews" | "sustainability" | "audit-logs";
+  | "reservations" | "reviews" | "sustainability" | "audit-logs" | "certifications";
 
 type StatsOverview = {
   users: { total: number; by_role: Record<string, number>; recent: any[] };
@@ -225,6 +225,9 @@ export default function AdminPage() {
   const [sustainability, setSustainability] = useState<SustainabilityStats | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditMeta, setAuditMeta] = useState({ total: 0, page: 1, pages: 1 });
+  const [certifications, setCertifications] = useState<any[]>([]);
+  const [certFilter, setCertFilter] = useState<"pending" | "all" | "approved" | "rejected">("pending");
+  const [certDetail, setCertDetail] = useState<any | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -303,6 +306,9 @@ export default function AdminPage() {
       } else if (t === "audit-logs") {
         const r = await apiFetch<{ logs: AuditLog[]; total: number; page: number; pages: number }>(`/admin/audit-logs?page=${page}&limit=30`, { headers: h });
         setAuditLogs(r.logs); setAuditMeta({ total: r.total, page: r.page, pages: r.pages });
+      } else if (t === "certifications") {
+        const r = await apiFetch<any[]>(`/certifications/all`, { headers: h });
+        setCertifications(r);
       }
     } catch {}
   }, [token, roleFilter, statusFilter, searchQuery]);
@@ -424,19 +430,19 @@ export default function AdminPage() {
     statistics: "Dashboard", publications: "Lieux", offers: "Offres", projects: "Établissements",
     circuits: "Circuits", "guide-offerings": "Offres Guide", reports: "Signalements", banned: "Bannis",
     users: "Utilisateurs", providers: "Providers", reservations: "Réservations", reviews: "Avis",
-    sustainability: "Durabilité", "audit-logs": "Journal d'audit",
+    sustainability: "Durabilité", "audit-logs": "Journal d'audit", certifications: "Certifications",
   };
 
   const tabIcons: Record<Tab, any> = {
     statistics: BarChart3, publications: MapPin, offers: Briefcase, projects: MapPin,
     circuits: CircuitBoard, "guide-offerings": Users, reports: Flag, banned: Ban,
     users: Users, providers: Briefcase, reservations: CalendarCheck, reviews: Star,
-    sustainability: LeafIcon, "audit-logs": ShieldCheck,
+    sustainability: LeafIcon, "audit-logs": ShieldCheck, certifications: FileText,
   };
 
   const menuGroups = [
     { label: "Supervision", tabs: ["statistics" as Tab, "users" as Tab, "providers" as Tab] },
-    { label: "Contenu", tabs: ["publications" as Tab, "offers" as Tab, "projects" as Tab, "circuits" as Tab, "guide-offerings" as Tab] },
+    { label: "Contenu", tabs: ["publications" as Tab, "offers" as Tab, "projects" as Tab, "circuits" as Tab, "guide-offerings" as Tab, "certifications" as Tab] },
     { label: "Opérations", tabs: ["reservations" as Tab, "reviews" as Tab, "reports" as Tab, "banned" as Tab] },
     { label: "Insights", tabs: ["sustainability" as Tab, "audit-logs" as Tab] },
   ];
@@ -565,6 +571,13 @@ export default function AdminPage() {
                       <StatCard icon={CalendarCheck} label="Résa. ce mois" value={stats.reservations.this_month} gradient={GRADIENT_PURPLE} />
                       <StatCard icon={TrendingUp} label="CA aujourd'hui" value={`${stats.reservations.revenue_today.toLocaleString("fr-FR")} TND`} gradient={GRADIENT_AMBER} />
                       <StatCard icon={LeafIcon} label="Modération" value={stats.pending_moderation} gradient={GRADIENT_RED} />
+                    </div>
+                    {/* KPIs Row 4 — Certifications */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+                      <StatCard icon={FileText} label="Certifications" value={certifications.length} gradient={GRADIENT_PRIMARY} />
+                      <StatCard icon={Check} label="Cert. approuvées" value={certifications.filter((c) => c.status === "approved").length} gradient="from-emerald-500 to-teal-600" />
+                      <StatCard icon={Clock} label="Cert. en attente" value={certifications.filter((c) => c.status === "pending").length} gradient="from-amber-500 to-orange-600" />
+                      <StatCard icon={X} label="Cert. refusées" value={certifications.filter((c) => c.status === "rejected").length} gradient="from-red-500 to-rose-600" />
                     </div>
 
                     {/* Charts */}
@@ -908,6 +921,198 @@ export default function AdminPage() {
                       </div>
                     )}
                     <Pagination page={auditMeta.page} pages={auditMeta.pages} onChange={(p) => fetchTabData("audit-logs", p)} />
+                  </div>
+                )}
+
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {/* CERTIFICATIONS */}
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {tab === "certifications" && (
+                  <div className="space-y-5">
+                    <div className="flex flex-wrap gap-2">
+                      {(["pending", "all", "approved", "rejected"] as const).map((f) => (
+                        <button key={f} onClick={() => setCertFilter(f)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                            certFilter === f ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25" : "bg-white text-slate-500 border border-slate-200 hover:border-emerald-300"
+                          }`}>
+                          {f === "pending" ? "En attente" : f === "all" ? "Toutes" : f === "approved" ? "Approuvées" : "Refusées"}
+                          {f === "pending" && ` (${certifications.filter((c) => c.status === "pending").length})`}
+                        </button>
+                      ))}
+                    </div>
+                    {(() => {
+                      const filtered = certFilter === "all" ? certifications : certifications.filter((c) => c.status === certFilter);
+                      if (filtered.length === 0) return <Empty label={`Aucune certification ${certFilter === "pending" ? "en attente" : certFilter === "approved" ? "approuvée" : certFilter === "rejected" ? "refusée" : ""}`} />;
+                       return (
+                        <div className="space-y-3">
+                          {filtered.map((cert) => (
+                            <div key={cert.id} onClick={() => setCertDetail(cert)} className={`${CARD} ${CARD_HOVER} p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-5 cursor-pointer`}>
+                              <div className="flex items-center gap-3 md:gap-5 flex-1 min-w-0">
+                                <div className={`w-9 h-9 md:w-10 md:h-10 rounded-2xl flex items-center justify-center border shrink-0 ${
+                                  cert.status === "approved" ? "bg-emerald-50 border-emerald-100" : cert.status === "rejected" ? "bg-red-50 border-red-100" : "bg-amber-50 border-amber-100"
+                                }`}>
+                                  <FileText size={16} className={
+                                    cert.status === "approved" ? "text-emerald-500" : cert.status === "rejected" ? "text-red-500" : "text-amber-500"
+                                  } />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-slate-800">{cert.name}</p>
+                                  <p className="text-xs text-slate-400 font-bold mt-0.5">Utilisateur: {cert.user_id?.slice(0, 8)}… • {cert.category || "Non catégorisé"}</p>
+                                  {cert.description && <p className="text-xs text-slate-500 mt-1 line-clamp-1">{cert.description}</p>}
+                                  <div className="flex flex-wrap gap-2 mt-1.5 text-[10px] text-slate-400 font-bold">
+                                    {cert.issued_by && <span>Émetteur: {cert.issued_by}</span>}
+                                    {cert.issued_at && <span>• Émis: {cert.issued_at}</span>}
+                                    {cert.expires_at && <span>• Expire: {cert.expires_at}</span>}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                    cert.status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                    cert.status === "rejected" ? "bg-red-50 text-red-700 border-red-200" :
+                                    "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}>
+                                    {cert.status === "approved" ? "Approuvée" : cert.status === "rejected" ? "Refusée" : "En attente"}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-bold">{new Date(cert.created_at).toLocaleDateString("fr-FR")}</span>
+                                </div>
+                              </div>
+                              {cert.status === "pending" && (
+                                <div className="flex gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                  <button onClick={async () => { setActionLoading(cert.id); await apiFetch(`/certifications/${cert.id}/status`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: "approved" }) }); setCertifications((c) => c.map((x: any) => x.id === cert.id ? { ...x, status: "approved" } : x)); setActionLoading(null); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"><Check size={14} /> Approuver</button>
+                                  <button onClick={async () => { setActionLoading(cert.id); await apiFetch(`/certifications/${cert.id}/status`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: "rejected", rejection_reason: "Non validé" }) }); setCertifications((c) => c.map((x: any) => x.id === cert.id ? { ...x, status: "rejected" } : x)); setActionLoading(null); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 text-red-600 border border-red-100 text-xs font-bold hover:bg-red-100 transition-all"><X size={14} /> Rejeter</button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {/* CERTIFICATION DETAIL MODAL */}
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {certDetail && (
+                  <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setCertDetail(null)}>
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                      <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
+                        <h3 className="text-lg font-extrabold text-slate-900">Détail certification</h3>
+                        <button onClick={() => setCertDetail(null)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-slate-400 text-xl">close</span>
+                        </button>
+                      </div>
+                      <div className="p-6 space-y-5">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shrink-0 ${
+                            certDetail.status === "approved" ? "bg-emerald-50 border-emerald-100" : certDetail.status === "rejected" ? "bg-red-50 border-red-100" : "bg-amber-50 border-amber-100"
+                          }`}>
+                            <FileText size={24} className={
+                              certDetail.status === "approved" ? "text-emerald-500" : certDetail.status === "rejected" ? "text-red-500" : "text-amber-500"
+                            } />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-base font-extrabold text-slate-800">{certDetail.name}</h4>
+                            <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                              certDetail.status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                              certDetail.status === "rejected" ? "bg-red-50 text-red-700 border-red-200" :
+                              "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
+                              {certDetail.status === "approved" ? "Approuvée" : certDetail.status === "rejected" ? "Refusée" : "En attente"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="material-symbols-outlined text-slate-400 text-lg">person</span>
+                            <span className="text-slate-600">Utilisateur:</span>
+                            <span className="font-bold text-slate-800">{certDetail.user_id}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="material-symbols-outlined text-slate-400 text-lg">category</span>
+                            <span className="text-slate-600">Catégorie:</span>
+                            <span className="font-bold text-slate-800">{certDetail.category || "Non catégorisé"}</span>
+                          </div>
+                          {certDetail.description && (
+                            <div className="flex items-start gap-3 text-sm">
+                              <span className="material-symbols-outlined text-slate-400 text-lg">description</span>
+                              <span className="text-slate-600">Description:</span>
+                              <span className="font-bold text-slate-800">{certDetail.description}</span>
+                            </div>
+                          )}
+                          {certDetail.issued_by && (
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="material-symbols-outlined text-slate-400 text-lg">account_balance</span>
+                              <span className="text-slate-600">Émetteur:</span>
+                              <span className="font-bold text-slate-800">{certDetail.issued_by}</span>
+                            </div>
+                          )}
+                          {certDetail.issued_at && (
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="material-symbols-outlined text-slate-400 text-lg">event</span>
+                              <span className="text-slate-600">Émis le:</span>
+                              <span className="font-bold text-slate-800">{certDetail.issued_at}</span>
+                            </div>
+                          )}
+                          {certDetail.expires_at && (
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="material-symbols-outlined text-slate-400 text-lg">event_busy</span>
+                              <span className="text-slate-600">Expire le:</span>
+                              <span className="font-bold text-slate-800">{certDetail.expires_at}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="material-symbols-outlined text-slate-400 text-lg">schedule</span>
+                            <span className="text-slate-600">Soumise le:</span>
+                            <span className="font-bold text-slate-800">{new Date(certDetail.created_at).toLocaleDateString("fr-FR")}</span>
+                          </div>
+                          {certDetail.rejection_reason && (
+                            <div className="flex items-start gap-3 text-sm p-3 bg-red-50 rounded-xl border border-red-100">
+                              <span className="material-symbols-outlined text-red-500 text-lg">block</span>
+                              <div>
+                                <span className="text-red-600 font-bold text-xs">Motif du refus:</span>
+                                <p className="text-red-700 text-sm mt-0.5">{certDetail.rejection_reason}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {(certDetail.file_url || certDetail.proof_url) && (() => {
+                          const rawUrl = certDetail.file_url || certDetail.proof_url;
+                          const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(rawUrl);
+                          const isPdf = /\.pdf$/i.test(rawUrl);
+                          const fileUrl = isPdf ? rawUrl.replace('/image/upload/', '/raw/upload/') : rawUrl;
+                          return (
+                            <div className="pt-2 space-y-3">
+                              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Document joint</p>
+                              {isImage ? (
+                                <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                  <img src={fileUrl} alt="Certification" className="w-full max-h-64 object-contain" />
+                                </div>
+                              ) : isPdf ? (
+                                <div className="rounded-xl overflow-hidden border border-slate-200">
+                                  <iframe src={fileUrl} className="w-full h-80" title="PDF Certification" />
+                                </div>
+                              ) : null}
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-3 bg-blue-50 rounded-xl border border-blue-100 text-blue-700 font-bold text-sm hover:bg-blue-100 transition-all">
+                                <span className="material-symbols-outlined text-lg">open_in_new</span>
+                                {isImage ? "Voir en pleine taille" : isPdf ? "Ouvrir le PDF" : "Télécharger le document"}
+                              </a>
+                            </div>
+                          );
+                        })()}
+                        {certDetail.status === "pending" && (
+                          <div className="flex gap-3 pt-2">
+                            <button onClick={async () => { await apiFetch(`/certifications/${certDetail.id}/status`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: "approved" }) }); setCertifications((c) => c.map((x: any) => x.id === certDetail.id ? { ...x, status: "approved" } : x)); setCertDetail(null); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all">
+                              <Check size={16} /> Approuver
+                            </button>
+                            <button onClick={async () => { await apiFetch(`/certifications/${certDetail.id}/status`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: "rejected", rejection_reason: "Non validé" }) }); setCertifications((c) => c.map((x: any) => x.id === certDetail.id ? { ...x, status: "rejected" } : x)); setCertDetail(null); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-bold hover:bg-red-100 transition-all">
+                              <X size={16} /> Rejeter
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 

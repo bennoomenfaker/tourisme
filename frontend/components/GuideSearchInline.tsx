@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Search, X, ExternalLink } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -21,7 +21,7 @@ interface GuideSearchInlineProps {
   dayLocation?: string;
 }
 
-export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng }: GuideSearchInlineProps) {
+export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng, dayLocation }: GuideSearchInlineProps) {
   const [query, setQuery] = useState("");
   const [zoneFilter, setZoneFilter] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -30,13 +30,25 @@ export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng }:
   const [hasSearched, setHasSearched] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const mountedRef = useRef(false);
 
-  function hasFilters(q: string, z: string, p: string) {
-    return q.trim() !== "" || z !== "" || p !== "";
-  }
+  /* Auto-populate zone from dayLocation */
+  useEffect(() => {
+    if (dayLocation && !zoneFilter) {
+      const match = TUNISIA_REGIONS.find(r => dayLocation.toLowerCase().includes(r.toLowerCase()));
+      if (match) setZoneFilter(match);
+    }
+  }, [dayLocation]);
 
-  async function doSearch(q: string, z: string, p: string) {
-    if (!hasFilters(q, z, p)) { setResults([]); setHasSearched(false); return; }
+  /* Auto-search closest guides on mount when we have coordinates */
+  useEffect(() => {
+    if (!mountedRef.current && dayLat != null && dayLng != null) {
+      mountedRef.current = true;
+      doSearch("", zoneFilter || "", "", dayLat, dayLng);
+    }
+  }, [dayLat, dayLng]);
+
+  async function doSearch(q: string, z: string, p: string, lat?: number | null, lng?: number | null) {
     setLoading(true); setHasSearched(true);
     try {
       const params = new URLSearchParams();
@@ -44,9 +56,11 @@ export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng }:
       if (z) params.set("zone", z);
       if (p) params.set("max_price", p);
       if (dayDate) params.set("date", dayDate);
-      if (dayLat != null && dayLng != null) {
-        params.set("lat", String(dayLat));
-        params.set("lng", String(dayLng));
+      const searchLat = lat ?? dayLat;
+      const searchLng = lng ?? dayLng;
+      if (searchLat != null && searchLng != null) {
+        params.set("lat", String(searchLat));
+        params.set("lng", String(searchLng));
       }
       const res = await apiFetch<any[]>(`/guide/search?${params.toString()}`);
       setResults(res || []);
@@ -65,19 +79,19 @@ export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng }:
     <div className="relative">
       <div className="flex flex-wrap items-center gap-1">
         <input value={query} onChange={(e) => { setQuery(e.target.value); triggerSearch(); }}
-          placeholder="Guide, zone..." className="w-24 text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
-        <select value={zoneFilter} onChange={(e) => { setZoneFilter(e.target.value); triggerSearch(); }}
-          className="text-[10px] border border-slate-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary w-20">
-          <option value="">Zone</option>
+          placeholder="Nom du guide..." className="flex-1 min-w-[100px] text-[11px] border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
+        <select value={zoneFilter} onChange={(e) => { setZoneFilter(e.target.value); doSearch(query, e.target.value, maxPrice); }}
+          className="text-[10px] border border-slate-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary w-28">
+          <option value="">Toutes les régions</option>
           {TUNISIA_REGIONS.map((r: string) => <option key={r} value={r}>{r}</option>)}
         </select>
         <input type="number" min={0} value={maxPrice} onChange={(e) => { setMaxPrice(e.target.value); triggerSearch(); }}
-          placeholder="Prix max" className="w-14 text-[10px] border border-slate-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
+          placeholder="Prix max" className="w-16 text-[10px] border border-slate-200 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-primary" />
         <button type="button" onClick={() => doSearch(query, zoneFilter, maxPrice)} className="p-1 text-primary hover:bg-primary/10 rounded-lg">
           {loading ? <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" /> : <Search size={13} />}
         </button>
         {!loading && hasSearched && results.length === 0 && (
-          <span className="text-[10px] text-slate-400">Aucun guide</span>
+          <span className="text-[10px] text-slate-400">Aucun guide trouvé</span>
         )}
         {hasSearched && results.length > 0 && hasLocation && (
           <button type="button" onClick={() => setShowMap(!showMap)} className={`text-[10px] font-medium ml-auto ${showMap ? "text-primary" : "text-slate-400 hover:text-primary"}`}>
@@ -85,6 +99,9 @@ export default function GuideSearchInline({ onSelect, dayDate, dayLat, dayLng }:
           </button>
         )}
       </div>
+      {!loading && hasSearched && results.length > 0 && (
+        <p className="text-[9px] text-slate-400 mt-1">{results.length} guide{results.length > 1 ? "s" : ""} trouvé{results.length > 1 ? "s" : ""}</p>
+      )}
       {results.length > 0 && !showMap && (
         <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 w-80 max-h-72 overflow-y-auto">
           {results.map((g: any) => {

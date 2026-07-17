@@ -15,7 +15,9 @@ import {
 import { getSchema, type SchemaField } from "@/lib/offer-schema";
 import { needsLocation, canHaveGuide, guideRequirement, hasItemTypesWithoutLocation } from "@/lib/offer-rules";
 import { getTaxonomy } from "@/lib/offer-taxonomy";
+import { GOVERNORATE_COORDS } from "@/lib/governorate-coords";
 import HierarchicalSelect from "@/components/HierarchicalSelect";
+import GuideSearchInline from "@/components/GuideSearchInline";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   ssr: false,
@@ -59,6 +61,7 @@ interface OfferItemForm {
   details_json: Record<string, any>;
   prices: { id?: string; label: string; price: string; currency: string; pricing_unit: string; is_default: boolean }[];
   guide_id?: string;
+  guide_name?: string;
   guide_enabled?: boolean;
 }
 
@@ -137,7 +140,7 @@ const OFFER_TYPE_MAP: Record<string, string> = {
 };
 
 function hasDifficulty(itemType: string): boolean {
-  return ["randonnee", "trekking", "vtt", "escalade", "kayak", "speleologie"].includes(itemType);
+  return ["randonnee", "trekking", "vtt", "escalade", "kayak", "speleologie", "equitation", "surfing", "diving", "paragliding", "tyrolienne"].includes(itemType);
 }
 
 export default function GuidedOfferWizard({ token, userRole, userProjectId, userVenueType, userVenues, onClose, onSuccess, editOffer, variant = 'modal' }: Props) {
@@ -171,7 +174,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const [meetingLat, setMeetingLat] = useState<number | null>(null);
   const [meetingLng, setMeetingLng] = useState<number | null>(null);
   const [locationType, setLocationType] = useState("fixed");
-  const [confirmationMode, setConfirmationMode] = useState("automatic");
+  const [confirmationMode, setConfirmationMode] = useState("manual");
   const [minGroupSize, setMinGroupSize] = useState("");
   const [maxGroupSize, setMaxGroupSize] = useState("");
   const [minAge, setMinAge] = useState("");
@@ -203,6 +206,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
   const formFields = normalizedCategory ? (CATEGORY_FORM_FIELDS[normalizedCategory] ?? []) : [];
   const isActivity = normalizedCategory === 'activity' || normalizedCategory === 'eco_tour';
   const isAccommodation = normalizedCategory === 'accommodation';
+  const isRestaurant = normalizedCategory === 'restaurant';
   const isEvent = normalizedCategory === 'event';
   const isSejour = normalizedCategory === 'sejour';
   const isCircuit = normalizedCategory === 'circuit';
@@ -267,6 +271,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         details_json: it.details_json || {},
         guide_enabled: !!it.details_json?.guide_id || canHaveGuide(normalizedCategory, it.item_type),
         guide_id: it.details_json?.guide_id || "",
+        guide_name: it.details_json?.guide_name || "",
         prices: it.prices?.length
           ? it.prices.map((p: any) => ({ id: p.id, label: p.label || "", price: p.price?.toString() || "", currency: p.currency || "TND", pricing_unit: p.pricing_unit || "per_person", is_default: p.is_default ?? false }))
           : [{ label: "Plein tarif", price: "", currency: "TND", pricing_unit: "per_person", is_default: true }],
@@ -304,6 +309,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         details_json: {},
         guide_enabled: canHaveGuide(normalizedCategory, firstType),
         guide_id: "",
+        guide_name: "",
         prices: [{ label: "Plein tarif", price: "", currency: "TND", pricing_unit: "per_person", is_default: true }],
       }]);
     }
@@ -314,6 +320,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
   function updateFirstItem(field: keyof OfferItemForm, value: any) {
     const updated = [...items];
+    if (!updated[0]) return;
     (updated[0] as any)[field] = value;
     setItems(updated);
   }
@@ -327,6 +334,8 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     if (!hasDifficulty(value)) updateFirstItem("difficulty_level", "");
     updateFirstItem("details_json", {});
     updateFirstItem("guide_enabled", canHaveGuide(normalizedCategory, value));
+    updateFirstItem("guide_id", "");
+    updateFirstItem("guide_name", "");
     const req = guideRequirement(normalizedCategory, value);
     if (req === 'required') updateFirstItem("guide_enabled", true);
     if (req === 'none') updateFirstItem("guide_enabled", false);
@@ -393,7 +402,10 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
       if (activeRule?.end_date) details.event_end = activeRule.end_date;
     }
 
-    if (item.guide_id) details.guide_id = item.guide_id;
+    if (item.guide_id) {
+      details.guide_id = item.guide_id;
+      if ((item as any).guide_name) details.guide_name = (item as any).guide_name;
+    }
 
     return Object.keys(details).length > 0 ? details : undefined;
   }
@@ -466,12 +478,21 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         fulfillment_mode: fulfillmentMode || undefined,
       };
 
+      /* Auto-sync activity schema fields → offer-level fields (backend requires them) */
+      if (isActivity && items[0]) {
+        const det = items[0].details_json || {};
+        if (!offerData.min_group_size && det.nb_participants_min) offerData.min_group_size = det.nb_participants_min;
+        if (!offerData.max_group_size && det.nb_participants_max) offerData.max_group_size = det.nb_participants_max;
+        if (!offerData.min_age && det.age_minimum) offerData.min_age = det.age_minimum;
+      }
+
       if (isEdit) {
         if (editOffer?.status === 'rejected') {
           (offerData as any).status = 'pending';
-        } else if (publishImmediately) {
+        } else if (publishImmediately && editOffer?.status === 'draft') {
           (offerData as any).status = 'approved';
         }
+        // Si status est déjà pending/approved, ne pas envoyer de status (reste inchangé)
       }
 
       let resultOffer;
@@ -506,18 +527,29 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         };
 
         let createdItem;
-        if (item.id) {
-          createdItem = await apiFetch<any>(`/offers/items/${item.id}`, {
-            method: "PATCH",
-            headers: { Authorization: `Bearer ${token}` },
-            body: JSON.stringify(itemData),
-          });
-        } else {
-          createdItem = await apiFetch<any>(`/offers/${resultOffer.id}/items`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: JSON.stringify(itemData),
-          });
+        try {
+          if (item.id) {
+            createdItem = await apiFetch<any>(`/offers/items/${item.id}`, {
+              method: "PATCH",
+              headers: { Authorization: `Bearer ${token}` },
+              body: JSON.stringify(itemData),
+            });
+          } else {
+            createdItem = await apiFetch<any>(`/offers/${resultOffer.id}/items`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: JSON.stringify(itemData),
+            });
+          }
+        } catch (itemErr: any) {
+          // Cleanup: delete the offer if item creation failed (new offer only)
+          if (!isEdit && resultOffer?.id) {
+            await apiFetch(`/offers/${resultOffer.id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {});
+          }
+          throw itemErr;
         }
 
         if (createdItem) {
@@ -731,18 +763,52 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     if (!item?.guide_enabled) return null;
     const req = guideRequirement(normalizedCategory, item.item_type);
     const required = req === 'required';
+
+    if (item.guide_id) {
+      return (
+        <div className="space-y-2 p-3 bg-amber-50 rounded-2xl border border-amber-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🧑‍🏫</span>
+              <span className="text-xs font-bold text-slate-600">Guide {required ? "requis" : "optionnel"}</span>
+            </div>
+            <button type="button" onClick={() => {
+              const u = [...items]; u[0].guide_id = ""; setItems(u);
+            }} className="text-[10px] text-red-400 hover:text-red-600 font-medium">
+              Retirer
+            </button>
+          </div>
+          <div className="bg-white rounded-xl p-2 border border-amber-200 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span className="text-[9px] font-bold text-primary">{item.guide_name?.charAt(0) || "G"}</span>
+            </div>
+            <span className="text-xs font-semibold text-slate-700">{item.guide_name || item.guide_id}</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-2 p-3 bg-amber-50 rounded-2xl border border-amber-100">
         <div className="flex items-center gap-2">
           <span className="text-lg">🧑‍🏫</span>
           <span className="text-xs font-bold text-slate-600">Guide {required ? "requis" : "optionnel"}</span>
         </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-bold text-slate-500">ID du guide</label>
-          <input className={`${inputClass} text-xs`} value={item.guide_id ?? ""}
-            onChange={(e) => { const u = [...items]; u[0].guide_id = e.target.value; setItems(u); }}
-            placeholder="Entrer l'ID du guide ou chercher..." />
-        </div>
+        <p className="text-[10px] text-slate-400">Recherchez un guide disponible dans votre région</p>
+        <GuideSearchInline
+          onSelect={(guideId, guideName, price, offeringId) => {
+            const u = [...items];
+            u[0].guide_id = guideId;
+            (u[0] as any).guide_name = guideName;
+            setItems(u);
+          }}
+          dayLat={lat}
+          dayLng={lng}
+          dayLocation={region}
+        />
+        {required && !item.guide_id && (
+          <p className="text-[10px] text-amber-600 font-medium">⚠ Un guide est requis pour ce type d'activité</p>
+        )}
       </div>
     );
   }
@@ -865,7 +931,16 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500">Région *</label>
-                    <input className={inputClass} value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Djerba, Tozeur, Tunis..." />
+                    <select className={inputClass} value={region} onChange={(e) => {
+                      setRegion(e.target.value);
+                      const coords = GOVERNORATE_COORDS[e.target.value];
+                      if (coords) { setLat(coords.lat); setLng(coords.lng); }
+                    }}>
+                      <option value="">Sélectionner une région</option>
+                      {Object.keys(GOVERNORATE_COORDS).map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500">Adresse</label>
@@ -1009,13 +1084,6 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                         onChange={(e) => updateFirstItem("duration_hours", e.target.value)} placeholder="Autre" />
                     </div>
                   </div>
-
-                  {/* Distance (optional) */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500">Distance (km, optionnel)</label>
-                    <input type="number" min="0" className={`${inputClass} w-32`} value={items[0]?.distance_km ?? ""}
-                      onChange={(e) => updateFirstItem("distance_km", e.target.value)} placeholder="5 km" />
-                  </div>
                 </div>
               ) : (
                 /* Non-activity: standard item_type dropdown */
@@ -1026,15 +1094,12 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                   </select>
 
                   {isAccommodation && currentItemType === 'room' && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500">Sous-type chambre</label>
                       <select className={inputClass} value={items[0]?.room_sub_type ?? ""} onChange={(e) => updateFirstItem("room_sub_type", e.target.value)}>
-                        <option value="">Sous-type chambre</option>
+                        <option value="">Sélectionner un sous-type</option>
                         {ROOM_SUB_TYPES.map((t) => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
                       </select>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400">Nombre de lits</label>
-                        <input type="number" min="1" className={inputClass} value={items[0]?.bed_count ?? ""} onChange={(e) => updateFirstItem("bed_count", e.target.value)} placeholder="2" />
-                      </div>
                     </div>
                   )}
 
@@ -1202,72 +1267,169 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
           {/* STEP 6: Capacity */}
           {step === 6 && (
             <div className="space-y-4">
-              <h3 className="font-bold text-slate-800">Capacité</h3>
-              <p className="text-xs text-slate-400">Définissez les limites de participants</p>
+              {isActivity ? (
+                <>
+                  <h3 className="font-bold text-slate-800">Politique & Livraison</h3>
+                  <p className="text-xs text-slate-400">Paramètres de réservation pour cette activité</p>
+                  <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                    <p className="text-[10px] text-blue-600 font-medium">
+                      ℹ️ Participants min/max et âge minimum sont définis dans les détails de l&apos;activité (étape 3)
+                    </p>
+                  </div>
+                </>
+              ) : !isAccommodation && !isRestaurant ? (
+                <>
+                  <h3 className="font-bold text-slate-800">
+                    {normalizedCategory === 'equipment_rental' ? 'Stock & Conditions' :
+                     normalizedCategory === 'craft' ? 'Stock & Production' :
+                     normalizedCategory === 'transport' ? 'Capacité véhicule' :
+                     'Capacité'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {normalizedCategory === 'equipment_rental' ? 'Définissez la quantité disponible et les conditions de location' :
+                     normalizedCategory === 'craft' ? 'Définissez le stock disponible et le délai de production' :
+                     normalizedCategory === 'transport' ? 'Nombre de places disponibles par véhicule' :
+                     'Définissez les limites de participants'}
+                  </p>
+                </>
+              ) : null}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Participants minimum</label>
-                  <input type="number" min="1" className={inputClass} value={minGroupSize} onChange={(e) => setMinGroupSize(e.target.value)} placeholder="1" />
+              {/* Group size - only for events (not equipment_rental, craft, transport) */}
+              {!isActivity && !isAccommodation && !isRestaurant && normalizedCategory === 'event' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500">Participants minimum</label>
+                    <input type="number" min="1" className={inputClass} value={minGroupSize} onChange={(e) => setMinGroupSize(e.target.value)} placeholder="1" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500">Participants maximum</label>
+                    <input type="number" min="1" className={inputClass} value={maxGroupSize} onChange={(e) => setMaxGroupSize(e.target.value)} placeholder="20" />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500">Participants maximum</label>
-                  <input type="number" min="1" className={inputClass} value={maxGroupSize} onChange={(e) => setMaxGroupSize(e.target.value)} placeholder="20" />
-                </div>
-              </div>
+              )}
 
-              {!isAccommodation && (
+              {/* Min age - only for events */}
+              {!isActivity && !isAccommodation && !isRestaurant && normalizedCategory === 'event' && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500">Âge minimum</label>
                   <input type="number" min="0" className={`${inputClass} w-32`} value={minAge} onChange={(e) => setMinAge(e.target.value)} placeholder="0" />
                 </div>
               )}
 
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Capacité de stock</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500">Type de capacité</label>
-                    <select className={inputClass} value={capacityType} onChange={(e) => setCapacityType(e.target.value)}>
-                      <option value="persons">Personnes</option>
-                      <option value="rooms">Chambres</option>
-                      <option value="beds">Lits</option>
-                      <option value="seats">Places</option>
-                      <option value="tents">Tentes</option>
-                      <option value="items">Articles</option>
-                      <option value="spaces">Espaces</option>
-                    </select>
+              {/* Stock capacity - adapted per category */}
+              {!isAccommodation && !isRestaurant && !isActivity && (
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {normalizedCategory === 'equipment_rental' ? 'Quantité disponible' :
+                     normalizedCategory === 'craft' ? 'Stock disponible' :
+                     normalizedCategory === 'transport' ? 'Capacité véhicule' :
+                     'Capacité de stock'}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500">Type de capacité</label>
+                      <select className={inputClass} value={capacityType} onChange={(e) => setCapacityType(e.target.value)}>
+                        {normalizedCategory === 'equipment_rental' ? (
+                          <>
+                            <option value="items">Articles</option>
+                            <option value="tents">Tentes</option>
+                          </>
+                        ) : normalizedCategory === 'craft' ? (
+                          <option value="items">Articles</option>
+                        ) : normalizedCategory === 'transport' ? (
+                          <option value="seats">Places (par véhicule)</option>
+                        ) : (
+                          <>
+                            <option value="persons">Personnes</option>
+                            <option value="seats">Places</option>
+                            <option value="items">Articles</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500">
+                        {normalizedCategory === 'equipment_rental' ? 'Quantité disponible' :
+                         normalizedCategory === 'craft' ? 'Stock total' :
+                         normalizedCategory === 'transport' ? 'Nombre de places' :
+                         'Quantité totale'}
+                      </label>
+                      <input type="number" min="1" className={inputClass} value={totalQuantity} onChange={(e) => setTotalQuantity(e.target.value)} placeholder={
+                        normalizedCategory === 'equipment_rental' ? 'Ex: 10 vélos' :
+                        normalizedCategory === 'craft' ? 'Ex: 50 pièces' :
+                        normalizedCategory === 'transport' ? 'Ex: 8' :
+                        'Ex: 20'
+                      } />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500">Quantité totale</label>
-                    <input type="number" min="1" className={inputClass} value={totalQuantity} onChange={(e) => setTotalQuantity(e.target.value)} placeholder="Ex: 20" />
-                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    {normalizedCategory === 'equipment_rental' ? 'Nombre d\'unités de cet équipement disponibles à la location' :
+                     normalizedCategory === 'craft' ? 'Nombre d\'articles en stock' :
+                     normalizedCategory === 'transport' ? 'Capacité maximale du véhicule' :
+                     'Définit le stock global disponible'}
+                  </p>
                 </div>
-                <p className="text-[10px] text-slate-400">Définit le stock global disponible (ex: 20 vélos, 5 chambres)</p>
-              </div>
+              )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500">Inclus dans l'offre</label>
+                <label className="text-xs font-bold text-slate-500">Description des inclusions (texte libre)</label>
                 <textarea className={`${inputClass} resize-none`} value={inclusions} onChange={(e) => setInclusions(e.target.value)} rows={2} placeholder="Matériel, guide, repas, transport..." />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500">Politique d&apos;annulation</label>
-                <textarea className={`${inputClass} resize-none`} value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={2} placeholder="Remboursable 48h avant..." />
+                <select className={inputClass} value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)}>
+                  <option value="">Sélectionner une politique</option>
+                  <option value="flexible">Flexible — Remboursement complet si annulation 48h avant</option>
+                  <option value="moderate">Modéré — Remboursement 50% si annulation 5 jours avant</option>
+                  <option value="strict">Stricte — Remboursement uniquement si annulation 7 jours avant</option>
+                  <option value="non_refundable">Non remboursable — Aucun remboursement</option>
+                </select>
               </div>
 
-              {/* Mode d'exécution */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500">Mode d&apos;exécution</label>
-                <select className={inputClass} value={fulfillmentMode} onChange={(e) => setFulfillmentMode(e.target.value)}>
-                  <option value="">Standard (réservation + créneau)</option>
-                  <option value="instant_stock">Stock instantané (disponible tout de suite)</option>
-                  <option value="scheduled">Planifié (date fixe à l&apos;avance)</option>
-                  <option value="recurring">Récurrent (tous les jours/semaines)</option>
-                  <option value="on_request">Sur demande (le prestataire confirme)</option>
-                </select>
-                <p className="text-[10px] text-slate-400">Comment cette offre est-elle exécutée ?</p>
-              </div>
+              {/* Mode d'exécution - adapted per category */}
+              {!isRestaurant && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500">Mode d&apos;exécution</label>
+                  <select className={inputClass} value={fulfillmentMode} onChange={(e) => setFulfillmentMode(e.target.value)}>
+                    {normalizedCategory === 'equipment_rental' ? (
+                      <>
+                        <option value="">Location standard</option>
+                        <option value="instant_stock">Disponible immédiatement</option>
+                        <option value="on_request">Sur demande (vérifier disponibilité)</option>
+                      </>
+                    ) : normalizedCategory === 'craft' ? (
+                      <>
+                        <option value="">Vente standard</option>
+                        <option value="instant_stock">En stock, expédition rapide</option>
+                        <option value="scheduled">Fabrication à la commande</option>
+                        <option value="on_request">Sur demande (produit sur mesure)</option>
+                      </>
+                    ) : normalizedCategory === 'transport' ? (
+                      <>
+                        <option value="">Réservation classique</option>
+                        <option value="instant_stock">Disponible immédiatement</option>
+                        <option value="scheduled">Départs fixes à horaires réguliers</option>
+                        <option value="on_request">Sur demande (itinéraire personnalisé)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="">Standard (réservation + créneau)</option>
+                        <option value="instant_stock">Stock instantané (disponible tout de suite)</option>
+                        <option value="scheduled">Planifié (date fixe à l&apos;avance)</option>
+                        <option value="recurring">Récurrent (tous les jours/semaines)</option>
+                        <option value="on_request">Sur demande (le prestataire confirme)</option>
+                      </>
+                    )}
+                  </select>
+                  <p className="text-[10px] text-slate-400">
+                    {normalizedCategory === 'equipment_rental' ? 'Comment la location est-elle gérée ?' :
+                     normalizedCategory === 'craft' ? 'Comment la vente est-elle gérée ?' :
+                     normalizedCategory === 'transport' ? 'Comment le transport est-il organisé ?' :
+                     'Comment cette offre est-elle exécutée ?'}
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -1282,14 +1444,14 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
                 </div>
               </div>
 
-              {/* Délai de production (artisanat uniquement) */}
-              {normalizedCategory === 'craft' || normalizedCategory === 'workshop' ? (
+              {/* Délai de production (artisanat et atelier uniquement) */}
+              {(normalizedCategory === 'craft' || normalizedCategory === 'workshop') && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500">Délai de production (jours)</label>
                   <input type="number" min="0" className={`${inputClass} w-32`} value={productionDelayDays} onChange={(e) => setProductionDelayDays(e.target.value)} placeholder="Ex: 3" />
                   <p className="text-[10px] text-slate-400">Temps nécessaire pour fabriquer/préparer l&apos;article</p>
                 </div>
-              ) : null}
+              )}
 
               {error && <p className="text-sm text-red-500 font-semibold">{error}</p>}
 
@@ -1309,14 +1471,39 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
               {needsLocation(normalizedCategory, currentItemType) ? (
                 <>
-                  <p className="text-xs text-slate-400">Placez votre offre sur la carte</p>
+                  <p className="text-xs text-slate-400">Placez votre offre sur la carte — la région et l'adresse se remplissent automatiquement</p>
+
+                  {/* Auto-filled region + address from MapPicker */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500">Région</label>
+                      <input className={inputClass} value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Région auto-remplie" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500">Adresse</label>
+                      <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse auto-remplie" />
+                    </div>
+                  </div>
+
                   <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <MapPicker
                       lat={lat ?? 33.8869}
                       lng={lng ?? 9.5375}
-                      onPick={(la, ln) => { setLat(la); setLng(ln); }}
+                      onPick={(la, ln, addr, reg) => {
+                        setLat(la);
+                        setLng(ln);
+                        if (addr) setAddress(addr);
+                        if (reg) setRegion(reg);
+                      }}
                     />
                   </div>
+
+                  {lat != null && lng != null && (
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      GPS: {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+                    </p>
+                  )}
+
                   {hasMeetingPoint && (
                     <div className="space-y-3 border-t border-slate-100 pt-4">
                       <h4 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 
@@ -31,27 +31,30 @@ function InvalidateSizeFix() {
   return null;
 }
 
-async function reverseGeocode(lat: number, lng: number): Promise<string> {
+async function reverseGeocode(lat: number, lng: number): Promise<{ address: string; region: string }> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=fr`,
       { headers: { "Accept-Language": "fr" } }
     );
     const data = await res.json();
-    return data.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    const address = data.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    const region = data.address?.state ?? data.address?.region ?? data.address?.county ?? "";
+    return { address, region };
   } catch {
-    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    return { address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, region: "" };
   }
 }
 
-async function searchPlace(query: string): Promise<{ lat: number; lng: number; display_name: string } | null> {
+async function searchPlace(query: string): Promise<{ lat: number; lng: number; display_name: string; region: string } | null> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=fr`
     );
     const data = await res.json();
     if (!data.length) return null;
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), display_name: data[0].display_name };
+    const region = data[0].address?.state ?? data[0].address?.region ?? data[0].address?.county ?? "";
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), display_name: data[0].display_name, region };
   } catch {
     return null;
   }
@@ -66,8 +69,9 @@ export default function MapPicker({
   lat: number | null;
   lng: number | null;
   radiusKm?: number | null;
-  onPick: (lat: number, lng: number, address: string) => void;
+  onPick: (lat: number, lng: number, address: string, region: string) => void;
 }) {
+  const mapId = useId();
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number } | null>(null);
   const [searching, setSearching]   = useState(false);
   const [searchErr, setSearchErr]   = useState("");
@@ -82,8 +86,8 @@ export default function MapPicker({
   }, []);
 
   async function handleClick(clat: number, clng: number) {
-    const address = await reverseGeocode(clat, clng);
-    onPick(clat, clng, address);
+    const { address, region } = await reverseGeocode(clat, clng);
+    onPick(clat, clng, address, region);
   }
 
   async function handleSearch() {
@@ -94,7 +98,7 @@ export default function MapPicker({
     setSearching(false);
     if (!result) { setSearchErr("Lieu introuvable. Essayez un autre nom."); return; }
     setFlyTarget({ lat: result.lat, lng: result.lng });
-    onPick(result.lat, result.lng, result.display_name);
+    onPick(result.lat, result.lng, result.display_name, result.region);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -127,6 +131,7 @@ export default function MapPicker({
       {/* Map — contained with overflow-hidden and fixed height */}
       <div className="map-contained border border-slate-200" style={{ height: 250 }}>
         <MapContainer
+          key={mapId}
           center={lat && lng ? [lat, lng] : [33.8869, 9.5375]}
           zoom={lat && lng ? 13 : 6}
           style={{ height: "100%", width: "100%" }}

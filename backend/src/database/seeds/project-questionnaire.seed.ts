@@ -194,11 +194,11 @@ async function seed() {
   const answerRepo = dataSource.getRepository(Answer);
 
   const existing = await questionnaireRepo.findOne({
-    where: { target_type: 'eco_project', is_active: true },
+    where: { target_type: 'provider', is_active: true },
   });
 
   if (existing) {
-    console.log('Questionnaire eco_project already seeded. Skipping.');
+    console.log('Questionnaire provider already seeded. Skipping.');
     await dataSource.destroy();
     return;
   }
@@ -227,7 +227,7 @@ async function seed() {
   const questionnaire = await questionnaireRepo.save(
     questionnaireRepo.create({
       name: 'Questionnaire Propriétaire Éco-Responsable',
-      target_type: 'eco_project',
+      target_type: 'provider',
       version: 1,
       description:
         "Évaluez le niveau de durabilité et d'impact éco-responsable de votre projet touristique.",

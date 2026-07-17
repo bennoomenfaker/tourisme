@@ -111,7 +111,7 @@ export class CircuitProgramItem {
     estimated_price?: number;
     currency?: string;
     notes?: string;
-    type?: 'hebergement' | 'restaurant' | 'activite' | 'transport';
+    type?: 'hebergement' | 'restaurant' | 'activite' | 'transport' | 'atelier' | 'guide_service' | 'equipment_rental' | 'evenement' | 'artisanat' | 'sejour';
   } | null;
 
   @Column({ type: 'boolean', default: false })

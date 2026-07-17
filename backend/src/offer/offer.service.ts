@@ -142,7 +142,7 @@ export class OfferService {
   async findByAuthor(authorId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { author_id: authorId, is_deleted: false },
-      relations: ['items', 'items.prices', 'venue'],
+      relations: ['items', 'items.prices', 'venue', 'category'],
       order: { created_at: 'DESC' },
     });
   }
@@ -385,7 +385,7 @@ export class OfferService {
     const activeBookings = await this.itemRepo
       .createQueryBuilder('item')
       .innerJoin(
-        'bookings',
+        'reservations',
         'b',
         'b.offer_item_id = item.id AND b.status != :cancelled',
         { cancelled: 'cancelled' },
@@ -489,8 +489,8 @@ export class OfferService {
        FROM circuit_program_items cpi
        INNER JOIN circuit_days cd ON cd.id = cpi.circuit_day_id
        INNER JOIN circuits c ON c.id = cd.circuit_id
-       WHERE cpi.linked_offer_item_id IN (${itemIds.map(() => '?').join(',')})`,
-      itemIds,
+       WHERE cpi.linked_offer_item_id = ANY($1::uuid[])`,
+      [itemIds],
     );
     return linked;
   }
@@ -514,9 +514,9 @@ export class OfferService {
          FROM circuit_program_items cpi
          INNER JOIN circuit_days cd ON cd.id = cpi.circuit_day_id
          INNER JOIN circuits c ON c.id = cd.circuit_id
-         WHERE cpi.linked_offer_item_id IN (${itemIds.map(() => '?').join(',')})
+         WHERE cpi.linked_offer_item_id = ANY($1::uuid[])
            AND c.status = 'approved'`,
-      itemIds,
+      [itemIds],
     );
 
     if (linked.length > 0) {
@@ -877,7 +877,7 @@ export class OfferService {
       .createQueryBuilder('session')
       .select('session.id')
       .innerJoin(
-        'bookings',
+        'reservations',
         'booking',
         'booking.session_id = session.id AND booking.status != :cancelled',
         { cancelled: 'cancelled' },
@@ -1109,6 +1109,7 @@ export class OfferService {
       item_type: string | null;
       offer_id: string;
       offer_title: string;
+      category_slug: string | null;
       prices: {
         id: string;
         label: string;
@@ -1124,6 +1125,7 @@ export class OfferService {
       item_type: string | null;
       offer_id: string;
       offer_title: string;
+      category_slug: string | null;
       prices: {
         id: string;
         label: string;
@@ -1139,6 +1141,7 @@ export class OfferService {
           item_type: item.item_type,
           offer_id: offer.id,
           offer_title: offer.title,
+          category_slug: (offer as any).category?.slug || null,
           prices: (item.prices || []).map((p) => ({
             id: p.id,
             label: p.label,

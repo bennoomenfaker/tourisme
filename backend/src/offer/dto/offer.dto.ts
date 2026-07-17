@@ -239,7 +239,7 @@ export class UpdateOfferDto {
   confirmation_mode?: string;
 
   @IsOptional()
-  @IsIn(['draft', 'pending', 'archived'])
+  @IsIn(['draft', 'pending', 'approved', 'rejected', 'archived', 'inactive'])
   status?: string;
 
   @IsOptional()
@@ -280,17 +280,7 @@ export class CreateOfferItemDto {
   description?: string;
 
   @IsOptional()
-  @IsIn([
-    'room',
-    'bed',
-    'camping_space',
-    'dish',
-    'menu',
-    'equipment',
-    'activity',
-    'workshop',
-    'transport_service',
-  ])
+  @IsString()
   item_type?: string;
 
   @IsOptional()
@@ -330,7 +320,7 @@ export class UpdateOfferItemDto {
   description?: string;
 
   @IsOptional()
-  @IsIn(['room', 'bed', 'camping_space', 'dish', 'menu', 'equipment', 'activity', 'workshop', 'transport_service'])
+  @IsString()
   item_type?: string;
 
   @IsOptional()
@@ -360,7 +350,7 @@ export class UpdateOfferItemDto {
   production_delay_days?: number;
 
   @IsOptional()
-  @IsIn(['draft', 'active', 'archived'])
+  @IsIn(['draft', 'pending', 'approved', 'rejected', 'archived', 'inactive'])
   status?: string;
 }
 

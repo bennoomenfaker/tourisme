@@ -281,13 +281,20 @@ export default function OfferDetailPage() {
                     <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
                   </button>
                 )}
-                {(user?.role === "guide" || user?.role === "provider") && (
+                {isAuthor && (
                   <button onClick={() => setShowEditWizard(true)} className="px-4 py-2 bg-primary/10 text-primary font-bold rounded-xl text-sm hover:bg-primary/20 transition-colors flex items-center gap-1.5">
                     ✏️ Modifier
                   </button>
                 )}
               </div>
               <div className="text-right">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border mb-1 ${
+                  offer.status === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                  offer.status === "pending" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                  "bg-red-50 text-red-700 border-red-200"
+                }`}>
+                  {offer.status === "approved" ? "Active" : offer.status === "pending" ? "En attente" : offer.status === "draft" ? "Brouillon" : "Refusée"}
+                </span>
                 {offer.price !== null && (
                   <div className="text-primary font-bold text-2xl">
                     {Number(offer.price).toLocaleString()} <span className="text-sm font-normal text-slate-400">TND</span>

@@ -120,6 +120,18 @@ function StepIdentity({ data, setData }: any) {
   );
 }
 
+const CERTIFICATIONS_LIST = [
+  "Guide certifié Éco-Voyage",
+  "Premiers secours (PSC1)",
+  "Guide de montagne agréé",
+  "Formation éco-tourisme",
+  "Brevet de guide touristique",
+  "Certification environnement",
+  "ISO 21401 — Hébergement durable",
+  "Green Key",
+  "Travelife",
+];
+
 function StepOrganization({ data, setData }: any) {
   return (
     <div className="space-y-5">
@@ -245,16 +257,53 @@ function StepOrganization({ data, setData }: any) {
 
       <div className="space-y-1.5">
         <label className="text-sm font-bold text-slate-700 ml-1">Années d&apos;expérience</label>
-        <div className="relative">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">history</span>
+        <div className="flex items-center gap-4">
           <input
             type="number"
             min="0"
-            className="w-full pl-11 pr-4 py-3.5 bg-surface-container border-none rounded-xl focus:ring-2 focus:ring-primary text-slate-900 placeholder:text-slate-400 font-medium"
+            max="50"
+            className="flex-1 pl-4 pr-4 py-3.5 bg-surface-container border-none rounded-xl focus:ring-2 focus:ring-primary text-slate-900 placeholder:text-slate-400 font-medium"
             value={data.years_experience}
-            onChange={(e) => setData({ ...data, years_experience: e.target.value })}
-            placeholder="5"
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "" || (/^\d{0,2}$/.test(v) && Number(v) <= 50)) {
+                setData({ ...data, years_experience: v });
+              }
+            }}
+            placeholder="0"
           />
+          <span className="text-sm font-bold text-slate-500 w-12">ans</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-slate-700 ml-1">Certifications & formations</label>
+        <div className="grid grid-cols-1 gap-2">
+          {CERTIFICATIONS_LIST.map((cert) => {
+            const active = data.certifications.includes(cert);
+            return (
+              <button
+                key={cert}
+                type="button"
+                onClick={() => {
+                  setData({
+                    ...data,
+                    certifications: active
+                      ? data.certifications.filter((c: string) => c !== cert)
+                      : [...data.certifications, cert],
+                  });
+                }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-bold text-left transition-all
+                  ${active ? "bg-primary/10 border-primary text-slate-900" : "border-slate-100 text-slate-600 hover:border-primary/30 bg-white"}`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0
+                  ${active ? "border-primary bg-primary" : "border-slate-300"}`}>
+                  {active && <Check className="w-3 h-3 text-slate-900" />}
+                </div>
+                {cert}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -303,6 +352,7 @@ export default function ProjectOwnerOnboardingPage() {
     city: "",
     region: "",
     years_experience: "",
+    certifications: [] as string[],
   });
 
   useEffect(() => {
@@ -362,6 +412,7 @@ export default function ProjectOwnerOnboardingPage() {
             city: data.city || undefined,
             region: data.region || undefined,
             years_experience: data.years_experience ? Number(data.years_experience) : undefined,
+            certifications: data.certifications.length ? data.certifications : undefined,
           }),
         });
 
@@ -462,8 +513,9 @@ export default function ProjectOwnerOnboardingPage() {
                   </>
                 )}
               </button>
-            </div>
-          </div>
+        </div>
+        <p className="text-xs text-slate-400 font-medium mt-2">Ces labels sont indicatifs. Téléversez la preuve depuis /dashboard#certifications</p>
+      </div>
         </div>
       </main>
     </div>

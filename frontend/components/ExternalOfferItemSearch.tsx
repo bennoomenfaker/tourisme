@@ -30,11 +30,12 @@ type Props = {
   excludeAuthorId: string;
   onSelect: (offerItemId: string, offerTitle: string, itemName: string, providerName: string, price?: string) => void;
   dayLabel?: string;
+  region?: string;
 };
 
 export default function ExternalOfferItemSearch({
-  lat, lng, radiusKm = 30, itemType = "room", category = "accommodation",
-  excludeAuthorId, onSelect, dayLabel,
+  lat, lng, radiusKm = 30, itemType, category,
+  excludeAuthorId, onSelect, dayLabel, region,
 }: Props) {
   const [results, setResults] = useState<ExternalOffer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,18 +47,23 @@ export default function ExternalOfferItemSearch({
       lat: String(lat),
       lng: String(lng),
       radius_km: String(radiusKm),
-      item_type: itemType,
-      category: category,
       exclude_author: excludeAuthorId,
     });
+    if (category) params.set("category", category);
+    if (itemType) params.set("item_type", itemType);
+    if (region) params.set("region", region);
     apiFetch<ExternalOffer[]>(`/offers/public?${params}`)
       .then(setResults)
       .catch(() => setResults([]))
       .finally(() => setLoading(false));
-  }, [lat, lng, radiusKm, itemType, category, excludeAuthorId]);
+  }, [lat, lng, radiusKm, itemType, category, excludeAuthorId, region]);
 
   if (lat == null || lng == null) {
     return <p className="text-xs text-slate-400">Définis la position du jour pour chercher des offres à proximité.</p>;
+  }
+
+  if (!category) {
+    return <p className="text-xs text-slate-400">Sélectionne une catégorie d'abord pour chercher des offres.</p>;
   }
 
   if (loading) {

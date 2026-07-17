@@ -169,7 +169,7 @@ export class QuestionnaireService {
       );
     } else if (questionnaire.target_type === 'guide') {
       await this.guideService.updateQuestionnaireScore(userId, percentage);
-    } else if (questionnaire.target_type === 'eco_project') {
+    } else if (questionnaire.target_type === 'provider') {
       await this.providerService.updateQuestionnaireScore(
         userId,
         percentage,
