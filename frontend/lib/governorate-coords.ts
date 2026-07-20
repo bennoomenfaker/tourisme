@@ -24,3 +24,6 @@ export const GOVERNORATE_COORDS: Record<string, { lat: number; lng: number }> = 
   "Kébili":         { lat: 33.7000, lng: 8.9667 },
   "Tataouine":      { lat: 32.9297, lng: 10.4514 },
 };
+
+/** Liste unique des régions tunisiennes (utilisée partout) */
+export const TUNISIA_REGIONS = Object.keys(GOVERNORATE_COORDS);

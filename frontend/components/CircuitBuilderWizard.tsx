@@ -142,9 +142,7 @@ const OPTION_GROUPS = [
   { value: "equipment", label: "Équipement" }, { value: "activity", label: "Activité" }, { value: "food", label: "Repas" },
 ];
 
-import governorates from "@/lib/tunisia-governorates.json";
-
-const TUNISIA_REGIONS = governorates.map((g) => g.name);
+import { TUNISIA_REGIONS } from "@/lib/governorate-coords";
 
 function genId() { return Math.random().toString(36).substring(2, 10); }
 

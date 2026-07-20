@@ -63,6 +63,8 @@ function NewReservationPage() {
     { full_name: "", age: null, document_type: "none", document_number: "", is_group_leader: true },
   ]);
   const [isCircuit, setIsCircuit] = useState(false);
+  const [bookingRef, setBookingRef] = useState<string | null>(null);
+  const [totalPrice, setTotalPrice] = useState<number>(0);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -128,7 +130,7 @@ function NewReservationPage() {
         }, 0)
     : 0;
 
-  const totalPrice = baseUnitPrice * participants.length;
+  const displayPrice = baseUnitPrice * participants.length;
 
   const handleSubmit = async () => {
     if (!offerId || !participants[0].full_name.trim()) {
@@ -139,14 +141,16 @@ function NewReservationPage() {
     setError(null);
     try {
       if (isCircuit) {
-        await apiFetch(`/circuits/${offerId}/reserve`, {
+        const result = await apiFetch<any>(`/circuits/${offerId}/reserve`, {
           method: "POST",
           body: JSON.stringify({
             participants_count: participants.length,
           }),
         });
+        setBookingRef(result.reservation_ref ?? null);
+        setTotalPrice(Number(result.final_total ?? result.base_total ?? 0));
       } else {
-        await apiFetch("/bookings", {
+        const result = await apiFetch<any>("/bookings", {
           method: "POST",
           body: JSON.stringify({
             offer_id: offerId,
@@ -157,6 +161,8 @@ function NewReservationPage() {
             participants: participants.filter((p) => p.full_name.trim()),
           }),
         });
+        setBookingRef(result.reservation_ref ?? null);
+        setTotalPrice(Number(result.total_price ?? 0));
       }
       setSuccess(true);
     } catch (err: any) {
@@ -194,11 +200,35 @@ function NewReservationPage() {
             <Check size={32} className="text-primary" />
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">Réservation confirmée !</h2>
-          <p className="text-slate-500 text-sm mb-6">
+          <p className="text-slate-500 text-sm mb-4">
             {offer?.confirmation_mode === "manual"
               ? "Votre demande a été envoyée. Le prestataire va la confirmer sous peu."
               : "Votre réservation est confirmée. Vous recevrez un email de confirmation."}
           </p>
+
+          <div className="bg-slate-50 rounded-xl p-4 mb-6 text-left space-y-2">
+            {bookingRef && (
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Référence</span>
+                <span className="font-mono font-bold text-slate-800">{bookingRef}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Offre</span>
+              <span className="font-medium text-slate-800">{offer?.title}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Participants</span>
+              <span className="font-medium text-slate-800">{participants.length}</span>
+            </div>
+            {totalPrice > 0 && (
+              <div className="flex justify-between text-sm border-t border-slate-200 pt-2">
+                <span className="text-slate-500 font-medium">Total</span>
+                <span className="font-bold text-primary">{totalPrice.toLocaleString()} TND</span>
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-3 justify-center">
             <button onClick={() => router.push("/dashboard/reservations")} className="px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600">
               Mes réservations
@@ -333,7 +363,7 @@ function NewReservationPage() {
               <span className="text-slate-500">
                 {selectedPrice ? `${selectedPrice.label} × ${participants.length}` : "Total"}
               </span>
-              <span className="font-bold text-lg text-primary">{totalPrice.toLocaleString()} TND</span>
+              <span className="font-bold text-lg text-primary">{displayPrice.toLocaleString()} TND</span>
             </div>
           </div>
 

@@ -164,7 +164,6 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
 
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
-  const [shortDesc, setShortDesc] = useState("");
   const [description, setDescription] = useState("");
   const [region, setRegion] = useState("");
   const [address, setAddress] = useState("");
@@ -457,7 +456,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
       const offerData: any = {
         title: title.trim(),
         offer_type: category,
-        description: description.trim() || shortDesc.trim() || undefined,
+        description: description.trim() || undefined,
         region: region.trim() || undefined,
         address: address.trim() || undefined,
         latitude: lat ?? undefined,
@@ -636,7 +635,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
         return null;
       case 2:
         if (!title.trim()) return "Le titre est obligatoire.";
-        if (!description.trim() && !shortDesc.trim()) return "La description est obligatoire.";
+        if (!description.trim()) return "La description est obligatoire.";
         if (userRole === "provider" && !selectedVenueId) return "Sélectionnez un établissement.";
         return null;
       case 4: // Tarifs
@@ -942,12 +941,7 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500">Description courte</label>
-                <input className={inputClass} value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} placeholder="Un résumé en une phrase (160 caractères max)" maxLength={160} />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500">Description détaillée</label>
+                <label className="text-xs font-bold text-slate-500">Description</label>
                 <textarea className={`${inputClass} resize-none`} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Décrivez l'expérience en détail..." />
               </div>
 
