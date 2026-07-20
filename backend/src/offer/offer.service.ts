@@ -274,6 +274,14 @@ export class OfferService {
     return offer;
   }
 
+  async findByStatus(status: string): Promise<Offer[]> {
+    return this.repo.find({
+      where: { status, is_deleted: false },
+      relations: ['venue', 'items', 'items.prices'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
   async findByVenue(venueId: string): Promise<Offer[]> {
     return this.repo.find({
       where: { venue_id: venueId, status: 'approved', is_deleted: false },
@@ -340,6 +348,17 @@ export class OfferService {
           const titles = linked.map((c) => c.circuit_title).join(', ');
           throw new BadRequestException(
             `Cette offre est référencée par le(s) circuit(s) publié(s) : ${titles}. Désactivez d'abord le(s) circuit(s).`,
+          );
+        }
+      }
+      // Vérifier qu'il y a au moins 1 item avant soumission
+      if (dto.status === 'pending' && offer.status === 'draft') {
+        const itemCount = await this.itemRepo.count({
+          where: { offer: { id: offerId } },
+        });
+        if (itemCount === 0) {
+          throw new BadRequestException(
+            'Une offre doit contenir au moins 1 item (variante) avant d\'être soumise',
           );
         }
       }
@@ -686,6 +705,32 @@ export class OfferService {
 
     const allowed = common[current] ?? [];
     return allowed.includes(next);
+  }
+
+  async approveOffer(offerId: string): Promise<Offer> {
+    const offer = await this.findOrFail(offerId);
+    if (!this.isValidOfferTransition(offer.status, 'approved', 'admin')) {
+      throw new BadRequestException(
+        `Transition de "${offer.status}" vers "approved" non autorisée`,
+      );
+    }
+    offer.status = 'approved';
+    await this.repo.save(offer);
+    await this.invalidateOfferCache();
+    return this.findById(offerId);
+  }
+
+  async rejectOffer(offerId: string, reason?: string): Promise<Offer> {
+    const offer = await this.findOrFail(offerId);
+    if (!this.isValidOfferTransition(offer.status, 'rejected', 'admin')) {
+      throw new BadRequestException(
+        `Transition de "${offer.status}" vers "rejected" non autorisée`,
+      );
+    }
+    offer.status = 'rejected';
+    await this.repo.save(offer);
+    await this.invalidateOfferCache();
+    return this.findById(offerId);
   }
 
   // ─── OfferItem Prices ──────────────────────────────────

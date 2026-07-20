@@ -354,6 +354,21 @@ export class ReservationService {
       );
     }
 
+    // Restaurer la capacité de la session guide
+    if (reservation.guideOfferingSession?.id) {
+      const session = await this.guideSessionRepo.findOne({
+        where: { id: reservation.guideOfferingSession.id },
+      });
+      if (session && session.remaining_capacity !== null) {
+        const participantCount = reservation.participants?.length ?? 1;
+        session.remaining_capacity += participantCount;
+        if (session.status === 'full') {
+          session.status = 'available';
+        }
+        await this.guideSessionRepo.save(session);
+      }
+    }
+
     // Notifier le voyageur
     this.notificationService
       .create(
@@ -458,6 +473,27 @@ export class ReservationService {
         "Impossible d'ajouter des participants à une réservation annulée",
       );
     }
+
+    // Vérifier la capacité avant d'ajouter
+    const additionalCount = participants.length;
+    if (reservation.offerItem && additionalCount > 0) {
+      const offerItem = await this.offerItemRepo.findOne({
+        where: { id: reservation.offerItem.id },
+      });
+      if (offerItem) {
+        const hasCapacity = await this.capacityService.checkAvailability(
+          offerItem.id,
+          reservation.session?.date ?? null,
+          additionalCount,
+        );
+        if (!hasCapacity) {
+          throw new BadRequestException(
+            `Capacité insuffisante : ${additionalCount} place(s) demandé(s) non disponibles`,
+          );
+        }
+      }
+    }
+
     const entities = participants.map((p) =>
       this.participantRepo.create({
         reservation: { id: reservationId } as Reservation,
@@ -469,6 +505,15 @@ export class ReservationService {
       }),
     );
     await this.participantRepo.save(entities);
+
+    // Réserver capacité pour les nouveaux participants
+    if (reservation.offerItem && additionalCount > 0) {
+      await this.capacityService.reserve(
+        reservation.offerItem.id,
+        reservation.session?.date ?? null,
+        additionalCount,
+      );
+    }
 
     // Recalculer le prix avec le nouveau nombre total de participants
     const updatedReservation = await this.findById(reservationId);

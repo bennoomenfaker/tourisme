@@ -196,8 +196,43 @@ export class CircuitService {
     if (!this.validateCircuitTransition(circuit.status, 'pending', 'provider')) {
       throw new BadRequestException(`Transition de "${circuit.status}" vers "pending" non autorisée`);
     }
+    // Vérifier qu'il y a au moins 1 jour avec des activités
+    const dayCount = await this.dayRepo.count({
+      where: { circuit: { id } },
+    });
+    if (dayCount === 0) {
+      throw new BadRequestException(
+        'Un circuit doit contenir au moins 1 jour avant d\'être soumis',
+      );
+    }
     circuit.status = 'pending';
     return this.circuitRepo.save(circuit);
+  }
+
+  async approveCircuit(id: string): Promise<Circuit> {
+    const circuit = await this.findById(id);
+    if (!this.validateCircuitTransition(circuit.status, 'approved', 'admin')) {
+      throw new BadRequestException(
+        `Transition de "${circuit.status}" vers "approved" non autorisée`,
+      );
+    }
+    circuit.status = 'approved';
+    const saved = await this.circuitRepo.save(circuit);
+    await this.invalidateCircuitCache();
+    return saved;
+  }
+
+  async rejectCircuit(id: string, reason?: string): Promise<Circuit> {
+    const circuit = await this.findById(id);
+    if (!this.validateCircuitTransition(circuit.status, 'rejected', 'admin')) {
+      throw new BadRequestException(
+        `Transition de "${circuit.status}" vers "rejected" non autorisée`,
+      );
+    }
+    circuit.status = 'rejected';
+    const saved = await this.circuitRepo.save(circuit);
+    await this.invalidateCircuitCache();
+    return saved;
   }
 
   private async assertNoConfirmedReservations(
@@ -879,6 +914,8 @@ export class CircuitService {
         'user',
         'circuit.days',
         'circuit.days.programItems',
+        'selectedOptions',
+        'selectedOptions.circuitOption',
       ],
     });
     if (!reservation) throw new NotFoundException('Réservation introuvable');
@@ -919,16 +956,21 @@ export class CircuitService {
             manager,
           );
 
-          const options = await manager.find(CircuitOption, {
-            where: { circuit: { id: reservation.circuit.id } },
-          });
-          const quantities = options.map(() => 1);
-          await this.reservationApp.restoreOptionsCapacity(
-            options,
-            reservation.circuit.start_date,
-            quantities,
-            manager,
-          );
+          // Restaurer capacité des options sélectionnées
+          if (reservation.selectedOptions?.length) {
+            const selectedOpts = reservation.selectedOptions.map(
+              (so: any) => so.circuitOption,
+            );
+            const quantities = reservation.selectedOptions.map(
+              (so: any) => so.quantity ?? 1,
+            );
+            await this.reservationApp.restoreOptionsCapacity(
+              selectedOpts,
+              reservation.circuit.start_date,
+              quantities,
+              manager,
+            );
+          }
         }
 
         reservation.status = 'rejected';
@@ -983,7 +1025,7 @@ export class CircuitService {
     const pendingReservations = await this.reservationRepo.count({
       where: {
         circuit: { id },
-        status: 'pending',
+      status: 'draft',
       },
     });
 
@@ -1048,6 +1090,8 @@ export class CircuitService {
         'user',
         'circuit.days',
         'circuit.days.programItems',
+        'selectedOptions',
+        'selectedOptions.circuitOption',
       ],
     });
     if (!reservation) throw new NotFoundException('Réservation introuvable');
@@ -1085,16 +1129,21 @@ export class CircuitService {
             manager,
           );
 
-          const options = await manager.find(CircuitOption, {
-            where: { circuit: { id: reservation.circuit.id } },
-          });
-          const quantities = options.map(() => 1);
-          await this.reservationApp.restoreOptionsCapacity(
-            options,
-            reservation.circuit.start_date,
-            quantities,
-            manager,
-          );
+          // Restaurer capacité des options sélectionnées
+          if (reservation.selectedOptions?.length) {
+            const selectedOpts = reservation.selectedOptions.map(
+              (so: any) => so.circuitOption,
+            );
+            const quantities = reservation.selectedOptions.map(
+              (so: any) => so.quantity ?? 1,
+            );
+            await this.reservationApp.restoreOptionsCapacity(
+              selectedOpts,
+              reservation.circuit.start_date,
+              quantities,
+              manager,
+            );
+          }
         }
 
         reservation.status = 'cancelled';
@@ -1221,14 +1270,23 @@ export class CircuitService {
       allDayDates,
       reservation.participants_count,
     );
-    const options = await this.optionRepo.find({
-      where: { circuit: { id: circuitWithDays.id } },
+    // Restore only selected options
+    const reservationWithOptions = await this.reservationRepo.findOne({
+      where: { id: reservation.id },
+      relations: ['selectedOptions', 'selectedOptions.circuitOption'],
     });
-    const quantities = options.map(() => 1);
-    await this.reservationApp.restoreOptionsCapacity(
-      options,
-      circuitWithDays.start_date,
-      quantities,
-    );
+    if (reservationWithOptions?.selectedOptions?.length) {
+      const selectedOpts = reservationWithOptions.selectedOptions.map(
+        (so: any) => so.circuitOption,
+      );
+      const quantities = reservationWithOptions.selectedOptions.map(
+        (so: any) => so.quantity ?? 1,
+      );
+      await this.reservationApp.restoreOptionsCapacity(
+        selectedOpts,
+        circuitWithDays.start_date,
+        quantities,
+      );
+    }
   }
 }

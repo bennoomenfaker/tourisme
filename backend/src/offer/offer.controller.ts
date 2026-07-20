@@ -408,4 +408,30 @@ export class OfferController {
   findSessions(@Param('itemId') itemId: string) {
     return this.service.findSessions(itemId);
   }
+
+  // ─── Admin ─────────────────────────────────────────
+
+  /** Liste des offres en attente (admin) */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Get('admin/pending')
+  findPendingOffers() {
+    return this.service.findByStatus('pending');
+  }
+
+  /** Approuver une offre (admin) */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Patch('admin/:id/approve')
+  approveOffer(@Param('id') id: string) {
+    return this.service.approveOffer(id);
+  }
+
+  /** Rejeter une offre (admin) */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Patch('admin/:id/reject')
+  rejectOffer(@Param('id') id: string, @Body('reason') reason?: string) {
+    return this.service.rejectOffer(id, reason);
+  }
 }

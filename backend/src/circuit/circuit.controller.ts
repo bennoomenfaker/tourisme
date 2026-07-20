@@ -348,4 +348,34 @@ export class CircuitController {
   finalizeCompletedCircuits() {
     return this.service.finalizeCompletedReservations();
   }
+
+  /**
+   * Liste des circuits en attente (admin)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Get('admin/pending')
+  findPendingCircuits() {
+    return this.service.findAll('pending');
+  }
+
+  /**
+   * Approuver un circuit (admin)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Patch('admin/:id/approve')
+  approveCircuit(@Param('id') id: string) {
+    return this.service.approveCircuit(id);
+  }
+
+  /**
+   * Rejeter un circuit (admin)
+   */
+  @ApiBearerAuth('bearer')
+  @Roles(Role.ADMIN)
+  @Patch('admin/:id/reject')
+  rejectCircuit(@Param('id') id: string, @Body('reason') reason?: string) {
+    return this.service.rejectCircuit(id, reason);
+  }
 }

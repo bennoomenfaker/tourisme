@@ -4,10 +4,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Circuit } from './circuit.entity';
 import { User } from '../../users/entities/user.entity';
+import { CircuitReservationOption } from './circuit-reservation-option.entity';
 
 /**
  * Réservation d'un circuit par un éco-voyageur
@@ -45,4 +47,11 @@ export class CircuitReservation {
 
   @CreateDateColumn()
   created_at!: Date;
+
+  @OneToMany(
+    () => CircuitReservationOption,
+    (opt) => opt.circuitReservation,
+    { cascade: true },
+  )
+  selectedOptions?: CircuitReservationOption[];
 }

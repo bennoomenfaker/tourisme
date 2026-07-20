@@ -27,6 +27,8 @@ import { Reservation } from '../reservation/entities/reservation.entity';
 import { ReservationParticipant } from '../reservation/entities/reservation-participant.entity';
 import { NotificationService } from '../notification/notification.service';
 import { EcoTravelerMongoService } from '../eco-traveler/eco-traveler-mongo.service';
+import { CapacityDomainService } from '../domain/capacity-domain.service';
+import { ReservationApplicationService } from '../domain/reservation-application.service';
 
 @Injectable()
 export class TripPlanService {
@@ -54,6 +56,8 @@ export class TripPlanService {
     private readonly notificationService: NotificationService,
     private readonly dataSource: DataSource,
     private readonly mongoService: EcoTravelerMongoService,
+    private readonly capacityService: CapacityDomainService,
+    private readonly reservationApp: ReservationApplicationService,
   ) {}
 
   // ─── TripPlan CRUD ───────────────────────────────────
@@ -269,6 +273,33 @@ export class TripPlanService {
           await queryRunner.manager.save(CircuitReservation, reservation);
           circuitReservationsCount++;
 
+          // Réserver capacité pour les activités liées au circuit
+          const fullCircuit = await this.circuitRepo.findOne({
+            where: { id: circuit.id },
+            relations: ['days', 'days.programItems'],
+          });
+          if (fullCircuit?.days?.length) {
+            const allProgramItems: any[] = [];
+            const allDayDates: (Date | null)[] = [];
+            for (const day of fullCircuit.days) {
+              const dayDate = day.date || fullCircuit.start_date;
+              for (const prog of day.programItems ?? []) {
+                allProgramItems.push(prog);
+                allDayDates.push(dayDate);
+              }
+            }
+            if (allProgramItems.length) {
+              await this.reservationApp
+                .reserveProgramItemsCapacity(
+                  allProgramItems,
+                  allDayDates,
+                  participantCount,
+                  queryRunner.manager,
+                )
+                .catch(() => {});
+            }
+          }
+
           if (circuit.author_id) {
             const notifType =
               reservationStatus === 'confirmed'
@@ -340,7 +371,7 @@ export class TripPlanService {
             .substring(2, 8)
             .toUpperCase();
           const booking = queryRunner.manager.create(Reservation, {
-            booking_ref: `BK-${refSuffix}`,
+            reservation_ref: `BK-${refSuffix}`,
             traveler: { id: ecoTravelerId } as User,
             guideOffering: { id: guideOffering.id } as any,
             guideOfferingSession: { id: sess.id } as any,
@@ -454,7 +485,7 @@ export class TripPlanService {
           .substring(2, 8)
           .toUpperCase();
         const booking = queryRunner.manager.create(Reservation, {
-          booking_ref: `BK-${refSuffix}`,
+          reservation_ref: `BK-${refSuffix}`,
           traveler: { id: ecoTravelerId } as User,
           offer: { id: offer.id } as any,
           offerItem: { id: offerItem.id } as OfferItem,
@@ -466,6 +497,14 @@ export class TripPlanService {
         });
 
         const saved = await queryRunner.manager.save(Reservation, booking);
+
+        // Décrémenter capacité offre
+        await this.capacityService.reserve(
+          offerItem.id,
+          null,
+          participantCount,
+          queryRunner.manager,
+        );
 
         if (dto.participants?.length) {
           const participants = dto.participants.map((p) =>
