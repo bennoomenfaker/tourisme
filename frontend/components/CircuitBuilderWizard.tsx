@@ -43,7 +43,7 @@ interface ExternalOfferItem {
 }
 
 interface OptionForm {
-  id: string; option_group: string; option_type: string; extra_price: string;
+  id: string; name: string; option_group: string; option_type: string; extra_price: string;
   is_included: boolean; is_required: boolean;
   external_offer_item_id: string | null;
   external_offer_title: string;
@@ -291,6 +291,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   const [basePrice, setBasePrice] = useState("");
   const [currency, setCurrency] = useState("TND");
   const [maxParticipants, setMaxParticipants] = useState("");
+  const [minParticipants, setMinParticipants] = useState("");
   const [bookingDeadlineDays, setBookingDeadlineDays] = useState("");
   const [confirmationMode, setConfirmationMode] = useState("automatic");
   const [inclusions, setInclusions] = useState("");
@@ -436,11 +437,37 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
 
 
 
+  function validateStep(s: number): string | null {
+    switch (s) {
+      case 1:
+        if (!title.trim()) return "Le titre est obligatoire.";
+        if (!startDate) return "La date de début est obligatoire.";
+        if (dateError) return dateError;
+        if (!durationDays || Number(durationDays) < 1) return "La durée doit être d'au moins 1 jour.";
+        return null;
+      case 2:
+        if (days.length === 0) return "Ajoutez au moins 1 jour au circuit.";
+        return null;
+      case 3: {
+        const hasAnyProgram = days.some(d => d.programItems.length > 0);
+        if (!hasAnyProgram) return "Ajoutez au moins 1 activité dans un jour.";
+        return null;
+      }
+      default:
+        return null;
+    }
+  }
+
   const goNext = () => {
-    if (step === 1 && dateError) return;
+    const validationError = validateStep(step);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setError('');
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
-  const goBack = () => setStep((s) => Math.max(s - 1, 1));
+  const goBack = () => { setError(''); setStep((s) => Math.max(s - 1, 1)); };
 
   function handleDurationDaysChange(val: string) {
     const n = parseInt(val) || 1;
@@ -514,7 +541,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   }
 
   function addOption() {
-    setOptions((prev) => [...prev, { id: genId(), option_group: "activity", option_type: "single_choice", extra_price: "", is_included: false, is_required: false, external_offer_item_id: null, external_offer_title: "", external_provider_name: "" }]);
+    setOptions((prev) => [...prev, { id: genId(), name: '', option_group: "activity", option_type: "single_choice", extra_price: "", is_included: false, is_required: false, external_offer_item_id: null, external_offer_title: "", external_provider_name: "" }]);
   }
 
   function removeOption(optId: string) {
@@ -591,6 +618,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
           duration_days: Number(durationDays) || undefined, duration_nights: Number(durationNights) || undefined,
           base_price: basePrice ? Number(basePrice) : undefined, currency,
           max_participants: maxParticipants ? Number(maxParticipants) : undefined,
+          min_participants: minParticipants ? Number(minParticipants) : undefined,
           booking_deadline_days: bookingDeadlineDays ? Number(bookingDeadlineDays) : undefined,
           confirmation_mode: confirmationMode, difficulty_level: difficultyLevel,
           inclusions: inclusions || undefined, exclusions: exclusions || undefined,
@@ -659,7 +687,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
         for (const opt of options) {
           await apiFetch(`/circuits/${circuitId}/options`, {
             method: "POST", headers: { Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ option_group: opt.option_group || undefined, option_type: opt.option_type, extra_price: opt.extra_price ? Number(opt.extra_price) : undefined, is_included: opt.is_included, is_required: opt.is_required, offer_item_id: opt.external_offer_item_id || undefined }),
+            body: JSON.stringify({ name: opt.name || undefined, option_group: opt.option_group || undefined, option_type: opt.option_type, extra_price: opt.extra_price ? Number(opt.extra_price) : undefined, is_included: opt.is_included, is_required: opt.is_required, offer_item_id: opt.external_offer_item_id || undefined }),
           });
         }
       } catch (dayErr: any) {
@@ -1344,6 +1372,10 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                     <label className="block text-xs font-medium text-slate-500 mb-1">Participants max</label>
                     <input type="number" min={1} value={maxParticipants} onChange={(e) => setMaxParticipants(e.target.value)} placeholder="Ex: 15" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Participants min</label>
+                    <input type="number" min={1} value={minParticipants} onChange={(e) => setMinParticipants(e.target.value)} placeholder="Ex: 2" className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-3">
                   <div>
@@ -1388,6 +1420,10 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                   {options.map((opt) => (
                     <div key={opt.id} className="bg-slate-50 rounded-xl p-3 space-y-2">
                       <div className="grid grid-cols-5 gap-2 items-end">
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Nom de l'option</label>
+                          <input type="text" value={opt.name} onChange={(e) => updateOption(opt.id, { name: e.target.value })} placeholder="Ex: Navette aéroport" className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary" />
+                        </div>
                         <div>
                           <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Groupe</label>
                           <select value={opt.option_group} onChange={(e) => updateOption(opt.id, { option_group: e.target.value })}
@@ -1467,7 +1503,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                   <div className="flex flex-wrap gap-2 text-xs text-slate-500 mb-3">
                     {region && <span className="flex items-center gap-1"><MapPin size={12} /> {region}</span>}
                     {durationDays && <span className="flex items-center gap-1"><Clock size={12} /> {durationDays} jour{durationDays !== "1" ? "s" : ""}</span>}
-                    {maxParticipants && <span className="flex items-center gap-1"><Users size={12} /> Max {maxParticipants} pers.</span>}
+                    {maxParticipants && <span className="flex items-center gap-1"><Users size={12} /> {minParticipants ? `${minParticipants}-` : ''}{maxParticipants} pers.</span>}
                     {confirmationMode === "automatic" ? <span className="flex items-center gap-1 text-primary"><Check size={12} /> Confirmation instantanée</span> : <span className="flex items-center gap-1 text-amber-600"><Info size={12} /> Sur demande</span>}
                   </div>
                   {description && <p className="text-sm text-slate-600 leading-relaxed mb-3 line-clamp-3">{description}</p>}
@@ -1493,7 +1529,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                   {options.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-100">
                       <h4 className="font-semibold text-xs text-slate-700 mb-1">{options.length} option{options.length > 1 ? "s" : ""}</h4>
-                      <div className="flex flex-wrap gap-1">{options.map((opt) => <span key={opt.id} className="text-[10px] bg-slate-100 rounded px-1.5 py-0.5 text-slate-500">{OPTION_GROUPS.find((g) => g.value === opt.option_group)?.label || opt.option_group}{opt.extra_price ? ` (+${Number(opt.extra_price).toLocaleString()} ${currency})` : ""}</span>)}</div>
+                      <div className="flex flex-wrap gap-1">{options.map((opt) => <span key={opt.id} className="text-[10px] bg-slate-100 rounded px-1.5 py-0.5 text-slate-500">{opt.name || OPTION_GROUPS.find((g) => g.value === opt.option_group)?.label || opt.option_group}{opt.extra_price ? ` (+${Number(opt.extra_price).toLocaleString()} ${currency})` : ""}</span>)}</div>
                     </div>
                   )}
                 </div>

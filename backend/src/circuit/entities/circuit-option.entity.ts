@@ -43,6 +43,10 @@ export class CircuitOption {
   option_group!: string | null;
   // 'transport' | 'accommodation' | 'equipment' | 'activity' | 'food'
 
+  @Column({ type: 'varchar', nullable: true })
+  name!: string | null;
+  // Nom descriptif de l'option (ex: "Navette aéroport", "Vélo tout-terrain")
+
   @Column()
   option_type!: string;
   // 'single_choice' | 'multiple_choice' | 'quantity' | 'time_slot'

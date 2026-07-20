@@ -61,6 +61,11 @@ export class CreateCircuitDto {
 
   @IsOptional()
   @IsInt()
+  @Min(1)
+  min_participants?: number;
+
+  @IsOptional()
+  @IsInt()
   @Min(0)
   booking_deadline_days?: number;
 

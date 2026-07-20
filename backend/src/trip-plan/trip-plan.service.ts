@@ -213,7 +213,7 @@ export class TripPlanService {
     tripPlanId: string,
     ecoTravelerId: string,
     dto: BookTripPlanDto,
-  ): Promise<Reservation[]> {
+  ): Promise<{ reservations: Reservation[]; errors: { item_id: string; label: string; error: string }[] }> {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
     const fullPlan = await this.tripPlanRepo.findOne({
       where: { id: tripPlanId },
@@ -242,130 +242,241 @@ export class TripPlanService {
 
     try {
       const reservations: Reservation[] = [];
+      const errors: { item_id: string; label: string; error: string }[] = [];
       let circuitReservationsCount = 0;
 
       for (const item of fullPlan.items) {
-        // ── Reserver un circuit ──
-        if (item.circuit) {
-          const circuit = item.circuit;
-          if (
-            circuit.max_participants &&
-            participantCount > circuit.max_participants
-          ) {
-            throw new BadRequestException(
-              `Le nombre de participants (${participantCount}) dépasse la limite pour le circuit "${circuit.title}" (${circuit.max_participants} max)`,
-            );
-          }
+        const itemLabel =
+          item.circuit?.title ?? item.guideOffering?.title ?? item.offerItem?.name ?? 'Élément inconnu';
 
-          const reservationStatus =
-            circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
-          const baseTotal =
-            (Number(circuit.base_price) ?? 0) * participantCount;
-          const reservation = queryRunner.manager.create(CircuitReservation, {
-            circuit: { id: circuit.id } as Circuit,
-            user: { id: ecoTravelerId } as User,
-            participants_count: participantCount,
-            base_total: baseTotal,
-            options_total: 0,
-            final_total: baseTotal,
-            status: reservationStatus,
-          });
-          await queryRunner.manager.save(CircuitReservation, reservation);
-          circuitReservationsCount++;
+        try {
+          // ── Reserver un circuit ──
+          if (item.circuit) {
+            const circuit = item.circuit;
+            if (
+              circuit.max_participants &&
+              participantCount > circuit.max_participants
+            ) {
+              errors.push({ item_id: item.id, label: itemLabel, error: `Participants (${participantCount}) dépassent la limite (${circuit.max_participants})` });
+              continue;
+            }
 
-          // Réserver capacité pour les activités liées au circuit
-          const fullCircuit = await this.circuitRepo.findOne({
-            where: { id: circuit.id },
-            relations: ['days', 'days.programItems'],
-          });
-          if (fullCircuit?.days?.length) {
-            const allProgramItems: any[] = [];
-            const allDayDates: (Date | null)[] = [];
-            for (const day of fullCircuit.days) {
-              const dayDate = day.date || fullCircuit.start_date;
-              for (const prog of day.programItems ?? []) {
-                allProgramItems.push(prog);
-                allDayDates.push(dayDate);
+            const reservationStatus =
+              circuit.confirmation_mode === 'manual' ? 'pending' : 'confirmed';
+            const baseTotal =
+              (Number(circuit.base_price) ?? 0) * participantCount;
+            const reservation = queryRunner.manager.create(CircuitReservation, {
+              circuit: { id: circuit.id } as Circuit,
+              user: { id: ecoTravelerId } as User,
+              participants_count: participantCount,
+              base_total: baseTotal,
+              options_total: 0,
+              final_total: baseTotal,
+              status: reservationStatus,
+            });
+            await queryRunner.manager.save(CircuitReservation, reservation);
+            circuitReservationsCount++;
+
+            // Réserver capacité pour les activités liées au circuit
+            const fullCircuit = await this.circuitRepo.findOne({
+              where: { id: circuit.id },
+              relations: ['days', 'days.programItems'],
+            });
+            if (fullCircuit?.days?.length) {
+              const allProgramItems: any[] = [];
+              const allDayDates: (Date | null)[] = [];
+              for (const day of fullCircuit.days) {
+                const dayDate = day.date || fullCircuit.start_date;
+                for (const prog of day.programItems ?? []) {
+                  allProgramItems.push(prog);
+                  allDayDates.push(dayDate);
+                }
+              }
+              if (allProgramItems.length) {
+                await this.reservationApp
+                  .reserveProgramItemsCapacity(
+                    allProgramItems,
+                    allDayDates,
+                    participantCount,
+                    queryRunner.manager,
+                  )
+                  .catch(() => {});
               }
             }
-            if (allProgramItems.length) {
-              await this.reservationApp
-                .reserveProgramItemsCapacity(
-                  allProgramItems,
-                  allDayDates,
-                  participantCount,
-                  queryRunner.manager,
+
+            if (circuit.author_id) {
+              const notifType =
+                reservationStatus === 'confirmed'
+                  ? 'booking_confirmed'
+                  : 'booking_request';
+              const notifTitle =
+                reservationStatus === 'confirmed'
+                  ? 'Réservation circuit confirmée'
+                  : 'Demande de réservation circuit';
+              const notifBody =
+                reservationStatus === 'confirmed'
+                  ? `Un voyageur a réservé le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan.`
+                  : `Un voyageur souhaite réserver le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan. En attente de confirmation.`;
+              this.notificationService
+                .create(
+                  circuit.author_id,
+                  notifType,
+                  notifTitle,
+                  notifBody,
+                  `/dashboard/incoming`,
                 )
                 .catch(() => {});
             }
+            continue;
           }
 
-          if (circuit.author_id) {
-            const notifType =
-              reservationStatus === 'confirmed'
-                ? 'booking_confirmed'
-                : 'booking_request';
-            const notifTitle =
-              reservationStatus === 'confirmed'
-                ? 'Réservation circuit confirmée'
-                : 'Demande de réservation circuit';
-            const notifBody =
-              reservationStatus === 'confirmed'
-                ? `Un voyageur a réservé le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan.`
-                : `Un voyageur souhaite réserver le circuit "${circuit.title}" (${participantCount} participant(s)) via un Trip Plan. En attente de confirmation.`;
+          // ── Reserver une prestation guide ──
+          if (item.guideOffering) {
+            const guideOffering = item.guideOffering;
+            const guideSession = item.guideOfferingSession;
+
+            if (guideOffering.status !== 'active') {
+              errors.push({ item_id: item.id, label: itemLabel, error: `La prestation n'est pas active` });
+              continue;
+            }
+
+            if (!guideSession) {
+              const session = await this.guideSessionRepo.findOne({
+                where: {
+                  guideOffering: { id: guideOffering.id },
+                  status: 'available',
+                },
+                order: { date: 'ASC' },
+              });
+              if (!session) {
+                errors.push({ item_id: item.id, label: itemLabel, error: 'Aucune session disponible' });
+                continue;
+              }
+              item.guideOfferingSession = session;
+            }
+
+            const sess = item.guideOfferingSession!;
+
+            if (
+              sess.remaining_capacity !== null &&
+              participantCount > sess.remaining_capacity
+            ) {
+              errors.push({ item_id: item.id, label: itemLabel, error: `Capacité insuffisante : ${sess.remaining_capacity} place(s) restante(s)` });
+              continue;
+            }
+
+            const totalPrice = Number(guideOffering.price) * participantCount;
+            const refSuffix = Math.random()
+              .toString(36)
+              .substring(2, 8)
+              .toUpperCase();
+            const booking = queryRunner.manager.create(Reservation, {
+              reservation_ref: `BK-${refSuffix}`,
+              traveler: { id: ecoTravelerId } as User,
+              guideOffering: { id: guideOffering.id } as any,
+              guideOfferingSession: { id: sess.id } as any,
+              total_price: totalPrice,
+              currency: 'TND',
+              special_requests: dto.special_requests ?? null,
+              confirmation_mode: guideOffering.confirmation_mode ?? 'manual',
+              status:
+                guideOffering.confirmation_mode === 'automatic'
+                  ? 'confirmed'
+                  : 'pending',
+            });
+
+            const saved = await queryRunner.manager.save(Reservation, booking);
+
+            if (dto.participants?.length) {
+              const participants = dto.participants.map((p) =>
+                queryRunner.manager.create(ReservationParticipant, {
+                  reservation: { id: saved.id } as Reservation,
+                  full_name: p.full_name,
+                  age: p.age ?? null,
+                  document_type: p.document_type ?? null,
+                  document_number: p.document_number ?? null,
+                  is_group_leader: p.is_group_leader ?? false,
+                }),
+              );
+              await queryRunner.manager.save(ReservationParticipant, participants);
+            }
+
+            const newRemaining =
+              sess.remaining_capacity !== null
+                ? Math.max(0, sess.remaining_capacity - participantCount)
+                : null;
+            await queryRunner.manager.update(GuideOfferingSession, sess.id, {
+              remaining_capacity: newRemaining,
+              status:
+                newRemaining !== null && newRemaining <= 0 ? 'full' : sess.status,
+            });
+
+            reservations.push(saved);
+
             this.notificationService
               .create(
-                circuit.author_id,
-                notifType,
-                notifTitle,
-                notifBody,
+                guideOffering.guide_id,
+                'guide_booking',
+                'Réservation guide via Trip Plan',
+                `Un voyageur a réservé "${guideOffering.title}" pour ${participantCount} participant(s) le ${sess.date instanceof Date ? sess.date.toLocaleDateString('fr-FR') : sess.date}`,
                 `/dashboard/incoming`,
               )
               .catch(() => {});
-          }
-          continue;
-        }
 
-        // ── Reserver une prestation guide ──
-        if (item.guideOffering) {
-          const guideOffering = item.guideOffering;
-          const guideSession = item.guideOfferingSession;
-
-          if (guideOffering.status !== 'active') {
-            throw new BadRequestException(
-              `La prestation "${guideOffering.title}" n'est pas active`,
-            );
+            continue;
           }
 
-          if (!guideSession) {
-            // Prendre la première session disponible si non spécifiée
-            const session = await this.guideSessionRepo.findOne({
-              where: {
-                guideOffering: { id: guideOffering.id },
-                status: 'available',
-              },
-              order: { date: 'ASC' },
-            });
-            if (!session) {
-              throw new BadRequestException(
-                `Aucune session disponible pour "${guideOffering.title}"`,
-              );
-            }
-            item.guideOfferingSession = session;
-          }
+          // ── Reserver une offre ──
+          const offerItem = item.offerItem;
+          if (!offerItem) continue;
 
-          const sess = item.guideOfferingSession!;
+          const offer = offerItem.offer;
+          if (!offer) continue;
+
+          if (offer.max_group_size && participantCount > offer.max_group_size) {
+            errors.push({ item_id: item.id, label: itemLabel, error: `Participants (${participantCount}) dépassent la limite (${offer.max_group_size})` });
+            continue;
+          }
 
           if (
-            sess.remaining_capacity !== null &&
-            participantCount > sess.remaining_capacity
+            offer.min_age != null &&
+            dto.participants?.some((p) => p.age != null && p.age < offer.min_age!)
           ) {
-            throw new BadRequestException(
-              `Capacité insuffisante pour "${guideOffering.title}" : ${sess.remaining_capacity} place(s) restante(s)`,
-            );
+            errors.push({ item_id: item.id, label: itemLabel, error: `Un participant est trop jeune (min: ${offer.min_age} ans)` });
+            continue;
           }
 
-          const totalPrice = Number(guideOffering.price) * participantCount;
+          const defaultPrice =
+            offerItem.prices?.find((p) => p.is_default) ?? offerItem.prices?.[0];
+          let totalPrice = 0;
+          if (defaultPrice) {
+            const unitPrice = Number(defaultPrice.price);
+            const pricingUnit = defaultPrice.pricing_unit ?? 'per_person';
+            const nights = offerItem.details_json?.nights ?? 1;
+
+            switch (pricingUnit) {
+              case 'per_person_per_night':
+              case 'per_night':
+                totalPrice = unitPrice * participantCount * nights;
+                break;
+              case 'per_room_per_night':
+                totalPrice = unitPrice * nights;
+                break;
+              case 'per_bed': {
+                const bedCount =
+                  offerItem.details_json?.bed_count ?? participantCount;
+                totalPrice = unitPrice * bedCount * nights;
+                break;
+              }
+              case 'per_person':
+              default:
+                totalPrice = unitPrice * participantCount;
+                break;
+            }
+          } else if (offer.price) {
+            totalPrice = Number(offer.price) * participantCount;
+          }
+
           const refSuffix = Math.random()
             .toString(36)
             .substring(2, 8)
@@ -373,19 +484,23 @@ export class TripPlanService {
           const booking = queryRunner.manager.create(Reservation, {
             reservation_ref: `BK-${refSuffix}`,
             traveler: { id: ecoTravelerId } as User,
-            guideOffering: { id: guideOffering.id } as any,
-            guideOfferingSession: { id: sess.id } as any,
+            offer: { id: offer.id } as any,
+            offerItem: { id: offerItem.id } as OfferItem,
             total_price: totalPrice,
-            currency: 'TND',
             special_requests: dto.special_requests ?? null,
-            confirmation_mode: guideOffering.confirmation_mode ?? 'manual',
+            confirmation_mode: offer.confirmation_mode ?? 'automatic',
             status:
-              guideOffering.confirmation_mode === 'automatic'
-                ? 'confirmed'
-                : 'pending',
+              offer.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
           });
 
           const saved = await queryRunner.manager.save(Reservation, booking);
+
+          await this.capacityService.reserve(
+            offerItem.id,
+            null,
+            participantCount,
+            queryRunner.manager,
+          );
 
           if (dto.participants?.length) {
             const participants = dto.participants.map((p) =>
@@ -401,154 +516,52 @@ export class TripPlanService {
             await queryRunner.manager.save(ReservationParticipant, participants);
           }
 
-          // Décrémenter capacité session
-          const newRemaining =
-            sess.remaining_capacity !== null
-              ? Math.max(0, sess.remaining_capacity - participantCount)
-              : null;
-          await queryRunner.manager.update(GuideOfferingSession, sess.id, {
-            remaining_capacity: newRemaining,
-            status:
-              newRemaining !== null && newRemaining <= 0 ? 'full' : sess.status,
-          });
-
           reservations.push(saved);
 
-          this.notificationService
-            .create(
-              guideOffering.guide_id,
-              'guide_booking',
-              'Réservation guide via Trip Plan',
-              `Un voyageur a réservé "${guideOffering.title}" pour ${participantCount} participant(s) le ${sess.date instanceof Date ? sess.date.toLocaleDateString('fr-FR') : sess.date}`,
-              `/dashboard/incoming`,
-            )
-            .catch(() => {});
-
-          continue;
-        }
-
-        // ── Reserver une offre ──
-        const offerItem = item.offerItem;
-        if (!offerItem) continue;
-
-        const offer = offerItem.offer;
-        if (!offer) continue;
-
-        if (offer.max_group_size && participantCount > offer.max_group_size) {
-          throw new BadRequestException(
-            `Le nombre de participants (${participantCount}) dépasse la limite autorisée pour "${offer.title}" (${offer.max_group_size} max)`,
-          );
-        }
-
-        if (
-          offer.min_age != null &&
-          dto.participants?.some((p) => p.age != null && p.age < offer.min_age!)
-        ) {
-          throw new BadRequestException(
-            `Un participant est trop jeune pour "${offer.title}" (âge minimum: ${offer.min_age} ans)`,
-          );
-        }
-
-        const defaultPrice =
-          offerItem.prices?.find((p) => p.is_default) ?? offerItem.prices?.[0];
-        let totalPrice = 0;
-        if (defaultPrice) {
-          const unitPrice = Number(defaultPrice.price);
-          const pricingUnit = defaultPrice.pricing_unit ?? 'per_person';
-          const nights = offerItem.details_json?.nights ?? 1;
-
-          switch (pricingUnit) {
-            case 'per_person_per_night':
-            case 'per_night':
-              totalPrice = unitPrice * participantCount * nights;
-              break;
-            case 'per_room_per_night':
-              totalPrice = unitPrice * nights;
-              break;
-            case 'per_bed': {
-              const bedCount =
-                offerItem.details_json?.bed_count ?? participantCount;
-              totalPrice = unitPrice * bedCount * nights;
-              break;
-            }
-            case 'per_person':
-            default:
-              totalPrice = unitPrice * participantCount;
-              break;
+          if (offer.author_id) {
+            const notifType =
+              offer.confirmation_mode === 'manual'
+                ? 'booking_request'
+                : 'booking_confirmed';
+            const notifTitle =
+              offer.confirmation_mode === 'manual'
+                ? 'Demande de réservation Trip Plan'
+                : 'Réservation Trip Plan confirmée';
+            const notifBody =
+              offer.confirmation_mode === 'manual'
+                ? `Un voyageur réserve "${offer.title}" via un Trip Plan. ${participantCount} participant(s). En attente de votre confirmation.`
+                : `Un voyageur a réservé "${offer.title}" via un Trip Plan. ${participantCount} participant(s). Réservation confirmée automatiquement.`;
+            this.notificationService
+              .create(
+                offer.author_id,
+                notifType,
+                notifTitle,
+                notifBody,
+                `/dashboard/incoming`,
+              )
+              .catch(() => {});
           }
-        } else if (offer.price) {
-          totalPrice = Number(offer.price) * participantCount;
-        }
-
-        const refSuffix = Math.random()
-          .toString(36)
-          .substring(2, 8)
-          .toUpperCase();
-        const booking = queryRunner.manager.create(Reservation, {
-          reservation_ref: `BK-${refSuffix}`,
-          traveler: { id: ecoTravelerId } as User,
-          offer: { id: offer.id } as any,
-          offerItem: { id: offerItem.id } as OfferItem,
-          total_price: totalPrice,
-          special_requests: dto.special_requests ?? null,
-          confirmation_mode: offer.confirmation_mode ?? 'automatic',
-          status:
-            offer.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
-        });
-
-        const saved = await queryRunner.manager.save(Reservation, booking);
-
-        // Décrémenter capacité offre
-        await this.capacityService.reserve(
-          offerItem.id,
-          null,
-          participantCount,
-          queryRunner.manager,
-        );
-
-        if (dto.participants?.length) {
-          const participants = dto.participants.map((p) =>
-            queryRunner.manager.create(ReservationParticipant, {
-              reservation: { id: saved.id } as Reservation,
-              full_name: p.full_name,
-              age: p.age ?? null,
-              document_type: p.document_type ?? null,
-              document_number: p.document_number ?? null,
-              is_group_leader: p.is_group_leader ?? false,
-            }),
-          );
-          await queryRunner.manager.save(ReservationParticipant, participants);
-        }
-
-        reservations.push(saved);
-
-        if (offer.author_id) {
-          const notifType =
-            offer.confirmation_mode === 'manual'
-              ? 'booking_request'
-              : 'booking_confirmed';
-          const notifTitle =
-            offer.confirmation_mode === 'manual'
-              ? 'Demande de réservation Trip Plan'
-              : 'Réservation Trip Plan confirmée';
-          const notifBody =
-            offer.confirmation_mode === 'manual'
-              ? `Un voyageur réserve "${offer.title}" via un Trip Plan. ${participantCount} participant(s). En attente de votre confirmation.`
-              : `Un voyageur a réservé "${offer.title}" via un Trip Plan. ${participantCount} participant(s). Réservation confirmée automatiquement.`;
-          const notifLink = `/dashboard/incoming`;
-          this.notificationService
-            .create(
-              offer.author_id,
-              notifType,
-              notifTitle,
-              notifBody,
-              notifLink,
-            )
-            .catch(() => {});
+        } catch (itemErr: any) {
+          errors.push({
+            item_id: item.id,
+            label: itemLabel,
+            error: itemErr.message || 'Erreur inconnue',
+          });
         }
       }
 
-      fullPlan.status = 'confirmed';
+      if (reservations.length === 0 && errors.length > 0) {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException(
+          `Aucun élément n'a pu être réservé : ${errors.map((e) => `${e.label} — ${e.error}`).join('; ')}`,
+        );
+      }
+
+      if (errors.length === 0) {
+        fullPlan.status = 'confirmed';
+      } else {
+        fullPlan.status = 'partial';
+      }
       await queryRunner.manager.save(fullPlan);
 
       await queryRunner.commitTransaction();
@@ -559,17 +572,20 @@ export class TripPlanService {
 
       const offerCount = reservations.length;
       const totalCount = offerCount + circuitReservationsCount;
+      const errMsg = errors.length
+        ? ` (${errors.length} échec${errors.length > 1 ? 's' : ''})`
+        : '';
       this.notificationService
         .create(
           ecoTravelerId,
           'booking_request',
           'Réservation Trip Plan',
-          `${totalCount} élément${totalCount > 1 ? 's' : ''} réservé${totalCount > 1 ? 's' : ''} depuis votre Trip Plan.`,
+          `${totalCount} élément${totalCount > 1 ? 's' : ''} réservé${totalCount > 1 ? 's' : ''} depuis votre Trip Plan${errMsg}.`,
           `/trip-plans/${tripPlanId}`,
         )
         .catch(() => {});
 
-      return this.reservationRepo.find({
+      const reservedReservations = await this.reservationRepo.find({
         where: { id: In(reservations.map((b) => b.id)) },
         relations: [
           'offer',
@@ -579,6 +595,8 @@ export class TripPlanService {
           'participants',
         ],
       });
+
+      return { reservations: reservedReservations, errors };
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw new BadRequestException(

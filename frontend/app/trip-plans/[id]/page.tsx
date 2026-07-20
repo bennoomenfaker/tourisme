@@ -1029,6 +1029,7 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [bookingErrors, setBookingErrors] = useState<{ item_id: string; label: string; error: string }[] | null>(null);
 
   const addParticipant = () => {
     setParticipants([...participants, { full_name: "", age: null, document_type: "none", document_number: "", is_group_leader: false }]);
@@ -1052,14 +1053,21 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
     }
     setSubmitting(true);
     setError(null);
+    setBookingErrors(null);
     try {
-      await apiFetch(`/trip-plans/${planId}/book`, {
-        method: "POST",
-        body: JSON.stringify({
-          participants: participants.filter((p) => p.full_name.trim()),
-          special_requests: specialRequests || undefined,
-        }),
-      });
+      const result = await apiFetch<{ reservations: any[]; errors: { item_id: string; label: string; error: string }[] }>(
+        `/trip-plans/${planId}/book`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            participants: participants.filter((p) => p.full_name.trim()),
+            special_requests: specialRequests || undefined,
+          }),
+        },
+      );
+      if (result.errors?.length) {
+        setBookingErrors(result.errors);
+      }
       setSuccess(true);
     } catch (err: any) {
       setError(err.message);
@@ -1111,6 +1119,16 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
               </div>
               <h4 className="font-bold text-slate-800 mb-1">Réservation effectuée !</h4>
               <p className="text-sm text-slate-500 mb-4">{itemCount} réservation{itemCount !== 1 ? "s" : ""} créée{itemCount !== 1 ? "s" : ""}</p>
+              {bookingErrors && bookingErrors.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-left">
+                  <p className="text-sm font-semibold text-amber-700 mb-2">Certains éléments n'ont pas pu être réservés :</p>
+                  {bookingErrors.map((err, i) => (
+                    <div key={i} className="text-xs text-amber-600 mb-1">
+                      <span className="font-medium">{err.label}</span> — {err.error}
+                    </div>
+                  ))}
+                </div>
+              )}
               <button onClick={onBooked} className="px-5 py-2 rounded-xl bg-primary text-white font-medium text-sm">Terminé</button>
             </div>
           ) : (

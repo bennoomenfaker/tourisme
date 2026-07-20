@@ -629,7 +629,31 @@ export default function GuidedOfferWizard({ token, userRole, userProjectId, user
     return skipped;
   }
 
+  function validateStep(s: number): string | null {
+    switch (s) {
+      case 1:
+        if (!category) return "Choisissez une catégorie.";
+        return null;
+      case 2:
+        if (!title.trim()) return "Le titre est obligatoire.";
+        if (!description.trim() && !shortDesc.trim()) return "La description est obligatoire.";
+        if (userRole === "provider" && !selectedVenueId) return "Sélectionnez un établissement.";
+        return null;
+      case 4: // Tarifs
+        if (!items[0]?.prices?.length) return "Ajoutez au moins un prix.";
+        if (items[0].prices.some((p: any) => !p.price || Number(p.price) <= 0)) return "Tous les prix doivent être > 0.";
+        return null;
+      default:
+        return null;
+    }
+  }
+
   function goNext() {
+    const validationError = validateStep(step);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setError("");
     let next = step + 1;

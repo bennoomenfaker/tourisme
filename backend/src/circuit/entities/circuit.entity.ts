@@ -69,6 +69,9 @@ export class Circuit {
   max_participants!: number | null;
 
   @Column({ type: 'int', nullable: true })
+  min_participants!: number | null;
+
+  @Column({ type: 'int', nullable: true })
   booking_deadline_days!: number | null;
 
   @Column({ type: 'varchar', nullable: true })

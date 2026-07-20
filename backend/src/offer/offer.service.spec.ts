@@ -23,6 +23,7 @@ describe('OfferService status transitions', () => {
     find: jest.fn(),
     create: jest.fn(),
     remove: jest.fn(),
+    count: jest.fn().mockResolvedValue(1),
     createQueryBuilder: jest.fn(() => ({
       innerJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),

@@ -19,6 +19,10 @@ export class CreateCircuitOptionDto {
   @IsString()
   option_group?: string;
 
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @IsString()
   @IsNotEmpty()
   option_type!: string;

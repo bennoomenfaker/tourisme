@@ -87,6 +87,7 @@ export class CircuitService {
       base_price: dto.base_price ?? null,
       currency: dto.currency ?? 'XAF',
       max_participants: dto.max_participants ?? null,
+      min_participants: dto.min_participants ?? null,
       booking_deadline_days: dto.booking_deadline_days ?? null,
       confirmation_mode: dto.confirmation_mode ?? null,
       inclusions: dto.inclusions ?? null,
@@ -284,6 +285,8 @@ export class CircuitService {
     if (dto.currency !== undefined) circuit.currency = dto.currency ?? 'XAF';
     if (dto.max_participants !== undefined)
       circuit.max_participants = dto.max_participants ?? null;
+    if (dto.min_participants !== undefined)
+      circuit.min_participants = dto.min_participants ?? null;
     if (dto.booking_deadline_days !== undefined)
       circuit.booking_deadline_days = dto.booking_deadline_days ?? null;
     if (dto.confirmation_mode !== undefined)
@@ -468,6 +471,7 @@ export class CircuitService {
         ? ({ id: dto.offer_item_id } as OfferItem)
         : null,
       option_group: dto.option_group ?? null,
+      name: dto.name ?? null,
       option_type: dto.option_type,
       is_required: dto.is_required ?? false,
       is_included: dto.is_included ?? false,
@@ -693,6 +697,13 @@ export class CircuitService {
     ) {
       throw new BadRequestException(
         `Le nombre de participants (${participantsCount}) dépasse la limite (${circuit.max_participants})`,
+      );
+    }
+
+    // Vérifier min_participants si défini
+    if (circuit.min_participants && participantsCount < circuit.min_participants) {
+      throw new BadRequestException(
+        `Minimum ${circuit.min_participants} participant(s) requis pour ce circuit`,
       );
     }
 

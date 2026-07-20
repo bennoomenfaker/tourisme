@@ -108,6 +108,19 @@ export class ReservationService {
       }
     }
 
+    // ── Vérification min/max participants ──
+    const participantCount = dto.participants?.length ?? 1;
+    if (offer.min_group_size && participantCount < offer.min_group_size) {
+      throw new BadRequestException(
+        `Minimum ${offer.min_group_size} participant(s) requis pour cette offre`,
+      );
+    }
+    if (offer.max_group_size && participantCount > offer.max_group_size) {
+      throw new BadRequestException(
+        `Maximum ${offer.max_group_size} participant(s) autorisé(s) pour cette offre`,
+      );
+    }
+
     // ── Vérification double réservation même session ──
     if (dto.session_id) {
       const existingReservation = await this.reservationRepo.findOne({
@@ -124,7 +137,6 @@ export class ReservationService {
 
     // ── Calcul du prix côté serveur ──
     let totalPrice = 0;
-    const participantCount = dto.participants?.length ?? 1;
 
     if (dto.offer_item_id) {
       const offerItem = await this.offerItemRepo.findOne({
