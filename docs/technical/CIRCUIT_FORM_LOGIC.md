@@ -82,11 +82,13 @@ Chaque mode change l'UI et les données envoyées :
 | **other** (autre propriétaire) | Prix achat pré-rempli depuis son offre catalogue + prix revente à saisir | *Son offre catalogue = 40 TND → achat pré-rempli 40 TND, je saisis revente 55 TND, marge = 15 TND* |
 | **external** (hors plateforme) | Prix estimé + prestataire | Saisie manuelle, tarif indicatif |
 
-### Tarification des activités (Step 3 — nouveau)
+### Tarification des activités (Step 3 — mis à jour)
 
 Chaque activité (program item) a désormais :
-- **`price`** : prix facturé au voyageur pour cette activité (éditable)
-- **`guide_cost`** : coût interne du guide (pré-rempli depuis le catalogue du guide, éditable)
+- **`price`** : prix de base de l'activité (éditable)
+- **`guide_suggested_price`** : prix suggéré par le guide (via `contribution.price`)
+- **`guide_applied_price`** : prix appliqué par le prestataire (modifiable)
+- **`final_price`** : `price + guide_applied_price` (ce que le voyageur voit)
 
 #### Pré-remplissage automatique
 
@@ -94,21 +96,49 @@ Chaque activité (program item) a désormais :
 |---------------------|-----------------|--------|:-----------:|
 | **Mon offre** (Tab 1) | `price` | Prix catalogue de mon offre | ✅ Oui |
 | **Offre externe** (Tab 2) | `price` | Prix catalogue de l'offre | ✅ Oui |
-| **Guide** (dans l'activité) | `guide_cost` | Prix du guide (offering.price) | ✅ Oui |
+| **Guide** (dans l'activité) | `guide_suggested_price` | Prix du guide (offering.price) | ✅ Oui |
+| **Guide** (dans l'activité) | `guide_applied_price` | Initialise avec le prix suggéré | ✅ Oui |
 | **Aucune offre / Externe** | `price` | Vide (saisie manuelle) | ✅ Oui |
 
-#### Logique économique
+#### Logique économique — Collaboration = Objet Central
 
-- **Coût guide** : ce que je paie au guide (ex: 100 TND/jour)
-- **Prix activité** : ce que le voyageur paie pour cette activité (ex: 120 TND)
-- **Ma marge** = Prix activité - Coût guide - Coût offre liée (si applicable)
+Le voyageur ne voit **JAMAIS** la répartition interne. Seul le `final_price` est affiché.
+
+```
+final_price = price (base activité) + guide_applied_price
+```
+
+- **Prix de base** : ce que le prestataire facture pour l'activité (ex: 90 TND)
+- **Guide appliqué** : prix négocié avec le guide (ex: 80 TND)
+- **Prix final** : ce que le voyageur voit (ex: 170 TND)
+- **Marge** = Prix de base - Coût offre liée (si applicable)
 
 *Exemple :*
 ```
-Guide = 100 TND/jour  (coût)
-Mon offre (repas) = 50 TND  (coût interne)
-Prix activité = 200 TND  (facturé voyageur)
-Marge = 200 - 100 - 50 = 50 TND
+Activité : Randonnée guidée au Djebel Zaghouan
+Price (base) = 90 TND
+Guide suggéré = 80 TND/jour
+Guide appliqué = 80 TND/jour
+
+Final_price = 90 + 80 = 170 TND
+
+Voyageur voit : 170 TND
+Internal : 90 (base) + 80 (guide)
+```
+
+#### Deux niveaux de `requires_guide`
+
+| Niveau | Champ | Effet |
+|--------|-------|-------|
+| **Catégorie** | `OfferCategory.requires_guide` | Règle par défaut pour toutes les offres de cette catégorie |
+| **Offre** | `Offer.requires_guide_override` | NULL = utiliser catégorie, TRUE = obligatoire, FALSE = pas besoin |
+
+```typescript
+// Logique de vérification (frontend + backend)
+function offerRequiresGuide(offer: Offer): boolean {
+  if (offer.requires_guide_override !== null) return offer.requires_guide_override;
+  return offer.category?.requires_guide ?? false;
+}
 ```
 
 ### Dans les activités (champ `inclus` multiselect)
@@ -131,9 +161,9 @@ programme_jours: [
 ### Tourisme (normalisé)
 ```
 Circuit → CircuitDay (day_number, title, description, date, lat, lng)
-        → CircuitProgramItem (title, start_time, end_time, category, subtypes, price, ...)
+        → CircuitProgramItem (title, start_time, end_time, category, subtypes, price, offer_id, collaboration_id, guide_suggested_price, guide_applied_price, final_price, ...)
 ```
-Les jours sont normalisés en entités plutôt qu'en JSONB, ce qui permet des relations plus riches (guide, offre liée, etc.)
+Les jours sont normalisés en entités plutôt qu'en JSONB, ce qui permet des relations plus riches (guide, offre liée, collaboration, etc.)
 
 ## 6. Champs conditionnels
 
@@ -175,6 +205,35 @@ Dans chaque journée du circuit, la localisation utilise désormais `MapPicker` 
 - Bouton bascule **Liste / 🗺️ Carte** → affiche un `MapPicker` avec les positions des guides
 - Résultats de carte cliquables pour sélection rapide
 
+### Sélection guide → Prix automatique
+
+Quand un guide est sélectionné :
+1. `guide_id` et `guide_name` sont enregistrés
+2. `guide_suggested_price` est initialisé avec le prix du guide (offering.price)
+3. `guide_applied_price` est initialisé avec le prix suggéré
+4. `guide_cost` est mis à jour avec le prix du guide
+5. La barre verte "Prix final activité" affiche `price + guide_applied_price`
+
+Si le prestataire modifie le `guide_applied_price` :
+- Un indicateur affiche le prix suggéré original
+- Le `final_price` est recalculé automatiquement
+
+**Code :** `CircuitBuilderWizard.tsx:1005-1020`
+
+```tsx
+onSelect={(id, name, price, offeringId) => {
+  const suggestedPrice = price || "";
+  updateProgramItem(day.id, prog.id, {
+    guide_id: id,
+    guide_name: name,
+    guide_cost: suggestedPrice,
+    guide_offering_id: offeringId || null,
+    guide_suggested_price: suggestedPrice,
+    guide_applied_price: suggestedPrice,
+  });
+}}
+```
+
 ### Page dédiée `/guide/search`
 Page complète de recherche de guides avec :
 - **Barre de recherche** centrale avec sélecteur de zone
@@ -191,3 +250,68 @@ Page complète de recherche de guides avec :
 - Polyligne verte pointillée pour le tracé
 - Icône hôtel orange pour l'hébergement (HebergementPoint)
 - Ajustement automatique du zoom (`fitBounds`)
+
+## 12. Guard de Publication Circuit
+
+Le circuit ne peut pas être publié tant que des collaborations sont en attente.
+
+**Backend :** `circuit.service.ts` — `submitForReview()`
+
+```typescript
+private async assertAllCollaborationsAccepted(circuitId: string): Promise<void> {
+  const items = await this.programItemRepo.find({
+    where: { circuit: { id: circuitId } },
+    relations: ["collaboration"],
+  });
+  for (const item of items) {
+    if (item.collaboration_id) {
+      const collab = await this.collaborationRepo.findOne({
+        where: { id: item.collaboration_id },
+      });
+      if (collab && collab.status !== "accepted" && collab.status !== "completed") {
+        throw new BadRequestException(
+          `L'activité "${item.title}" a une collaboration en attente (${collab.status}). ` +
+          `Toutes les collaborations doivent être acceptées avant publication.`
+        );
+      }
+    }
+  }
+}
+```
+
+**Frontend :** Le circuit reste en `DRAFT` tant que le guard n'est pas satisfait.
+
+## 13. Interface ProgramItemForm (Frontend)
+
+```typescript
+interface ProgramItemForm {
+  id: string;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  is_included: boolean;
+  is_required: boolean;
+  linked_offer_item_id: string | null;
+  offer_id: string | null;              // Nouveau
+  collaboration_id: string | null;      // Nouveau
+  emoji: string;
+  duration_minutes: string;
+  distance_km: string;
+  transport_mode: string;
+  guide_id: string | null;
+  guide_name: string;
+  guide_cost: string;
+  guide_offering_id: string | null;
+  guide_suggested_price: string;        // Nouveau
+  guide_applied_price: string;          // Nouveau
+  category: string | null;
+  subtypes: string[] | null;
+  price: string;
+  final_price: string;                  // Nouveau
+  photos: string[];
+  fields: any;
+  external_reference: any;
+  is_external_reference: boolean;
+}
+```

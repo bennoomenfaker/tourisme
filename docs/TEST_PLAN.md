@@ -58,3 +58,23 @@
 | 3 | Guide modifie prix saisonnier | price_override sur les sessions | ✅ |
 | 4 | Voyageur cherche guide disponible | Guides avec sessions available affichés | ✅ |
 | 5 | Voyageur réserve prestation guide | Booking + GuideOfferingSession liés | ✅ |
+
+### 11.6 Collaboration Guide ↔ Prestataire
+
+| # | Scénario | Résultat attendu | Statut |
+|---|----------|------------------|--------|
+| 1 | Prestataire invite un guide sur une offre | Collaboration créée (status=pending), notification envoyée au guide | ✅ |
+| 2 | Guide accepte l'invitation | Status → accepted, notification envoyée au prestataire | ✅ |
+| 3 | Guide remplit le wizard 8 étapes | Contribution sauvegardée en JSONB | ✅ |
+| 4 | Guide confirme la contribution | Status → completed, completed_at défini, notification au prestataire | ✅ |
+| 5 | Guide refuse l'invitation | Status → declined, decline_reason sauvegardée, notification au prestataire | ✅ |
+| 6 | Prestataire annule une invitation pending | Status → cancelled | ✅ |
+| 7 | Prestataire annule une invitation accepted | Status → cancelled | ✅ |
+| 8 | Tentative de double invitation même guide/section | Erreur "Une invitation est déjà en cours" | ✅ |
+| 9 | Guide tente de répondre à une invitation non-pending | Erreur "Cette invitation a déjà été traitée" | ✅ |
+| 10 | Guide tente de modifier contribution sans avoir accepté | Erreur "Vous ne pouvez modifier que si vous avez accepté" | ✅ |
+| 11 | Prestataire voit les collaborations sur `/offers/[id]` | Section "Collaborateurs" affichée avec les contributions | ✅ |
+| 12 | Guide voit les invitations dans onglet "Collabs" | Onglet affiché avec statuts (en attente, en cours, historique) | ✅ |
+| 13 | Prestataire voit les contributions dans onglet "Collabs" | Onglet affiché avec stats + liste des collaborations | ✅ |
+| 14 | Recherche de guide dans le modal d'invitation | Seuls les guides suivis apparaissent | ✅ |
+| 15 | Invitation avec message personnalisé | Message sauvegardé et affiché dans la carte | ✅ |

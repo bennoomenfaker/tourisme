@@ -1,11 +1,22 @@
 # Logique Métier - Circuits Multi-Jours
 
+> **Date :** 28 Juillet 2026 (mis à jour)
+> **Statut :** Implémenté — Modèle pricing collaboration
+
+---
+
 ## Structure Hiérarchique
 
 ```
 Circuit
 ├── plusieurs Jours (CircuitDay)
 │   └── plusieurs Activités (CircuitProgramItem)
+│       ├── price (base activité)
+│       ├── collaboration_id → Collaboration
+│       │   ├── guide_id → Guide
+│       │   ├── suggested_price (prix suggéré par le guide)
+│       │   └── applied_price (prix appliqué par le prestataire)
+│       └── final_price = price + guide_applied_price
 └── Options (CircuitOption)
 ```
 
@@ -15,8 +26,57 @@ Circuit
 |--------|----------|-------------|
 | `circuits` | 1 → N `circuit_days` | Circuit multi-jours avec titre, description, prix de base |
 | `circuit_days` | N → 1 `circuits` + N → N `circuit_program_items` | Journée avec date, titre, localisation |
-| `circuit_program_items` | N → 1 `circuit_days` | Activité avec lien `linked_offer_item_id` ou `guide_id` ou `external_reference` |
+| `circuit_program_items` | N → 1 `circuit_days` | Activité avec `offer_id`, `collaboration_id`, `guide_applied_price`, `final_price` |
 | `circuit_options` | N → 1 `circuits` | Options additionnelles (hébergement, transport, etc.) |
+
+---
+
+## Modèle Pricing — Collaboration = Objet Central
+
+### Principe
+
+Le voyageur ne voit **JAMAIS** la répartition interne (base vs guide). Seul le `final_price` est affiché.
+
+```
+final_price = price (base activité) + guide_applied_price
+```
+
+### Deux niveaux de `requires_guide`
+
+| Niveau | Champ | Effet |
+|--------|-------|-------|
+| **Catégorie** | `OfferCategory.requires_guide` | Règle par défaut pour toutes les offres de cette catégorie |
+| **Offre** | `Offer.requires_guide_override` | NULL = utiliser catégorie, TRUE = obligatoire, FALSE = pas besoin |
+
+```typescript
+// Logique de vérification
+function offerRequiresGuide(offer: Offer): boolean {
+  if (offer.requires_guide_override !== null) return offer.requires_guide_override;
+  return offer.category?.requires_guide ?? false;
+}
+```
+
+### Guard de Publication
+
+Le circuit ne peut pas être publié tant que des collaborations sont en attente :
+
+```typescript
+// circuit.service.ts — submitForReview()
+private async assertAllCollaborationsAccepted(circuitId: string): Promise<void> {
+  const items = await this.programItemRepo.find({ where: { circuit: { id: circuitId } } });
+  for (const item of items) {
+    if (item.collaboration_id) {
+      const collab = await this.collaborationRepo.findOne({ where: { id: item.collaboration_id } });
+      if (collab && collab.status !== "accepted" && collab.status !== "completed") {
+        throw new BadRequestException(
+          `L'activité "${item.title}" a une collaboration en attente (${collab.status}). ` +
+          `Toutes les collaborations doivent être acceptées avant publication.`
+        );
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -31,19 +91,6 @@ Circuit
 - ✅ Les informations de l'offre (prix, description) sont récupérées
 - ✅ Le prix catalogue est affiché comme référence
 
-**Code :** `Circuits.tsx:789-802`
-
-```tsx
-{prog.linked_offer_item_id && offerItems.some((it) => it.id === prog.linked_offer_item_id) && (
-  <div className="flex items-center gap-1.5 bg-primary/5 border border-primary/20 rounded-lg px-2 py-1.5">
-    <span className="w-2 h-2 rounded-full bg-primary" />
-    <span className="text-[11px] font-medium text-primary truncate max-w-[160px]">
-      {offerItems.find((it) => it.id === prog.linked_offer_item_id)?.name}
-    </span>
-  </div>
-)}
-```
-
 ### Cas 2 — Offre d'un autre propriétaire (other)
 
 **Composants :** `ExternalOfferModal` (onglet "Offres externes") + `ExternalOfferItemSearch`
@@ -53,36 +100,38 @@ Circuit
 - ✅ La sélection crée un lien avec `linked_offer_item_id` externe
 - ✅ Les informations de l'offre sont récupérées (titre, prix)
 
-**Code :** `ExternalOfferItemSearch.tsx`
-
-```tsx
-const res = await apiFetch<any[]>(`/offers/public?${params.toString()}`);
-const filtered = Array.isArray(res) ? res.filter((o: any) =>
-  o.title?.toLowerCase().includes(query.toLowerCase()) ||
-  o.items?.some((it: any) => it.name?.toLowerCase().includes(query.toLowerCase()))
-) : [];
-```
-
 ### Cas 3 — Guide
 
 **Composants :** `GuideSearchInline` (intégré dans `CircuitBuilderWizard.tsx:72-230`)
 
-- ⚠️ La recherche fonctionne via `/guide/search`
-- ⚠️ Filtre par zone et prix max disponible
-- ⚠️ Le guide est lié via `guide_id` et `guide_name`
-- ⚠️ Si le guide possède une offre, elle n'est pas auto-ligatée
+- ✅ La recherche fonctionne via `/guide/public/search`
+- ✅ Filtre par zone et prix max disponible
+- ✅ Le guide est lié via `guide_id` et `guide_name`
+- ✅ Le prix guide est automatiquement récupéré (`guide_suggested_price`)
+- ✅ Le `guide_applied_price` est initialisé avec le prix suggéré
+- ✅ Le `final_price` est calculé automatiquement
 
-**BUG IDENTIFIÉ :** L'offre du guide n'est pas automatiquement reliée à l'activité.
+**Nouveau :** Le guide possède maintenant une `Collaboration` liée dans le circuit.
 
-**Code :** `CircuitBuilderWizard.tsx:859-865`
+**Code :** `CircuitBuilderWizard.tsx:1005-1020`
 
 ```tsx
 <GuideSearchInline
-  onSelect={(id, name, price) => updateProgramItem(day.id, prog.id, { guide_id: id, guide_name: name, guide_cost: price || "" })}
+  onSelect={(id, name, price, offeringId) => {
+    const suggestedPrice = price || "";
+    updateProgramItem(day.id, prog.id, {
+      guide_id: id,
+      guide_name: name,
+      guide_cost: suggestedPrice,
+      guide_offering_id: offeringId || null,
+      guide_suggested_price: suggestedPrice,
+      guide_applied_price: suggestedPrice,
+    });
+  }}
   dayDate={day.date || undefined}
   dayLat={day.lat}
   dayLng={day.lng}
-  dayLocation={day.location_name}
+  dayLocation={day.location_name || region}
 />
 ```
 
@@ -90,17 +139,9 @@ const filtered = Array.isArray(res) ? res.filter((o: any) =>
 
 **Composants :** `ExternalOfferModal` (onglet "Référence externe")
 
-- ⚠️ Il est possible de saisir un prestataire externe
-- ⚠️ Aucune offre n'est requise
-- ⚠️ **BUG :** `onExternalRefChange` n'est pas correctement branché dans le wizard
-
-**Code :** `ExternalOfferModal.tsx:176-180` (la callback est appelée mais pas stockée)
-
-```tsx
-onExternalRefChange({ ...(externalRef || {} as ExternalRef), 
-  type: e.target.value as ExternalRef['type'] 
-})
-```
+- ✅ Il est possible de saisir un prestataire externe
+- ✅ Aucune offre n'est requise
+- ✅ Les champs sont entièrement manuels
 
 ---
 
@@ -110,6 +151,8 @@ onExternalRefChange({ ...(externalRef || {} as ExternalRef),
 
 - **Prix catalogue** : Valeur de référence dans l'offre (immuable depuis le circuit)
 - **Prix circuit** : Copie indépendante, modifiable
+- **Prix guide** : Suggestion du guide, modifiable par le prestataire
+- **Prix final** : `price + guide_applied_price` (ce que le voyageur voit)
 
 ### Cas 1 — Ma propre offre
 
@@ -118,67 +161,66 @@ onExternalRefChange({ ...(externalRef || {} as ExternalRef),
 - ✅ Le champ reste modifiable
 - ✅ Le prix catalogue reste visible comme référence
 
-**Code :** `CircuitBuilderWizard.tsx:884-888`
-
-```tsx
-{prog.linked_offer_item_id && offerItems.find((it) => it.id === prog.linked_offer_item_id)?.prices?.[0] && (
-  <div className="text-[10px] text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1.5 shrink-0">
-    Offre à {Number(offerItems.find((it) => it.id === prog.linked_offer_item_id)!.prices![0].price).toLocaleString()} TND
-  </div>
-)}
-```
-
 ### Cas 2 — Offre externe
 
 - ✅ Le prix catalogue est récupéré automatiquement
 - ✅ Le prix du circuit est pré-rempli
 - ✅ Il reste modifiable
 
-**Code :** `ExternalOfferModal.tsx:176-179`
-
-```tsx
-onSelect={(itemId, title, providerName, price) => {
-  onSelectMyOffer(itemId, price);
-  onClose();
-}}
-```
-
 ### Cas 3 — Guide
 
-- ✅ Le prix de l'offre du guide est récupéré (via `guide_cost`)
-- ⚠️ Le prix du circuit n'est pas pré-rempli depuis l'offre du guide
+- ✅ Le prix du guide est récupéré automatiquement (`guide_suggested_price`)
+- ✅ Le `guide_applied_price` est initialisé avec le prix suggéré
+- ✅ Le prestataire peut modifier le `guide_applied_price`
+- ✅ Le `final_price` est calculé automatiquement
+- ✅ Si le prix suggéré ≠ prix appliqué, un indicateur s'affiche
 
 ### Cas 4 — Prestataire externe
 
 - ✅ Aucun prix n'est pré-rempli
 - ✅ Les champs sont entièrement manuels
 
+### Exemple concret
+
+```
+Activité : Randonnée guidée au Djebel Zaghouan
+Price (base) = 90 TND
+Guide suggéré = 80 TND/jour
+Guide appliqué = 80 TND/jour
+
+Final_price = 90 + 80 = 170 TND
+
+Voyageur voit : 170 TND
+Internal : 90 (base) + 80 (guide)
+```
+
 ---
 
-## Bugs Identifiés
+## Champs Nouveaux dans CircuitProgramItem
 
-### 1. externalRef non branché dans CircuitBuilderWizard
+| Champ | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `offer_id` | UUID | Oui | Lien vers l'offre parente |
+| `collaboration_id` | UUID | Oui | Lien vers la collaboration guide |
+| `guide_suggested_price` | DECIMAL | Oui | Prix suggéré par le guide |
+| `guide_applied_price` | DECIMAL | Oui | Prix appliqué par le prestataire |
+| `final_price` | DECIMAL | Oui | `price + guide_applied_price` |
 
-**Fichier :** `CircuitBuilderWizard.tsx:777-780`
+---
 
-```tsx
-setExternalModalDayId(day.id);
-setExternalModalProgId(prog.id);
-// onExternalRefChange n'est jamais appelé
-```
+## Bugs Résolus
 
-**Impact :** Les références externes ne sont jamais sauvegardées dans le state.
+### 1. Guide offer auto-link ✅ Résolu
 
-### 2. Guide offer auto-link manquant
+**Avant :** L'offre du guide n'était pas automatiquement reliée à l'activité.
 
-**Fichier :** `CircuitBuilderWizard.tsx:860`
+**Maintenant :** Le guide est lié via `guide_id` et une `Collaboration` est créée.
 
-```tsx
-onSelect={(id, name, price) => {
-  // L'offre du guide (price) n'est pas liée à linked_offer_item_id
-  updateProgramItem(day.id, prog.id, { guide_id: id, guide_name: name, guide_cost: price || "" })
-}}
-```
+### 2. externalRef non branché ✅ Résolu
+
+**Avant :** Les références externes n'étaient jamais sauvegardées dans le state.
+
+**Maintenant :** `onExternalRefChange` est correctement branché.
 
 ### 3. Double implémentation GuideSearchInline
 
@@ -188,8 +230,8 @@ Le composant `GuideSearchInline.tsx` existe en tant que composant exporté mais 
 
 ## Recommandations
 
-1. **Priorité Haute :** Brancher `onExternalRefChange` dans le wizard pour sauvegarder la référence externe
-2. **Priorité Haute :** Auto-ligaturer l'offre du guide sélectionné
-3. **Priorité Moyenne :** Unifier les implémentations de `GuideSearchInline`
-4. **Priorité Moyenne :** Ajouter des badges visuels pour indiquer le type de prestation
-5. **Priorité Basse :** Intégrer le système de Provider Schema de Maram (12 catégories configurables)
+1. ~~Priorité Haute : Brancher `onExternalRefChange`~~ ✅ Résolu
+2. ~~Priorité Haute : Auto-ligaturer l'offre du guide~~ ✅ Résolu
+3. ~~Priorité Moyenne : Unifier les implémentations de `GuideSearchInline`~~ ⏳ En cours
+4. ~~Priorité Moyenne : Ajouter des badges visuels pour indiquer le type de prestation~~ ✅ Résolu
+5. ~~Priorité Basse : Intégrer le système de Provider Schema de Maram~~ ✅ Résolu

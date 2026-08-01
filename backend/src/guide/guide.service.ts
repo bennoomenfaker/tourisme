@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Guide } from './entities/guide.entity';
 import { GuideOffering } from './entities/guide-offering.entity';
 import {
@@ -9,6 +9,10 @@ import {
   UpdateGuideExperienceDto,
 } from './dto/guide.dto';
 import { GuideMongoService } from './guide-mongo.service';
+import { CertificationService } from '../certification/certification.service';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
+import { Review } from '../review/entities/review.entity';
+import { Reservation } from '../reservation/entities/reservation.entity';
 
 @Injectable()
 export class GuideService {
@@ -17,15 +21,24 @@ export class GuideService {
     private readonly repo: Repository<Guide>,
     @InjectRepository(GuideOffering)
     private readonly offeringRepo: Repository<GuideOffering>,
+    @InjectRepository(Collaboration)
+    private readonly collabRepo: Repository<Collaboration>,
+    @InjectRepository(Review)
+    private readonly reviewRepo: Repository<Review>,
+    @InjectRepository(Reservation)
+    private readonly reservationRepo: Repository<Reservation>,
+    private readonly certificationService: CertificationService,
     private readonly mongoService: GuideMongoService,
   ) {}
 
   async getProfile(userId: string) {
-    const [sqlProfile, mongoSkills, mongoEngagement] = await Promise.all([
-      this.repo.findOne({ where: { user_id: userId } }),
-      this.mongoService.getSkills(userId),
-      this.mongoService.getEngagement(userId),
-    ]);
+    const [sqlProfile, mongoSkills, mongoEngagement, approvedCerts] =
+      await Promise.all([
+        this.repo.findOne({ where: { user_id: userId } }),
+        this.mongoService.getSkills(userId),
+        this.mongoService.getEngagement(userId),
+        this.certificationService.findApprovedByUser(userId),
+      ]);
 
     if (sqlProfile) {
       const freshCompletion = this.calculateCompletion(sqlProfile);
@@ -55,13 +68,17 @@ export class GuideService {
       score_feedbacks: sqlProfile?.score_feedbacks ?? 0,
       profile_completion: sqlProfile?.profile_completion,
       is_onboarded: sqlProfile?.is_onboarded,
-      // MongoDB
+      // MongoDB (activités/paysages — métadonnées non vérifiées)
       skills_activities: mongoSkills?.activities ?? [],
       skills_landscapes: mongoSkills?.landscapes ?? [],
-      certifications: mongoSkills?.certifications ?? [],
       badges: mongoEngagement?.badges ?? [],
       feedback_received: mongoEngagement?.feedback_received ?? 0,
       reservations_handled: mongoEngagement?.reservations_handled ?? 0,
+      // Certifications : uniquement celles validées par l'admin (table ORM)
+      certifications: approvedCerts.map((c) => ({
+        label: c.name,
+        proof: c.proof_url ?? c.file_url ?? '',
+      })),
     };
   }
 
@@ -106,9 +123,25 @@ export class GuideService {
     profile.profile_completion = this.calculateCompletion(profile);
 
     const saved = await this.repo.save(profile);
+
+    // Les certifications déclarées ici sont créées dans la table ORM (status pending)
+    // → elles passent ensuite par le workflow admin (approbation/refus).
+    // La preuve (URL ou fichier) est obligatoire pour chaque certification cochée.
+    const validCerts = (dto.certifications ?? []).filter(
+      (c) => c?.label?.trim() && c?.proof?.trim(),
+    );
+    if (validCerts.length > 0) {
+      await this.certificationService.createFromOnboarding(
+        userId,
+        validCerts.map((c) => ({
+          label: c.label.trim(),
+          proof: (c.proof ?? '').trim(),
+        })),
+      );
+    }
+
     await this.mongoService.upsertSkills(userId, {
       landscapes: dto.landscapes,
-      certifications: dto.certifications.map(c => ({ label: c.label, proof: c.proof ?? '' })),
     });
 
     return saved;
@@ -175,6 +208,75 @@ export class GuideService {
     };
   }
 
+  async getStats(userId: string) {
+    const activeStatuses = [
+      'accepted',
+      'completed',
+    ];
+    const collabs = await this.collabRepo.find({
+      where: [
+        { guide_id: userId },
+        { invited_user_id: userId, invited_user_type: 'guide' },
+      ],
+    });
+    const activeCollabs = collabs.filter((c) =>
+      activeStatuses.includes(c.status),
+    );
+    const collabOfferIds = [
+      ...new Set(
+        activeCollabs.map((c) => c.offer_id).filter(Boolean) as string[],
+      ),
+    ];
+
+    // Prestations : prestations guide propres + offres où le guide collabore
+    const ownOfferings = await this.offeringRepo.count({
+      where: { guide_id: userId },
+    });
+
+    let reservationsOnOffers = 0;
+    if (collabOfferIds.length > 0) {
+      reservationsOnOffers = await this.reservationRepo
+        .createQueryBuilder('r')
+        .where('r.offer_id IN (:...ids)', { ids: collabOfferIds })
+        .andWhere("r.status NOT IN ('cancelled')")
+        .getCount();
+    }
+
+    const reservationsOnOfferings = await this.reservationRepo
+      .createQueryBuilder('r')
+      .innerJoin('guide_offerings', 'go', 'go.id = r.guide_offering_id')
+      .where('go.guide_id = :uid', { uid: userId })
+      .andWhere("r.status NOT IN ('cancelled')")
+      .getCount();
+
+    const reviews = await this.reviewRepo.find({
+      where: { target_type: 'guide', target_id: userId },
+    });
+    const reviewCount = reviews.length;
+    const reviewAvg =
+      reviewCount > 0
+        ? reviews.reduce((acc, r) => acc + (r.rating ?? 0), 0) / reviewCount
+        : 0;
+
+    return {
+      offers: {
+        total: ownOfferings + collabOfferIds.length,
+        own_offerings: ownOfferings,
+        collaborated: collabOfferIds.length,
+        collaborated_offer_ids: collabOfferIds,
+      },
+      reservations: {
+        total: reservationsOnOffers + reservationsOnOfferings,
+        on_offers: reservationsOnOffers,
+        on_offerings: reservationsOnOfferings,
+      },
+      reviews: {
+        total: reviewCount,
+        average: parseFloat(reviewAvg.toFixed(1)),
+      },
+    };
+  }
+
   async searchGuides(query: string) {
     const q = query.trim();
     const builder = this.repo
@@ -187,9 +289,10 @@ export class GuideService {
         'g.guide_type',
         'g.sustainability_score',
       ])
-      .limit(20);
+      .orderBy('g.full_name', 'ASC')
+      .limit(50);
     if (q) {
-      builder.where('(LOWER(g.full_name) LIKE :q OR LOWER(g.zone) LIKE :q)', {
+      builder.where('(LOWER(g.full_name) LIKE :q OR LOWER(g.zone) LIKE :q OR LOWER(g.specialties::text) LIKE :q)', {
         q: `%${q.toLowerCase()}%`,
       });
     }

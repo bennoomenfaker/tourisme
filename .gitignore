@@ -16,4 +16,8 @@ backend/node_modules/
 dist/
 build/
 .turbo/
+docker-backup/
 .agents
+graphify-out/
+opencode-skills/
+tool.execute.before

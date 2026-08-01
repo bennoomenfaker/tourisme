@@ -134,6 +134,22 @@ export class Offer {
   @Column({ type: 'varchar', default: 'pending' })
   status!: string;
 
+  // Override du requires_guide de la catégorie :
+  //   NULL = utiliser la catégorie (OfferCategory.requires_guide)
+  //   TRUE = obligatoire pour cette offre
+  //   FALSE = pas nécessaire (même si la catégorie l'exige)
+  @Column({ type: 'boolean', nullable: true, default: null })
+  requires_guide_override!: boolean | null;
+
+  // Prix final auto-calculé = base_price + applied_guide_price
+  // Visible par le voyageur. Le détail interne reste caché.
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  final_price!: number | null;
+
+  // true = toutes les collaborations sont complétées, le prestataire peut confirmer la publication
+  @Column({ type: 'boolean', default: false })
+  publish_ready!: boolean;
+
   @Column({ type: 'text', nullable: true })
   rejection_reason!: string | null;
 
@@ -155,6 +171,11 @@ export class Offer {
 
   @Column({ type: 'date', nullable: true })
   availability_end!: Date | null;
+
+  // Disponibilité au format agenda (SlotLike) pour la synchronisation guide/prestataire
+  // { type: 'specific'|'range'|'recurring', dates?, start_date?, end_date?, days_of_week?, time_slots? }
+  @Column({ type: 'jsonb', nullable: true })
+  disponibilite!: Record<string, any> | null;
 
   @Column({ type: 'varchar', nullable: true })
   offer_subtype!: string | null;

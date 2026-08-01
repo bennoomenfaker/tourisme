@@ -8,10 +8,12 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUUID,
+  Matches,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class CreateCircuitDto {
   @IsString()
@@ -109,7 +111,8 @@ export class CreateCircuitDto {
   address?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @Matches(UUID_REGEX, { message: 'project_id must be a UUID' })
   project_id?: string;
 
   @IsOptional()

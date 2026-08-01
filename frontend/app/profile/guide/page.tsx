@@ -7,12 +7,14 @@ import {
   Plus, Edit3, ShieldCheck, MapPin, Calendar, Leaf, ArrowLeft,
   LayoutGrid, Tag, Users, Info, Sparkles, ArrowRight, Send, X, Search, UserPlus,
   Clock, ChevronLeft, ChevronRight, Check, Globe, Star, BookOpen,
-  MoreVertical, UserX, ShieldBan, Flag, BarChart3, Route,
+  MoreVertical, UserX, ShieldBan, Flag, BarChart3, Route, Handshake, CalendarDays,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import MessagerieWidget from "@/components/MessagerieWidget";
 import PubInteractions from "@/components/PubInteractions";
 import GuideAnalytics from "@/components/GuideAnalytics";
+import GuideCollaborationsTab from "@/components/collaboration/GuideCollaborationsTab";
+import AgendaManager from "@/components/collaboration/AgendaManager";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"),
   { ssr: false, loading: () => <div className="h-[268px] rounded-2xl bg-slate-100 animate-pulse" /> }
@@ -59,7 +61,7 @@ type GuideProfile = {
   years_experience: number | null;
   sustainability_score: number | null;
   feedback_received: number; reservations_handled: number;
-  skills_activities: string[]; skills_landscapes: string[]; certifications: string[];
+  skills_activities: string[]; skills_landscapes: string[]; certifications: (string | { label: string; proof: string })[];
   badges: { label: string; obtained_at: string }[];
 };
 
@@ -83,6 +85,17 @@ type Circuit = {
   difficulty_level: string | null;
   images?: string[] | null; cover_image?: string | null;
   max_participants: number | null;
+};
+
+type GuideOffering = {
+  id: string; guide_id: string; title: string; description: string | null;
+  languages: string[] | null; price: number; pricing_unit: string;
+  min_travelers: number | null; max_travelers: number | null;
+  service_zone_type: string; lat: number | null; lng: number | null;
+  radius_km: number | null; zone_governorate: string | null;
+  zone_municipality: string | null; displacement_allowed: boolean;
+  displacement_max_km: number | null; displacement_type: string | null;
+  status: string; created_at: string;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -198,7 +211,7 @@ const LANGUAGES_LIST = [
   { value: "de", label: "Allemand" }, { value: "it", label: "Italien" },
 ];
 
-type Tab = "tout" | "offres" | "circuits" | "statistiques" | "reseau" | "apropos";
+type Tab = "tout" | "offres" | "circuits" | "statistiques" | "reseau" | "collaborations" | "agenda" | "apropos";
 
 // ─── Botanical SVG Cover ──────────────────────────────────────────────────────
 
@@ -236,6 +249,7 @@ export default function GuideProfilePage() {
   const [profile,   setProfile]   = useState<GuideProfile | null>(null);
   const [offers,    setOffers]    = useState<Offer[]>([]);
   const [circuits,  setCircuits]  = useState<Circuit[]>([]);
+  const [guideOfferings, setGuideOfferings] = useState<GuideOffering[]>([]);
   const [token,     setToken]     = useState("");
   const [loading,   setLoading]   = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("tout");
@@ -312,6 +326,7 @@ export default function GuideProfilePage() {
           apiFetch<Circuit[]>("/circuits/mine", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => [] as Circuit[]),
         ]);
         setProfile(p);
+        apiFetch<GuideOffering[]>("/guide-offerings/mine", { headers: { Authorization: `Bearer ${tkn}` } }).then((g) => setGuideOfferings(g)).catch(() => {});
         const offersWithCover = myOffers.map((o) => {
           const validImages = o.images?.filter((url) => url.startsWith("http")) ?? null;
           return { ...o, images: validImages?.length ? validImages : null, cover_image: o.cover_image ?? validImages?.[0] ?? null };
@@ -762,6 +777,66 @@ export default function GuideProfilePage() {
             commentApiBase="/interactions"
           />
         )}
+      </div>
+    );
+  };
+
+  const GuideOfferingCard = ({ offering }: { offering: GuideOffering }) => {
+    const statusLabel = offering.status === "active" ? "Active" : offering.status === "rejected" ? "Refusée" : "En attente";
+    const statusClass = offering.status === "active" ? "bg-emerald-500 text-white border-white/20" : offering.status === "rejected" ? "bg-red-500 text-white border-white/20" : "bg-amber-500 text-white border-white/20";
+    return (
+      <div className="bg-white rounded-3xl border border-slate-100/90 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+        <div className="flex flex-col lg:flex-row">
+          <div className="lg:w-2/5 relative min-h-[200px] bg-slate-50 flex items-center justify-center overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-100">
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-emerald-400 opacity-90" />
+            <span className="material-symbols-outlined text-white/40 relative z-10" style={{ fontSize: 100 }}>hiking</span>
+            <div className={`absolute top-3 left-3 text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-xl shadow border ${statusClass}`}>
+              {statusLabel}
+            </div>
+            <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-3.5 py-1.5 rounded-xl shadow border border-slate-100 text-right">
+              <span className="text-primary font-extrabold text-lg tracking-tight">{Number(offering.price).toLocaleString()} DT</span>
+              <span className="text-slate-400 text-[10px] font-bold block leading-none">{offering.pricing_unit}</span>
+            </div>
+          </div>
+          <div className="lg:w-3/5 p-6 md:p-8 flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h3 className="text-lg md:text-xl font-extrabold text-slate-800 tracking-tight leading-tight">{offering.title}</h3>
+              </div>
+              {offering.description && <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-3">{offering.description}</p>}
+              <div className="flex flex-wrap gap-2.5 mb-4">
+                <span className="bg-emerald-50 text-primary border border-emerald-100/60 rounded-xl px-3 py-1 text-[11px] font-extrabold tracking-wider flex items-center gap-1 uppercase">
+                  <Sparkles size={11} className="text-primary shrink-0" />Prestation de guide
+                </span>
+                {offering.languages && offering.languages.length > 0 && (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1">
+                    <Globe size={11} className="text-slate-400" />{offering.languages.join(", ")}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
+                <span className="flex items-center gap-1"><MapPin size={11} className="text-slate-400" />
+                  {offering.service_zone_type === "point" && "Point fixe"}
+                  {offering.service_zone_type === "radius" && `Rayon ${offering.radius_km ?? "?"} km`}
+                  {offering.service_zone_type === "governorate" && `Gouvernorat ${offering.zone_governorate ?? ""}`}
+                  {offering.service_zone_type === "municipality" && `${offering.zone_municipality ?? ""}, ${offering.zone_governorate ?? ""}`}
+                </span>
+                {offering.min_travelers != null && (
+                  <span className="flex items-center gap-1"><Users size={11} className="text-slate-400" />{offering.min_travelers}-{offering.max_travelers ?? "∞"} pers.</span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-slate-50 pt-4 mt-3">
+              <p className="text-[11px] font-bold text-slate-400">
+                {new Date(offering.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+              </p>
+              <a href="/dashboard/guide-offerings"
+                className="text-primary hover:text-primary/80 font-extrabold text-xs inline-flex items-center gap-1 hover:translate-x-1 transition-transform duration-200">
+                <span>Gérer</span><ArrowRight size={14} strokeWidth={2.5} />
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -1788,6 +1863,8 @@ export default function GuideProfilePage() {
                 { key: "circuits", label: "Circuits", Icon: Route },
                 { key: "statistiques", label: "Statistiques", Icon: BarChart3 },
                 { key: "reseau",  label: "Réseau",   Icon: Users },
+                { key: "collaborations", label: "Collabs", Icon: Handshake },
+                { key: "agenda", label: "Agenda", Icon: CalendarDays },
                 { key: "apropos", label: "À propos", Icon: Info },
               ].map(({ key, label, Icon }) => (
                 <button key={key} onClick={() => setActiveTab(key as Tab)}
@@ -1803,7 +1880,7 @@ export default function GuideProfilePage() {
                 <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5">
                   <Sparkles size={12} className="text-primary" /><span>Offres de guide</span>
                 </h3>
-                {offers.length === 0 ? (
+                {offers.length === 0 && guideOfferings.length === 0 ? (
                   <div className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-12 text-center">
                     <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <span className="material-symbols-outlined text-primary text-3xl">hiking</span>
@@ -1816,7 +1893,10 @@ export default function GuideProfilePage() {
                     </a>
                   </div>
                 ) : (
-                  offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
+                  <>
+                    {guideOfferings.length > 0 && guideOfferings.map((g) => <GuideOfferingCard key={g.id} offering={g} />)}
+                    {offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
+                  </>
                 )}
 
                 {circuits.length > 0 && (
@@ -1857,16 +1937,19 @@ export default function GuideProfilePage() {
             {activeTab === "offres" && (
               <div className="space-y-5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-extrabold text-slate-800">Offres disponibles ({offers.length})</h3>
+                  <h3 className="text-sm font-extrabold text-slate-800">Offres disponibles ({offers.length + guideOfferings.length})</h3>
                   <a href="/dashboard/guide-offerings" className="text-primary hover:text-primary/80 text-xs font-extrabold flex items-center gap-1">+ Gérer mes prestations</a>
                 </div>
-                {offers.length === 0 ? (
+                {offers.length === 0 && guideOfferings.length === 0 ? (
                   <div className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-12 text-center">
                     <p className="text-slate-800 font-extrabold text-base">Aucune offre pour l'instant</p>
                     <p className="text-slate-400 text-sm mt-1">Publiez votre première expérience guidée.</p>
                   </div>
                 ) : (
-                  offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
+                  <>
+                    {guideOfferings.map((g) => <GuideOfferingCard key={g.id} offering={g} />)}
+                    {offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
+                  </>
                 )}
               </div>
             )}
@@ -2054,6 +2137,16 @@ export default function GuideProfilePage() {
               </div>
             )}
 
+            {/* TAB: COLLABORATIONS */}
+            {activeTab === "collaborations" && (
+              <GuideCollaborationsTab userId={profile.user_id} token={token} />
+            )}
+
+            {/* TAB: AGENDA */}
+            {activeTab === "agenda" && (
+              <AgendaManager userId={profile.user_id} />
+            )}
+
             {/* TAB: À PROPOS */}
             {activeTab === "apropos" && (
               <div className="space-y-5">
@@ -2182,7 +2275,10 @@ export default function GuideProfilePage() {
                           <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                             <Check size={12} className="text-primary" />
                           </div>
-                          <p className="text-sm font-semibold text-slate-700">{c}</p>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-700">{typeof c === "string" ? c : c.label}</p>
+                            {typeof c !== "string" && c.proof && <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{c.proof}</p>}
+                          </div>
                         </div>
                       ))}
                     </div>

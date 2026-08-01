@@ -55,6 +55,11 @@ export class GuideController {
     return this.service.markOnboarded(req.user.sub);
   }
 
+  @Get('stats')
+  getStats(@Req() req: any) {
+    return this.service.getStats(req.user.sub);
+  }
+
   @Public()
   @Roles()
   @Get('public/search')

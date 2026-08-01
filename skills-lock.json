@@ -91,6 +91,12 @@
       "skillPath": "skills/threat-modeling/SKILL.md",
       "computedHash": "2020e5d0d4a0147a5ff1d7691e6334c62ccb21e37dc23b7abbdc3f5c826c2f8b"
     },
+    "ui-ux-pro-max": {
+      "source": "zesion21/opencode-project-template",
+      "sourceType": "github",
+      "skillPath": ".opencode/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "42e672517c626004fab65bf97355ee158a748355f1621806f6846a0b8a461cd4"
+    },
     "vulnerability-chaining": {
       "source": "mn-youssef/security-skills",
       "sourceType": "github",

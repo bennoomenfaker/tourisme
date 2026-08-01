@@ -11,6 +11,8 @@ import { CircuitService } from './circuit.service';
 import { CircuitController } from './circuit.controller';
 import { NotificationModule } from '../notification/notification.module';
 import { OfferItem } from '../offer/entities/offer-item.entity';
+import { Offer } from '../offer/entities/offer.entity';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { OfferItem } from '../offer/entities/offer-item.entity';
       CircuitReservationOption,
       CircuitReservationSnapshot,
       OfferItem,
+      Offer,
+      Collaboration,
     ]),
     NotificationModule,
   ],

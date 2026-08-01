@@ -38,7 +38,7 @@ Ce document regroupe l'architecture, le modèle de données, les cas d'utilisati
 
 ## 2. Architecture Applicative
 
-### Backend (NestJS) — 37 modules
+### Backend (NestJS) — 38 modules
 
 ```
 backend/src/
@@ -52,6 +52,11 @@ backend/src/
 ├── offer/             # Offres (40+ schemas dynamiques)
 │   ├── entities/      # Offer, OfferItem, Price, Session, Capacity, Availability
 │   └── dto/
+├── collaboration/     # Collaboration guide ↔ prestataire (invitation, wizard 8 étapes)
+│   ├── entities/      # Collaboration (contribution JSONB)
+│   ├── dto/           # CreateCollaborationDto, UpdateContributionDto
+│   ├── collaboration.service.ts
+│   └── collaboration.controller.ts
 ├── booking/           # Réservations avec transactions atomiques
 ├── circuit/           # Circuits multi-jours (CircuitDay, ProgramItem, Option)
 ├── trip-plan/         # Plans de voyage (regroupement + réservation groupée)

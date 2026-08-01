@@ -27,6 +27,9 @@ import { ReserveCircuitDto } from './dto/reserve-circuit.dto';
 import { User } from '../users/entities/user.entity';
 import { NotificationService } from '../notification/notification.service';
 import { OfferItem } from '../offer/entities/offer-item.entity';
+import { Offer } from '../offer/entities/offer.entity';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
+import { CollaborationStatus } from '../common/enums/collaboration-status.enum';
 import { PricingDomainService } from '../domain/pricing-domain.service';
 import { CapacityDomainService } from '../domain/capacity-domain.service';
 import { ReservationApplicationService } from '../domain/reservation-application.service';
@@ -53,6 +56,10 @@ export class CircuitService {
     private readonly snapshotRepo: Repository<CircuitReservationSnapshot>,
     @InjectRepository(OfferItem)
     private readonly offerItemRepo: Repository<OfferItem>,
+    @InjectRepository(Offer)
+    private readonly offerRepo: Repository<Offer>,
+    @InjectRepository(Collaboration)
+    private readonly collabRepo: Repository<Collaboration>,
     private readonly notificationService: NotificationService,
     private readonly redis: RedisService,
     private readonly pricingService: PricingDomainService,
@@ -206,8 +213,42 @@ export class CircuitService {
         'Un circuit doit contenir au moins 1 jour avant d\'être soumis',
       );
     }
+
+    // Publication Guard : vérifier que toutes les collaborations requises sont acceptées
+    await this.assertAllCollaborationsAccepted(id);
+
     circuit.status = 'pending';
     return this.circuitRepo.save(circuit);
+  }
+
+  /**
+   * Vérifie que toutes les collaborations liées aux activités du circuit
+   * sont acceptées (ou complétées). Sinon, bloque la publication.
+   */
+  private async assertAllCollaborationsAccepted(circuitId: string): Promise<void> {
+    const items = await this.programItemRepo.find({
+      where: { circuitDay: { circuit: { id: circuitId } } },
+    });
+
+    const pendingCollabIds = items
+      .filter((item) => item.collaboration_id != null)
+      .map((item) => item.collaboration_id!);
+
+    if (pendingCollabIds.length === 0) return;
+
+    const pendingCount = await this.collabRepo.count({
+      where: pendingCollabIds.map((id) => ({
+        id,
+        status: CollaborationStatus.PENDING,
+      })),
+    });
+
+    if (pendingCount > 0) {
+      throw new BadRequestException(
+        `Impossible de publier : ${pendingCount} collaboration(s) en attente d'acceptation. ` +
+        `Invitez un autre guide ou retirez les activités concernées.`,
+      );
+    }
   }
 
   async approveCircuit(id: string): Promise<Circuit> {
@@ -547,6 +588,35 @@ export class CircuitService {
       }
     }
 
+    // Récupérer le prix du guide depuis la collaboration si fournie
+    let guideSuggestedPrice: number | null = null;
+    let guideAppliedPrice: number | null = null;
+    if (dto.guide_id && dto.collaboration_id) {
+      const collab = await this.collabRepo.findOne({
+        where: { id: dto.collaboration_id },
+      });
+      if (collab?.contribution?.suggested_price) {
+        guideSuggestedPrice = Number(collab.contribution.suggested_price);
+        // Le prix appliqué est soit celui du DTO, soit le suggested_price
+        guideAppliedPrice = dto.guide_applied_price != null
+          ? Number(dto.guide_applied_price)
+          : guideSuggestedPrice;
+      }
+    } else if (dto.guide_id && !dto.collaboration_id) {
+      // Guide sans collaboration : récupérer le prix depuis le champ fields (legacy)
+      guideSuggestedPrice = dto.guide_suggested_price ?? null;
+      guideAppliedPrice = dto.guide_applied_price ?? guideSuggestedPrice;
+    }
+
+    // Prix de base de l'activité
+    const activityPrice = dto.price ?? catalogPrice ?? null;
+
+    // Prix final = prix activité + prix guide appliqué
+    const finalPrice =
+      activityPrice != null && guideAppliedPrice != null
+        ? Number(activityPrice) + Number(guideAppliedPrice)
+        : activityPrice ?? guideAppliedPrice ?? null;
+
     const item = this.programItemRepo.create({
       circuitDay: { id: dayId } as CircuitDay,
       title: dto.title,
@@ -556,6 +626,8 @@ export class CircuitService {
       is_included: dto.is_included ?? true,
       is_required: dto.is_required ?? true,
       linked_offer_item_id: dto.linked_offer_item_id ?? null,
+      offer_id: dto.offer_id ?? null,
+      collaboration_id: dto.collaboration_id ?? null,
       linked_location_id: dto.linked_location_id ?? null,
       emoji: dto.emoji ?? null,
       duration_minutes: dto.duration_minutes ?? null,
@@ -563,9 +635,12 @@ export class CircuitService {
       transport_mode: dto.transport_mode ?? null,
       guide_id: dto.guide_id ?? null,
       guide_name: dto.guide_name ?? null,
+      guide_suggested_price: guideSuggestedPrice,
+      guide_applied_price: guideAppliedPrice,
       category: dto.category ?? null,
       subtypes: dto.subtypes?.length ? dto.subtypes : null,
-      price: dto.price ?? catalogPrice ?? null,
+      price: activityPrice,
+      final_price: finalPrice,
       photos: dto.photos?.length ? dto.photos : null,
       unit_details: dto.unit_details ?? null,
       fields: dto.fields ?? null,
@@ -585,8 +660,15 @@ export class CircuitService {
     const items = await this.programItemRepo.find({
       where: { circuitDay: { circuit: { id: circuitId } }, is_included: true },
     });
-    const activitiesTotal = items.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
-    circuit.base_price = activitiesTotal > 0 ? activitiesTotal : circuit.base_price;
+    // Calcul : somme des prix finaux (activités + guides)
+    // Si final_price n'est pas défini, on utilise price + guide_applied_price
+    const total = items.reduce((sum, item) => {
+      if (item.final_price != null) return sum + Number(item.final_price);
+      const activityPrice = Number(item.price ?? 0);
+      const guidePrice = Number(item.guide_applied_price ?? 0);
+      return sum + activityPrice + guidePrice;
+    }, 0);
+    circuit.base_price = total > 0 ? total : circuit.base_price;
     await this.circuitRepo.save(circuit);
   }
 
@@ -624,6 +706,22 @@ export class CircuitService {
       }
       item.linked_offer_item_id = dto.linked_offer_item_id ?? null;
     }
+    if (dto.offer_id !== undefined) item.offer_id = dto.offer_id ?? null;
+    if (dto.collaboration_id !== undefined) {
+      item.collaboration_id = dto.collaboration_id ?? null;
+      // Si une collaboration est liée, récupérer les prix du guide
+      if (dto.collaboration_id) {
+        const collab = await this.collabRepo.findOne({
+          where: { id: dto.collaboration_id },
+        });
+        if (collab?.contribution?.suggested_price) {
+          item.guide_suggested_price = Number(collab.contribution.suggested_price);
+          if (item.guide_applied_price == null) {
+            item.guide_applied_price = item.guide_suggested_price;
+          }
+        }
+      }
+    }
     if (dto.linked_location_id !== undefined)
       item.linked_location_id = dto.linked_location_id ?? null;
     if (dto.emoji !== undefined) item.emoji = dto.emoji ?? null;
@@ -635,10 +733,27 @@ export class CircuitService {
       item.transport_mode = dto.transport_mode ?? null;
     if (dto.guide_id !== undefined) item.guide_id = dto.guide_id ?? null;
     if (dto.guide_name !== undefined) item.guide_name = dto.guide_name ?? null;
+    if (dto.guide_suggested_price !== undefined)
+      item.guide_suggested_price = dto.guide_suggested_price ?? null;
+    if (dto.guide_applied_price !== undefined) {
+      item.guide_applied_price = dto.guide_applied_price ?? null;
+      // Recalculer le final_price quand le prix guide appliqué change
+      item.final_price =
+        item.price != null && item.guide_applied_price != null
+          ? Number(item.price) + Number(item.guide_applied_price)
+          : item.price ?? item.guide_applied_price ?? null;
+    }
     if (dto.category !== undefined) item.category = dto.category ?? null;
     if (dto.subtypes !== undefined)
       item.subtypes = dto.subtypes?.length ? dto.subtypes : null;
-    if (dto.price !== undefined) item.price = dto.price ?? null;
+    if (dto.price !== undefined) {
+      item.price = dto.price ?? null;
+      // Recalculer le final_price quand le prix de base change
+      item.final_price =
+        item.price != null && item.guide_applied_price != null
+          ? Number(item.price) + Number(item.guide_applied_price)
+          : item.price ?? item.guide_applied_price ?? null;
+    }
     if (dto.photos !== undefined)
       item.photos = dto.photos?.length ? dto.photos : null;
     if (dto.unit_details !== undefined)

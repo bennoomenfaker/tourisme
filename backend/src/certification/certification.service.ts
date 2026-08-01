@@ -64,6 +64,43 @@ export class CertificationService {
     await this.repo.remove(cert);
   }
 
+  /**
+   * Crée les certifications déclarées pendant l'onboarding (une par cert cochée).
+   * La preuve (URL ou fichier) est obligatoire pour chaque certification.
+   * Ne duplique pas une certification existante au même nom pour le même user.
+   */
+  async createFromOnboarding(
+    userId: string,
+    items: { label: string; proof: string }[],
+  ): Promise<Certification[]> {
+    const created: Certification[] = [];
+    for (const item of items) {
+      const label = item.label?.trim();
+      if (!label) continue;
+      const proof = item.proof?.trim();
+      if (!proof) continue;
+
+      const existing = await this.repo.findOne({
+        where: { user_id: userId, name: label },
+      });
+      if (existing) continue;
+
+      const cert = this.repo.create({
+        user_id: userId,
+        name: label,
+        category: null,
+        description: null,
+        proof_url: proof,
+        status: 'pending',
+        issued_by: null,
+        issued_at: null,
+        expires_at: null,
+      });
+      created.push(await this.repo.save(cert));
+    }
+    return created;
+  }
+
   async countByUser(userId: string): Promise<number> {
     return this.repo.count({ where: { user_id: userId, status: 'approved' } });
   }

@@ -6,6 +6,8 @@ import { GuideOfferingAvailabilityRule } from '../../guide/entities/guide-offeri
 import { Offer } from '../../offer/entities/offer.entity';
 import { OfferItem } from '../../offer/entities/offer-item.entity';
 import { OfferItemPrice } from '../../offer/entities/offer-item-price.entity';
+import { OfferCategory } from '../../offer/entities/offer-category.entity';
+import { Venue } from '../../provider/entities/venue.entity';
 import { TripPlan } from '../../trip-plan/entities/trip-plan.entity';
 import { TripPlanItem } from '../../trip-plan/entities/trip-plan-item.entity';
 import { Review } from '../../review/entities/review.entity';
@@ -177,17 +179,36 @@ export class RealisticUserDataSeed {
   // ── 2. Mobile Offers for provider fakerbennoomen@gmail.com  ──
 
   private async addMobileOffers() {
-    // We attach these offers to one of Faker's venues: "Coopérative Artisanale Tataouine"
-    const venueId = 'b1822765-564a-470c-832b-3092cc763554';
-    const categoryActivity = '21a655e0-de08-4b62-b0da-7c5337fd93be'; // activity
-    const categoryCraft = '04137263-fdbc-468c-8f6b-a7c9b1cc6ae8'; // craft
-    const categorySejour = '4c50bfe4-dc54-4b5d-bfa9-308c31c8b356'; // sejour
+    const manager = this.offerRepo.manager;
+
+    // Catégories résolues par slug (les UUID diffèrent d'une base à l'autre).
+    const categoryIdBySlug = async (slug: string) => {
+      const cat = await manager.getRepository(OfferCategory).findOne({
+        where: { slug },
+      });
+      return cat ? cat.id : null;
+    };
+    const categoryActivity = await categoryIdBySlug('activity');
+    const categoryCraft = await categoryIdBySlug('craft');
+    const categorySejour = await categoryIdBySlug('sejour');
+
+    // Venue du prestataire résolue par nom, sinon n'importe laquelle du provider.
+    const venueRepo = manager.getRepository(Venue);
+    const venue =
+      (await venueRepo.findOne({
+        where: {
+          provider_id: this.PO_FAKER,
+          name: 'Coopérative Artisanale Tataouine',
+        },
+      })) ||
+      (await venueRepo.findOne({ where: { provider_id: this.PO_FAKER } }));
+    const venueId = venue ? venue.id : null;
 
     // --- Offer 1: Mobile/guided tour ---
     const o1 = await this.upsertOffer({
       author_id: this.PO_FAKER,
       author_type: 'provider',
-      project_id: venueId,
+      venue_id: venueId,
       title: 'Randonnée Guidée Ksour du Sud',
       description:
         'Randonnée accompagnée par un guide local à travers les ksour du Sud. Transport, repas et guide inclus.',
@@ -216,7 +237,7 @@ export class RealisticUserDataSeed {
     const o2 = await this.upsertOffer({
       author_id: this.PO_FAKER,
       author_type: 'provider',
-      project_id: venueId,
+      venue_id: venueId,
       title: 'Atelier Poterie Mobile Tataouine',
       description:
         'Atelier poterie qui se déplace chez vous (hôtel, gîte). Initiation aux techniques ancestrales. Matériel fourni.',
@@ -245,7 +266,7 @@ export class RealisticUserDataSeed {
     const o3 = await this.upsertOffer({
       author_id: this.PO_FAKER,
       author_type: 'provider',
-      project_id: venueId,
+      venue_id: venueId,
       title: 'Séjour Immersion Tataouine',
       description:
         "Séjour tout compris de 5 jours : hébergement chez l'habitant, randonnées, ateliers artisanaux, cuisine locale.",

@@ -15,6 +15,9 @@ import { OfferItemAvailabilityRule } from './entities/offer-item-availability-ru
 import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Venue } from '../provider/entities/venue.entity';
 import { RedisService } from '../redis/redis.service';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
+import { CollaborationStatus } from '../common/enums/collaboration-status.enum';
+import { NotificationService } from '../notification/notification.service';
 import {
   paginated,
   PaginatedResult,
@@ -52,6 +55,9 @@ export class OfferService {
     private readonly capacityRepo: Repository<OfferItemCapacity>,
     @InjectRepository(Venue)
     private readonly venueRepo: Repository<Venue>,
+    @InjectRepository(Collaboration)
+    private readonly collabRepo: Repository<Collaboration>,
+    private readonly notificationService: NotificationService,
     private readonly redis: RedisService,
   ) {}
 
@@ -427,8 +433,50 @@ export class OfferService {
     offer.deleted_at = new Date();
     offer.status = 'archived';
     await this.repo.save(offer);
+
+    // Notifier et marquer les collaborations comme supprimées (historique visible côté collab)
+    await this.markCollabsOfferDeleted(offer);
     await this.invalidateOfferCache();
     return { message: 'Offre supprimée (archivée).' };
+  }
+
+  /** Marque les collaborations d'une offre supprimée et notifie les collaborateurs */
+  private async markCollabsOfferDeleted(offer: Offer): Promise<void> {
+    const collabs = await this.collabRepo.find({ where: { offer_id: offer.id } });
+    if (!collabs.length) return;
+
+    const offerTitle = offer.title ?? 'une offre';
+    const offerImages: string[] = offer.images ?? [];
+    const offerCover: string | null =
+      Array.isArray(offerImages) && offerImages.length > 0
+        ? offerImages[0]
+        : null;
+    await Promise.all(
+      collabs.map(async (c) => {
+        await this.notificationService.create(c.invited_user_id!, 'offer_deleted', {
+          offer_id: offer.id,
+          collab_id: c.id,
+          offer_title: offerTitle,
+          section: c.section,
+          message: `L'offre « ${offerTitle} » à laquelle vous collaboriez a été supprimée par son propriétaire.`,
+        });
+        // Marquer le collab comme "décliné + offre supprimée" pour conserver un historique visible
+        const existingData = (c.contribution ?? {}) as Record<string, any>;
+        await this.collabRepo.update(
+          { id: c.id },
+          {
+            status: CollaborationStatus.DECLINED,
+            contribution: {
+              ...existingData,
+              offer_deleted: true,
+              offer_title: offerTitle,
+              offer_description: offer.description,
+              offer_cover: offerCover,
+            },
+          } as any,
+        );
+      }),
+    );
   }
 
   async archive(authorId: string, offerId: string): Promise<Offer> {

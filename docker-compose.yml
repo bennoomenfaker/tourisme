@@ -12,7 +12,8 @@ services:
       - tourisme_pgdata:/var/lib/postgresql/data
     networks:
       - tourisme_net
-    # port 5432 is NOT exposed to the host (internal only)
+    ports:
+      - "5432:5432"
 
   # ── Redis (Cache) ──────────────────────────────────────────
   redis:

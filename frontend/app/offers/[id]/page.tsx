@@ -7,12 +7,17 @@ import {
   ArrowLeft, Leaf, MapPin, Clock, Users, Star, Calendar,
   DollarSign, ShieldCheck, Info, ChevronDown, ChevronUp,
   ChevronRight, Check, Heart, ShoppingCart, AlertTriangle,
-  CalendarDays, Timer, Hash, Tag,
+  CalendarDays, Timer, Hash, Tag, UserPlus, AlertCircle, Loader2,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
 import { OFFER_SCHEMAS } from "@/lib/offer-schema";
 import dynamic from "next/dynamic";
+import CollaborationInviteModal from "@/components/collaboration/CollaborationInviteModal";
+import CollaborationCard from "@/components/collaboration/CollaborationCard";
+import CollaborationWizard from "@/components/collaboration/CollaborationWizard";
+import DeclineModal from "@/components/collaboration/DeclineModal";
+import OfferAgendaSync from "@/components/collaboration/OfferAgendaSync";
 
 const GuidedOfferWizard = dynamic(() => import("@/components/GuidedOfferWizard"), { ssr: false });
 const MapView = dynamic(() => import("@/components/map/MapView"), { ssr: false });
@@ -88,6 +93,10 @@ interface Offer {
   author_id: string;
   author_type: string;
   items: OfferItem[];
+  requires_guide_override?: boolean | null;
+  final_price?: number | null;
+  publish_ready?: boolean;
+  category?: { requires_guide: boolean } | null;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -100,6 +109,18 @@ const TYPE_LABELS: Record<string, string> = {
   transfer: "Transfert",
   sejour: "Séjour",
   circuit: "Circuit",
+};
+
+const SECTION_LABELS: Record<string, string> = {
+  randonnee: "Randonnée / Nature",
+  visite_culturelle: "Visite culturelle",
+  guide_tour: "Guide touristique",
+  transport: "Transport / Transfert",
+  accompagnement: "Accompagnement",
+  photographie: "Photographie",
+  gastronomie: "Gastronomie / Dégustation",
+  bien_etre: "Bien-être / Méditation",
+  autre: "Autre",
 };
 
 export default function OfferDetailPage() {
@@ -116,6 +137,15 @@ export default function OfferDetailPage() {
   const [togglingFav, setTogglingFav] = useState(false);
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [showAddedToCart, setShowAddedToCart] = useState(false);
+  const [collaborations, setCollaborations] = useState<any[]>([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showWizard, setShowWizard] = useState<string | null>(null);
+  const [declineCollab, setDeclineCollab] = useState<string | null>(null);
+  const [collabStatus, setCollabStatus] = useState<any>(null);
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [newPrice, setNewPrice] = useState<string>("");
+  const [publishing, setPublishing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -138,6 +168,21 @@ export default function OfferDetailPage() {
     apiFetch<any>(`/favorites/check/offer/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => setIsFavorite(res?.isFavorite ?? false))
       .catch(() => {});
+  }, [id]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (!stored) return;
+    const u = JSON.parse(stored);
+    if (u.role !== "provider" && u.role !== "guide") return;
+    apiFetch<any[]>(`/collaborations/offer/${id}`)
+      .then(setCollaborations)
+      .catch(() => {});
+    if (u.role === "provider") {
+      apiFetch<any>(`/collaborations/offer/${id}/status`)
+        .then(setCollabStatus)
+        .catch(() => {});
+    }
   }, [id]);
 
   const toggleFavorite = async () => {
@@ -177,6 +222,47 @@ export default function OfferDetailPage() {
       console.error("Add to cart error:", e);
     } finally {
       setAddingToCart(null);
+    }
+  };
+
+  const handleUpdatePrice = async () => {
+    const price = parseFloat(newPrice);
+    if (isNaN(price) || price < 0) return;
+    try {
+      await apiFetch(`/collaborations/offer/${id}/price`, {
+        method: "PATCH",
+        body: JSON.stringify({ price }),
+      });
+      setOffer((prev) => prev ? { ...prev, price } : prev);
+      setEditingPrice(false);
+      setNewPrice("");
+    } catch (e: any) {
+      alert(e.message || "Erreur lors de la mise à jour du prix");
+    }
+  };
+
+  const handlePublish = async () => {
+    const price = offer?.price;
+    if (!price || price <= 0) {
+      alert("Veuillez d'abord définir le prix de l'offre avant de publier.");
+      setEditingPrice(true);
+      return;
+    }
+    if (!confirm("Confirmer la publication de cette offre ? Les guides seront notifiés.")) return;
+    setPublishing(true);
+    try {
+      await apiFetch(`/collaborations/offer/${id}/publish`, {
+        method: "POST",
+        body: JSON.stringify({ final_price: price }),
+      });
+      setOffer((prev) => prev ? { ...prev, publish_ready: true } : prev);
+      apiFetch<any>(`/collaborations/offer/${id}/status`)
+        .then(setCollabStatus)
+        .catch(() => {});
+    } catch (e: any) {
+      alert(e.message || "Erreur lors de la publication");
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -295,9 +381,55 @@ export default function OfferDetailPage() {
                 }`}>
                   {offer.status === "approved" ? "Active" : offer.status === "pending" ? "En attente" : offer.status === "draft" ? "Brouillon" : "Refusée"}
                 </span>
-                {offer.price !== null && (
-                  <div className="text-primary font-bold text-2xl">
-                    {Number(offer.price).toLocaleString()} <span className="text-sm font-normal text-slate-400">TND</span>
+                {isAuthor && (offer.requires_guide_override === true || (offer.requires_guide_override === null && offer.category?.requires_guide === true)) && (
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border mb-1 ml-1 ${
+                    offer.publish_ready ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}>
+                    {offer.publish_ready ? "Publiée avec guide" : "En attente collaboration"}
+                  </span>
+                )}
+                {editingPrice ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="number"
+                      value={newPrice}
+                      onChange={(e) => setNewPrice(e.target.value)}
+                      placeholder={String(offer.price ?? 0)}
+                      className="w-24 text-right px-2 py-1 rounded-lg border border-emerald-300 text-lg font-bold text-primary outline-none focus:ring-2 focus:ring-emerald-200"
+                      autoFocus
+                    />
+                    <span className="text-sm font-normal text-slate-400">TND</span>
+                    <button
+                      onClick={handleUpdatePrice}
+                      className="p-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      onClick={() => { setEditingPrice(false); setNewPrice(""); }}
+                      className="p-1 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className={`text-primary font-bold text-2xl ${isAuthor ? "cursor-pointer hover:opacity-70" : ""}`}
+                    onClick={() => {
+                      if (isAuthor) {
+                        setNewPrice(String(offer.price ?? ""));
+                        setEditingPrice(true);
+                      }
+                    }}
+                  >
+                    {(offer.final_price ?? offer.price) !== null ? (
+                      <>
+                        {Number(offer.final_price ?? offer.price).toLocaleString()} <span className="text-sm font-normal text-slate-400">TND</span>
+                        {isAuthor && <span className="text-xs text-slate-300 ml-1">✏️</span>}
+                      </>
+                    ) : (
+                      <span className="text-sm text-slate-400 font-normal">Prix non défini</span>
+                    )}
                   </div>
                 )}
                 {offer.confirmation_mode === "automatic" ? (
@@ -615,6 +747,144 @@ export default function OfferDetailPage() {
               </div>
             )}
 
+            {/* ─── Collaborations ─────────────────────────────────── */}
+            {(isAuthor || user?.role === "guide") && collaborations.length > 0 && (
+              <div className="mt-6">
+                {actionError && (
+                  <div className="flex items-start gap-3 text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-xl mb-3">
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <span>{actionError}</span>
+                    <button onClick={() => setActionError(null)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+                  </div>
+                )}
+                <h2 className="text-lg font-bold text-slate-800 mb-3">Collaborateurs</h2>
+                <div className="space-y-3">
+                  {collaborations.map((c) => (
+                    <CollaborationCard
+                      key={c.id}
+                      collaboration={c}
+                      role={user?.role === "provider" ? "provider" : "guide"}
+                      onAction={(action) => {
+                        setActionError(null);
+                        if (action === "accept") {
+                          apiFetch(`/collaborations/${c.id}/respond`, {
+                            method: "PATCH",
+                            body: JSON.stringify({ accept: true }),
+                          }).then(() => {
+                            setCollaborations((prev) =>
+                              prev.map((x) => x.id === c.id ? { ...x, status: "accepted" } : x)
+                            );
+                          }).catch((e) => setActionError(e.message || "Erreur lors de l'acceptation"));
+                        } else if (action === "decline") {
+                          setDeclineCollab(c.id);
+                        } else if (action === "contribute") {
+                          setShowWizard(c.id);
+                        } else if (action === "cancel") {
+                          if (!confirm("Voulez-vous vraiment annuler cette collaboration ?")) return;
+                          apiFetch(`/collaborations/${c.id}`, { method: "DELETE" }).then(() => {
+                            setCollaborations((prev) => prev.filter((x) => x.id !== c.id));
+                          }).catch((e) => setActionError(e.message || "Erreur lors de l'annulation"));
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ─── Publication panel (provider with requires_guide) ──── */}
+            {isAuthor && (offer.requires_guide_override === true || (offer.requires_guide_override === null && offer.category?.requires_guide === true)) && collabStatus && (
+              <div className="mt-6 bg-white border border-slate-100 rounded-2xl p-5">
+                <h2 className="text-lg font-bold text-slate-800 mb-3">Publication</h2>
+
+                {/* Status summary */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <p className="text-xl font-extrabold text-slate-800">{collabStatus.total}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                    <p className="text-xl font-extrabold text-emerald-700">{collabStatus.completed}</p>
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase">Complétées</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-xl p-3 text-center">
+                    <p className="text-xl font-extrabold text-amber-700">{collabStatus.pending}</p>
+                    <p className="text-[10px] font-bold text-amber-400 uppercase">En attente</p>
+                  </div>
+                </div>
+
+                {/* Guide contributions */}
+                {collabStatus.contributions.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Contributions des guides
+                    </p>
+                    <div className="space-y-2">
+                      {collabStatus.contributions.map((c: any, i: number) => (
+                        <div key={i} className="bg-emerald-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">{c.guide_name}</p>
+                            <p className="text-xs text-slate-500">{SECTION_LABELS[c.section] || c.section}</p>
+                          </div>
+                          {c.price != null && (
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-emerald-700">
+                                Prix suggéré: {Number(c.price).toLocaleString()} {c.currency}
+                              </p>
+                              <p className="text-[10px] text-slate-400">Guide → Prestataire</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2 italic">
+                      Le prix du guide est une suggestion. Vous décidez du prix final de l&apos;offre.
+                    </p>
+                  </div>
+                )}
+
+                {/* Publish button */}
+                {collabStatus.all_done ? (
+                  <button
+                    onClick={handlePublish}
+                    disabled={publishing || offer.publish_ready}
+                    className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {publishing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : offer.publish_ready ? (
+                      <>
+                        <Check size={18} /> Offre publiée avec collaboration
+                      </>
+                    ) : (
+                      <>
+                        <Check size={18} /> Confirmer la publication
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="bg-amber-50 rounded-xl p-3 text-sm text-amber-700 text-center font-medium">
+                    En attente de {collabStatus.pending} collaboration(s) avant publication
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isAuthor && (
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="mt-4 w-full py-2.5 rounded-xl border-2 border-dashed border-emerald-300 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2"
+              >
+                <UserPlus size={16} /> Inviter un collaborateur
+              </button>
+            )}
+
+            {isAuthor && (
+              <div className="mt-4">
+                <OfferAgendaSync offerId={id} offerTitle={offer?.title || ""} />
+              </div>
+            )}
+
             {/* Added to cart notification */}
             {showAddedToCart && (
               <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-xl z-50 flex items-center gap-2">
@@ -678,6 +948,44 @@ export default function OfferDetailPage() {
             setShowEditWizard(false);
           }}
           editOffer={offer}
+        />
+      )}
+      {showInviteModal && (
+        <CollaborationInviteModal
+          offerId={id}
+          offerTitle={offer?.title || ""}
+          defaultType={user?.role === "guide" ? "provider" : "guide"}
+          onClose={() => setShowInviteModal(false)}
+          onInvited={() => {
+            setShowInviteModal(false);
+            apiFetch<any[]>(`/collaborations/offer/${id}`).then(setCollaborations).catch(() => {});
+          }}
+        />
+      )}
+      {showWizard && (
+        <CollaborationWizard
+          collaborationId={showWizard}
+          initialData={collaborations.find((c) => c.id === showWizard)?.contribution}
+          onComplete={() => {
+            setShowWizard(null);
+            apiFetch<any[]>(`/collaborations/offer/${id}`).then(setCollaborations).catch(() => {});
+          }}
+          onCancel={() => setShowWizard(null)}
+        />
+      )}
+      {declineCollab && (
+        <DeclineModal
+          onClose={() => setDeclineCollab(null)}
+          onDecline={async (reason) => {
+            await apiFetch(`/collaborations/${declineCollab}/respond`, {
+              method: "PATCH",
+              body: JSON.stringify({ accept: false, decline_reason: reason }),
+            });
+            setCollaborations((prev) =>
+              prev.map((x) => x.id === declineCollab ? { ...x, status: "declined", decline_reason: reason } : x)
+            );
+            setDeclineCollab(null);
+          }}
         />
       )}
     </div>

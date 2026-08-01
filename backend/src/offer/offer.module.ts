@@ -11,9 +11,11 @@ import { Venue } from '../provider/entities/venue.entity';
 import { Provider } from '../provider/entities/provider.entity';
 import { Organization } from '../organization/entities/organization.entity';
 import { ProviderActivity } from '../provider-activity/entities/provider-activity.entity';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
 import { OfferService } from './offer.service';
 import { OfferController } from './offer.controller';
 import { ProviderModule } from '../provider/provider.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -29,8 +31,10 @@ import { ProviderModule } from '../provider/provider.module';
       Provider,
       Organization,
       ProviderActivity,
+      Collaboration,
     ]),
     ProviderModule,
+    NotificationModule,
   ],
   providers: [OfferService],
   controllers: [OfferController],

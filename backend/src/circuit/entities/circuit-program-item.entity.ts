@@ -8,11 +8,14 @@ import {
 } from 'typeorm';
 import { CircuitDay } from './circuit-day.entity';
 import { OfferItem } from '../../offer/entities/offer-item.entity';
+import { Offer } from '../../offer/entities/offer.entity';
+import { Collaboration } from '../../collaboration/entities/collaboration.entity';
 
 /**
  * Activité / Étape d'une journée de circuit
  * Définit ce qui est prévu à un moment donné : randonnée, repas, atelier, etc.
  * Peut être lié à un OfferItem existant (linked_offer_item_id)
+ * Peut être lié à une Collaboration (guide, chauffeur, artisan...)
  */
 @Entity('circuit_program_items')
 export class CircuitProgramItem {
@@ -56,6 +59,32 @@ export class CircuitProgramItem {
   linkedOfferItem!: OfferItem | null;
   // Lien vers un OfferItem si cette activité correspond à un item du catalogue
 
+  /* ── Lien direct vers l'offre parente ─────────────────────── */
+  @Column({ type: 'uuid', nullable: true })
+  offer_id!: string | null;
+  // Lien vers l'Offre parente (pour récupérer requires_guide, final_price, etc.)
+
+  @ManyToOne(() => Offer, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    createForeignKeyConstraints: false,
+  })
+  @JoinColumn({ name: 'offer_id' })
+  offer!: Offer | null;
+
+  /* ── Collaboration liée (guide, chauffeur, artisan...) ────── */
+  @Column({ type: 'uuid', nullable: true })
+  collaboration_id!: string | null;
+  // Lien vers la Collaboration pour cette activité (prix guide, statut, etc.)
+
+  @ManyToOne(() => Collaboration, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    createForeignKeyConstraints: false,
+  })
+  @JoinColumn({ name: 'collaboration_id' })
+  collaboration!: Collaboration | null;
+
   @Column({ type: 'uuid', nullable: true })
   linked_location_id!: string | null;
   // Lien vers un lieu (place_contributions)
@@ -78,6 +107,15 @@ export class CircuitProgramItem {
   @Column({ type: 'varchar', nullable: true })
   guide_name!: string | null;
 
+  /* ── Prix guide : suggéré vs appliqué ─────────────────────── */
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  guide_suggested_price!: number | null;
+  // Prix proposé par le guide (valeur de référence, immuable)
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  guide_applied_price!: number | null;
+  // Prix appliqué par le prestataire (modifiable, c'est ce qui entre dans le calcul)
+
   @Column({ type: 'varchar', nullable: true })
   category!: string | null;
   // 'hebergement' | 'activite' | 'restauration' | 'transport' | 'workshop' | etc.
@@ -88,7 +126,11 @@ export class CircuitProgramItem {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price!: number | null;
-  // Prix individuel pour cette activité
+  // Prix individuel pour cette activité (base_price de l'offre)
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  final_price!: number | null;
+  // Prix final = price + guide_applied_price (ce que le voyageur voit)
 
   @Column({ type: 'simple-array', nullable: true })
   photos!: string[] | null;

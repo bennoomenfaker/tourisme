@@ -21,6 +21,9 @@ import {
   GuideEngagementSchema,
 } from './schemas/guide-engagement.schema';
 import { ReservationModule } from '../reservation/reservation.module';
+import { CertificationModule } from '../certification/certification.module';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
+import { Review } from '../review/entities/review.entity';
 
 @Module({
   imports: [
@@ -32,12 +35,15 @@ import { ReservationModule } from '../reservation/reservation.module';
       GuideOfferingBlock,
       GuideOfferingPrice,
       Reservation,
+      Collaboration,
+      Review,
     ]),
     MongooseModule.forFeature([
       { name: GuideSkills.name, schema: GuideSkillsSchema },
       { name: GuideEngagement.name, schema: GuideEngagementSchema },
     ]),
     forwardRef(() => ReservationModule),
+    CertificationModule,
   ],
   providers: [
     GuideService,

@@ -30,6 +30,11 @@ export class OfferCategory {
   @Column({ default: 0 })
   sort_order!: number;
 
+  @Column({ type: 'boolean', default: false })
+  requires_guide!: boolean;
+  // Si true, les offres de cette catégorie nécessitent un guide (ex: randonnée, kayak)
+  // Le prestataire peut override par offre via Offer.requires_guide_override
+
   @CreateDateColumn()
   created_at!: Date;
 }

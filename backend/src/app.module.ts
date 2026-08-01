@@ -38,6 +38,7 @@ import { ProviderModule } from './provider/provider.module';
 import { OrganizationModule } from './organization/organization.module';
 import { ProviderActivityModule } from './provider-activity/provider-activity.module';
 import { CertificationModule } from './certification/certification.module';
+import { CollaborationModule } from './collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { CertificationModule } from './certification/certification.module';
     RedisModule,
     DomainModule,
     CertificationModule,
+    CollaborationModule,
   ],
   providers: [
     GoogleStrategy,

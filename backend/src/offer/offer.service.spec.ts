@@ -12,6 +12,8 @@ import { OfferItemAvailabilityRule } from './entities/offer-item-availability-ru
 import { OfferItemSession } from './entities/offer-item-session.entity';
 import { Venue } from '../provider/entities/venue.entity';
 import { RedisService } from '../redis/redis.service';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
+import { NotificationService } from '../notification/notification.service';
 
 describe('OfferService status transitions', () => {
   let service: OfferService;
@@ -37,6 +39,12 @@ describe('OfferService status transitions', () => {
     delByPattern: jest.fn(),
   };
 
+  const mockNotificationService = {
+    create: jest.fn(),
+    deleteForOffer: jest.fn(),
+    replaceForOffer: jest.fn(),
+  };
+
   beforeEach(async () => {
     findOrFailMock = jest.fn();
 
@@ -60,6 +68,8 @@ describe('OfferService status transitions', () => {
         },
         { provide: getRepositoryToken(OfferItemSession), useValue: mockRepo() },
         { provide: getRepositoryToken(Venue), useValue: mockRepo() },
+        { provide: getRepositoryToken(Collaboration), useValue: mockRepo() },
+        { provide: NotificationService, useValue: mockNotificationService },
         { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();

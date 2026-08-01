@@ -29,9 +29,12 @@ interface DayForm {
 interface ProgramItemForm {
   id: string; title: string; description: string; start_time: string; end_time: string;
   is_included: boolean; is_required: boolean; linked_offer_item_id: string | null;
+  offer_id: string | null; collaboration_id: string | null;
   emoji: string; duration_minutes: string; distance_km: string; transport_mode: string;
   guide_id: string | null; guide_name: string; guide_cost: string; guide_offering_id: string | null;
-  category: string | null; subtypes: string[] | null; price: string; photos: string[];
+  guide_suggested_price: string; guide_applied_price: string;
+  category: string | null; subtypes: string[] | null; price: string; final_price: string;
+  photos: string[];
   fields: Record<string, any> | null;
   external_reference: Record<string, any> | null; is_external_reference: boolean;
 }
@@ -513,7 +516,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
   }
 
   function addProgramItem(dayId: string) {
-    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null, emoji: "📍", duration_minutes: "", distance_km: "", transport_mode: "", guide_id: null, guide_name: "", guide_cost: "", guide_offering_id: null, category: null, subtypes: null, price: "", photos: [], fields: null, external_reference: null, is_external_reference: false }] }));
+    setDays((prev) => prev.map((d) => d.id !== dayId ? d : { ...d, programItems: [...d.programItems, { id: genId(), title: "", description: "", start_time: "", end_time: "", is_included: true, is_required: false, linked_offer_item_id: null, offer_id: null, collaboration_id: null, emoji: "📍", duration_minutes: "", distance_km: "", transport_mode: "", guide_id: null, guide_name: "", guide_cost: "", guide_offering_id: null, guide_suggested_price: "", guide_applied_price: "", category: null, subtypes: null, price: "", final_price: "", photos: [], fields: null, external_reference: null, is_external_reference: false }] }));
   }
 
   function removeProgramItem(dayId: string, itemId: string) {
@@ -662,11 +665,16 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                 start_time: prog.start_time || undefined, end_time: prog.end_time || undefined,
                 is_included: prog.is_included, is_required: prog.is_required,
                 linked_offer_item_id: prog.linked_offer_item_id || undefined,
+                offer_id: prog.offer_id || undefined,
+                collaboration_id: prog.collaboration_id || undefined,
                 emoji: prog.emoji || undefined,
                 duration_minutes: prog.duration_minutes ? Number(prog.duration_minutes) : undefined,
                 distance_km: prog.distance_km ? Number(prog.distance_km) : undefined,
                 transport_mode: prog.transport_mode || undefined,
                 guide_id: prog.guide_id || undefined,
+                guide_name: prog.guide_name || undefined,
+                guide_suggested_price: prog.guide_suggested_price ? Number(prog.guide_suggested_price) : undefined,
+                guide_applied_price: prog.guide_applied_price ? Number(prog.guide_applied_price) : undefined,
                 category: prog.category || undefined,
                 subtypes: prog.subtypes?.length ? prog.subtypes : undefined,
                 price: prog.price ? Number(prog.price) : undefined,
@@ -995,17 +1003,27 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                               {prog.guide_id ? (
                                 <div className="flex items-center gap-1.5 bg-primary/5 rounded-lg px-2 py-1">
                                   <span className="text-[11px] font-medium text-primary">{prog.guide_name}</span>
-                                  <button type="button" onClick={() => updateProgramItem(day.id, prog.id, { guide_id: null, guide_name: "" })} className="text-red-400 hover:text-red-600 p-0.5"><X size={12} /></button>
+                                  {prog.guide_suggested_price && (
+                                    <span className="text-[10px] text-slate-400">({prog.guide_suggested_price} TND/j)</span>
+                                  )}
+                                  <button type="button" onClick={() => updateProgramItem(day.id, prog.id, {
+                                    guide_id: null, guide_name: "", guide_suggested_price: "", guide_applied_price: "", collaboration_id: null
+                                  })} className="text-red-400 hover:text-red-600 p-0.5"><X size={12} /></button>
                                 </div>
                               ) : (
                                 <div className="relative">
                                   <GuideSearchInline
-                                    onSelect={(id, name, price, offeringId) => updateProgramItem(day.id, prog.id, {
-                                      guide_id: id,
-                                      guide_name: name,
-                                      guide_cost: price || "",
-                                      guide_offering_id: offeringId || null,
-                                    })}
+                                    onSelect={(id, name, price, offeringId) => {
+                                      const suggestedPrice = price || "";
+                                      updateProgramItem(day.id, prog.id, {
+                                        guide_id: id,
+                                        guide_name: name,
+                                        guide_cost: suggestedPrice,
+                                        guide_offering_id: offeringId || null,
+                                        guide_suggested_price: suggestedPrice,
+                                        guide_applied_price: suggestedPrice,
+                                      });
+                                    }}
                                     dayDate={day.date || undefined}
                                     dayLat={day.lat}
                                     dayLng={day.lng}
@@ -1017,7 +1035,7 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                             {/* Price + guide cost */}
                             <div className="flex items-center gap-2">
                               <div className="flex-1">
-                                <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Prix facturé voyageur</label>
+                                <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Prix base activité</label>
                                 <div className="relative">
                                   <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
                                   <input type="number" min={0} value={prog.price} onChange={(e) => updateProgramItem(day.id, prog.id, { price: e.target.value })}
@@ -1027,15 +1045,32 @@ export default function CircuitBuilderWizard({ token, onClose, onSuccess }: Circ
                               </div>
                               {prog.guide_id && (
                                 <div className="flex-1">
-                                  <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Coût guide</label>
+                                  <label className="block text-[10px] font-medium text-slate-400 mb-0.5">
+                                    Prix guide appliqué
+                                    {prog.guide_suggested_price && prog.guide_suggested_price !== prog.guide_applied_price && (
+                                      <span className="text-amber-500 ml-1">(suggéré: {prog.guide_suggested_price})</span>
+                                    )}
+                                  </label>
                                   <div className="relative">
                                     <DollarSign size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input type="number" min={0} value={prog.guide_cost} onChange={(e) => updateProgramItem(day.id, prog.id, { guide_cost: e.target.value })}
-                                      placeholder="0" className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    <input type="number" min={0} value={prog.guide_applied_price} onChange={(e) => updateProgramItem(day.id, prog.id, {
+                                      guide_applied_price: e.target.value,
+                                      guide_cost: e.target.value,
+                                    })}
+                                      placeholder={prog.guide_suggested_price || "0"} className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
                                   </div>
                                 </div>
                               )}
                             </div>
+                            {/* Prix final = base + guide */}
+                            {prog.guide_id && (
+                              <div className="bg-emerald-50 rounded-lg px-3 py-2 flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-emerald-600 uppercase">Prix final activité</span>
+                                <span className="text-sm font-extrabold text-emerald-700">
+                                  {(Number(prog.price || 0) + Number(prog.guide_applied_price || 0)).toLocaleString()} TND
+                                </span>
+                              </div>
+                            )}
                             {/* is_included / is_required toggles */}
                             <div className="flex items-center gap-3">
                               <label className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 cursor-pointer">

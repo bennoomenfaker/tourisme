@@ -7,11 +7,13 @@ import {
   Plus, Edit3, ShieldCheck, MapPin, Calendar, Phone, Building2, Globe, Leaf, ArrowLeft,
   LayoutGrid, Tag, Briefcase, Users, Info, Sparkles,
   ArrowRight, Send, X, Clock, ChevronLeft, ChevronRight, Check, Search, UserPlus,
-  MoreVertical, UserX, ShieldBan, Flag,
+  MoreVertical, UserX, ShieldBan, Flag, Handshake, CalendarDays,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import MessagerieWidget from "@/components/MessagerieWidget";
 import PubInteractions from "@/components/PubInteractions";
+import ProviderCollaborationsTab from "@/components/collaboration/ProviderCollaborationsTab";
+import AgendaManager from "@/components/collaboration/AgendaManager";
 
 const MapPicker = dynamic(
   () => import("@/components/map/MapPicker"),
@@ -302,7 +304,7 @@ function getOfferSustainabilityLevel(score: number) {
   return              { label: "Offre Conventionnelle",              color: "text-slate-500",   bg: "bg-slate-100",    emoji: "📋" };
 }
 
-type Tab = "tout" | "offres" | "projets" | "reseau" | "apropos";
+type Tab = "tout" | "offres" | "projets" | "reseau" | "collaborations" | "agenda" | "apropos";
 
 // ─── Botanical SVG Cover ──────────────────────────────────────────────────────
 
@@ -2862,6 +2864,8 @@ export default function ProjectOwnerProfilePage() {
                 { key: "offres",  label: "Offres",   Icon: Tag },
                 { key: "projets", label: "Établissements",  Icon: Briefcase },
                 { key: "reseau",  label: "Réseau",   Icon: Users },
+                { key: "collaborations", label: "Collabs", Icon: Handshake },
+                { key: "agenda", label: "Agenda", Icon: CalendarDays },
                 { key: "apropos", label: "À propos", Icon: Info },
               ].map(({ key, label, Icon }) => (
                 <button key={key} onClick={() => setActiveTab(key as Tab)}
@@ -3077,6 +3081,16 @@ export default function ProjectOwnerProfilePage() {
                   )}
                 </div>
               </div>
+            )}
+
+            {/* TAB: COLLABORATIONS */}
+            {activeTab === "collaborations" && (
+              <ProviderCollaborationsTab userId={profile.user_id} token={token} />
+            )}
+
+            {/* TAB: AGENDA */}
+            {activeTab === "agenda" && (
+              <AgendaManager userId={profile.user_id} />
             )}
 
             {activeTab === "apropos" && (

@@ -7,10 +7,11 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUUID,
   Matches,
   Min,
 } from 'class-validator';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class CreateCircuitProgramItemDto {
   @IsString()
@@ -44,11 +45,23 @@ export class CreateCircuitProgramItemDto {
   is_required?: boolean;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @Matches(UUID_REGEX, { message: 'linked_offer_item_id must be a UUID' })
   linked_offer_item_id?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @Matches(UUID_REGEX, { message: 'offer_id must be a UUID' })
+  offer_id?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(UUID_REGEX, { message: 'collaboration_id must be a UUID' })
+  collaboration_id?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(UUID_REGEX, { message: 'linked_location_id must be a UUID' })
   linked_location_id?: string;
 
   @IsOptional()
@@ -70,12 +83,23 @@ export class CreateCircuitProgramItemDto {
   transport_mode?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  @Matches(UUID_REGEX, { message: 'guide_id must be a UUID' })
   guide_id?: string;
 
   @IsOptional()
   @IsString()
   guide_name?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  guide_suggested_price?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  guide_applied_price?: number;
 
   @IsOptional()
   @IsString()

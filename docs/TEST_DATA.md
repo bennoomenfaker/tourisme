@@ -436,3 +436,49 @@
 | issued_at | 2025-01-20 |
 | expires_at | 2027-01-19 |
 | status | pending |
+
+---
+
+## 15. Collaborations
+
+### Scénario de test — Invitation
+
+| Champ | Valeur |
+|-------|--------|
+| provider_id | ID du provider (fakerbennoomen+1@gmail.com) |
+| guide_id | ID du guide (fakerbennoomen+2@gmail.com) |
+| offer_id | ID d'une offre existante du provider |
+| section | `activite` |
+| message | "Je cherche un guide pour cette randonnée eco-touristique" |
+| status | `pending` |
+
+### Scénario de test — Contribution du guide
+
+| Champ | Valeur |
+|-------|--------|
+| services | `["Randonnée guidée", "Observation faune/flore"]` |
+| service_description | "Randonnée de 4h dans le parc national avec observation des oiseaux" |
+| availability_type | `flexible` |
+| available_days | `["lundi", "mardi", "mercredi", "jeudi", "vendredi"]` |
+| available_hours | `08:00 - 16:00` |
+| pricing_model | `per_person` |
+| price | `45` |
+| currency | `TND` |
+| languages | `["Français", "Anglais"]` |
+| skills | `["Premiers secours", "Faune & flore"]` |
+| detailed_description | "Randonnée de 4h dans le parc national de Bou Hedma avec observation des gazelles et oiseaux. Passage par des sentiers peu fréquentés avec arrêts explicatifs." |
+| equipment_provided | `["Jumelles", "Guide d'identification des oiseaux"]` |
+| equipment_required | `["Chaussures de marche", "Chapeau", "Bouteille d'eau"]` |
+
+### Requête SQL pour vérifier
+
+```sql
+SELECT c.id, c.status, c.section,
+       p.full_name AS provider_name,
+       g.full_name AS guide_name,
+       o.title AS offer_title
+FROM collaborations c
+JOIN users p ON c.provider_id = p.id
+JOIN users g ON c.guide_id = g.id
+JOIN offers o ON c.offer_id = o.id;
+```
