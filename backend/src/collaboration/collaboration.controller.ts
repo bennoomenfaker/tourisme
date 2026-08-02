@@ -163,6 +163,28 @@ export class CollaborationController {
     return this.service.getOfferForCollaborator(req.user.sub, offerId);
   }
 
+  /* ── Agenda : mes créneaux ────────────────────────────────── */
+  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Get('availability')
+  @ApiOperation({ summary: 'Mes créneaux d\'agenda' })
+  getAvailability(@Req() req: any) {
+    return this.service.getAvailability(req.user.sub);
+  }
+
+  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Post('availability')
+  @ApiOperation({ summary: 'Ajouter un créneau d\'agenda' })
+  saveAvailabilitySlot(@Req() req: any, @Body() dto: any) {
+    return this.service.saveAvailabilitySlot(req.user.sub, dto);
+  }
+
+  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Delete('availability/:id')
+  @ApiOperation({ summary: 'Supprimer un créneau d\'agenda' })
+  deleteAvailabilitySlot(@Param('id') id: string, @Req() req: any) {
+    return this.service.deleteAvailabilitySlot(req.user.sub, id);
+  }
+
   /* ── Get one collaboration ────────────────────────────────── */
   @Roles(Role.PROVIDER, Role.GUIDE, Role.ADMIN)
   @Get(':id')
@@ -260,27 +282,5 @@ export class CollaborationController {
       offerId,
       disponibilite,
     );
-  }
-
-  /* ── Agenda : mes créneaux ────────────────────────────────── */
-  @Roles(Role.GUIDE, Role.PROVIDER)
-  @Get('availability')
-  @ApiOperation({ summary: 'Mes créneaux d\'agenda' })
-  getAvailability(@Req() req: any) {
-    return this.service.getAvailability(req.user.sub);
-  }
-
-  @Roles(Role.GUIDE, Role.PROVIDER)
-  @Post('availability')
-  @ApiOperation({ summary: 'Ajouter un créneau d\'agenda' })
-  saveAvailabilitySlot(@Req() req: any, @Body() dto: any) {
-    return this.service.saveAvailabilitySlot(req.user.sub, dto);
-  }
-
-  @Roles(Role.GUIDE, Role.PROVIDER)
-  @Delete('availability/:id')
-  @ApiOperation({ summary: 'Supprimer un créneau d\'agenda' })
-  deleteAvailabilitySlot(@Param('id') id: string, @Req() req: any) {
-    return this.service.deleteAvailabilitySlot(req.user.sub, id);
   }
 }
