@@ -153,7 +153,8 @@ export class CircuitService {
     const cached = await this.redis.get<Circuit>(cacheKey);
     if (cached) {
       if (cached.status === 'approved') return cached;
-      if (user && (cached.author_id === user.sub || user.role === 'admin')) return cached;
+      if (user && (cached.author_id === user.sub || user.role === 'admin'))
+        return cached;
       throw new NotFoundException('Circuit introuvable');
     }
 
@@ -180,7 +181,11 @@ export class CircuitService {
     });
   }
 
-  validateCircuitTransition(current: string, next: string, role?: string): boolean {
+  validateCircuitTransition(
+    current: string,
+    next: string,
+    role?: string,
+  ): boolean {
     const providerAllowed: Record<string, string[]> = {
       draft: ['pending', 'archived'],
       approved: ['archived'],
@@ -201,10 +206,16 @@ export class CircuitService {
   async submitForReview(id: string, userId: string): Promise<Circuit> {
     const circuit = await this.findById(id);
     if (circuit.author_id !== userId) {
-      throw new ForbiddenException('Vous ne pouvez soumettre que vos propres circuits');
+      throw new ForbiddenException(
+        'Vous ne pouvez soumettre que vos propres circuits',
+      );
     }
-    if (!this.validateCircuitTransition(circuit.status, 'pending', 'provider')) {
-      throw new BadRequestException(`Transition de "${circuit.status}" vers "pending" non autorisée`);
+    if (
+      !this.validateCircuitTransition(circuit.status, 'pending', 'provider')
+    ) {
+      throw new BadRequestException(
+        `Transition de "${circuit.status}" vers "pending" non autorisée`,
+      );
     }
     // Vérifier qu'il y a au moins 1 jour avec des activités
     const dayCount = await this.dayRepo.count({
@@ -212,7 +223,7 @@ export class CircuitService {
     });
     if (dayCount === 0) {
       throw new BadRequestException(
-        'Un circuit doit contenir au moins 1 jour avant d\'être soumis',
+        "Un circuit doit contenir au moins 1 jour avant d'être soumis",
       );
     }
 
@@ -227,7 +238,9 @@ export class CircuitService {
    * Vérifie que toutes les collaborations liées aux activités du circuit
    * sont acceptées (ou complétées). Sinon, bloque la publication.
    */
-  private async assertAllCollaborationsAccepted(circuitId: string): Promise<void> {
+  private async assertAllCollaborationsAccepted(
+    circuitId: string,
+  ): Promise<void> {
     const items = await this.programItemRepo.find({
       where: { circuitDay: { circuit: { id: circuitId } } },
     });
@@ -248,7 +261,7 @@ export class CircuitService {
     if (pendingCount > 0) {
       throw new BadRequestException(
         `Impossible de publier : ${pendingCount} collaboration(s) en attente d'acceptation. ` +
-        `Invitez un autre guide ou retirez les activités concernées.`,
+          `Invitez un autre guide ou retirez les activités concernées.`,
       );
     }
   }
@@ -341,8 +354,7 @@ export class CircuitService {
     if (dto.lat !== undefined) circuit.lat = dto.lat ?? null;
     if (dto.lng !== undefined) circuit.lng = dto.lng ?? null;
     if (dto.address !== undefined) circuit.address = dto.address ?? null;
-    if (dto.project_id !== undefined)
-      circuit.venue_id = dto.project_id ?? null;
+    if (dto.project_id !== undefined) circuit.venue_id = dto.project_id ?? null;
     if (dto.images !== undefined)
       circuit.images = dto.images?.length ? dto.images : null;
     if (dto.cover_image !== undefined)
@@ -600,9 +612,10 @@ export class CircuitService {
       if (collab?.contribution?.suggested_price) {
         guideSuggestedPrice = Number(collab.contribution.suggested_price);
         // Le prix appliqué est soit celui du DTO, soit le suggested_price
-        guideAppliedPrice = dto.guide_applied_price != null
-          ? Number(dto.guide_applied_price)
-          : guideSuggestedPrice;
+        guideAppliedPrice =
+          dto.guide_applied_price != null
+            ? Number(dto.guide_applied_price)
+            : guideSuggestedPrice;
       }
     } else if (dto.guide_id && !dto.collaboration_id) {
       // Guide sans collaboration : récupérer le prix depuis le champ fields (legacy)
@@ -617,7 +630,7 @@ export class CircuitService {
     const finalPrice =
       activityPrice != null && guideAppliedPrice != null
         ? Number(activityPrice) + Number(guideAppliedPrice)
-        : activityPrice ?? guideAppliedPrice ?? null;
+        : (activityPrice ?? guideAppliedPrice ?? null);
 
     const item = this.programItemRepo.create({
       circuitDay: { id: dayId } as CircuitDay,
@@ -657,7 +670,9 @@ export class CircuitService {
   }
 
   private async recalculateCircuitPrice(circuitId: string): Promise<void> {
-    const circuit = await this.circuitRepo.findOne({ where: { id: circuitId } });
+    const circuit = await this.circuitRepo.findOne({
+      where: { id: circuitId },
+    });
     if (!circuit) return;
     const items = await this.programItemRepo.find({
       where: { circuitDay: { circuit: { id: circuitId } }, is_included: true },
@@ -717,7 +732,9 @@ export class CircuitService {
           where: { id: dto.collaboration_id },
         });
         if (collab?.contribution?.suggested_price) {
-          item.guide_suggested_price = Number(collab.contribution.suggested_price);
+          item.guide_suggested_price = Number(
+            collab.contribution.suggested_price,
+          );
           if (item.guide_applied_price == null) {
             item.guide_applied_price = item.guide_suggested_price;
           }
@@ -743,7 +760,7 @@ export class CircuitService {
       item.final_price =
         item.price != null && item.guide_applied_price != null
           ? Number(item.price) + Number(item.guide_applied_price)
-          : item.price ?? item.guide_applied_price ?? null;
+          : (item.price ?? item.guide_applied_price ?? null);
     }
     if (dto.category !== undefined) item.category = dto.category ?? null;
     if (dto.subtypes !== undefined)
@@ -754,7 +771,7 @@ export class CircuitService {
       item.final_price =
         item.price != null && item.guide_applied_price != null
           ? Number(item.price) + Number(item.guide_applied_price)
-          : item.price ?? item.guide_applied_price ?? null;
+          : (item.price ?? item.guide_applied_price ?? null);
     }
     if (dto.photos !== undefined)
       item.photos = dto.photos?.length ? dto.photos : null;
@@ -818,7 +835,10 @@ export class CircuitService {
     }
 
     // Vérifier min_participants si défini
-    if (circuit.min_participants && participantsCount < circuit.min_participants) {
+    if (
+      circuit.min_participants &&
+      participantsCount < circuit.min_participants
+    ) {
       throw new BadRequestException(
         `Minimum ${circuit.min_participants} participant(s) requis pour ce circuit`,
       );

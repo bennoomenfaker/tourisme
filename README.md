@@ -125,21 +125,20 @@ Offer (conteneur commercial)
     └── OfferItemAvailabilityRule (récurrence)
 ```
 
-### 12 catégories supportées
+### 10 catégories supportées
 
-| Catégorie | Exemples |
-|-----------|----------|
-| 🏕️ Hébergement | Chambres, camping, éco-lodges, suites, bungalows |
-| 🥾 Activités | Randonnées, kayak, ateliers, observation faune |
-| 🍽️ Restauration | Restaurants éco-responsables, cuisine traditionnelle |
-| 🎨 Artisanat | Poterie, tissage, produits locaux |
-| 🚐 Transport | Navettes, transferts, location vélo |
-| 🧭 Guide | Guide touristique local |
-| 🎿 Location | Vélo, kayak, matériel outdoor |
-| 🎪 Événements | Festival, spectacle |
-| 🗺️ Circuit | Circuit multi-jours organisé |
-| 🌴 Séjour | Forfait hébergement + activités |
-| 🌿 Éco-Tour | Tourisme durable et responsable |
+| Slug | Catégorie | Exemples |
+|------|-----------|----------|
+| `eco_tour` | Éco-Tour | Tourisme durable et responsable |
+| `accommodation` | Hébergement | Chambres, camping, éco-lodges, suites |
+| `activity` | Activité | Randonnées, kayak, ateliers, observation faune |
+| `restaurant` | Restauration | Restaurants éco-responsables, cuisine traditionnelle |
+| `craft` | Artisanat | Poterie, tissage, produits locaux |
+| `workshop` | Atelier | Ateliers poterie/cuisine/tissage/musique |
+| `transfer` | Transfert | Navettes, transferts, location vélo |
+| `sejour` | Séjour | Forfait hébergement + activités |
+| `circuit` | Circuit | Circuit multi-jours organisé |
+| `other` | Autre | Autres types d'offres |
 
 ### 40+ schemas dynamiques
 
@@ -227,25 +226,31 @@ tourisme/
 │   └── src/
 │       ├── auth/              # JWT, Google OAuth
 │       ├── users/             # Utilisateurs multi-rôles
-│       ├── eco-traveler/      # Profils voyageurs
+│       ├── eco-traveler/      # Profils voyageurs + score durabilité
 │       ├── guide/             # Profils guides + prestations
-│       ├── project-owner/     # Propriétaires + CRUD projets
+│       ├── provider/          # Propriétaires + CRUD projets
 │       ├── offer/             # Offres (40+ schemas)
-│       ├── booking/           # Réservations
-│       ├── circuit/           # Circuits multi-jours (6 entités)
-│       ├── trip-plan/         # Plans de voyage
+│       ├── reservation/       # Réservations (offres + guides)
+│       ├── circuit/           # Circuits multi-jours + réservations
+│       ├── trip-plan/         # Plans de voyage (réservation groupée)
+│       ├── travel-cart/       # Panier voyageur
 │       ├── notification/      # Notifications
 │       ├── messages/          # Messagerie privée
 │       ├── follow/            # Abonnements
 │       ├── review/            # Avis et notes
 │       ├── favorite/          # Favoris
+│       ├── domain/            # Services métier transverses (capacité, prix, états)
 │       └── upload/            # Cloudinary
 ├── frontend/                   # Next.js Frontend
 │   └── app/                   # App Router
-│       ├── circuits/          # Pages circuits
+│       ├── explore/           # Carte + découverte
 │       ├── offers/            # Catalogue destinations
+│       ├── circuits/          # Pages circuits
 │       ├── trip-plans/        # Plans de voyage
 │       ├── reservations/      # Réservations
+│       ├── dashboard/         # Espaces provider/guide/éco-voyageur/admin
+│       ├── messagerie/        # Messagerie privée
+│       ├── notifications/     # Centre de notifications
 │       └── profile/           # Profils publics
 ├── docs/                       # Documentation
 ├── scripts/                    # Seeds SQL
@@ -257,12 +262,15 @@ tourisme/
 ## 📄 Documentation
 
 - [Architecture globale](./docs/GLOBAL_PROJECT.md)
-- [Audit circuits & tarification](./docs/ANALYSE_OFFRES_CIRCUITS.md)
-- [Audit DDD & data integrity](./docs/AUDIT_DDD_CIRCUITS.md)
 - [Logique métier circuits](./docs/CIRCUIT_BUSINESS_LOGIC.md)
-- [Plan d'action sprints](./docs/TODO_SPRINT_PLAN.md)
+- [Fonctionnalité collaboration & agenda](./docs/COLLABORATION_FEATURE.md)
+- [Architecture panier & trip plan](./docs/architecture-travel-cart.md)
+- [Logique de tarification](./docs/pricing-logic.md)
+- [Analyse métier réservation (audit + corrections)](./docs/analyse-metier-resultat.md)
+- [Roadmap d'implémentation](./docs/ROADMAP_IMPLEMENTATION.md)
+- [Sprints 1 → 5](./docs/SPRINT_1.md)
 - [API Documentation](http://localhost:3003/api) (Swagger)
 
 ---
 
-*Dernière mise à jour : 5 Juillet 2026*
+*Dernière mise à jour : 2 Août 2026*

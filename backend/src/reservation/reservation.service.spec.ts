@@ -56,13 +56,19 @@ describe('ReservationService', () => {
       providers: [
         ReservationService,
         { provide: getRepositoryToken(Reservation), useValue: mockRepo },
-        { provide: getRepositoryToken(ReservationParticipant), useValue: mockRepo },
+        {
+          provide: getRepositoryToken(ReservationParticipant),
+          useValue: mockRepo,
+        },
         { provide: getRepositoryToken(OfferItemSession), useValue: mockRepo },
         { provide: getRepositoryToken(Offer), useValue: mockRepo },
         { provide: getRepositoryToken(OfferItem), useValue: mockRepo },
         { provide: getRepositoryToken(OfferItemCapacity), useValue: mockRepo },
         { provide: getRepositoryToken(GuideOffering), useValue: mockRepo },
-        { provide: getRepositoryToken(GuideOfferingSession), useValue: mockRepo },
+        {
+          provide: getRepositoryToken(GuideOfferingSession),
+          useValue: mockRepo,
+        },
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: CapacityDomainService, useValue: mockCapacityService },
         { provide: ReservationDomainService, useValue: mockReservationDomain },
@@ -80,7 +86,9 @@ describe('ReservationService', () => {
   describe('findById', () => {
     it('should throw NotFoundException if reservation not found', async () => {
       mockRepo.findOne.mockResolvedValue(null);
-      await expect(service.findById('non-existent-id')).rejects.toThrow('Réservation introuvable');
+      await expect(service.findById('non-existent-id')).rejects.toThrow(
+        'Réservation introuvable',
+      );
     });
 
     it('should return reservation if found', async () => {

@@ -168,9 +168,7 @@ export class TravelCartService {
       });
       if (!circuit) throw new NotFoundException('Circuit introuvable');
       if (circuit.status !== 'approved') {
-        throw new BadRequestException(
-          "Ce circuit n'est pas encore publié",
-        );
+        throw new BadRequestException("Ce circuit n'est pas encore publié");
       }
 
       itemData.circuit = circuit;

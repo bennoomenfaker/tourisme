@@ -59,7 +59,9 @@ export class EcoTravelerService {
       this.tripPlanRepo.count({
         where: { ecoTraveler: { id: userId } as any },
       }),
-      this.reservationRepo.count({ where: { traveler: { id: userId } as any } }),
+      this.reservationRepo.count({
+        where: { traveler: { id: userId } as any },
+      }),
       this.circuitResRepo.count({ where: { user: { id: userId } as any } }),
     ]);
 

@@ -24,6 +24,8 @@ git push -u origin pr/reservation-durabilite   # pousse la branche
 | [PR-02](PR-02-reservation-lifecycle.md) | Réservation | reservation/* | Bug refus=confirmation corrigé + réservations guide complètes |
 | [PR-03](PR-03-trip-plan-cart.md) | Trip Plan + Panier | trip-plan, travel-cart, frontend | Réservation groupée circuits + prestations guide, validation publication |
 | [PR-04](PR-04-pricing.md) | Pricing (doc) | docs/pricing-logic.md | Logique de prix serveur, unités de facturation, angles morts |
+| [PR-05](PR-05-circuit-audit-fixes.md) | Circuit (audit) | circuit/*, domain/* | 3 corrections : garde-fou suppression, devise TND, machine à états expired |
+| [PR-06](PR-06-frontend-reservation.md) | Frontend réservations | app/reservations, app/dashboard, app/trip-plans | Alignement sur le modèle réel + UX (toasts, icons, budgets par jour) |
 
 > L'offre (offer) n'a pas de changement de code dans cette série ; la logique de
 > prix associée est documentée dans PR-04 et docs/pricing-logic.md.

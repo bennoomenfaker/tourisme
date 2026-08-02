@@ -53,7 +53,10 @@ export class ReservationService {
    * Crée une réservation avec ses participants
    * Génère une référence unique pour le suivi
    */
-  async create(travelerId: string, dto: CreateReservationDto): Promise<Reservation> {
+  async create(
+    travelerId: string,
+    dto: CreateReservationDto,
+  ): Promise<Reservation> {
     let session: OfferItemSession | null = null;
     if (dto.session_id) {
       session = await this.sessionRepo.findOne({
@@ -211,7 +214,7 @@ export class ReservationService {
       confirmation_mode: dto.confirmation_mode ?? 'automatic',
       status: dto.confirmation_mode === 'manual' ? 'pending' : 'confirmed',
     });
-    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
+    const saved = await this.reservationRepo.save(reservation);
 
     // ── Décrémentation de la capacité via CapacityDomainService ──
     if (dto.offer_item_id) {
@@ -224,7 +227,9 @@ export class ReservationService {
     }
 
     // ── Mise à jour du score de durabilité (composante réservations 40%) ──
-    this.ecoTravelerService.recomputeReservationsScore(travelerId).catch(() => {});
+    this.ecoTravelerService
+      .recomputeReservationsScore(travelerId)
+      .catch(() => {});
 
     if (dto.participants?.length) {
       const participants = dto.participants.map((p) =>
@@ -241,7 +246,9 @@ export class ReservationService {
     }
 
     const notifType =
-      reservation.status === 'confirmed' ? 'booking_confirmed' : 'booking_request';
+      reservation.status === 'confirmed'
+        ? 'booking_confirmed'
+        : 'booking_request';
     const notifTitle =
       reservation.status === 'confirmed'
         ? 'Réservation confirmée'
@@ -365,9 +372,11 @@ export class ReservationService {
     reservation.status = 'cancelled';
     reservation.cancelled_at = new Date();
     reservation.cancel_reason = reason ?? null;
-    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
+    const saved = await this.reservationRepo.save(reservation);
 
-    this.ecoTravelerService.recomputeReservationsScore(travelerId).catch(() => {});
+    this.ecoTravelerService
+      .recomputeReservationsScore(travelerId)
+      .catch(() => {});
 
     // Restaurer la capacité via CapacityDomainService
     if (reservation.offerItem?.id) {
@@ -465,7 +474,7 @@ export class ReservationService {
     if (nextStatus === 'rejected') {
       reservation.status = 'rejected';
       reservation.cancel_reason = dto?.reason ?? null;
-      const saved = (await this.reservationRepo.save(reservation)) as Reservation;
+      const saved = await this.reservationRepo.save(reservation);
 
       // Restaurer la capacité réservée (offre ou session guide)
       await this.restoreReservationCapacity(reservation);
@@ -486,7 +495,7 @@ export class ReservationService {
     }
 
     reservation.status = 'confirmed';
-    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
+    const saved = await this.reservationRepo.save(reservation);
     this.ecoTravelerService
       .recomputeReservationsScore(reservation.traveler.id)
       .catch(() => {});
@@ -650,7 +659,12 @@ export class ReservationService {
     const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const expired = await this.reservationRepo.find({
       where: { status: 'pending', created_at: LessThan(cutoff) },
-      relations: ['offerItem', 'session', 'guideOfferingSession', 'participants'],
+      relations: [
+        'offerItem',
+        'session',
+        'guideOfferingSession',
+        'participants',
+      ],
     });
     for (const reservation of expired) {
       reservation.status = 'expired';
@@ -683,7 +697,10 @@ export class ReservationService {
     });
     let count = 0;
     for (const reservation of completed) {
-      if (reservation.session?.date && new Date(reservation.session.date) < now) {
+      if (
+        reservation.session?.date &&
+        new Date(reservation.session.date) < now
+      ) {
         reservation.status = 'completed';
         await this.reservationRepo.save(reservation);
         count++;
@@ -695,7 +712,9 @@ export class ReservationService {
   /**
    * Restaure la capacité d'une réservation (session + stock global)
    */
-  private async restoreReservationCapacity(reservation: Reservation): Promise<void> {
+  private async restoreReservationCapacity(
+    reservation: Reservation,
+  ): Promise<void> {
     if (reservation.offerItem?.id) {
       const sessionDate = reservation.session?.date ?? null;
       const participantCount = reservation.participants?.length ?? 1;
@@ -775,7 +794,7 @@ export class ReservationService {
       confirmation_mode: offering.confirmation_mode,
     });
 
-    const saved = (await this.reservationRepo.save(reservation)) as Reservation;
+    const saved = await this.reservationRepo.save(reservation);
 
     if (dto.participants?.length) {
       const participants = dto.participants.map((p, i) =>
@@ -797,7 +816,9 @@ export class ReservationService {
     }
     await this.guideSessionRepo.save(session);
 
-    this.ecoTravelerService.recomputeReservationsScore(travelerId).catch(() => {});
+    this.ecoTravelerService
+      .recomputeReservationsScore(travelerId)
+      .catch(() => {});
 
     try {
       await this.notificationService.create(

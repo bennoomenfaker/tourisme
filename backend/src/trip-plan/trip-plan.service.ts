@@ -223,7 +223,10 @@ export class TripPlanService {
     tripPlanId: string,
     ecoTravelerId: string,
     dto: BookTripPlanDto,
-  ): Promise<{ reservations: Reservation[]; errors: { item_id: string; label: string; error: string }[] }> {
+  ): Promise<{
+    reservations: Reservation[];
+    errors: { item_id: string; label: string; error: string }[];
+  }> {
     await this.findByIdForOwner(tripPlanId, ecoTravelerId);
     const fullPlan = await this.tripPlanRepo.findOne({
       where: { id: tripPlanId },
@@ -257,28 +260,43 @@ export class TripPlanService {
 
       for (const item of fullPlan.items) {
         const itemLabel =
-          item.circuit?.title ?? item.guideOffering?.title ?? item.offerItem?.name ?? 'Élément inconnu';
+          item.circuit?.title ??
+          item.guideOffering?.title ??
+          item.offerItem?.name ??
+          'Élément inconnu';
 
         try {
           // ── Reserver un circuit ──
           if (item.circuit) {
             const circuit = item.circuit;
             if (circuit.status !== 'approved') {
-              errors.push({ item_id: item.id, label: itemLabel, error: "Ce circuit n'est pas encore publié" });
+              errors.push({
+                item_id: item.id,
+                label: itemLabel,
+                error: "Ce circuit n'est pas encore publié",
+              });
               continue;
             }
             if (
               circuit.min_participants &&
               participantCount < circuit.min_participants
             ) {
-              errors.push({ item_id: item.id, label: itemLabel, error: `Minimum ${circuit.min_participants} participant(s) requis pour ce circuit` });
+              errors.push({
+                item_id: item.id,
+                label: itemLabel,
+                error: `Minimum ${circuit.min_participants} participant(s) requis pour ce circuit`,
+              });
               continue;
             }
             if (
               circuit.max_participants &&
               participantCount > circuit.max_participants
             ) {
-              errors.push({ item_id: item.id, label: itemLabel, error: `Participants (${participantCount}) dépassent la limite (${circuit.max_participants})` });
+              errors.push({
+                item_id: item.id,
+                label: itemLabel,
+                error: `Participants (${participantCount}) dépassent la limite (${circuit.max_participants})`,
+              });
               continue;
             }
 
@@ -357,7 +375,11 @@ export class TripPlanService {
             const guideSession = item.guideOfferingSession;
 
             if (guideOffering.status !== 'active') {
-              errors.push({ item_id: item.id, label: itemLabel, error: `La prestation n'est pas active` });
+              errors.push({
+                item_id: item.id,
+                label: itemLabel,
+                error: `La prestation n'est pas active`,
+              });
               continue;
             }
 
@@ -370,7 +392,11 @@ export class TripPlanService {
                 order: { date: 'ASC' },
               });
               if (!session) {
-                errors.push({ item_id: item.id, label: itemLabel, error: 'Aucune session disponible' });
+                errors.push({
+                  item_id: item.id,
+                  label: itemLabel,
+                  error: 'Aucune session disponible',
+                });
                 continue;
               }
               item.guideOfferingSession = session;
@@ -382,7 +408,11 @@ export class TripPlanService {
               sess.remaining_capacity !== null &&
               participantCount > sess.remaining_capacity
             ) {
-              errors.push({ item_id: item.id, label: itemLabel, error: `Capacité insuffisante : ${sess.remaining_capacity} place(s) restante(s)` });
+              errors.push({
+                item_id: item.id,
+                label: itemLabel,
+                error: `Capacité insuffisante : ${sess.remaining_capacity} place(s) restante(s)`,
+              });
               continue;
             }
 
@@ -419,7 +449,10 @@ export class TripPlanService {
                   is_group_leader: p.is_group_leader ?? false,
                 }),
               );
-              await queryRunner.manager.save(ReservationParticipant, participants);
+              await queryRunner.manager.save(
+                ReservationParticipant,
+                participants,
+              );
             }
 
             const newRemaining =
@@ -429,7 +462,9 @@ export class TripPlanService {
             await queryRunner.manager.update(GuideOfferingSession, sess.id, {
               remaining_capacity: newRemaining,
               status:
-                newRemaining !== null && newRemaining <= 0 ? 'full' : sess.status,
+                newRemaining !== null && newRemaining <= 0
+                  ? 'full'
+                  : sess.status,
             });
 
             reservations.push(saved);
@@ -455,20 +490,31 @@ export class TripPlanService {
           if (!offer) continue;
 
           if (offer.max_group_size && participantCount > offer.max_group_size) {
-            errors.push({ item_id: item.id, label: itemLabel, error: `Participants (${participantCount}) dépassent la limite (${offer.max_group_size})` });
+            errors.push({
+              item_id: item.id,
+              label: itemLabel,
+              error: `Participants (${participantCount}) dépassent la limite (${offer.max_group_size})`,
+            });
             continue;
           }
 
           if (
             offer.min_age != null &&
-            dto.participants?.some((p) => p.age != null && p.age < offer.min_age!)
+            dto.participants?.some(
+              (p) => p.age != null && p.age < offer.min_age!,
+            )
           ) {
-            errors.push({ item_id: item.id, label: itemLabel, error: `Un participant est trop jeune (min: ${offer.min_age} ans)` });
+            errors.push({
+              item_id: item.id,
+              label: itemLabel,
+              error: `Un participant est trop jeune (min: ${offer.min_age} ans)`,
+            });
             continue;
           }
 
           const defaultPrice =
-            offerItem.prices?.find((p) => p.is_default) ?? offerItem.prices?.[0];
+            offerItem.prices?.find((p) => p.is_default) ??
+            offerItem.prices?.[0];
           let totalPrice = 0;
           if (defaultPrice) {
             const unitPrice = Number(defaultPrice.price);
@@ -534,7 +580,10 @@ export class TripPlanService {
                 is_group_leader: p.is_group_leader ?? false,
               }),
             );
-            await queryRunner.manager.save(ReservationParticipant, participants);
+            await queryRunner.manager.save(
+              ReservationParticipant,
+              participants,
+            );
           }
 
           reservations.push(saved);

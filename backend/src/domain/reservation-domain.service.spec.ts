@@ -9,37 +9,61 @@ describe('ReservationDomainService', () => {
 
   describe('validateTransition', () => {
     it('autorise pending → expired pour booking', () => {
-      expect(service.validateTransition('pending', 'expired', 'booking')).toBe(true);
+      expect(service.validateTransition('pending', 'expired', 'booking')).toBe(
+        true,
+      );
     });
 
-    it("autorise pending → expired pour circuit (aligné sur CircuitService.checkExpiredReservations)", () => {
-      expect(service.validateTransition('pending', 'expired', 'circuit')).toBe(true);
+    it('autorise pending → expired pour circuit (aligné sur CircuitService.checkExpiredReservations)', () => {
+      expect(service.validateTransition('pending', 'expired', 'circuit')).toBe(
+        true,
+      );
     });
 
     it('autorise pending → confirmed/rejected/cancelled pour les deux types', () => {
       for (const type of ['booking', 'circuit'] as const) {
-        expect(service.validateTransition('pending', 'confirmed', type)).toBe(true);
-        expect(service.validateTransition('pending', 'rejected', type)).toBe(true);
-        expect(service.validateTransition('pending', 'cancelled', type)).toBe(true);
+        expect(service.validateTransition('pending', 'confirmed', type)).toBe(
+          true,
+        );
+        expect(service.validateTransition('pending', 'rejected', type)).toBe(
+          true,
+        );
+        expect(service.validateTransition('pending', 'cancelled', type)).toBe(
+          true,
+        );
       }
     });
 
     it('autorise confirmed → cancelled/completed pour les deux types', () => {
       for (const type of ['booking', 'circuit'] as const) {
-        expect(service.validateTransition('confirmed', 'cancelled', type)).toBe(true);
-        expect(service.validateTransition('confirmed', 'completed', type)).toBe(true);
+        expect(service.validateTransition('confirmed', 'cancelled', type)).toBe(
+          true,
+        );
+        expect(service.validateTransition('confirmed', 'completed', type)).toBe(
+          true,
+        );
       }
     });
 
     it('refuse les transitions hors domaine', () => {
-      expect(service.validateTransition('confirmed', 'expired', 'booking')).toBe(false);
-      expect(service.validateTransition('expired', 'confirmed', 'circuit')).toBe(false);
-      expect(service.validateTransition('cancelled', 'pending', 'booking')).toBe(false);
+      expect(
+        service.validateTransition('confirmed', 'expired', 'booking'),
+      ).toBe(false);
+      expect(
+        service.validateTransition('expired', 'confirmed', 'circuit'),
+      ).toBe(false);
+      expect(
+        service.validateTransition('cancelled', 'pending', 'booking'),
+      ).toBe(false);
     });
 
     it('refuse rejected → draft hors circuit', () => {
-      expect(service.validateTransition('rejected', 'draft', 'booking')).toBe(false);
-      expect(service.validateTransition('rejected', 'draft', 'circuit')).toBe(true);
+      expect(service.validateTransition('rejected', 'draft', 'booking')).toBe(
+        false,
+      );
+      expect(service.validateTransition('rejected', 'draft', 'circuit')).toBe(
+        true,
+      );
     });
   });
 
