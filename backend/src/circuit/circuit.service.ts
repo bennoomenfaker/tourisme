@@ -34,6 +34,7 @@ import { PricingDomainService } from '../domain/pricing-domain.service';
 import { CapacityDomainService } from '../domain/capacity-domain.service';
 import { ReservationApplicationService } from '../domain/reservation-application.service';
 import { ReservationDomainService } from '../domain/reservation-domain.service';
+import { EcoTravelerService } from '../eco-traveler/eco-traveler.service';
 
 @Injectable()
 export class CircuitService {
@@ -66,6 +67,7 @@ export class CircuitService {
     private readonly capacityService: CapacityDomainService,
     private readonly reservationApp: ReservationApplicationService,
     private readonly reservationDomain: ReservationDomainService,
+    private readonly ecoTravelerService: EcoTravelerService,
   ) {}
 
   private readonly CIRCUIT_CACHE_PREFIX = 'circuit:';
@@ -989,6 +991,8 @@ export class CircuitService {
       participantsCount,
     );
 
+    this.ecoTravelerService.recomputeReservationsScore(userId).catch(() => {});
+
     return result.saved;
   }
 
@@ -1019,6 +1023,9 @@ export class CircuitService {
     }
     reservation.status = 'confirmed';
     const saved = await this.reservationRepo.save(reservation);
+    this.ecoTravelerService
+      .recomputeReservationsScore(reservation.user.id)
+      .catch(() => {});
     await this.reservationApp.notifyTraveler(
       reservation.user.id,
       'booking_confirmed',
@@ -1104,6 +1111,9 @@ export class CircuitService {
         return saved;
       })
       .then(async (saved) => {
+        this.ecoTravelerService
+          .recomputeReservationsScore(reservation.user.id)
+          .catch(() => {});
         await this.reservationApp.notifyTraveler(
           reservation.user.id,
           'booking_rejected',
@@ -1276,6 +1286,9 @@ export class CircuitService {
         return manager.save(reservation);
       })
       .then(async (saved) => {
+        this.ecoTravelerService
+          .recomputeReservationsScore(userId)
+          .catch(() => {});
         // Notifications
         await this.reservationApp.notifyTraveler(
           userId,
@@ -1342,6 +1355,9 @@ export class CircuitService {
       await this.cancelReservationCapacity(reservation);
       reservation.status = 'expired';
       await this.reservationRepo.save(reservation);
+      this.ecoTravelerService
+        .recomputeReservationsScore(reservation.user.id)
+        .catch(() => {});
       await this.reservationApp.notifyTraveler(
         reservation.user.id,
         'booking_expired',

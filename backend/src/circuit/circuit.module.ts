@@ -10,6 +10,7 @@ import { CircuitReservationSnapshot } from './entities/circuit-reservation-snaps
 import { CircuitService } from './circuit.service';
 import { CircuitController } from './circuit.controller';
 import { NotificationModule } from '../notification/notification.module';
+import { EcoTravelerModule } from '../eco-traveler/eco-traveler.module';
 import { OfferItem } from '../offer/entities/offer-item.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { Collaboration } from '../collaboration/entities/collaboration.entity';
@@ -29,6 +30,7 @@ import { Collaboration } from '../collaboration/entities/collaboration.entity';
       Collaboration,
     ]),
     NotificationModule,
+    EcoTravelerModule,
   ],
   providers: [CircuitService],
   controllers: [CircuitController],
