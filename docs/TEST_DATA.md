@@ -482,3 +482,64 @@ JOIN users p ON c.provider_id = p.id
 JOIN users g ON c.guide_id = g.id
 JOIN offers o ON c.offer_id = o.id;
 ```
+
+---
+
+## 16. Enrichissement Master — `scripts/seed-enrichment-master.sql`
+
+Script idempotent appliqué via Docker. Mot de passe commun à tous les comptes faker : `Aa17092001`.
+
+### Comptes supplémentaires
+
+| Email | Rôle | Profil |
+|-------|------|--------|
+| fakerbennoomen+4@gmail.com | provider | Omar Ben Romdhane — Désert Eco-Aventures (Douz), completion 100, onboarded |
+| fakerbennoomen+5@gmail.com | eco_traveler | Nour Ben Ammar, completion 100, onboarded |
+
+Onboardings complétés : `f.akerbennoomen@gmail.com` (eco_traveler) et `fa.kerbennoomen@gmail.com` (guide) → 100 %.
+
+### Certifications
+
+| Nom | User | Statut |
+|-----|------|--------|
+| Licence de guide éco-touristique | fa.kerbennoomen | approved |
+| PSC1 — Premiers Secours | +2 (guide) | approved |
+| Spéléologie niveau 2 | +2 (guide) | rejected |
+| Label Green Key | provider principal | approved |
+| ISO 14001 | provider principal | rejected |
+| Travelife | +1 (provider) | approved |
+| Label Éco-Voyage | +4 (provider) | pending |
+
+### Offres pending complétées (attributs remplis)
+
+| Offre | Prix | Capacité | Score durabilité |
+|-------|------|----------|------------------|
+| Séjour Éco-Luxe La Marsa | 180 TND | 1–4 | 65 |
+| Séjour Éco-Luxe Sidi Bou Said | 210 TND | 1–3 | 70 |
+| Package Plage Verte | 95 TND | 2–12 | 75 |
+| Circuit Vert Cap Bon | 65 TND | 2–15 | 70 |
+| Kayak Aventure Tataouine | 55 TND | 2–8 | 68 |
+
+### Guide offerings (fakerbennoomen+2)
+
+- **Randonnée Éco Jebel Orbata** → active
+- **Atelier Cuisine Tunisienne Bio** → active
+- **Guide Patrimoine Carthage Test** → rejected
+
+### Nouvelles réservations (14 offres, 6 circuits, 3 guides)
+
+Réfs `RES-2026-*` : SEJOUR-2P (confirmed 1500), POTERIE-5P (pending 300), KAYAK-REJ (rejected 130), KSOUR-ANN (cancelled 1250), MOSAIC-5P (completed 450), RESTO-2P (pending 240), TROGLO-5P (confirmed 750), KROUM-ANN (cancelled 240), GUIDE-JEBEL-5P (confirmed 225), GUIDE-CARTH-REJ (rejected 70), GUIDE-FERN-5P (pending 600) + 3 rés. kayak/gnawa/pottery de +3.
+
+Réservations circuits (IDs `e6000000-*`) : Magie du Sahara (confirmed, 5p), Djerba Authentique (pending, 2p), Road Trip Sud (cancelled, 5p), Trek Kroumirie (rejected, 2p), Djerba Plongée (confirmed, 2p), Kerkennah (pending, 5p).
+
+Participants ajoutés pour les groupes de 5 et 2 (36 au total).
+
+### Trip plans validés
+
+- Tous les drafts de `f.akerbennoomen@gmail.com` → confirmed
+- « Voyage Djerba & Sud Août 2026 » (+3) → confirmed
+- « Week-end Art & Désert — Douz » (+5, 2026-10-17/18) → confirmed, avec items poterie + randonnée Jebel Ressas
+
+### Notifications
+
+76 notifications au total. Nouvelles : booking_request, booking_confirmed, booking_cancelled, circuit_confirmed, circuit_pending, circuit_available, admin_approved (certifications), admin_rejected (certifications + guide offering), avec refs `data->>'ref'` / `data->>'certification'` dédiées pour l'idempotence.
