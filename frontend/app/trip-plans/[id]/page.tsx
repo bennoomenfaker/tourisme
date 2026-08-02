@@ -7,9 +7,11 @@ import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, Calendar, Plus, Trash2, MapPin, Clock,
   Search, X, Loader2, Check, AlertCircle, Tag, Share2, Edit, ChevronRight, User,
+  Wallet, Store, Compass, Bed, Tent,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
+import { ToastProvider, useToast } from "@/components/ui/Toast";
 
 const TripMap = dynamic(() => import("@/components/map/TripMap"), { ssr: false });
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), { ssr: false });
@@ -190,8 +192,17 @@ function computeItemTotal(item: TripPlanItem, participantCount: number): number 
 }
 
 export default function TripPlanDetailPage() {
+  return (
+    <ToastProvider>
+      <TripPlanDetailPageInner />
+    </ToastProvider>
+  );
+}
+
+function TripPlanDetailPageInner() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { toast } = useToast();
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddItem, setShowAddItem] = useState(false);
@@ -229,7 +240,8 @@ export default function TripPlanDetailPage() {
       });
       setPlan(updated);
       setEditingTitle(false);
-    } catch (e: any) { alert(e.message); }
+      toast("Titre du plan mis à jour", "success");
+    } catch (e: any) { toast(e.message, "error"); }
     setSavingTitle(false);
   };
 
@@ -244,7 +256,8 @@ export default function TripPlanDetailPage() {
       });
       setEditingItem(null);
       loadPlan();
-    } catch (e: any) { alert(e.message); }
+      toast("Activité mise à jour", "success");
+    } catch (e: any) { toast(e.message, "error"); }
   };
 
   const planImages = useMemo(() => {
@@ -262,18 +275,10 @@ export default function TripPlanDetailPage() {
 
   const totalBudget = useMemo(() => {
     if (!plan?.items) return 0;
-    let total = 0;
-    for (const item of plan.items) {
-      if (item.offerItem?.prices?.length) {
-        const price = item.offerItem.prices.find((p) => p.is_default)?.price ?? item.offerItem.prices[0]?.price;
-        if (price) total += Number(price);
-      } else if (item.circuit?.base_price) {
-        total += Number(item.circuit.base_price);
-      } else if (item.guideOffering?.price) {
-        total += Number(item.guideOffering.price);
-      }
-    }
-    return total;
+    return plan.items.reduce(
+      (sum, item) => sum + (computeItemTotal(item, 1) ?? 0),
+      0,
+    );
   }, [plan]);
 
   const dayCount = useMemo(() => {
@@ -319,11 +324,11 @@ export default function TripPlanDetailPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
                 {planImages.length > 1 && (
                   <>
-                    <button onClick={() => setGalleryIdx((i) => (i - 1 + planImages.length) % planImages.length)} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"><ArrowLeft size={18} /></button>
-                    <button onClick={() => setGalleryIdx((i) => (i + 1) % planImages.length)} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"><ArrowLeft size={18} className="rotate-180" /></button>
+                    <button onClick={() => setGalleryIdx((i) => (i - 1 + planImages.length) % planImages.length)} aria-label="Image précédente" className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"><ArrowLeft size={18} /></button>
+                    <button onClick={() => setGalleryIdx((i) => (i + 1) % planImages.length)} aria-label="Image suivante" className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors"><ChevronRight size={18} /></button>
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                       {planImages.map((_, i) => (
-                        <button key={i} onClick={() => setGalleryIdx(i)} className={`w-2 h-2 rounded-full transition-all ${i === galleryIdx ? "bg-white scale-125" : "bg-white/50"}`} />
+                        <button key={i} onClick={() => setGalleryIdx(i)} aria-label={`Image ${i + 1}`} className={`w-2 h-2 rounded-full transition-all ${i === galleryIdx ? "bg-white scale-125" : "bg-white/50"}`} />
                       ))}
                     </div>
                   </>
@@ -352,10 +357,10 @@ export default function TripPlanDetailPage() {
                         <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
                           className="flex-1 text-xl font-bold border-b-2 border-emerald-300 bg-transparent focus:outline-none py-0.5" autoFocus
                           onKeyDown={(e) => { if (e.key === "Enter") handleSaveTitle(); if (e.key === "Escape") setEditingTitle(false); }} />
-                        <button onClick={handleSaveTitle} disabled={savingTitle} className="text-primary hover:text-emerald-700">
+                        <button onClick={handleSaveTitle} disabled={savingTitle} aria-label="Enregistrer le titre" className="text-primary hover:text-emerald-700">
                           {savingTitle ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
                         </button>
-                        <button onClick={() => setEditingTitle(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        <button onClick={() => setEditingTitle(false)} aria-label="Annuler la modification" className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
                       </div>
                     ) : (
                       <h1 className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-primary transition-colors" onClick={() => setEditingTitle(true)} title="Cliquer pour modifier">
@@ -375,10 +380,10 @@ export default function TripPlanDetailPage() {
                         <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
                           className="flex-1 text-xl font-bold border-b-2 border-emerald-300 bg-transparent focus:outline-none py-0.5" autoFocus
                           onKeyDown={(e) => { if (e.key === "Enter") handleSaveTitle(); if (e.key === "Escape") setEditingTitle(false); }} />
-                        <button onClick={handleSaveTitle} disabled={savingTitle} className="text-primary hover:text-emerald-700">
+                        <button onClick={handleSaveTitle} disabled={savingTitle} aria-label="Enregistrer le titre" className="text-primary hover:text-emerald-700">
                           {savingTitle ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
                         </button>
-                        <button onClick={() => setEditingTitle(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+                        <button onClick={() => setEditingTitle(false)} aria-label="Annuler la modification" className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
                       </div>
                     ) : (
                       <h1 className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-primary transition-colors" onClick={() => setEditingTitle(true)} title="Cliquer pour modifier">
@@ -445,12 +450,14 @@ export default function TripPlanDetailPage() {
                     router.push(`/messagerie?share=${encodeURIComponent(text)}`);
                   }}
                   className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-primary hover:border-emerald-200 transition-colors"
+                  aria-label="Partager le plan"
                 >
                   <Share2 size={16} />
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
                   className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                  aria-label="Supprimer le plan"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -462,9 +469,9 @@ export default function TripPlanDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-base">payments</span> Budget estimé (1 personne)
+                        <Wallet size={16} /> Budget estimé (1 personne)
                       </p>
-                      <p className="text-2xl font-black text-emerald-700 mt-1">{totalBudget.toLocaleString()} <span className="text-sm font-normal text-emerald-500">TND</span></p>
+                      <p className="text-2xl font-black text-emerald-700 mt-1">{totalBudget.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} <span className="text-sm font-normal text-emerald-500">TND</span></p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-emerald-500">{plan.items?.length ?? 0} activité{(plan.items?.length ?? 0) !== 1 ? "s" : ""}</p>
@@ -497,7 +504,12 @@ export default function TripPlanDetailPage() {
                     <div className="relative">
                       <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-emerald-200" />
                       <div className="space-y-4">
-                        {days.map((dayNum) => (
+                        {days.map((dayNum) => {
+                          const dayTotal = grouped[dayNum].reduce(
+                            (sum, i) => sum + (computeItemTotal(i, 1) ?? 0),
+                            0,
+                          );
+                          return (
                           <div key={dayNum}>
                             <div className="flex items-center gap-3 relative mb-2">
                               <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold z-10 shrink-0 shadow-md shadow-emerald-500/20">
@@ -507,6 +519,11 @@ export default function TripPlanDetailPage() {
                                 <h3 className="text-sm font-bold text-slate-700">Jour {dayNum}</h3>
                                 <p className="text-[10px] text-slate-400">{grouped[dayNum].length} activité{grouped[dayNum].length > 1 ? "s" : ""}</p>
                               </div>
+                              {dayTotal > 0 && (
+                                <span className="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full shrink-0">
+                                  ~{formatPrice(dayTotal)} TND
+                                </span>
+                              )}
                             </div>
                             <div className="ml-[15px] space-y-2 border-l-2 border-dashed border-emerald-200 pl-5 mb-3">
                               {grouped[dayNum].map((item) => {
@@ -546,7 +563,8 @@ export default function TripPlanDetailPage() {
                               })}
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                         {unassigned.length > 0 && (
                           <div>
                             <div className="flex items-center gap-3 relative mb-2">
@@ -656,8 +674,8 @@ export default function TripPlanDetailPage() {
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
-                                <button onClick={() => { setEditingItem(item.id); setEditItemDay(String(item.day_number ?? "")); setEditItemNotes(item.notes ?? ""); }} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"><Edit size={14} /></button>
-                                <button onClick={async () => { if (!confirm("Retirer cette activité du plan ?")) return; try { await apiFetch(`/trip-plans/${id}/items/${item.id}`, { method: "DELETE" }); loadPlan(); } catch (e: any) { alert(e.message); } }} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={14} /></button>
+                                <button onClick={() => { setEditingItem(item.id); setEditItemDay(String(item.day_number ?? "")); setEditItemNotes(item.notes ?? ""); }} aria-label="Modifier l'activité" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"><Edit size={14} /></button>
+                                <button onClick={async () => { if (!confirm("Retirer cette activité du plan ?")) return; try { await apiFetch(`/trip-plans/${id}/items/${item.id}`, { method: "DELETE" }); loadPlan(); toast("Activité retirée du plan", "success"); } catch (e: any) { toast(e.message, "error"); } }} aria-label="Retirer l'activité du plan" className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={14} /></button>
                               </div>
                             </div>
                           </div>
@@ -731,8 +749,8 @@ export default function TripPlanDetailPage() {
               <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600">Annuler</button>
               <button
                 onClick={async () => {
-                  try { await apiFetch(`/trip-plans/${id}`, { method: "DELETE" }); router.push("/trip-plans"); }
-                  catch (e: any) { alert(e.message); }
+                  try { await apiFetch(`/trip-plans/${id}`, { method: "DELETE" }); toast("Plan supprimé", "success"); router.push("/trip-plans"); }
+                  catch (e: any) { toast(e.message, "error"); }
                 }}
                 className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600"
               >
@@ -747,6 +765,7 @@ export default function TripPlanDetailPage() {
 }
 
 function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan: TripPlan; onClose: () => void; onAdded: () => void }) {
+  const { toast } = useToast();
   const [tab, setTab] = useState<"offers" | "guides">("offers");
   const [offers, setOffers] = useState<OfferListItem[]>([]);
   const [search, setSearch] = useState("");
@@ -802,8 +821,9 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
       });
       onAdded();
       onClose();
+      toast("Activité ajoutée au plan", "success");
     } catch (e: any) {
-      alert(e.message);
+      toast(e.message, "error");
     } finally {
       setAdding(null);
     }
@@ -834,8 +854,9 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
       });
       onAdded();
       onClose();
+      toast("Prestation guide ajoutée au plan", "success");
     } catch (e: any) {
-      alert(e.message);
+      toast(e.message, "error");
     } finally {
       setAddingGuideOffering(null);
     }
@@ -855,11 +876,11 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
             <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4">
               <button onClick={() => setTab("offers")}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${tab === "offers" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                🏪 Offres
+                <Store size={13} className="inline mr-1 -mt-0.5" /> Offres
               </button>
               <button onClick={() => setTab("guides")}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${tab === "guides" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                🧑‍🏫 Guides
+                <Compass size={13} className="inline mr-1 -mt-0.5" /> Guides
               </button>
             </div>
           )}
@@ -887,7 +908,7 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                   />
                 </div>
                 {mapLat && mapLng && (
-                  <p className="text-[10px] text-slate-400 mt-1">📍 {mapLat.toFixed(5)}, {mapLng.toFixed(5)}</p>
+                  <p className="text-[10px] text-slate-400 mt-1"><MapPin size={10} className="inline mr-0.5 -mt-0.5" />{mapLat.toFixed(5)}, {mapLng.toFixed(5)}</p>
                 )}
               </div>
 
@@ -905,8 +926,8 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                           <div className="flex flex-wrap gap-1 mt-1">
                             {item.item_type && <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">{item.item_type}</span>}
                             {item.details_json?.room_sub_type && <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">{item.details_json.room_sub_type}</span>}
-                            {item.details_json?.bed_count != null && <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">🛏 {item.details_json.bed_count} lit(s)</span>}
-                            {item.details_json?.tent_capacity != null && <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">⛺ {item.details_json.tent_capacity} pers.</span>}
+                            {item.details_json?.bed_count != null && <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full"><Bed size={10} className="inline mr-0.5 -mt-0.5" />{item.details_json.bed_count} lit(s)</span>}
+                            {item.details_json?.tent_capacity != null && <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full"><Tent size={10} className="inline mr-0.5 -mt-0.5" />{item.details_json.tent_capacity} pers.</span>}
                           </div>
                           {item.prices.length > 0 && (
                             <p className="text-xs text-primary font-semibold mt-1">
@@ -939,14 +960,14 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                 <ArrowLeft size={14} /> Retour aux guides
               </button>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-lg">
-                  {selectedGuide.photo ? <img src={selectedGuide.photo} alt="" className="w-full h-full rounded-full object-cover" /> : "🧑‍🏫"}
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  {selectedGuide.photo ? <img src={selectedGuide.photo} alt="" className="w-full h-full rounded-full object-cover" /> : <User size={22} className="text-amber-400" />}
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-800">{selectedGuide.full_name}</h4>
-                  {selectedGuide.zone && <p className="text-xs text-slate-400">📍 {selectedGuide.zone}</p>}
+                  {selectedGuide.zone && <p className="text-xs text-slate-400"><MapPin size={10} className="inline mr-0.5 -mt-0.5" />{selectedGuide.zone}</p>}
                   {selectedGuide.sustainability_score != null && (
-                    <p className="text-xs text-emerald-600">🌿 Score: {selectedGuide.sustainability_score}</p>
+                    <p className="text-xs text-emerald-600"><Leaf size={10} className="inline mr-0.5 -mt-0.5" /> Score: {selectedGuide.sustainability_score}</p>
                   )}
                 </div>
               </div>
@@ -979,10 +1000,10 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                         {o.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{o.description}</p>}
                         <div className="flex flex-wrap gap-2 mt-2 text-[10px] text-slate-500">
                           <span className="font-bold text-primary">{Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
-                          {o.service_zone_type === "radius" && o.radius_km && <span>📏 Rayon {o.radius_km} km</span>}
-                          {o.service_zone_type === "all_tunisia" && <span>🌍 Toute la Tunisie</span>}
-                          {o.service_zone_type === "point" && <span>📍 Point fixe</span>}
-                          {o.languages?.length > 0 && <span>🗣️ {o.languages.join(", ")}</span>}
+                          {o.service_zone_type === "radius" && o.radius_km && <span>Rayon {o.radius_km} km</span>}
+                          {o.service_zone_type === "all_tunisia" && <span>Toute la Tunisie</span>}
+                          {o.service_zone_type === "point" && <span><MapPin size={10} className="inline mr-0.5 -mt-0.5" />Point fixe</span>}
+                          {o.languages?.length > 0 && <span>{o.languages.join(", ")}</span>}
                         </div>
                       </div>
                       <button onClick={() => handleAddGuideOffering(o.id)} disabled={addingGuideOffering === o.id}
@@ -1059,14 +1080,14 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                       className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-sm shrink-0">
-                          {g.photo ? <img src={g.photo} alt="" className="w-full h-full rounded-full object-cover" /> : "🧑‍🏫"}
+                          {g.photo ? <img src={g.photo} alt="" className="w-full h-full rounded-full object-cover" /> : <User size={18} className="text-amber-400" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-slate-800">{g.full_name}</p>
                           <div className="flex flex-wrap gap-1.5 mt-0.5">
-                            {g.zone && <span className="text-[10px] text-slate-400">📍 {g.zone}</span>}
+                            {g.zone && <span className="text-[10px] text-slate-400"><MapPin size={9} className="inline mr-0.5 -mt-0.5" />{g.zone}</span>}
                             {g.sustainability_score != null && (
-                              <span className="text-[10px] text-emerald-600">🌿 {g.sustainability_score}</span>
+                              <span className="text-[10px] text-emerald-600"><Leaf size={9} className="inline mr-0.5 -mt-0.5" />{g.sustainability_score}</span>
                             )}
                             <span className="text-[10px] text-amber-600">{(g.offerings ?? []).length} prestation(s)</span>
                           </div>
@@ -1080,7 +1101,7 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
                 <p className="text-sm text-slate-400 text-center py-4">Aucun guide trouvé pour "{guideSearchQuery}"</p>
               ) : (
                 <div className="text-center py-8">
-                  <span className="text-3xl mb-2 block">🧑‍🏫</span>
+                  <Compass size={40} className="mx-auto mb-2 text-slate-300" />
                   <p className="text-sm text-slate-400">Cherchez un guide par nom pour voir ses prestations</p>
                   <p className="text-xs text-slate-300 mt-1">Vous pourrez le contacter ou ajouter une note à votre plan</p>
                 </div>
