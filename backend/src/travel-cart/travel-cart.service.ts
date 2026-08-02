@@ -167,6 +167,11 @@ export class TravelCartService {
         where: { id: dto.circuit_id },
       });
       if (!circuit) throw new NotFoundException('Circuit introuvable');
+      if (circuit.status !== 'approved') {
+        throw new BadRequestException(
+          "Ce circuit n'est pas encore publié",
+        );
+      }
 
       itemData.circuit = circuit;
       itemData.unit_price = circuit.base_price
@@ -293,6 +298,12 @@ export class TravelCartService {
 
     let sortOrder = 0;
     for (const cartItem of cart.items) {
+      if (cartItem.circuit && cartItem.circuit.status !== 'approved') {
+        throw new BadRequestException(
+          `Le circuit "${cartItem.circuit.title ?? 'sans titre'}" n'est pas encore publié`,
+        );
+      }
+
       const notes = [
         cartItem.notes,
         participantCount > 1 ? `${participantCount} participants` : null,

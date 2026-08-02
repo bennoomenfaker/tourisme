@@ -27,6 +27,7 @@ import { Reservation } from '../reservation/entities/reservation.entity';
 import { ReservationParticipant } from '../reservation/entities/reservation-participant.entity';
 import { NotificationService } from '../notification/notification.service';
 import { EcoTravelerMongoService } from '../eco-traveler/eco-traveler-mongo.service';
+import { EcoTravelerService } from '../eco-traveler/eco-traveler.service';
 import { CapacityDomainService } from '../domain/capacity-domain.service';
 import { ReservationApplicationService } from '../domain/reservation-application.service';
 
@@ -56,6 +57,7 @@ export class TripPlanService {
     private readonly notificationService: NotificationService,
     private readonly dataSource: DataSource,
     private readonly mongoService: EcoTravelerMongoService,
+    private readonly ecoTravelerService: EcoTravelerService,
     private readonly capacityService: CapacityDomainService,
     private readonly reservationApp: ReservationApplicationService,
   ) {}
@@ -85,7 +87,13 @@ export class TripPlanService {
   async findByTraveler(ecoTravelerId: string): Promise<TripPlan[]> {
     return this.tripPlanRepo.find({
       where: { ecoTraveler: { id: ecoTravelerId } },
-      relations: ['items', 'items.offerItem', 'items.offerItem.offer'],
+      relations: [
+        'items',
+        'items.offerItem',
+        'items.offerItem.offer',
+        'items.circuit',
+        'items.guideOffering',
+      ],
       order: { created_at: 'DESC' },
     });
   }
@@ -99,6 +107,8 @@ export class TripPlanService {
         'items.offerItem.offer',
         'items.offerItem.prices',
         'items.circuit',
+        'items.guideOffering',
+        'items.guideOfferingSession',
         'ecoTraveler',
       ],
     });
@@ -253,6 +263,17 @@ export class TripPlanService {
           // ── Reserver un circuit ──
           if (item.circuit) {
             const circuit = item.circuit;
+            if (circuit.status !== 'approved') {
+              errors.push({ item_id: item.id, label: itemLabel, error: "Ce circuit n'est pas encore publié" });
+              continue;
+            }
+            if (
+              circuit.min_participants &&
+              participantCount < circuit.min_participants
+            ) {
+              errors.push({ item_id: item.id, label: itemLabel, error: `Minimum ${circuit.min_participants} participant(s) requis pour ce circuit` });
+              continue;
+            }
             if (
               circuit.max_participants &&
               participantCount > circuit.max_participants
@@ -568,6 +589,10 @@ export class TripPlanService {
 
       this.mongoService
         .incrementStat(ecoTravelerId, 'reservations_made')
+        .catch(() => {});
+
+      this.ecoTravelerService
+        .recomputeReservationsScore(ecoTravelerId)
         .catch(() => {});
 
       const offerCount = reservations.length;
