@@ -48,7 +48,6 @@ function NewReservationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const offerId = searchParams.get("offerId");
-  const preselectedItemId = searchParams.get("itemId");
 
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,8 +55,6 @@ function NewReservationPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(preselectedItemId);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [specialRequests, setSpecialRequests] = useState("");
   const [participants, setParticipants] = useState<Participant[]>([
     { full_name: "", age: null, document_type: "none", document_number: "", is_group_leader: true },
@@ -114,12 +111,7 @@ function NewReservationPage() {
     setParticipants(updated);
   };
 
-  const selectedItem = offer?.items.find((i) => i.id === selectedItemId);
-  const selectedPrice = selectedItem?.prices.find((p) => p.is_default) ?? selectedItem?.prices[0];
-
-  const baseUnitPrice = selectedPrice
-    ? Number(selectedPrice.price)
-    : offer?.price
+  const baseUnitPrice = offer?.price
     ? Number(offer.price)
     : offer?.items?.length
     ? offer.items
@@ -154,8 +146,6 @@ function NewReservationPage() {
           method: "POST",
           body: JSON.stringify({
             offer_id: offerId,
-            offer_item_id: selectedItemId ?? undefined,
-            session_id: selectedSessionId ?? undefined,
             special_requests: specialRequests || undefined,
             confirmation_mode: offer?.confirmation_mode ?? "automatic",
             participants: participants.filter((p) => p.full_name.trim()),
@@ -261,43 +251,6 @@ function NewReservationPage() {
             </div>
           )}
 
-          {(offer?.items?.length ?? 0) > 0 && (
-            <div className="mb-5">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Que souhaitez-vous réserver ?</label>
-              <select
-                value={selectedItemId ?? ""}
-                onChange={(e) => { setSelectedItemId(e.target.value || null); setSelectedSessionId(null); }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              >
-                <option value="">L&apos;offre entière</option>
-                {offer?.items.filter((i) => i.status !== "inactive").map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {selectedItem && selectedItem.sessions.filter((s) => s.status === "available").length > 0 && (
-            <div className="mb-5">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Choisir une session</label>
-              <select
-                value={selectedSessionId ?? ""}
-                onChange={(e) => setSelectedSessionId(e.target.value || null)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              >
-                <option value="">Pas de session spécifique</option>
-                {selectedItem.sessions
-                  .filter((s) => s.status === "available" && (!s.remaining_capacity || s.remaining_capacity > 0))
-                  .map((session) => (
-                    <option key={session.id} value={session.id}>
-                      {new Date(session.date).toLocaleDateString("fr-FR")} {session.start_time}–{session.end_time}
-                      {session.remaining_capacity !== null ? ` (${session.remaining_capacity} places)` : ""}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          )}
-
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-700 mb-1">Participants</label>
             {participants.map((p, i) => (
@@ -362,9 +315,7 @@ function NewReservationPage() {
 
           <div className="border-t border-slate-100 pt-4 mb-5">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">
-                {selectedPrice ? `${selectedPrice.label} × ${participants.length}` : "Total"}
-              </span>
+              <span className="text-slate-500">Total</span>
               <span className="font-bold text-lg text-primary">{displayPrice.toLocaleString()} TND</span>
             </div>
           </div>
