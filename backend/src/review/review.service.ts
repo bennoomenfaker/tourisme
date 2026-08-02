@@ -8,12 +8,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from './entities/review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { EcoTravelerService } from '../eco-traveler/eco-traveler.service';
 
 @Injectable()
 export class ReviewService {
   constructor(
     @InjectRepository(Review)
     private readonly reviewRepo: Repository<Review>,
+    private readonly ecoTravelerService: EcoTravelerService,
   ) {}
 
   async create(authorId: string, dto: CreateReviewDto): Promise<Review> {
@@ -39,7 +41,12 @@ export class ReviewService {
       comment: dto.comment ?? null,
       photos: dto.photos?.length ? dto.photos : null,
     });
-    return this.reviewRepo.save(review);
+    const saved = await this.reviewRepo.save(review);
+
+    // Mise à jour du score de durabilité (composante feedbacks 20%)
+    this.ecoTravelerService.recomputeFeedbacksScore(authorId).catch(() => {});
+
+    return saved;
   }
 
   async findByTarget(targetType: string, targetId: string): Promise<Review[]> {
