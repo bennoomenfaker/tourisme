@@ -26,6 +26,9 @@ git push -u origin pr/reservation-durabilite   # pousse la branche
 | [PR-04](PR-04-pricing.md) | Pricing (doc) | docs/pricing-logic.md | Logique de prix serveur, unités de facturation, angles morts |
 | [PR-05](PR-05-circuit-audit-fixes.md) | Circuit (audit) | circuit/*, domain/* | 3 corrections : garde-fou suppression, devise TND, machine à états expired |
 | [PR-06](PR-06-frontend-reservation.md) | Frontend réservations | app/reservations, app/dashboard, app/trip-plans | Alignement sur le modèle réel + UX (toasts, icons, budgets par jour) |
+| [PR-07](PR-07-pricing-guide-collaboration.md) | Pricing offre + réservation | collaboration/*, offers/[id], reservations/new, guide.service | Prix offre = base + prix appliqué des guides (récupéré par zone), ajustement provider, réservation = offre entière |
 
-> L'offre (offer) n'a pas de changement de code dans cette série ; la logique de
-> prix associée est documentée dans PR-04 et docs/pricing-logic.md.
+> PR-07 : le prix de l'offre intègre désormais le prix des guides (récupéré
+> automatiquement par zone depuis les prestations, ajustable par le provider), et
+> la réservation se fait exclusivement sur l'offre entière (plus de sélection
+> item/session).

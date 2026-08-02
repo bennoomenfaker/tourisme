@@ -49,6 +49,18 @@ Cas particuliers :
 - **Aucun item sélectionné, offre avec prix indicatif** : `offer.price × participants`.
 - **Aucun item sélectionné, offre multi-items** : somme des prix par défaut de tous
   les items × participants.
+- **Réservation = offre entière (choix produit)** : le formulaire de réservation
+  n'offre plus le choix item/session ; il envoie uniquement `offer_id` +
+  `participants`, le backend somme les items actifs.
+- **Prix affiché d'une offre avec guides** : `prix_offre = offer.price + Σ
+  contribution.applied_price` des guides en collaboration (statuts `pending`,
+  `accepted`, `completed`). `applied_price` est le prix appliqué par le provider
+  (ajustable sur la page offre via `PATCH /collaborations/:id/applied-price`) ;
+  `price` / `suggested_price` restent l'offre initiale du guide. À la création
+  d'une invitation, le prix du guide est récupéré automatiquement depuis ses
+  prestations (`GuideOffering`) par zone (municipalité → gouvernorat → toute la
+  Tunisie → prix le plus bas actif) puis envoyé via `guide_price` (seed de
+  `applied_price`, `auto_recovered: true`).
 
 ### Sessions & prix dynamiques
 - Une `session` a une `price_override` optionnelle : si renseignée, elle remplace
