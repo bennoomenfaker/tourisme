@@ -94,7 +94,7 @@ export class CircuitService {
       duration_nights: dto.duration_nights ?? null,
       region: dto.region ?? null,
       base_price: dto.base_price ?? null,
-      currency: dto.currency ?? 'XAF',
+      currency: dto.currency ?? 'TND',
       max_participants: dto.max_participants ?? null,
       min_participants: dto.min_participants ?? null,
       booking_deadline_days: dto.booking_deadline_days ?? null,
@@ -325,7 +325,7 @@ export class CircuitService {
     if (dto.region !== undefined) circuit.region = dto.region ?? null;
     if (dto.base_price !== undefined)
       circuit.base_price = dto.base_price ?? null;
-    if (dto.currency !== undefined) circuit.currency = dto.currency ?? 'XAF';
+    if (dto.currency !== undefined) circuit.currency = dto.currency ?? 'TND';
     if (dto.max_participants !== undefined)
       circuit.max_participants = dto.max_participants ?? null;
     if (dto.min_participants !== undefined)
@@ -1161,7 +1161,7 @@ export class CircuitService {
     const pendingReservations = await this.reservationRepo.count({
       where: {
         circuit: { id },
-      status: 'draft',
+        status: 'pending',
       },
     });
 

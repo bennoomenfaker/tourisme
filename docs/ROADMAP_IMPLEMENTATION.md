@@ -22,21 +22,21 @@
 
 **Objectif** : corriger les bugs critiques, poser les fondations data (events, abandons), premier aperçu serveur et recommandation V1.
 
-### Tâche 1.1 — 🔴 Bug `CircuitService.remove` (A7.2) — 0,5 j
+### Tâche 1.1 — ✅ FAIT — Bug `CircuitService.remove` (A7.2) — 0,5 j
 - **Fichier** : `backend/src/circuit/circuit.service.ts` (méthode `remove`).
-- **Changement** : `where: { circuit: { id }, status: 'draft' }` → `status: 'pending'` (les réservations circuit en attente sont `'pending'`, cf. `circuit.service.ts:reserve`). Ajouter aussi la vérification des `expired` (le circuit ne doit pas être supprimé si des réservations expired existent sans capacité restaurée ? → non, expired est restauré par cron, juste ajouter `status: In(['pending','confirmed'])`).
-- **Tests** : `circuit.service.spec.ts` — « remove refuse si une réservation pending existe » / « remove refuse si confirmed existe ».
-- **AC** : un circuit avec une `circuit_reservation` en `pending` ne peut plus être supprimé (erreur 400 avec message).
+- **Changement appliqué** : `where: { circuit: { id }, status: 'draft' }` → `status: 'pending'`. (Reste envisageable : élargir à `In(['pending','confirmed'])` — `confirmed` est déjà vérifié séparément.)
+- **Tests restants** : `circuit.service.spec.ts` — « remove refuse si une réservation pending existe » / « remove refuse si confirmed existe ».
+- **AC** : un circuit avec une `circuit_reservation` en `pending` ne peut plus être supprimé (erreur 400 avec message). *(Code corrigé + `tsc` + 48 tests verts.)*
 
-### Tâche 1.2 — 🟠 Correction défaut `currency` circuit (A6) — 0,25 j
-- **Fichier** : `backend/src/circuit/circuit.service.ts` (`create`).
-- **Changement** : défaut `'XAF'` → `'TND'` (aligné sur le reste du système).
-- **Test** : le `create` sans `currency` produit `'TND'`.
+### Tâche 1.2 — ✅ FAIT — Correction défaut `currency` circuit (A6) — 0,25 j
+- **Fichier** : `backend/src/circuit/circuit.service.ts` (`create` **et** `update`).
+- **Changement appliqué** : défaut `'XAF'` → `'TND'` (aligné sur le reste du système).
+- **Test restant** : le `create` sans `currency` produit `'TND'`.
 
-### Tâche 1.3 — 🟠 Machine à états uniforme (A7) — 1,5 j
+### Tâche 1.3 — ◑ PARTIEL — Machine à états uniforme (A7) — 1,5 j
 - **Fichiers** : `backend/src/domain/reservation-domain.service.ts`, `backend/src/reservation/reservation.service.ts`, `backend/src/circuit/circuit.service.ts`.
 - **Changements** :
-  - Ajouter la transition `pending → expired` pour `'circuit'` dans `RESERVATION_TRANSITIONS` (ou aligner le cron circuit sur une autre sortie — décision produit : **conserver l'expiration 48h pour les circuits**, donc l'ajouter).
+  - ✅ Transition `pending → expired` ajoutée pour `'circuit'` dans `RESERVATION_TRANSITIONS` (décision produit : **conserver l'expiration 48h pour les circuits**).
   - Tous les crons passent par `reservationDomain.validateTransition()` (booking **et** circuit).
   - `finalizeCompletedReservations` (booking) : ajouter une sortie pour les offres **sans session** → utiliser `created_at + durée indicative` (ou un nouveau champ `expected_end_at`, voir schéma) pour passer en `completed` ; sinon documenter le choix « reste confirmed ».
   - Supprimer les états fantômes du trip plan (`planning`, `pending`, `completed`, `cancelled` dans le frontend `STATUS_LABELS`) ou les implémenter (dépend de A1 au Sprint 2).

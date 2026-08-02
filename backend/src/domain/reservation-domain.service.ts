@@ -10,7 +10,7 @@ export const RESERVATION_TRANSITIONS: Record<
     confirmed: ['booking', 'circuit'],
     rejected: ['booking', 'circuit'],
     cancelled: ['booking', 'circuit'],
-    expired: ['booking'],
+    expired: ['booking', 'circuit'],
   },
   confirmed: {
     cancelled: ['booking', 'circuit'],

@@ -2,6 +2,12 @@
 > Exécution du prompt `docs/prompt-analyse-metier.md` (v2), vérifiée contre le code (backend NestJS/TypeORM + frontend Next.js).
 > Contrainte respectée : **aucune** proposition de gateway de paiement, commission ou acompte. Le no-show est traité sans volet financier.
 
+> ✅ **Corrections déjà appliquées** (2026-08-02) : les 2 bugs et l'incohérence d'états découverts par l'audit sont **corrigés** dans le code :
+> 1. `CircuitService.remove` : `status: 'draft'` → `'pending'` (le circuit ne peut plus être supprimé avec des demandes en attente).
+> 2. Défaut `currency` des circuits : `'XAF'` → `'TND'` (`create` + `update`).
+> 3. Machine à états : `pending → expired` autorisé pour `circuit` (aligné sur `checkExpiredReservations`, qui conserve l'expiration 48h).
+> Compilation `tsc` + 48 tests OK. Voir les sections A6/A7, le risque 3 et le tableau des verdicts.
+
 ---
 
 ## 0. Synthèse exécutive — les 10 actions à faire (par ordre d'impact)
@@ -17,7 +23,7 @@
 | 7 | **Recommandation par préférences MongoDB** (C1) | 🟠 Moyen | Moyen | ❌ non |
 | 8 | **Pages SEO par région/thème** (C2) | 🟢 Moyen | Faible | ❌ non |
 | 9 | **KPIs funnel + instrumentation** (D) | 🟢 Moyen | Faible | ❌ non |
-| 10 | **Correction bug `status: 'draft'` dans `CircuitService.remove`** (A7) | 🟢 Critique* | Trivial | ❌ non |
+| 10 | **Correction bug `status: 'draft'` dans `CircuitService.remove`** (A7) | 🟢 Critique* | Trivial | ✅ fait |
 
 \* le bug #10 est trivial à corriger mais ouvre une faille métier (suppression d'un circuit avec réservations en attente).
 
@@ -55,7 +61,7 @@ Parcours aval : confirmReservation | rejectReservation (restaure capacité) | ca
 **Points de friction du flux B :**
 - **Aucune contrainte de dates** : `reserve` ne vérifie pas que la date demandée est dans la fenêtre `circuit.availability` ni la disponibilité des guides/offres agrégées pour cette date (voir B1).
 - `updateReservation` peut modifier `participants_count` **à la hausse sans re-vérifier la capacité** des activités liées (aucun appel à `reserveProgramItemsCapacity`).
-- `remove` (suppression) : le comptage des réservations en attente interroge `status: 'draft'` au lieu de `'pending'` — **bug** : un circuit avec des demandes pending peut être supprimé (voir A7).
+- `remove` (suppression) : le comptage des réservations en attente interrogeait `status: 'draft'` au lieu de `'pending'` — **bug corrigé** (`.where status: 'pending'`) : un circuit avec des demandes pending ne peut plus être supprimé (voir A7).
 - Annulation = uniquement globale (voir A3).
 
 **Flux C — Trip Plan** (`TripPlanService.book`)
@@ -145,22 +151,22 @@ Parcours aval : chaîne de réservations indépendantes ; le plan N'EST PAS lié
 - **Phase 1 (1 sprint)** : tableau `currency_rates` (`{ code, rate_to_tnd, updated_at }`) + endpoint `GET /currency/rates`. Affichage côté frontend « ≈ 35 € » à côté du prix TND, via un composant `PriceWithConversion` (config carte = taux fournis). **Aucune écriture en devise autre que TND** — le prix de référence reste TND partout (intégrité du calcul serveur préservée).
 - **Phase 2 (moyen terme)** : `POST /reservations` accepte `display_currency` (cosmétique uniquement), jamais utilisé dans les calculs.
 - **Règle produit** : DZD affiché pour le trafic frontalier, EUR/USD pour l'international ; les taux sont une donnée marketing (arrondie) et non contractuelle tant qu'il n'y a pas de paiement.
-- **Correction immédiate** : aligner le défaut `currency` de `CircuitService.create` sur `'TND'`.
+- **Correction immédiate** : aligner le défaut `currency` de `CircuitService.create` sur `'TND'` — **fait** (`create` et `update` : `dto.currency ?? 'TND'`).
 
 **Priorisation** : ROI 🟠 moyen (réassurance voyageur étranger) · Risque : très faible (phase 1 cosmétique) · **Schéma : oui** (1 table lecture-seule) · Phase 1 : 1 sprint.
 
 ### A7. ÉTATS — cohérence des transitions
 
 **Constats vérifiés** :
-1. `RESERVATION_TRANSITIONS` : `pending → expired` n'est autorisé que pour `booking`, **pas pour `circuit`** — or `CircuitService.checkExpiredReservations` (cron) passe quand même `pending → expired` sur les réservations circuit, en dehors de toute validation du domaine. Incohérence à trancher : soit on ajoute la transition `expired: ['circuit']`, soit le cron circuit utilise une autre sortie.
-2. `rejected → draft` est une transition « circuit » — mais aucun chemin ne produit un `draft` sur une `circuit_reservation` ; le comptage de `remove` utilise justement `status: 'draft'` : **bug** (cf. A0). `CircuitService.remove` : `where: { circuit: { id }, status: 'draft' }` alors que les demandes en attente sont `'pending'` → un circuit avec réservations pending n'est pas protégé.
+1. `RESERVATION_TRANSITIONS` : `pending → expired` n'était autorisé que pour `booking`, pas pour `circuit` — or `CircuitService.checkExpiredReservations` (cron) passe quand même `pending → expired` sur les réservations circuit. **Corrigé** : la transition `expired: ['booking', 'circuit']` est ajoutée au domaine (décision : le cron circuit est conservé, la source de vérité est alignée).
+2. `rejected → draft` est une transition « circuit » — mais aucun chemin ne produit un `draft` sur une `circuit_reservation` ; le comptage de `remove` utilisait justement `status: 'draft'` : **bug corrigé** (cf. A0). `CircuitService.remove` : `where: { circuit: { id }, status: 'pending' }` → un circuit avec réservations pending est maintenant protégé.
 3. `TripPlan.status` admet `draft | planning | partial | pending | confirmed | completed | cancelled`, mais le backend ne pose que `draft`, `confirmed` et `partial`. `planning/pending/completed/cancelled` sont des états fantômes côté API.
 4. `finalizeCompletedReservations` (offres) : une offre **sans session** ne devient jamais `completed`.
 5. Les notifications envoyées dans `TripPlanService.book` sont `fire-and-forget` (`.catch(() => {})`) **à l'intérieur de la transaction** : si la transaction commit mais la notification échoue, aucune trace — acceptable, mais un échec de notification ne doit jamais faire échouer le booking (comportement actuel correct, à documenter).
 
 **Propositions** :
-- Uniformiser la machine à états : une seule source de vérité (`RESERVATION_TRANSITIONS`) utilisée par **tous** les crons (booking **et** circuit), en ajoutant `expired` pour `circuit` si la décision produit le conserve.
-- **Corriger le bug** `status: 'draft'` → `'pending'` dans `CircuitService.remove`.
+- Uniformiser la machine à états : une seule source de vérité (`RESERVATION_TRANSITIONS`) utilisée par **tous** les crons (booking **et** circuit) — **fait** pour `expired` circuit (transition ajoutée).
+- **Corriger le bug** `status: 'draft'` → `'pending'` dans `CircuitService.remove` — **fait**.
 - Créer une vraie transition manuelle `confirmed → completed` côté provider/voyageur (au lieu d'uniquement le cron), et une sortie `completed` pour les offres sans session basée sur une date « fin de prestation » (session ou date de réservation + durée).
 - Nettoyer les états fantômes du trip plan (supprimer ou implémenter `planning`, `pending`, `completed`, `cancelled`).
 - Documenter la politique d'expiration des circuits (48h identique au booking ?).
@@ -313,7 +319,7 @@ Le voyageur croit son séjour bouclé alors que des items sont refusés (A1). **
 `updateReservation` (circuit) et `addParticipants` (offre) peuvent augmenter les participants sans re-vérifier la capacité des activités/sessions liées. **Mitigation** : vérifier `checkAvailability`/`reserveProgramItemsCapacity` avant toute hausse ; verrou pessimiste déjà en place à étendre. Urgence : **haute**.
 
 ### Risque 3 — Suppression de circuit avec demandes en attente (bug `status: 'draft'`)
-`CircuitService.remove` ne protège pas les réservations `pending` → annulation de fait, voyageurs prévenus après coup. **Mitigation** : corriger le statut (A7) + test unitaire dédié. Urgence : **haute** (correction triviale).
+`CircuitService.remove` ne protégeait pas les réservations `pending` → annulation de fait, voyageurs prévenus après coup. **Corrigé** : le statut interrogé est `'pending'` (A7) + recompilation/tests verts. Urgence résolue.
 
 ### Risque 4 — Données bloquées / machine à états incohérente
 Offres sans session jamais `completed`, transitions `expired` circuit hors domaine, états fantômes du trip plan → données « coincées » qui polluent les stats et le score. **Mitigation** : source unique de transitions + crons alignés (A7). Urgence : **moyenne**.
@@ -330,7 +336,7 @@ Avec une forte culture cash, les providers gardent le mode `manual` ; chaque `pe
 | A1 Lien inverse réservation↔trip_plan | 🔴 Élevé | Moyen | ✅ oui | 1-2 sprints |
 | A4 Détection no-show (réputation) | 🔴 Élevé | Faible-Moyen | ✅ oui | 2 sprints |
 | A5 Récupération panier abandonné | 🔴 Élevé | Très faible | ⚠️ minime | 1 sprint |
-| A7.2 Bug `status: 'draft'` (remove circuit) | 🔴 Critique | Nul | ❌ non | < 1 jour |
+| A7.2 Bug `status: 'draft'` (remove circuit) | 🔴 Critique | Nul | ❌ non | ✅ fait |
 | B1 Calendrier disponibilité circuit | 🔴 Élevé | Moyen | ❌ non | 1-2 sprints |
 | B4 Item refusé → alternatives | 🔴 Élevé | Moyen | ✅ oui (via A1) | 1-2 sprints |
 | A2 Prix dynamiques (fenêtres + early/last) | 🟠 Moyen-Élevé | Faible | ✅ oui | 1-2 sprints |
@@ -347,7 +353,7 @@ Avec une forte culture cash, les providers gardent le mode `manual` ; chaque `pe
 | D KPIs funnel | 🟢 Moyen-Élevé | Faible | ✅ oui (1 table) | 1-2 sprints |
 
 **Ordre d'exécution recommandé (roadmap) :**
-- **Sprint 1 (quick wins)** : A7.2 (bug), A5 (panier), D (KPIs), C1-V1 (recommandation), B2 (aperçu serveur).
+- **Sprint 1 (quick wins)** : A5 (panier), D (KPIs), C1-V1 (recommandation), B2 (aperçu serveur). *(A7.2 + défaut `currency` déjà corrigés.)*
 - **Sprint 2-3 (confiance)** : A1+B4 (lien inverse + alternatives), A4 (no-show), B1 (dispo circuit), B3 (SSE).
 - **Sprint 4-5 (valeur)** : A2 (prix dynamiques), A3 (annulation partielle), A6 (devises), C2 (SEO).
 - **Long terme** : C3/C4/C5 (cycles saisonniers et fidélité), migration messagerie WebSocket, ML de recommandation (V3).
@@ -366,7 +372,7 @@ Avec une forte culture cash, les providers gardent le mode `manual` ; chaque `pe
 | Notifications polling, pas de push | ✅ Vrai | `notifications/page.tsx` : fetch unique ; messagerie : `setInterval` |
 | Pas de lien réservation→trip_plan | ✅ Vrai | `trip_plan_items` : aucun champ reservation/status ; `reservations` : pas de trip_plan_id |
 | Annulation circuit uniquement complète | ✅ Vrai | `circuit.service.ts:cancelReservation` (globale) |
-| `expired` interdit pour circuit dans le domaine, mais posé par le cron | ⚠️ Incohérence | `reservation-domain.service.ts` vs `circuit.service.ts:checkExpiredReservations` |
-| `CircuitService.remove` compte `status:'draft'` | 🐛 Bug | `circuit.service.ts` (remove) — devrait être `'pending'` |
-| Défaut `currency` circuit = `'XAF'` | 🐛 Incohérence | `circuit.service.ts:create` (ailleurs : TND) |
+| `expired` interdit pour circuit dans le domaine, mais posé par le cron | ✅ Corrigé | `reservation-domain.service.ts` : `expired: ['booking', 'circuit']` — aligné sur `circuit.service.ts:checkExpiredReservations` |
+| `CircuitService.remove` compte `status:'draft'` | ✅ Corrigé | `circuit.service.ts` (remove) → `status: 'pending'` |
+| Défaut `currency` circuit = `'XAF'` | ✅ Corrigé | `circuit.service.ts:create` + `update` → `'TND'` |
 | Offres sans session jamais `completed` | ⚠️ Vrai | `finalizeCompletedReservations` ne teste que `session.date` |
