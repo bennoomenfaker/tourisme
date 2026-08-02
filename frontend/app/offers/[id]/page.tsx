@@ -135,17 +135,16 @@ export default function OfferDetailPage() {
   const [showEditWizard, setShowEditWizard] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
-  const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [collaborations, setCollaborations] = useState<any[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showWizard, setShowWizard] = useState<string | null>(null);
   const [declineCollab, setDeclineCollab] = useState<string | null>(null);
   const [collabStatus, setCollabStatus] = useState<any>(null);
-  const [editingPrice, setEditingPrice] = useState(false);
-  const [newPrice, setNewPrice] = useState<string>("");
   const [publishing, setPublishing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [appliedPriceEdits, setAppliedPriceEdits] = useState<Record<string, string>>({});
+  const [savingAppliedPrice, setSavingAppliedPrice] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -201,7 +200,6 @@ export default function OfferDetailPage() {
   };
 
   const addToCart = async (offerItemId: string) => {
-    setAddingToCart(offerItemId);
     try {
       const token = localStorage.getItem("access_token");
       if (token) {
@@ -220,40 +218,36 @@ export default function OfferDetailPage() {
       setTimeout(() => setShowAddedToCart(false), 2000);
     } catch (e) {
       console.error("Add to cart error:", e);
-    } finally {
-      setAddingToCart(null);
     }
   };
 
-  const handleUpdatePrice = async () => {
-    const price = parseFloat(newPrice);
-    if (isNaN(price) || price < 0) return;
+  const handleSaveAppliedPrice = async (collabId: string) => {
+    const raw = appliedPriceEdits[collabId];
+    const price = parseFloat(raw);
+    if (Number.isNaN(price) || price < 0) return;
+    setSavingAppliedPrice(collabId);
     try {
-      await apiFetch(`/collaborations/offer/${id}/price`, {
+      await apiFetch(`/collaborations/${collabId}/applied-price`, {
         method: "PATCH",
-        body: JSON.stringify({ price }),
+        body: JSON.stringify({ applied_price: price }),
       });
-      setOffer((prev) => prev ? { ...prev, price } : prev);
-      setEditingPrice(false);
-      setNewPrice("");
+      apiFetch<any>(`/collaborations/offer/${id}/status`)
+        .then(setCollabStatus)
+        .catch(() => {});
     } catch (e: any) {
-      alert(e.message || "Erreur lors de la mise à jour du prix");
+      alert(e.message || "Erreur lors de la mise à jour du prix du guide");
+    } finally {
+      setSavingAppliedPrice(null);
     }
   };
 
   const handlePublish = async () => {
-    const price = offer?.price;
-    if (!price || price <= 0) {
-      alert("Veuillez d'abord définir le prix de l'offre avant de publier.");
-      setEditingPrice(true);
-      return;
-    }
     if (!confirm("Confirmer la publication de cette offre ? Les guides seront notifiés.")) return;
     setPublishing(true);
     try {
       await apiFetch(`/collaborations/offer/${id}/publish`, {
         method: "POST",
-        body: JSON.stringify({ final_price: price }),
+        body: JSON.stringify({}),
       });
       setOffer((prev) => prev ? { ...prev, publish_ready: true } : prev);
       apiFetch<any>(`/collaborations/offer/${id}/status`)
@@ -287,6 +281,18 @@ export default function OfferDetailPage() {
   const canAddToCart = user?.role === "eco_traveler" && !isAuthor;
   const images = offer.images?.filter(Boolean) ?? [];
   const allImages = images.length > 0 ? images : null;
+
+  const basePrice = Number(offer.price ?? 0);
+  const activeCollabs = collaborations.filter((c) =>
+    ["pending", "accepted", "completed"].includes(c.status),
+  );
+  const guideSum = activeCollabs.reduce(
+    (s, c) =>
+      s + Number(c.contribution?.applied_price ?? c.contribution?.price ?? 0),
+    0,
+  );
+  const displayTotal =
+    offer.final_price != null ? Number(offer.final_price) : basePrice + guideSum;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50 pb-12">
@@ -388,49 +394,22 @@ export default function OfferDetailPage() {
                     {offer.publish_ready ? "Publiée avec guide" : "En attente collaboration"}
                   </span>
                 )}
-                {editingPrice ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="number"
-                      value={newPrice}
-                      onChange={(e) => setNewPrice(e.target.value)}
-                      placeholder={String(offer.price ?? 0)}
-                      className="w-24 text-right px-2 py-1 rounded-lg border border-emerald-300 text-lg font-bold text-primary outline-none focus:ring-2 focus:ring-emerald-200"
-                      autoFocus
-                    />
-                    <span className="text-sm font-normal text-slate-400">TND</span>
-                    <button
-                      onClick={handleUpdatePrice}
-                      className="p-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button
-                      onClick={() => { setEditingPrice(false); setNewPrice(""); }}
-                      className="p-1 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300"
-                    >
-                      ✕
-                    </button>
+                {displayTotal > 0 ? (
+                  <div className="text-primary font-bold text-2xl">
+                    {displayTotal.toLocaleString()} <span className="text-sm font-normal text-slate-400">TND</span>
                   </div>
                 ) : (
-                  <div
-                    className={`text-primary font-bold text-2xl ${isAuthor ? "cursor-pointer hover:opacity-70" : ""}`}
-                    onClick={() => {
-                      if (isAuthor) {
-                        setNewPrice(String(offer.price ?? ""));
-                        setEditingPrice(true);
-                      }
-                    }}
-                  >
-                    {(offer.final_price ?? offer.price) !== null ? (
-                      <>
-                        {Number(offer.final_price ?? offer.price).toLocaleString()} <span className="text-sm font-normal text-slate-400">TND</span>
-                        {isAuthor && <span className="text-xs text-slate-300 ml-1">✏️</span>}
+                  <span className="text-sm text-slate-400 font-normal">Prix non défini</span>
+                )}
+                {isAuthor && (basePrice > 0 || guideSum > 0) && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Tarif de base {basePrice.toLocaleString()} TND
+                    {guideSum > 0 && (
+                      <> + guides {guideSum.toLocaleString()} TND ={" "}
+                        <span className="font-semibold text-emerald-700">{displayTotal.toLocaleString()} TND</span>
                       </>
-                    ) : (
-                      <span className="text-sm text-slate-400 font-normal">Prix non défini</span>
                     )}
-                  </div>
+                  </p>
                 )}
                 {offer.confirmation_mode === "automatic" ? (
                   <span className="inline-flex items-center gap-1 text-xs text-primary bg-emerald-50 rounded-full px-2 py-0.5 mt-1">
@@ -708,37 +687,6 @@ export default function OfferDetailPage() {
                               </div>
                             </div>
                           )}
-
-                          {canAddToCart && (
-                            <button
-                              onClick={() => addToCart(item.id)}
-                              disabled={addingToCart === item.id}
-                              className="w-full mt-2 py-2 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
-                            >
-                              <ShoppingCart size={16} /> Ajouter au panier
-                            </button>
-                          )}
-                          {!user && (
-                            <button
-                              onClick={() => router.push(`/auth/login?redirect=/offers/${id}`)}
-                              className="w-full mt-2 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-sm flex items-center justify-center gap-2"
-                            >
-                              <Check size={16} /> Réserver {item.name}
-                            </button>
-                          )}
-                          {canReserve && (
-                            <button
-                              onClick={() => router.push(`/reservations/new?offerId=${offer.id}&itemId=${item.id}`)}
-                              className="w-full mt-2 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-emerald-600 text-sm flex items-center justify-center gap-2"
-                            >
-                              <Check size={16} /> Réserver {item.name}
-                            </button>
-                          )}
-                          {existingBooking && (
-                            <div className="w-full mt-2 py-2 rounded-xl bg-blue-50 text-blue-700 text-sm text-center font-medium">
-                              Vous avez déjà réservé cette offre
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -820,25 +768,81 @@ export default function OfferDetailPage() {
                       Contributions des guides
                     </p>
                     <div className="space-y-2">
-                      {collabStatus.contributions.map((c: any, i: number) => (
-                        <div key={i} className="bg-emerald-50 rounded-xl px-4 py-3 flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-800">{c.guide_name}</p>
-                            <p className="text-xs text-slate-500">{SECTION_LABELS[c.section] || c.section}</p>
-                          </div>
-                          {c.price != null && (
-                            <div className="text-right">
-                              <p className="text-sm font-bold text-emerald-700">
-                                Prix suggéré: {Number(c.price).toLocaleString()} {c.currency}
+                      {collabStatus.contributions.map((c: any, i: number) => {
+                        const appliedValue =
+                          c.applied_price != null ? String(c.applied_price) : "";
+                        const appliedRaw = appliedPriceEdits[c.collab_id] ?? appliedValue;
+                        const dirty = appliedRaw !== appliedValue;
+                        return (
+                          <div
+                            key={c.collab_id ?? i}
+                            className="bg-emerald-50 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-800 flex items-center gap-2 flex-wrap">
+                                {c.guide_name}
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-white text-slate-500 border border-slate-200">
+                                  {c.status === "completed"
+                                    ? "Contribution validée"
+                                    : c.status === "accepted"
+                                      ? "Accepté"
+                                      : "En attente"}
+                                </span>
                               </p>
-                              <p className="text-[10px] text-slate-400">Guide → Prestataire</p>
+                              <p className="text-xs text-slate-500">{SECTION_LABELS[c.section] || c.section}</p>
+                              {c.price != null && (
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                  Prix proposé par le guide : {Number(c.price).toLocaleString()} {c.currency}
+                                </p>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase shrink-0">
+                                Prix appliqué
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={appliedRaw}
+                                  onChange={(e) =>
+                                    setAppliedPriceEdits((prev) => ({
+                                      ...prev,
+                                      [c.collab_id]: e.target.value,
+                                    }))
+                                  }
+                                  onBlur={() => {
+                                    if (dirty) handleSaveAppliedPrice(c.collab_id);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                  }}
+                                  className="w-24 px-2 py-1.5 pr-6 rounded-lg border border-emerald-200 text-sm font-bold text-slate-800 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
+                                  {c.currency}
+                                </span>
+                              </div>
+                              {savingAppliedPrice === c.collab_id && (
+                                <Loader2 size={16} className="animate-spin text-emerald-500" />
+                              )}
+                              {dirty && savingAppliedPrice !== c.collab_id && (
+                                <button
+                                  onClick={() => handleSaveAppliedPrice(c.collab_id)}
+                                  className="p-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                                >
+                                  <Check size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                     <p className="text-xs text-slate-400 mt-2 italic">
-                      Le prix du guide est une suggestion. Vous décidez du prix final de l&apos;offre.
+                      Prix de l&apos;offre = tarif de base + prix appliqué des guides. Modifiez le prix
+                      appliqué d&apos;un guide : le total est recalculé automatiquement.
                     </p>
                   </div>
                 )}
@@ -878,7 +882,6 @@ export default function OfferDetailPage() {
                 <UserPlus size={16} /> Inviter un collaborateur
               </button>
             )}
-
             {isAuthor && (
               <div className="mt-4">
                 <OfferAgendaSync offerId={id} offerTitle={offer?.title || ""} />
@@ -897,8 +900,8 @@ export default function OfferDetailPage() {
               <div className="grid grid-cols-2 gap-3 mt-6">
                 <button
                   onClick={() => {
-                    const firstItem = offer.items?.find(i => i.status === "active");
-                    if (firstItem) addToCart(firstItem.id);
+                    const activeItems = (offer.items ?? []).filter((i) => i.status === "active");
+                    activeItems.forEach((i) => addToCart(i.id));
                   }}
                   className="py-3 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white text-base flex items-center justify-center gap-2 transition-colors"
                 >
@@ -954,11 +957,15 @@ export default function OfferDetailPage() {
         <CollaborationInviteModal
           offerId={id}
           offerTitle={offer?.title || ""}
+          offerRegion={offer?.region}
           defaultType={user?.role === "guide" ? "provider" : "guide"}
           onClose={() => setShowInviteModal(false)}
           onInvited={() => {
             setShowInviteModal(false);
             apiFetch<any[]>(`/collaborations/offer/${id}`).then(setCollaborations).catch(() => {});
+            if (user?.role === "provider") {
+              apiFetch<any>(`/collaborations/offer/${id}/status`).then(setCollabStatus).catch(() => {});
+            }
           }}
         />
       )}

@@ -93,6 +93,17 @@ export class CollaborationService {
       );
 
     const invitedType = dto.invited_user_type ?? 'guide';
+    // Prix du guide récupéré automatiquement depuis son offering (par zone)
+    const seedContribution =
+      invitedType === 'guide' && dto.guide_price != null
+        ? {
+            price: dto.guide_price,
+            applied_price: dto.guide_price,
+            suggested_price: dto.guide_price,
+            currency: 'TND',
+            auto_recovered: true,
+          }
+        : null;
     let invitedName = dto.invited_user_name ?? null;
     if (!invitedName) {
       if (invitedType === 'guide') {
@@ -120,7 +131,7 @@ export class CollaborationService {
       }
       existing.status = CollaborationStatus.PENDING;
       existing.message = dto.message ?? null;
-      existing.contribution = null;
+      existing.contribution = seedContribution;
       existing.decline_reason = null;
       existing.invited_user_type = invitedType;
       existing.invited_user_name = invitedName;
@@ -138,6 +149,7 @@ export class CollaborationService {
       section: dto.section,
       message: dto.message ?? null,
       status: CollaborationStatus.PENDING,
+      contribution: seedContribution ?? undefined,
       invited_user_id: inviteeId,
       invited_user_type: invitedType,
       invited_user_name: invitedName,
@@ -1029,6 +1041,43 @@ export class CollaborationService {
     return this.offerRepo.save(offer);
   }
 
+  /* ──── PROVIDER: adjust a guide's applied price (margin) ──── */
+  async updateAppliedPrice(
+    collaborationId: string,
+    providerId: string,
+    appliedPrice: number,
+  ) {
+    const collab = await this.repo.findOne({
+      where: { id: collaborationId },
+      relations: ['provider'],
+    });
+    if (!collab) throw new NotFoundException('Collaboration introuvable.');
+
+    const offer = collab.offer_id
+      ? await this.offerRepo.findOne({ where: { id: collab.offer_id } })
+      : null;
+    const authorId = offer?.author_id ?? collab.provider_id;
+    if (authorId !== providerId)
+      throw new ForbiddenException(
+        "Vous n'êtes pas autorisé à modifier le prix de ce guide.",
+      );
+    if (offer?.status === 'approved')
+      throw new BadRequestException(
+        'Cette offre est publiée. Le prix du guide ne peut plus être modifié.',
+      );
+
+    const current = (collab.contribution ?? {}) as Record<string, any>;
+    collab.contribution = {
+      ...current,
+      price: current.price ?? appliedPrice,
+      suggested_price: current.suggested_price ?? appliedPrice,
+      applied_price: appliedPrice,
+      currency: current.currency ?? 'TND',
+      auto_recovered: current.auto_recovered ?? true,
+    };
+    return this.repo.save(collab);
+  }
+
   /* ──────────────────── PROVIDER: get offer collab status ──── */
   async getOfferCollabStatus(offerId: string) {
     const all = await this.repo.find({
@@ -1047,11 +1096,21 @@ export class CollaborationService {
     ).length;
 
     const contributions = all
-      .filter((c) => c.status === CollaborationStatus.COMPLETED && c.contribution)
+      .filter(
+        (c) =>
+          c.status !== CollaborationStatus.DECLINED &&
+          c.status !== CollaborationStatus.CANCELLED &&
+          c.contribution &&
+          (c.contribution?.price != null ||
+            c.contribution?.applied_price != null),
+      )
       .map((c) => ({
+        collab_id: c.id,
         guide_name: c.invited_user_name ?? c.guide?.full_name ?? 'Collaborateur',
         section: c.section,
+        status: c.status,
         price: c.contribution?.price ?? null,
+        applied_price: c.contribution?.applied_price ?? c.contribution?.price ?? null,
         currency: c.contribution?.currency ?? 'TND',
         services: c.contribution?.services ?? [],
       }));

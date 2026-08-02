@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCollaborationDto {
@@ -66,4 +66,12 @@ export class CreateCollaborationDto {
   @IsString()
   @IsOptional()
   message?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Prix du guide récupéré automatiquement depuis sa prestation (offering) par zone — pré-rempli et modifiable par le provider',
+  })
+  @IsNumber()
+  @IsOptional()
+  guide_price?: number;
 }

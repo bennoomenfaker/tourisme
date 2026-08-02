@@ -211,6 +211,22 @@ export class CollaborationController {
     );
   }
 
+  /* ── Provider: adjust a guide's applied price (margin) ────── */
+  @Roles(Role.PROVIDER, Role.GUIDE)
+  @Patch(':id/applied-price')
+  @ApiOperation({ summary: "Ajuster le prix appliqué d'un guide (marge)" })
+  updateAppliedPrice(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: { applied_price: number },
+  ) {
+    return this.service.updateAppliedPrice(
+      id,
+      req.user.sub,
+      body.applied_price,
+    );
+  }
+
   /* ── Provider: get offer collab status ────────────────────── */
   @Roles(Role.PROVIDER, Role.GUIDE)
   @Get('offer/:offerId/status')

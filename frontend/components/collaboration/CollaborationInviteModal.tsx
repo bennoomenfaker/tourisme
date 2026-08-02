@@ -40,6 +40,7 @@ interface GuideProfile extends Guide {
 interface CollaborationInviteModalProps {
   offerId: string;
   offerTitle: string;
+  offerRegion?: string | null;
   onClose: () => void;
   onInvited: () => void;
   defaultType?: InviteeType;
@@ -57,9 +58,40 @@ const SERVICE_TYPES = [
   { value: "autre", label: "Autre", icon: "✨" },
 ];
 
+// Récupération du prix du guide depuis ses prestations (offerings), par zone.
+// Priorité : municipalité exacte → gouvernorat exact → toute la Tunisie → prix le plus bas (approximation).
+function recoverGuidePrice(offerings: any[], region?: string | null): number | null {
+  if (!offerings?.length) return null;
+  const active = offerings.filter((o: any) => o.status === "active");
+  const list = active.length > 0 ? active : offerings;
+  const norm = (s?: string | null) => (s ?? "").trim().toLowerCase();
+  const regionNorm = norm(region);
+
+  const byMunicipality = list.filter(
+    (o: any) => o.zone_municipality && norm(o.zone_municipality) === regionNorm,
+  );
+  const byGovernorate = list.filter(
+    (o: any) => o.zone_governorate && norm(o.zone_governorate) === regionNorm,
+  );
+  const allTunisia = list.filter((o: any) => o.service_zone_type === "all_tunisia");
+  const candidates = byMunicipality.length
+    ? byMunicipality
+    : byGovernorate.length
+      ? byGovernorate
+      : allTunisia.length
+        ? allTunisia
+        : list;
+
+  const prices = candidates
+    .map((o: any) => Number(o.price))
+    .filter((p: number) => Number.isFinite(p) && p >= 0);
+  return prices.length ? Math.min(...prices) : null;
+}
+
 export default function CollaborationInviteModal({
   offerId,
   offerTitle,
+  offerRegion,
   onClose,
   onInvited,
   defaultType = "guide",
@@ -70,6 +102,7 @@ export default function CollaborationInviteModal({
   const [selected, setSelected] = useState<SearchResult | null>(null);
   const [guideProfile, setGuideProfile] = useState<GuideProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [guidePrice, setGuidePrice] = useState("");
   const [serviceType, setServiceType] = useState("randonnee");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -109,30 +142,40 @@ export default function CollaborationInviteModal({
   useEffect(() => {
     if (!selected || selected.type !== "guide") {
       setGuideProfile(null);
+      setGuidePrice("");
       return;
     }
     setLoadingProfile(true);
     apiFetch<GuideProfile>(`/guide/public/${selected.user_id}`)
-      .then(setGuideProfile)
+      .then((profile) => {
+        setGuideProfile(profile);
+        const recovered = recoverGuidePrice(profile.offerings, offerRegion);
+        setGuidePrice(recovered != null ? String(recovered) : "");
+      })
       .catch(() => setGuideProfile(null))
       .finally(() => setLoadingProfile(false));
-  }, [selected]);
+  }, [selected, offerRegion]);
 
   const handleSend = async () => {
     if (!selected) return;
     setSending(true);
     setError("");
     try {
+      const payload: Record<string, unknown> = {
+        invited_user_id: selected.user_id,
+        invited_user_type: selected.type,
+        invited_user_name: selected.name,
+        offer_id: offerId,
+        section: serviceType,
+        message: message || null,
+      };
+      if (selected.type === "guide") {
+        const price = parseFloat(guidePrice);
+        if (!Number.isNaN(price) && price >= 0) payload.guide_price = price;
+      }
       await apiFetch("/collaborations", {
         method: "POST",
-        body: JSON.stringify({
-          invited_user_id: selected.user_id,
-          invited_user_type: selected.type,
-          invited_user_name: selected.name,
-          offer_id: offerId,
-          section: serviceType,
-          message: message || null,
-        }),
+        body: JSON.stringify(payload),
       });
       onInvited();
     } catch (e: any) {
@@ -388,6 +431,37 @@ export default function CollaborationInviteModal({
                   <p className="text-xs text-slate-500">{selected.subtitle || "Prestataire"}</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Prix du guide récupéré automatiquement */}
+          {selected && selected.type === "guide" && (
+            <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
+                Prix du guide
+                <span className="ml-1.5 text-[10px] font-medium text-emerald-600 bg-emerald-100 rounded-full px-2 py-0.5">
+                  récupéré automatiquement
+                </span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={guidePrice}
+                  onChange={(e) => setGuidePrice(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-2.5 pr-12 rounded-xl border border-emerald-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none text-sm font-bold text-slate-800 bg-white"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
+                  TND
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">
+                Prix récupéré depuis la prestation du guide
+                {offerRegion ? ` pour la zone « ${offerRegion} »` : " (zone de l'offre)"}. Modifiable :
+                ce montant est ajouté au tarif de base de l&apos;offre.
+              </p>
             </div>
           )}
 

@@ -115,6 +115,7 @@ export class Collaboration {
     price?: number; // Ancien champ (legacy, gardé pour compatibilité)
     currency?: string;
     extra_fees?: { label: string; amount: number }[];
+    auto_recovered?: boolean; // Prix récupéré automatiquement depuis l'offering du guide
 
     // Étape 4 — Langues & compétences
     languages?: string[];
