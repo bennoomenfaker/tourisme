@@ -5,13 +5,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Or, Repository } from 'typeorm';
+import { In, Not, Or, Repository } from 'typeorm';
 import { EcoTraveler } from './entities/eco-traveler.entity';
 import { Friendship } from './entities/friendship.entity';
 import { Publication } from '../publication/entities/publication.entity';
 import { TripPlan } from '../trip-plan/entities/trip-plan.entity';
 import { Reservation } from '../reservation/entities/reservation.entity';
 import { CircuitReservation } from '../circuit/entities/circuit-reservation.entity';
+import { Review } from '../review/entities/review.entity';
 import {
   CompleteProfileDto,
   UpdateGoalsDto,
@@ -36,6 +37,8 @@ export class EcoTravelerService {
     private readonly reservationRepo: Repository<Reservation>,
     @InjectRepository(CircuitReservation)
     private readonly circuitResRepo: Repository<CircuitReservation>,
+    @InjectRepository(Review)
+    private readonly reviewRepo: Repository<Review>,
     private readonly mongoService: EcoTravelerMongoService,
   ) {}
 
@@ -259,6 +262,37 @@ export class EcoTravelerService {
     // TODO Sprint badges : déclencher les badges liés au score ici quand les noms/seuils seront définis
 
     return saved;
+  }
+
+  /**
+   * Recalcule la composante 'réservations' (40%) du score de durabilité
+   * à partir des réservations actives (offres, prestations guide, circuits).
+   * Appelé à chaque création / confirmation / annulation / expiration.
+   */
+  async recomputeReservationsScore(userId: string): Promise<void> {
+    const activeStatuses = Not(In(['cancelled', 'expired', 'rejected']));
+    const [reservationCount, circuitCount] = await Promise.all([
+      this.reservationRepo.count({
+        where: { traveler: { id: userId } as any, status: activeStatuses },
+      }),
+      this.circuitResRepo.count({
+        where: { user: { id: userId } as any, status: activeStatuses },
+      }),
+    ]);
+    const score = Math.min((reservationCount + circuitCount) * 25, 100);
+    await this.updateScoreComponent(userId, 'reservations', score);
+  }
+
+  /**
+   * Recalcule la composante 'feedbacks' (20%) du score de durabilité
+   * à partir des avis publiés. Appelé à chaque création d'avis.
+   */
+  async recomputeFeedbacksScore(userId: string): Promise<void> {
+    const count = await this.reviewRepo.count({
+      where: { author_id: userId },
+    });
+    const score = Math.min(count * 20, 100);
+    await this.updateScoreComponent(userId, 'feedbacks', score);
   }
 
   private async findOrFail(userId: string) {
