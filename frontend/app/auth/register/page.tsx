@@ -172,7 +172,7 @@ export default function RegisterPage() {
                       potted_plant
                     </span>
                     <span className="text-[11px] font-bold text-slate-600 group-hover:text-primary uppercase tracking-wider">
-                      Propriétaire
+                      Provider
                     </span>
                   </label>
 
