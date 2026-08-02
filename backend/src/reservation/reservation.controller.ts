@@ -106,13 +106,17 @@ export class ReservationController {
   }
 
   /**
-   * Confirmation par le provider (mode manuel)
+   * Confirmation ou refus par le provider/guide (mode manuel)
    */
   @ApiBearerAuth('bearer')
   @Roles(Role.GUIDE, Role.PROVIDER)
   @Patch(':id/confirm')
-  confirm(@Req() req: any, @Param('id') id: string) {
-    return this.service.confirm(id, req.user.sub);
+  confirm(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { status?: string; reason?: string },
+  ) {
+    return this.service.confirm(id, req.user.sub, body ?? {});
   }
 
   /**

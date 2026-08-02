@@ -22,6 +22,7 @@ import { GuideOfferingSession } from '../guide/entities/guide-offering-session.e
 import { NotificationService } from '../notification/notification.service';
 import { CapacityDomainService } from '../domain/capacity-domain.service';
 import { ReservationDomainService } from '../domain/reservation-domain.service';
+import { EcoTravelerService } from '../eco-traveler/eco-traveler.service';
 
 @Injectable()
 export class ReservationService {
@@ -45,6 +46,7 @@ export class ReservationService {
     private readonly notificationService: NotificationService,
     private readonly capacityService: CapacityDomainService,
     private readonly reservationDomain: ReservationDomainService,
+    private readonly ecoTravelerService: EcoTravelerService,
   ) {}
 
   /**
@@ -221,6 +223,9 @@ export class ReservationService {
       );
     }
 
+    // ── Mise à jour du score de durabilité (composante réservations 40%) ──
+    this.ecoTravelerService.recomputeReservationsScore(travelerId).catch(() => {});
+
     if (dto.participants?.length) {
       const participants = dto.participants.map((p) =>
         this.participantRepo.create({
@@ -281,7 +286,14 @@ export class ReservationService {
   async findByTraveler(travelerId: string): Promise<Reservation[]> {
     return this.reservationRepo.find({
       where: { traveler: { id: travelerId } },
-      relations: ['offer', 'offerItem', 'session', 'participants'],
+      relations: [
+        'offer',
+        'offerItem',
+        'session',
+        'guideOffering',
+        'guideOfferingSession',
+        'participants',
+      ],
       order: { created_at: 'DESC' },
     });
   }
@@ -355,6 +367,8 @@ export class ReservationService {
     reservation.cancel_reason = reason ?? null;
     const saved = (await this.reservationRepo.save(reservation)) as Reservation;
 
+    this.ecoTravelerService.recomputeReservationsScore(travelerId).catch(() => {});
+
     // Restaurer la capacité via CapacityDomainService
     if (reservation.offerItem?.id) {
       const sessionDate = reservation.session?.date ?? null;
@@ -412,37 +426,77 @@ export class ReservationService {
     return saved;
   }
 
-  /** Confirme une réservation (par le provider, mode manual) */
-  async confirm(id: string, providerId: string): Promise<Reservation> {
+  /** Confirme ou refuse une réservation (par le provider ou le guide, mode manuel) */
+  async confirm(
+    id: string,
+    providerId: string,
+    dto?: { status?: string; reason?: string },
+  ): Promise<Reservation> {
     const reservation = await this.findById(id);
+    const nextStatus = dto?.status === 'rejected' ? 'rejected' : 'confirmed';
+
     const offer = reservation.offer
       ? await this.offerRepo.findOne({ where: { id: reservation.offer.id } })
       : null;
-    if (!offer || offer.author_id !== providerId) {
+    // Une réservation porte soit une offre (provider) soit une prestation guide
+    const authorId = offer
+      ? offer.author_id
+      : (reservation.guideOffering?.guide_id ?? null);
+    if (!authorId || authorId !== providerId) {
       throw new ForbiddenException(
-        'Vous ne pouvez confirmer que les réservations de vos propres offres',
+        'Vous ne pouvez gérer que les réservations de vos propres prestations',
       );
     }
     if (
       !this.reservationDomain.validateTransition(
         reservation.status,
-        'confirmed',
+        nextStatus,
         'booking',
       )
     ) {
       throw new BadRequestException(
-        'Cette réservation ne peut plus être confirmée',
+        `Cette réservation ne peut pas passer au statut "${nextStatus}"`,
       );
     }
+
+    const itemTitle =
+      offer?.title ?? reservation.guideOffering?.title ?? 'prestation';
+
+    if (nextStatus === 'rejected') {
+      reservation.status = 'rejected';
+      reservation.cancel_reason = dto?.reason ?? null;
+      const saved = (await this.reservationRepo.save(reservation)) as Reservation;
+
+      // Restaurer la capacité réservée (offre ou session guide)
+      await this.restoreReservationCapacity(reservation);
+
+      this.ecoTravelerService
+        .recomputeReservationsScore(reservation.traveler.id)
+        .catch(() => {});
+      this.notificationService
+        .create(
+          reservation.traveler.id,
+          'booking_rejected',
+          'Réservation refusée',
+          `Votre demande de réservation ${saved.reservation_ref} pour "${itemTitle}" a été refusée par le prestataire.${dto?.reason ? ` Motif : ${dto.reason}` : ''}`,
+          `/reservations/${saved.id}`,
+        )
+        .catch(() => {});
+      return saved;
+    }
+
     reservation.status = 'confirmed';
     const saved = (await this.reservationRepo.save(reservation)) as Reservation;
+    this.ecoTravelerService
+      .recomputeReservationsScore(reservation.traveler.id)
+      .catch(() => {});
     this.notificationService
       .create(
         reservation.traveler.id,
         'booking_confirmed',
         'Réservation confirmée',
-        `Votre réservation ${saved.reservation_ref} pour "${offer.title}" a été confirmée par le prestataire.`,
-        `/bookings/${saved.id}`,
+        `Votre réservation ${saved.reservation_ref} pour "${itemTitle}" a été confirmée par le prestataire.`,
+        `/reservations/${saved.id}`,
       )
       .catch(() => {});
     return saved;
@@ -596,12 +650,15 @@ export class ReservationService {
     const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const expired = await this.reservationRepo.find({
       where: { status: 'pending', created_at: LessThan(cutoff) },
-      relations: ['offerItem', 'session', 'participants'],
+      relations: ['offerItem', 'session', 'guideOfferingSession', 'participants'],
     });
     for (const reservation of expired) {
       reservation.status = 'expired';
       await this.reservationRepo.save(reservation);
       await this.restoreReservationCapacity(reservation);
+      this.ecoTravelerService
+        .recomputeReservationsScore(reservation.traveler.id)
+        .catch(() => {});
       this.notificationService
         .create(
           reservation.traveler.id,
@@ -647,6 +704,19 @@ export class ReservationService {
         sessionDate,
         participantCount,
       );
+    }
+    if (reservation.guideOfferingSession?.id) {
+      const session = await this.guideSessionRepo.findOne({
+        where: { id: reservation.guideOfferingSession.id },
+      });
+      if (session && session.remaining_capacity !== null) {
+        const participantCount = reservation.participants?.length ?? 1;
+        session.remaining_capacity += participantCount;
+        if (session.status === 'full') {
+          session.status = 'available';
+        }
+        await this.guideSessionRepo.save(session);
+      }
     }
   }
 
@@ -726,6 +796,8 @@ export class ReservationService {
       if (session.remaining_capacity <= 0) session.status = 'full';
     }
     await this.guideSessionRepo.save(session);
+
+    this.ecoTravelerService.recomputeReservationsScore(travelerId).catch(() => {});
 
     try {
       await this.notificationService.create(

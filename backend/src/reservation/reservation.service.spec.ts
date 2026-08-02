@@ -12,6 +12,7 @@ import { GuideOfferingSession } from '../guide/entities/guide-offering-session.e
 import { NotificationService } from '../notification/notification.service';
 import { CapacityDomainService } from '../domain/capacity-domain.service';
 import { ReservationDomainService } from '../domain/reservation-domain.service';
+import { EcoTravelerService } from '../eco-traveler/eco-traveler.service';
 
 describe('ReservationService', () => {
   let service: ReservationService;
@@ -45,6 +46,11 @@ describe('ReservationService', () => {
     validateTransition: jest.fn().mockReturnValue(true),
   };
 
+  const mockEcoTravelerService = {
+    recomputeReservationsScore: jest.fn(),
+    recomputeFeedbacksScore: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,6 +66,7 @@ describe('ReservationService', () => {
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: CapacityDomainService, useValue: mockCapacityService },
         { provide: ReservationDomainService, useValue: mockReservationDomain },
+        { provide: EcoTravelerService, useValue: mockEcoTravelerService },
       ],
     }).compile();
 
@@ -92,7 +99,14 @@ describe('ReservationService', () => {
       expect(result).toEqual(mockReservations);
       expect(mockRepo.find).toHaveBeenCalledWith({
         where: { traveler: { id: 'user-1' } },
-        relations: ['offer', 'offerItem', 'session', 'participants'],
+        relations: [
+          'offer',
+          'offerItem',
+          'session',
+          'guideOffering',
+          'guideOfferingSession',
+          'participants',
+        ],
         order: { created_at: 'DESC' },
       });
     });

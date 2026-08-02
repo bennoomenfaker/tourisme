@@ -11,6 +11,7 @@ import { GuideOfferingSession } from '../guide/entities/guide-offering-session.e
 import { ReservationService } from './reservation.service';
 import { ReservationController } from './reservation.controller';
 import { NotificationModule } from '../notification/notification.module';
+import { EcoTravelerModule } from '../eco-traveler/eco-traveler.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { NotificationModule } from '../notification/notification.module';
       GuideOfferingSession,
     ]),
     NotificationModule,
+    EcoTravelerModule,
   ],
   providers: [ReservationService],
   controllers: [ReservationController],
