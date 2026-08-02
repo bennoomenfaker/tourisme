@@ -1,6 +1,6 @@
 # 🌍 Éco-Voyage — Plateforme de Tourisme Durable
 
-**Éco-Voyage** est une plateforme web de **tourisme durable** qui connecte voyageurs éco-responsables, guides locaux et propriétaires de projets éco-touristiques. L'objectif : promouvoir un tourisme respectueux de l'environnement via un système de **score de durabilité** et de **badges** gamifiant l'engagement écologique.
+**Éco-Voyage** est une plateforme web de **tourisme durable** qui connecte voyageurs éco-responsables, guides locaux et providers d'établissements éco-touristiques. L'objectif : promouvoir un tourisme respectueux de l'environnement via un système de **score de durabilité** et de **badges** gamifiant l'engagement écologique.
 
 ---
 
@@ -11,7 +11,7 @@
 - **Créer des plans de voyage** (Trip Plans) avec un programme jour par jour
 - **Réserver** des activités, hébergements et circuits en quelques clics
 - **Publier** des lieux et expériences avec photos, likes et commentaires
-- **Messagerie privée** avec guides et propriétaires
+- **Messagerie privée** avec guides et providers
 - **Suivre** ses favoris et recevoir des notifications
 
 ### Pour les Guides Locaux
@@ -20,8 +20,8 @@
 - **Recevoir des réservations** de circuits et plans de voyage
 - **Construire un profil public** avec spécialités, langues, zone de service et tarifs
 
-### Pour les Propriétaires de Projets
-- **Créer et gérer plusieurs projets** éco-touristiques (1 propriétaire → N projets)
+### Pour les Providers
+- **Créer et gérer plusieurs établissements** éco-touristiques (1 provider → N établissements)
 - **Publier des offres** riches (hébergement, restauration, activités, artisanat, transport)
 - **Construire des circuits multi-jours** avec un wizard guidé en 6 étapes
 - **Gérer la tarification** avec pré-remplissage automatique depuis le catalogue
@@ -43,7 +43,7 @@
 |------|-------------|-----------------|
 | **Éco-Voyageur** | Voyageur éco-responsable | Explorer, Réserver, Plans de voyage, Publications |
 | **Guide** | Guide local ou professionnel | Prestations, Réservations, Profil public |
-| **Propriétaire** | Porteur de projet éco-touristique | Projets (1:N), Offres, Circuits, Statistiques |
+| **Provider** | Gère des établissements éco-touristiques | Établissements (1:N), Offres, Circuits, Statistiques |
 | **Admin** | Administrateur plateforme | Modération, Validation, Gestion utilisateurs |
 
 ---
@@ -53,9 +53,9 @@
 ### La chaîne de valeur
 
 ```
-Propriétaire
+Provider
     ↓ détient
-Projet (1:N) — hébergement, restaurant, artisanat, transport...
+Établissement (1:N) — hébergement, restaurant, artisanat, transport...
     ↓ génère
 Offres (conteneurs commerciaux)
     ↓ contiennent
@@ -98,14 +98,14 @@ Circuit
 | Type | Description | Prix |
 |------|-------------|------|
 | **Ma propre offre** | Lien vers une de mes offres sur la plateforme | Pré-rempli depuis mon catalogue |
-| **Offre externe** | Activité d'un autre propriétaire de la plateforme | Prix catalogue du partenaire |
+| **Offre externe** | Activité d'un autre provider de la plateforme | Prix catalogue du partenaire |
 | **Guide local** | Guide avec ou sans offre liée | Coût guide + prix activité |
 | **Référence externe** | Prestataire hors plateforme (hôtel, agence) | Saisie manuelle |
 
 ### Logique de tarification
 
 - **Prix catalogue** = valeur de référence de l'offre (immuable)
-- **Prix circuit** = copie indépendante, modifiable par le propriétaire
+- **Prix circuit** = copie indépendante, modifiable par le provider
 - **Auto-pré-remplissage** : quand une offre est sélectionnée, le prix catalogue pré-remplit le champ
 - **Marge** = prix facturé - coût achat (offre externe / guide)
 
@@ -228,7 +228,7 @@ tourisme/
 │       ├── users/             # Utilisateurs multi-rôles
 │       ├── eco-traveler/      # Profils voyageurs + score durabilité
 │       ├── guide/             # Profils guides + prestations
-│       ├── provider/          # Propriétaires + CRUD projets
+│       ├── provider/          # Providers + CRUD établissements
 │       ├── offer/             # Offres (40+ schemas)
 │       ├── reservation/       # Réservations (offres + guides)
 │       ├── circuit/           # Circuits multi-jours + réservations
