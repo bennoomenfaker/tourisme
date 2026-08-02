@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
   ArrowLeft, Leaf, Calendar, Plus, Trash2, MapPin, Clock,
-  Search, X, Loader2, Check, AlertCircle, Tag, Share2, Edit, ChevronRight,
+  Search, X, Loader2, Check, AlertCircle, Tag, Share2, Edit, ChevronRight, User,
 } from "lucide-react";
 import AppNavbar from "@/components/nav/AppNavbar";
 import BackToDashboard from "@/components/nav/BackToDashboard";
@@ -35,6 +35,18 @@ interface TripPlanItem {
   created_at: string;
   offerItem: OfferItem | null;
   circuit: CircuitBrief | null;
+  guideOffering: GuideOfferingBrief | null;
+  guideOfferingSession: { id: string; date: string; start_time: string | null; end_time: string | null } | null;
+}
+
+interface GuideOfferingBrief {
+  id: string;
+  title: string;
+  price: number | null;
+  currency: string;
+  pricing_unit: string | null;
+  guide_name: string | null;
+  confirmation_mode: string | null;
 }
 
 interface CircuitBrief {
@@ -113,6 +125,8 @@ interface Participant {
 const STATUS_LABELS: Record<string, string> = {
   draft: "Brouillon",
   planning: "En planification",
+  partial: "Partiellement réservé",
+  pending: "En attente de confirmation",
   confirmed: "Confirmé",
   completed: "Terminé",
   cancelled: "Annulé",
@@ -121,10 +135,59 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-slate-100 text-slate-600",
   planning: "bg-blue-100 text-blue-700",
+  partial: "bg-amber-100 text-amber-700",
+  pending: "bg-amber-100 text-amber-700",
   confirmed: "bg-emerald-100 text-emerald-700",
   completed: "bg-green-100 text-green-700",
   cancelled: "bg-red-100 text-red-600",
 };
+
+const PRICING_UNIT_LABELS: Record<string, string> = {
+  per_person: "/pers.",
+  per_person_per_night: "/pers./nuit",
+  per_night: "/nuit",
+  per_room_per_night: "/chambre/nuit",
+  per_bed: "/lit",
+  per_group: "/groupe",
+  per_hour: "/h",
+  per_day: "/jour",
+  per_trip: "/sortie",
+  on_request: "sur demande",
+};
+
+function formatPrice(n: number): string {
+  return n.toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+}
+
+function computeItemTotal(item: TripPlanItem, participantCount: number): number | null {
+  if (item.circuit?.base_price != null) {
+    return Number(item.circuit.base_price) * participantCount;
+  }
+  if (item.guideOffering?.price != null) {
+    return Number(item.guideOffering.price) * participantCount;
+  }
+  if (item.offerItem?.prices?.length) {
+    const p = item.offerItem.prices.find((pp) => pp.is_default) ?? item.offerItem.prices[0];
+    if (p) {
+      const unitPrice = Number(p.price);
+      const pricingUnit = p.pricing_unit ?? "per_person";
+      const nights = item.offerItem.details_json?.nights ?? 1;
+      switch (pricingUnit) {
+        case "per_person_per_night":
+        case "per_night":
+          return unitPrice * participantCount * nights;
+        case "per_room_per_night":
+          return unitPrice * nights;
+        case "per_bed":
+          return unitPrice * (item.offerItem.details_json?.bed_count ?? participantCount) * nights;
+        case "per_person":
+        default:
+          return unitPrice * participantCount;
+      }
+    }
+  }
+  return null;
+}
 
 export default function TripPlanDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -206,6 +269,8 @@ export default function TripPlanDetailPage() {
         if (price) total += Number(price);
       } else if (item.circuit?.base_price) {
         total += Number(item.circuit.base_price);
+      } else if (item.guideOffering?.price) {
+        total += Number(item.guideOffering.price);
       }
     }
     return total;
@@ -397,7 +462,7 @@ export default function TripPlanDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-base">payments</span> Budget estimé
+                        <span className="material-symbols-outlined text-base">payments</span> Budget estimé (1 personne)
                       </p>
                       <p className="text-2xl font-black text-emerald-700 mt-1">{totalBudget.toLocaleString()} <span className="text-sm font-normal text-emerald-500">TND</span></p>
                     </div>
@@ -446,23 +511,32 @@ export default function TripPlanDetailPage() {
                             <div className="ml-[15px] space-y-2 border-l-2 border-dashed border-emerald-200 pl-5 mb-3">
                               {grouped[dayNum].map((item) => {
                                 const img = item.offerItem?.offer?.images?.[0] ?? item.circuit?.cover_image;
+                                const itemName = item.offerItem?.name ?? item.circuit?.title ?? item.guideOffering?.title ?? "Activité";
                                 return (
                                   <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-[22px] relative hover:border-emerald-200 hover:shadow-sm transition-all">
                                     <div className="absolute -left-[9px] top-3 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white" />
                                     <div className="flex items-start gap-3">
                                       {img && <img src={img} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />}
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-slate-800 truncate">{item.offerItem?.name ?? item.circuit?.title ?? "Activité"}</p>
+                                        <p className="text-sm font-semibold text-slate-800 truncate">{itemName}</p>
                                         {item.offerItem?.offer && (
                                           <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{item.offerItem.offer.title}{item.offerItem.offer.region && ` — ${item.offerItem.offer.region}`}</p>
                                         )}
                                         {item.circuit && (
                                           <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{item.circuit.title}{item.circuit.region && ` — ${item.circuit.region}`}</p>
                                         )}
+                                        {item.guideOffering && (
+                                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><User size={10} />Guide — {item.guideOffering.guide_name ?? "Guide local"}{item.guideOfferingSession?.date && ` · ${new Date(item.guideOfferingSession.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}${item.guideOfferingSession.start_time ? ` · ${item.guideOfferingSession.start_time.slice(0, 5)}` : ""}`}</p>
+                                        )}
                                         {item.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{item.notes}</p>}
                                         {(item.offerItem?.prices?.length ?? 0) > 0 && (
                                           <span className="inline-block text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-1">
-                                            {Number(item.offerItem!.prices.find((p) => p.is_default)?.price ?? item.offerItem!.prices[0]?.price ?? 0).toLocaleString()} TND
+                                            {formatPrice(Number(item.offerItem!.prices.find((p) => p.is_default)?.price ?? item.offerItem!.prices[0]?.price ?? 0))} TND{PRICING_UNIT_LABELS[item.offerItem!.prices.find((p) => p.is_default)?.pricing_unit ?? item.offerItem!.prices[0]?.pricing_unit ?? ""] ?? ""}
+                                          </span>
+                                        )}
+                                        {item.guideOffering?.price != null && (
+                                          <span className="inline-block text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full mt-1 ml-1">
+                                            {formatPrice(Number(item.guideOffering.price))} TND{PRICING_UNIT_LABELS[item.guideOffering.pricing_unit ?? ""] ?? ""}
                                           </span>
                                         )}
                                       </div>
@@ -486,7 +560,7 @@ export default function TripPlanDetailPage() {
                               {unassigned.map((item) => (
                                 <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 -ml-[22px] relative">
                                   <div className="absolute -left-[9px] top-3 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white" />
-                                  <p className="text-sm font-semibold text-slate-800">{item.offerItem?.name ?? item.circuit?.title ?? "Activité"}</p>
+                                  <p className="text-sm font-semibold text-slate-800">{item.offerItem?.name ?? item.circuit?.title ?? item.guideOffering?.title ?? "Activité"}</p>
                                   {item.notes && <p className="text-xs text-slate-400 mt-0.5 italic">{item.notes}</p>}
                                 </div>
                               ))}
@@ -507,7 +581,7 @@ export default function TripPlanDetailPage() {
                     items={plan.items
                       .filter((item) => item.lat != null && item.lng != null)
                       .map((item) => ({
-                        label: item.offerItem?.name ?? item.circuit?.title ?? item.notes ?? `Jour ${item.day_number ?? "?"}`,
+                        label: item.offerItem?.name ?? item.circuit?.title ?? item.guideOffering?.title ?? item.notes ?? `Jour ${item.day_number ?? "?"}`,
                         lat: Number(item.lat),
                         lng: Number(item.lng),
                         day_number: item.day_number,
@@ -528,9 +602,10 @@ export default function TripPlanDetailPage() {
                                 {img && <img src={img} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                                    <h4 className="font-semibold text-slate-800 truncate">{item.offerItem?.name ?? item.circuit?.title ?? item.notes ?? "Élément supprimé"}</h4>
+                                    <h4 className="font-semibold text-slate-800 truncate">{item.offerItem?.name ?? item.circuit?.title ?? item.guideOffering?.title ?? item.notes ?? "Élément supprimé"}</h4>
                                     {item.offerItem?.item_type && <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">{item.offerItem.item_type}</span>}
                                     {item.circuit && <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">Circuit{item.circuit.duration_days ? ` (${item.circuit.duration_days}j)` : ""}</span>}
+                                    {item.guideOffering && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Guide</span>}
                                     {item.day_number && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">Jour {item.day_number}</span>}
                                   </div>
                                   {item.offerItem?.offer && (
@@ -538,6 +613,9 @@ export default function TripPlanDetailPage() {
                                   )}
                                   {item.circuit && (
                                     <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin size={10} />{item.circuit.title}{item.circuit.region && ` — ${item.circuit.region}`}</p>
+                                  )}
+                                  {item.guideOffering && (
+                                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><User size={10} />Guide — {item.guideOffering.guide_name ?? "Guide local"}{item.guideOfferingSession?.date && ` · ${new Date(item.guideOfferingSession.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}${item.guideOfferingSession.start_time ? ` · ${item.guideOfferingSession.start_time.slice(0, 5)}` : ""}`}</p>
                                   )}
                                   {(item.offerItem?.details_json?.room_sub_type || item.offerItem?.details_json?.bed_count || item.offerItem?.details_json?.tent_capacity) && (
                                     <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -557,10 +635,19 @@ export default function TripPlanDetailPage() {
                                   {item.notes && (item.offerItem?.name || item.circuit?.title) && <p className="text-xs text-slate-500 mt-1 italic">{item.notes}</p>}
                                   <div className="flex flex-wrap gap-2 mt-2">
                                     {item.offerItem?.prices?.filter((p) => p.is_default || item.offerItem!.prices.length === 1).map((p) => (
-                                      <span key={p.id} className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">{Number(p.price).toLocaleString()} {p.currency}</span>
+                                      <span key={p.id} className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
+                                        {Number(p.price) > 0 ? `${formatPrice(Number(p.price))} ${p.currency}${PRICING_UNIT_LABELS[p.pricing_unit ?? ""] ?? ""}` : "Gratuit / sur demande"}
+                                      </span>
                                     ))}
                                     {item.circuit?.base_price != null && (
-                                      <span className="text-xs bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">{Number(item.circuit.base_price).toLocaleString()} {item.circuit.currency}</span>
+                                      <span className="text-xs bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
+                                        {Number(item.circuit.base_price) > 0 ? `${formatPrice(Number(item.circuit.base_price))} ${item.circuit.currency}/pers.` : "Gratuit / sur demande"}
+                                      </span>
+                                    )}
+                                    {item.guideOffering?.price != null && (
+                                      <span className="text-xs bg-amber-50 text-amber-700 font-semibold px-2 py-0.5 rounded-full">
+                                        {Number(item.guideOffering.price) > 0 ? `${formatPrice(Number(item.guideOffering.price))} ${item.guideOffering.currency}${PRICING_UNIT_LABELS[item.guideOffering.pricing_unit ?? ""] ?? ""}` : "Gratuit / sur demande"}
+                                      </span>
                                     )}
                                     {item.circuit?.duration_days && (
                                       <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{item.circuit.duration_days} jour{item.circuit.duration_days > 1 ? "s" : ""}</span>
@@ -601,7 +688,7 @@ export default function TripPlanDetailPage() {
       {showBook && plan && <BookModal planId={id} plan={plan} onClose={() => setShowBook(false)} onBooked={() => { loadPlan(); setShowBook(false); }} />}
 
       {editingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div role="dialog" aria-modal="true" aria-label="Modifier l'activité" className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-lg p-6 mx-4 max-w-sm w-full">
             <h3 className="font-bold text-slate-800 mb-4">Modifier l&apos;activité</h3>
             <div className="space-y-3">
@@ -636,7 +723,7 @@ export default function TripPlanDetailPage() {
       )}
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div role="dialog" aria-modal="true" aria-label="Supprimer le plan" className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-lg p-6 mx-4 max-w-sm w-full">
             <h3 className="font-bold text-slate-800 mb-2">Supprimer le plan ?</h3>
             <p className="text-sm text-slate-500 mb-4">Cette action est irréversible.</p>
@@ -755,7 +842,7 @@ function AddItemModal({ planId, plan, onClose, onAdded }: { planId: string; plan
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/30 backdrop-blur-sm overflow-y-auto">
+    <div role="dialog" aria-modal="true" aria-label="Ajouter une activité" className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/30 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-lg mx-4 w-full max-w-lg mb-12">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
           <h3 className="font-bold text-slate-800">Ajouter une activité</h3>
@@ -1078,36 +1165,30 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
 
   const itemCount = plan.items?.length ?? 0;
 
+  const succeededCount = Math.max(0, itemCount - (bookingErrors?.length ?? 0));
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   const planCurrency = plan.items?.reduce<string | null>((cur, item) => {
-    return cur ?? item.circuit?.currency ?? item.offerItem?.prices?.[0]?.currency ?? null;
+    return cur ?? item.circuit?.currency ?? item.offerItem?.prices?.[0]?.currency ?? item.guideOffering?.currency ?? null;
   }, null) ?? "TND";
 
   const estimatedTotal = plan.items?.reduce((sum, item) => {
-    if (item.circuit?.base_price) {
-      return sum + Number(item.circuit.base_price) * participants.length;
-    }
-    if (item.offerItem?.prices?.length) {
-      const defaultPrice = item.offerItem.prices.find(p => p.is_default) ?? item.offerItem.prices[0];
-      if (defaultPrice?.price) {
-        const unitPrice = Number(defaultPrice.price);
-        const pricingUnit = defaultPrice.pricing_unit ?? 'per_person';
-        if (pricingUnit === 'per_person' || pricingUnit === 'per_person_per_night') {
-          return sum + unitPrice * participants.length;
-        }
-        return sum + unitPrice;
-      }
-    }
-    if ((item as any).guideOffering?.price) {
-      return sum + Number((item as any).guideOffering.price) * participants.length;
-    }
-    return sum;
+    const total = computeItemTotal(item, participants.length);
+    return total != null ? sum + total : sum;
   }, 0) ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/30 backdrop-blur-sm overflow-y-auto">
+    <div role="dialog" aria-modal="true" aria-labelledby="book-plan-title" className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/30 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-lg mx-4 w-full max-w-md mb-12">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
-          <h3 className="font-bold text-slate-800">Réserver le plan</h3>
+          <h3 id="book-plan-title" className="font-bold text-slate-800">Réserver le plan</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400"><X size={18} /></button>
         </div>
 
@@ -1118,7 +1199,15 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
                 <Check size={28} className="text-primary" />
               </div>
               <h4 className="font-bold text-slate-800 mb-1">Réservation effectuée !</h4>
-              <p className="text-sm text-slate-500 mb-4">{itemCount} réservation{itemCount !== 1 ? "s" : ""} créée{itemCount !== 1 ? "s" : ""}</p>
+              <p className="text-sm text-slate-500 mb-1">
+                {succeededCount} réservation{succeededCount !== 1 ? "s" : ""} créée{succeededCount !== 1 ? "s" : ""}
+                {succeededCount !== itemCount ? ` sur ${itemCount} élément(s)` : ""}.
+              </p>
+              {succeededCount > 0 && (
+                <p className="text-xs text-slate-400 mb-4">
+                  Les demandes soumises à confirmation du prestataire apparaîtront comme « En attente » dans Mes réservations.
+                </p>
+              )}
               {bookingErrors && bookingErrors.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-left">
                   <p className="text-sm font-semibold text-amber-700 mb-2">Certains éléments n'ont pas pu être réservés :</p>
@@ -1168,45 +1257,44 @@ function BookModal({ planId, plan, onClose, onBooked }: { planId: string; plan: 
                 <button onClick={addParticipant} className="text-sm text-primary hover:text-emerald-700 font-medium">+ Ajouter un participant</button>
               </div>
 
-              {estimatedTotal > 0 && (
+              {plan.items && plan.items.length > 0 && (
                 <div className="mb-4 bg-slate-50 rounded-xl p-3">
                   <h4 className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Récapitulatif des prix</h4>
                   <div className="space-y-1">
                     {plan.items?.map((item) => {
-                      let label = "";
-                      let price: number | null = null;
-                      if (item.circuit?.base_price) {
-                        label = item.circuit.title;
-                        price = Number(item.circuit.base_price) * participants.length;
-                      } else if (item.offerItem?.prices?.length) {
-                        const p = item.offerItem.prices.find(p => p.is_default) ?? item.offerItem.prices[0];
-                        label = item.offerItem.name;
-                        if (p?.price) {
-                          const unitPrice = Number(p.price);
-                          const pricingUnit = p.pricing_unit ?? 'per_person';
-                          if (pricingUnit === 'per_person' || pricingUnit === 'per_person_per_night') {
-                            price = unitPrice * participants.length;
-                          } else {
-                            price = unitPrice;
-                          }
+                      const label = item.offerItem?.name ?? item.circuit?.title ?? item.guideOffering?.title ?? "Élément";
+                      const total = computeItemTotal(item, participants.length);
+                      let unitLabel = "";
+                      if (item.offerItem?.prices?.length) {
+                        const p = item.offerItem.prices.find((pp) => pp.is_default) ?? item.offerItem.prices[0];
+                        unitLabel = `${formatPrice(Number(p?.price ?? 0))} ${p?.currency ?? "TND"}${PRICING_UNIT_LABELS[p?.pricing_unit ?? ""] ?? ""}`;
+                        const nights = item.offerItem.details_json?.nights;
+                        if (nights != null && p?.pricing_unit && p.pricing_unit !== "per_person") {
+                          unitLabel += ` × ${nights} nuit${nights > 1 ? "s" : ""}`;
                         }
-                      } else if ((item as any).guideOffering?.price) {
-                        label = (item as any).guideOffering.title;
-                        price = Number((item as any).guideOffering.price) * participants.length;
+                        if (p?.pricing_unit === "per_bed" && item.offerItem.details_json?.bed_count != null) {
+                          unitLabel += ` × ${item.offerItem.details_json.bed_count} lit${item.offerItem.details_json.bed_count > 1 ? "s" : ""}`;
+                        }
+                      } else if (item.circuit?.base_price != null) {
+                        unitLabel = `${formatPrice(Number(item.circuit.base_price))} ${item.circuit.currency}/pers.`;
+                      } else if (item.guideOffering?.price != null) {
+                        unitLabel = `${formatPrice(Number(item.guideOffering.price))} ${item.guideOffering.currency}${PRICING_UNIT_LABELS[item.guideOffering.pricing_unit ?? ""] ?? ""}`;
                       }
-                      if (!price) return null;
                       return (
                         <div key={item.id} className="flex justify-between text-xs text-slate-500">
-                          <span className="truncate mr-2">{label}</span>
-                          <span className="font-medium shrink-0">{price.toLocaleString()} {planCurrency}</span>
+                          <span className="truncate mr-2">{label}{unitLabel && <span className="text-slate-400"> · {unitLabel}</span>}</span>
+                          <span className="font-medium shrink-0">
+                            {total != null && total > 0 ? `${formatPrice(total)} ${planCurrency}` : "Gratuit / sur demande"}
+                          </span>
                         </div>
                       );
                     })}
                   </div>
                   <div className="flex justify-between text-sm font-bold text-slate-800 pt-2 mt-2 border-t border-slate-200">
                     <span>Total estimé</span>
-                    <span className="text-primary">{estimatedTotal.toLocaleString()} {planCurrency}</span>
+                    <span className="text-primary">{formatPrice(estimatedTotal)} {planCurrency}</span>
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Estimation hors confirmation du prestataire. Les prix par nuit/lit tiennent compte de la durée de l'offre.</p>
                 </div>
               )}
 

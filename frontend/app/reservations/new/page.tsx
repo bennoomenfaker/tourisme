@@ -150,7 +150,7 @@ function NewReservationPage() {
         setBookingRef(result.reservation_ref ?? null);
         setTotalPrice(Number(result.final_total ?? result.base_total ?? 0));
       } else {
-        const result = await apiFetch<any>("/bookings", {
+        const result = await apiFetch<any>("/reservations", {
           method: "POST",
           body: JSON.stringify({
             offer_id: offerId,
@@ -199,7 +199,9 @@ function NewReservationPage() {
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check size={32} className="text-primary" />
           </div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Réservation confirmée !</h2>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">
+            {offer?.confirmation_mode === "manual" ? "Demande envoyée !" : "Réservation confirmée !"}
+          </h2>
           <p className="text-slate-500 text-sm mb-4">
             {offer?.confirmation_mode === "manual"
               ? "Votre demande a été envoyée. Le prestataire va la confirmer sous peu."
