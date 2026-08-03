@@ -4,9 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { apiFetch } from "@/lib/api";
-import { Plus, Trash2, Edit, MapPin, DollarSign, Users, Globe, Compass, X, Check, Loader2, Calendar, Clock, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
-import AppNavbar from "@/components/nav/AppNavbar";
-import Modal from "@/components/ui/Modal";
+import { Plus, Trash2, Edit, MapPin, DollarSign, Users, Globe, Compass, X, Loader2, Calendar, Clock, Sparkles } from "lucide-react";
 
 const MapPicker = dynamic(() => import("@/components/map/MapPicker"), {
   ssr: false,
@@ -366,7 +364,7 @@ function SessionPanel({ token, offeringId }: { token: string; offeringId: string
   );
 }
 
-export default function GuideOfferingsPage() {
+export default function GuideOfferingsManager() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [offerings, setOfferings] = useState<GuideOffering[]>([]);
@@ -410,99 +408,96 @@ export default function GuideOfferingsPage() {
     setShowForm(true);
   }
 
-  function handleFormSuccess(offering: GuideOffering) {
+  function handleFormSuccess() {
     setShowForm(false);
     setEditingOffering(undefined);
     loadOfferings();
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
-      <AppNavbar title="Mes prestations de guide" />
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold text-slate-800">Mes prestations</h1>
-          <div className="flex items-center gap-2">
-            {myId && (
-              <button onClick={() => router.push(`/profile/guide/${myId}`)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-primary/30 text-primary font-semibold text-sm hover:bg-primary/5 transition-colors">
-                <Compass size={16} /> Voir profil public
-              </button>
-            )}
-            <button onClick={() => { setEditingOffering(undefined); setShowForm(true); }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 transition-colors">
-              <Plus size={16} /> Nouvelle prestation
+    <div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-xl font-bold text-slate-800">Mes prestations</h1>
+        <div className="flex items-center gap-2">
+          {myId && (
+            <button onClick={() => router.push(`/profile/guide/${myId}`)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-primary/30 text-primary font-semibold text-sm hover:bg-primary/5 transition-colors">
+              <Compass size={16} /> Voir profil public
             </button>
-          </div>
+          )}
+          <button onClick={() => { setEditingOffering(undefined); setShowForm(true); }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-emerald-600 transition-colors">
+            <Plus size={16} /> Nouvelle prestation
+          </button>
         </div>
+      </div>
 
-        {loading ? (
-          <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-primary" /></div>
-        ) : offerings.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
-            <Compass size={48} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">Aucune prestation pour le moment</p>
-            <p className="text-xs text-slate-400 mt-1">Créez votre première prestation de guide</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {offerings.map((o) => (
-              <div key={o.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-slate-800">{o.title}</h3>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${o.status === "active" ? "bg-emerald-100 text-emerald-700" : o.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
-                          {o.status === "active" ? "Active" : o.status === "rejected" ? "Refusée" : "En attente"}
-                        </span>
-                      </div>
-                      {o.description && <p className="text-sm text-slate-500 mb-3 line-clamp-2">{o.description}</p>}
-                      <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                        <span className="flex items-center gap-1"><DollarSign size={12} /> {Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
-                        {o.min_travelers && <span className="flex items-center gap-1"><Users size={12} /> {o.min_travelers}-{o.max_travelers ?? "∞"} pers.</span>}
-                        {o.languages && o.languages.length > 0 && <span className="flex items-center gap-1"><Globe size={12} /> {o.languages.join(", ")}</span>}
-                        <span className="flex items-center gap-1">
-                          <MapPin size={12} />
-                          {o.service_zone_type === "point" && "Point fixe"}
-                          {o.service_zone_type === "radius" && `Rayon ${o.radius_km ?? "?"} km`}
-                          {o.service_zone_type === "governorate" && `Gouvernorat ${o.zone_governorate ?? ""}`}
-                          {o.service_zone_type === "municipality" && `${o.zone_municipality ?? ""}, ${o.zone_governorate ?? ""}`}
-                        </span>
-                        {o.displacement_allowed && <span className="text-emerald-600">Déplacement possible ({o.displacement_max_km ?? "?"} km)</span>}
-                      </div>
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-primary" /></div>
+      ) : offerings.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+          <Compass size={48} className="text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500 font-medium">Aucune prestation pour le moment</p>
+          <p className="text-xs text-slate-400 mt-1">Créez votre première prestation de guide</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {offerings.map((o) => (
+            <div key={o.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-slate-800">{o.title}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${o.status === "active" ? "bg-emerald-100 text-emerald-700" : o.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>
+                        {o.status === "active" ? "Active" : o.status === "rejected" ? "Refusée" : "En attente"}
+                      </span>
                     </div>
-                    <div className="flex gap-2 shrink-0">
-                      <button onClick={() => setExpandedSessions((prev) => { const next = new Set(prev); if (next.has(o.id)) next.delete(o.id); else next.add(o.id); return next; })}
-                        className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-colors">
-                        <Calendar size={14} />
-                      </button>
-                      <button onClick={() => handleEdit(o)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors">
-                        <Edit size={14} />
-                      </button>
-                      <button onClick={() => handleDelete(o.id)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
+                    {o.description && <p className="text-sm text-slate-500 mb-3 line-clamp-2">{o.description}</p>}
+                    <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                      <span className="flex items-center gap-1"><DollarSign size={12} /> {Number(o.price).toLocaleString()} TND/{o.pricing_unit}</span>
+                      {o.min_travelers && <span className="flex items-center gap-1"><Users size={12} /> {o.min_travelers}-{o.max_travelers ?? "∞"} pers.</span>}
+                      {o.languages && o.languages.length > 0 && <span className="flex items-center gap-1"><Globe size={12} /> {o.languages.join(", ")}</span>}
+                      <span className="flex items-center gap-1">
+                        <MapPin size={12} />
+                        {o.service_zone_type === "point" && "Point fixe"}
+                        {o.service_zone_type === "radius" && `Rayon ${o.radius_km ?? "?"} km`}
+                        {o.service_zone_type === "governorate" && `Gouvernorat ${o.zone_governorate ?? ""}`}
+                        {o.service_zone_type === "municipality" && `${o.zone_municipality ?? ""}, ${o.zone_governorate ?? ""}`}
+                      </span>
+                      {o.displacement_allowed && <span className="text-emerald-600">Déplacement possible ({o.displacement_max_km ?? "?"} km)</span>}
                     </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => setExpandedSessions((prev) => { const next = new Set(prev); if (next.has(o.id)) next.delete(o.id); else next.add(o.id); return next; })}
+                      className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-colors">
+                      <Calendar size={14} />
+                    </button>
+                    <button onClick={() => handleEdit(o)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors">
+                      <Edit size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(o.id)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
-                {expandedSessions.has(o.id) && (
-                  <div className="px-5 pb-5">
-                    <SessionPanel token={token!} offeringId={o.id} />
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              {expandedSessions.has(o.id) && (
+                <div className="px-5 pb-5">
+                  <SessionPanel token={token!} offeringId={o.id} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {showForm && (
         <OfferingForm
           token={token!}
           offering={editingOffering}
           onClose={() => { setShowForm(false); setEditingOffering(undefined); }}
-          onSuccess={handleFormSuccess}
+          onSuccess={() => handleFormSuccess()}
         />
       )}
     </div>

@@ -7,7 +7,7 @@ import {
   Plus, Edit3, ShieldCheck, MapPin, Calendar, Leaf, ArrowLeft,
   LayoutGrid, Tag, Users, Info, Sparkles, ArrowRight, Send, X, Search, UserPlus,
   Clock, ChevronLeft, ChevronRight, Check, Globe, Star, BookOpen,
-  MoreVertical, UserX, ShieldBan, Flag, BarChart3, Route, Handshake, CalendarDays,
+  MoreVertical, UserX, ShieldBan, Flag, BarChart3, Handshake, CalendarDays,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import MessagerieWidget from "@/components/MessagerieWidget";
@@ -75,16 +75,6 @@ type Offer = {
   min_age: number | null; cancellation_policy: string | null;
   sustainability_score: number | null;
   images?: string[] | null; cover_image?: string | null;
-};
-
-type Circuit = {
-  id: string; title: string; description: string | null;
-  base_price: number | null; currency: string;
-  duration_days: number | null; duration_nights: number | null;
-  region: string | null; status: string; created_at: string;
-  difficulty_level: string | null;
-  images?: string[] | null; cover_image?: string | null;
-  max_participants: number | null;
 };
 
 type GuideOffering = {
@@ -211,7 +201,7 @@ const LANGUAGES_LIST = [
   { value: "de", label: "Allemand" }, { value: "it", label: "Italien" },
 ];
 
-type Tab = "tout" | "offres" | "circuits" | "statistiques" | "reseau" | "collaborations" | "agenda" | "apropos";
+type Tab = "tout" | "offres" | "statistiques" | "reseau" | "collaborations" | "agenda" | "apropos";
 
 // ─── Botanical SVG Cover ──────────────────────────────────────────────────────
 
@@ -248,7 +238,6 @@ export default function GuideProfilePage() {
 
   const [profile,   setProfile]   = useState<GuideProfile | null>(null);
   const [offers,    setOffers]    = useState<Offer[]>([]);
-  const [circuits,  setCircuits]  = useState<Circuit[]>([]);
   const [guideOfferings, setGuideOfferings] = useState<GuideOffering[]>([]);
   const [token,     setToken]     = useState("");
   const [loading,   setLoading]   = useState(true);
@@ -320,10 +309,9 @@ export default function GuideProfilePage() {
       if (!tkn) { router.push("/auth/login"); return; }
       setToken(tkn);
       try {
-        const [p, myOffers, myCircuits] = await Promise.all([
+        const [p, myOffers] = await Promise.all([
           apiFetch<GuideProfile>("/guide/profile", { headers: { Authorization: `Bearer ${tkn}` } }),
           apiFetch<Offer[]>("/offers/mine", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => [] as Offer[]),
-          apiFetch<Circuit[]>("/circuits/mine", { headers: { Authorization: `Bearer ${tkn}` } }).catch(() => [] as Circuit[]),
         ]);
         setProfile(p);
         apiFetch<GuideOffering[]>("/guide-offerings/mine", { headers: { Authorization: `Bearer ${tkn}` } }).then((g) => setGuideOfferings(g)).catch(() => {});
@@ -332,7 +320,6 @@ export default function GuideProfilePage() {
           return { ...o, images: validImages?.length ? validImages : null, cover_image: o.cover_image ?? validImages?.[0] ?? null };
         });
         setOffers(offersWithCover);
-        setCircuits(myCircuits);
         // Fetch structured certifications from API
         apiFetch<any[]>(`/certifications/user/${p.user_id}`).then((c) => setStructuredCerts(c)).catch(() => {});
         // Load network in background
@@ -830,7 +817,7 @@ export default function GuideProfilePage() {
               <p className="text-[11px] font-bold text-slate-400">
                 {new Date(offering.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
               </p>
-              <a href="/dashboard/guide-offerings"
+              <a href="/dashboard#Mes Prestations"
                 className="text-primary hover:text-primary/80 font-extrabold text-xs inline-flex items-center gap-1 hover:translate-x-1 transition-transform duration-200">
                 <span>Gérer</span><ArrowRight size={14} strokeWidth={2.5} />
               </a>
@@ -1745,7 +1732,7 @@ export default function GuideProfilePage() {
                 </div>
               </div>
               <div className="mt-6 md:mt-0 flex flex-row flex-wrap justify-center sm:justify-end gap-3 self-center md:self-end">
-                <a href="/dashboard/guide-offerings"
+                <a href="/dashboard#Mes Prestations"
                   className="bg-primary hover:bg-primary/90 active:scale-95 text-white font-bold px-5 py-3 rounded-2xl inline-flex items-center gap-2 hover:shadow-lg transition-all shadow-sm text-sm">
                   <Plus size={18} strokeWidth={2.5} /><span>Gérer mes prestations</span>
                 </a>
@@ -1860,7 +1847,6 @@ export default function GuideProfilePage() {
               {[
                 { key: "tout",    label: "Tout",     Icon: LayoutGrid },
                 { key: "offres",  label: "Offres",   Icon: Tag },
-                { key: "circuits", label: "Circuits", Icon: Route },
                 { key: "statistiques", label: "Statistiques", Icon: BarChart3 },
                 { key: "reseau",  label: "Réseau",   Icon: Users },
                 { key: "collaborations", label: "Collabs", Icon: Handshake },
@@ -1887,7 +1873,7 @@ export default function GuideProfilePage() {
                     </div>
                     <p className="text-slate-800 font-extrabold text-base mb-1">Aucune offre publiée</p>
                     <p className="text-slate-400 text-sm mb-5">Créez vos prestations de guide.</p>
-                    <a href="/dashboard/guide-offerings"
+                    <a href="/dashboard#Mes Prestations"
                       className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-2xl text-sm font-bold hover:bg-primary/90 shadow-sm">
                       <Plus size={16} />Créer une prestation
                     </a>
@@ -1898,38 +1884,6 @@ export default function GuideProfilePage() {
                     {offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
                   </>
                 )}
-
-                {circuits.length > 0 && (
-                  <div className="space-y-3 mt-8">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5">
-                        <Route size={12} className="text-primary" /><span>Circuits</span>
-                      </h3>
-                      <span className="text-[10px] font-bold text-slate-400">{circuits.length} circuit{circuits.length > 1 ? "s" : ""}</span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {circuits.slice(0, 4).map((c) => (
-                        <a key={c.id} href={`/circuits/${c.id}`} className="block bg-white rounded-2xl border border-slate-100/90 shadow-sm p-4 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h4 className="font-bold text-slate-800 text-sm truncate">{c.title}</h4>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${c.status === "approved" ? "bg-emerald-100 text-emerald-700" : c.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                              {c.status === "approved" ? "Approuvé" : c.status === "pending" ? "En attente" : "Rejeté"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
-                            {c.difficulty_level && (
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${c.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : c.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : c.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
-                                {c.difficulty_level === "easy" ? "🟢 Facile" : c.difficulty_level === "moderate" ? "🟡 Modéré" : c.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
-                              </span>
-                            )}
-                            {c.duration_days && <span><Calendar size={11} className="inline mr-0.5" />{c.duration_days}j</span>}
-                            <span className="font-bold text-primary">{Number(c.base_price ?? 0).toLocaleString()} TND</span>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1938,7 +1892,7 @@ export default function GuideProfilePage() {
               <div className="space-y-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-extrabold text-slate-800">Offres disponibles ({offers.length + guideOfferings.length})</h3>
-                  <a href="/dashboard/guide-offerings" className="text-primary hover:text-primary/80 text-xs font-extrabold flex items-center gap-1">+ Gérer mes prestations</a>
+                  <a href="/dashboard#Mes Prestations" className="text-primary hover:text-primary/80 text-xs font-extrabold flex items-center gap-1">+ Gérer mes prestations</a>
                 </div>
                 {offers.length === 0 && guideOfferings.length === 0 ? (
                   <div className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-12 text-center">
@@ -1950,52 +1904,6 @@ export default function GuideProfilePage() {
                     {guideOfferings.map((g) => <GuideOfferingCard key={g.id} offering={g} />)}
                     {offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
                   </>
-                )}
-              </div>
-            )}
-
-            {/* TAB: CIRCUITS */}
-            {activeTab === "circuits" && (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-extrabold text-slate-800">Mes circuits ({circuits.length})</h3>
-                  <a href="/dashboard?tab=circuits" className="text-primary hover:text-primary/80 text-xs font-extrabold flex items-center gap-1">+ Créer un circuit</a>
-                </div>
-                {circuits.length === 0 ? (
-                  <div className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-12 text-center">
-                    <p className="text-slate-800 font-extrabold text-base">Aucun circuit pour l'instant</p>
-                    <p className="text-slate-400 text-sm mt-1">Créez votre premier itinéraire éco-responsable.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {circuits.map((c) => (
-                      <div key={c.id} className="bg-white rounded-3xl border border-slate-100/90 shadow-sm p-5 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-extrabold text-slate-800 text-sm truncate">{c.title}</h4>
-                            {c.region && <span className="inline-block mt-0.5 text-[10px] font-bold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{c.region}</span>}
-                          </div>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.status === "approved" ? "bg-emerald-100 text-emerald-700" : c.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                            {c.status === "approved" ? "Approuvé" : c.status === "pending" ? "En attente" : "Rejeté"}
-                          </span>
-                        </div>
-                        {c.description && <p className="text-xs text-slate-400 line-clamp-2 mb-3">{c.description}</p>}
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
-                          {c.difficulty_level && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${c.difficulty_level === "easy" ? "bg-emerald-100 text-emerald-700" : c.difficulty_level === "moderate" ? "bg-amber-100 text-amber-700" : c.difficulty_level === "hard" ? "bg-red-100 text-red-700" : "bg-slate-800 text-white"}`}>
-                              {c.difficulty_level === "easy" ? "🟢 Facile" : c.difficulty_level === "moderate" ? "🟡 Modéré" : c.difficulty_level === "hard" ? "🔴 Difficile" : "⚫ Expert"}
-                            </span>
-                          )}
-                          {c.duration_days && <span className="flex items-center gap-1"><Calendar size={12} />{c.duration_days} jour{c.duration_days > 1 ? "s" : ""}</span>}
-                          <span className="font-bold text-primary text-sm">{Number(c.base_price ?? 0).toLocaleString()} {c.currency || "TND"}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <a href={`/circuits/${c.id}`} className="flex-1 text-center text-xs font-bold text-primary border border-emerald-200 rounded-xl px-3 py-2 hover:bg-emerald-50">Détails</a>
-                          <a href={`/dashboard?tab=circuits`} className="flex-1 text-center text-xs font-bold text-blue-600 border border-blue-200 rounded-xl px-3 py-2 hover:bg-blue-50">Modifier</a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 )}
               </div>
             )}

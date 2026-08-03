@@ -28,25 +28,20 @@ export class CircuitController {
   constructor(private readonly service: CircuitService) {}
 
   /**
-   * Crée un nouveau circuit (guide ou project owner)
+   * Crée un nouveau circuit (prestataire uniquement — le guide ne crée pas de circuits)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Post()
   async create(@Req() req: any, @Body() dto: CreateCircuitDto) {
-    const isGuide = req.user.role === Role.GUIDE;
-    return this.service.create(
-      req.user.sub,
-      isGuide ? 'guide' : 'provider',
-      dto,
-    );
+    return this.service.create(req.user.sub, 'provider', dto);
   }
 
   /**
    * Circuits de l'auteur connecté (DOIT être avant :id)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Get('mine')
   findMine(@Req() req: any) {
     return this.service.findByAuthor(req.user.sub);
@@ -82,7 +77,7 @@ export class CircuitController {
    * Modifie un circuit (auteur uniquement)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Patch(':id')
   async update(
     @Req() req: any,
@@ -111,7 +106,7 @@ export class CircuitController {
    * Soumet un circuit pour validation admin (draft → pending)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Patch(':id/submit')
   async submitForReview(@Req() req: any, @Param('id') id: string) {
     return this.service.submitForReview(id, req.user.sub);
@@ -121,7 +116,7 @@ export class CircuitController {
    * Supprime un circuit (auteur uniquement)
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Delete(':id')
   async remove(@Req() req: any, @Param('id') id: string) {
     await this.service.remove(id, req.user.sub);
@@ -132,7 +127,7 @@ export class CircuitController {
    * Ajoute un jour au circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Post(':circuitId/days')
   addDay(
     @Req() req: any,
@@ -146,7 +141,7 @@ export class CircuitController {
    * Modifie un jour du circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Patch(':circuitId/days/:dayId')
   updateDay(
     @Req() req: any,
@@ -161,7 +156,7 @@ export class CircuitController {
    * Supprime un jour du circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Delete(':circuitId/days/:dayId')
   removeDay(
     @Req() req: any,
@@ -175,7 +170,7 @@ export class CircuitController {
    * Ajoute une option au circuit
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Post(':circuitId/options')
   addOption(
     @Req() req: any,
@@ -198,7 +193,7 @@ export class CircuitController {
    * Ajoute un programme à un jour
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Post(':circuitId/days/:dayId/program')
   addProgramItem(
     @Req() req: any,
@@ -212,7 +207,7 @@ export class CircuitController {
    * Modifie une activité du programme
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Patch(':circuitId/days/:dayId/program/:itemId')
   updateProgramItem(
     @Req() req: any,
@@ -226,7 +221,7 @@ export class CircuitController {
    * Supprime une activité du programme
    */
   @ApiBearerAuth('bearer')
-  @Roles(Role.GUIDE, Role.PROVIDER)
+  @Roles(Role.PROVIDER)
   @Delete(':circuitId/days/:dayId/program/:itemId')
   removeProgramItem(@Req() req: any, @Param('itemId') itemId: string) {
     return this.service.removeProgramItem(itemId, req.user.sub);

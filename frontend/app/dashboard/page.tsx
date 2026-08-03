@@ -9,6 +9,7 @@ import GuidedOfferWizard from "@/components/GuidedOfferWizard";
 import CircuitBuilderWizard from "@/components/CircuitBuilderWizard";
 import ImageUploader from "@/components/ImageUploader";
 import CertificationUploader from "@/components/CertificationUploader";
+import GuideOfferingsManager from "@/components/collaboration/GuideOfferingsManager";
 import Modal from "@/components/ui/Modal";
 
 const MapPicker = dynamic(
@@ -1974,6 +1975,7 @@ export default function DashboardPage() {
   const [editingVenue, setEditingVenue] = useState<any>(null);
   const [dashConvos, setDashConvos] = useState<DashConv[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [incomingCount, setIncomingCount] = useState(0);
   const [offerTypeFilter, setOfferTypeFilter] = useState("");
 
   useEffect(() => {
@@ -2016,9 +2018,15 @@ export default function DashboardPage() {
           } catch {}
         } else {
           try {
-            const myOffers = await apiFetch<Offer[]>("/offers/mine", { headers: { Authorization: `Bearer ${tkn}` } });
+            const offersPath = userRole === "guide" ? "/guide-offerings/mine" : "/offers/mine";
+            const myOffers = await apiFetch<Offer[]>(offersPath, { headers: { Authorization: `Bearer ${tkn}` } });
             setOffers(myOffers);
           } catch {}
+          if (userRole === "guide") {
+            apiFetch<any[]>("/reservations/incoming", { headers: { Authorization: `Bearer ${tkn}` } })
+              .then((r) => setIncomingCount(Array.isArray(r) ? r.length : 0))
+              .catch(() => {});
+          }
         }
       } catch {
         router.push("/auth/login");
@@ -2139,7 +2147,6 @@ export default function DashboardPage() {
         { label: "Mes Prestations", icon: "badge" },
         { label: "Certifications", icon: "school" },
         { label: "Réservations", icon: "event_available" },
-        { label: "Circuits", icon: "route" },
         { label: "Notifications", icon: "notifications" },
         { label: "Paramètres", icon: "settings" },
       ]
@@ -2256,7 +2263,7 @@ export default function DashboardPage() {
             </div>
             <nav className="flex-1 space-y-0.5">
               {navItems.map((item) => (
-                <button key={item.label} onClick={() => { setActiveItem(item.label); setSidebarOpen(false); if (item.label === "Mes Prestations") router.push("/dashboard/guide-offerings"); }}
+                <button key={item.label} onClick={() => { setActiveItem(item.label); setSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${
                     activeItem === item.label
                       ? "bg-emerald-50 text-emerald-700 font-bold"
@@ -2323,7 +2330,7 @@ export default function DashboardPage() {
             </div>
             <nav className="flex-1 space-y-0.5">
               {navItems.map((item) => (
-                <button key={item.label} onClick={() => { setActiveItem(item.label); if (item.label === "Mes Prestations") router.push("/dashboard/guide-offerings"); }}
+                <button key={item.label} onClick={() => { setActiveItem(item.label); }}
                   title={!sidebarHovered ? item.label : undefined}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${
                     activeItem === item.label
@@ -2577,7 +2584,7 @@ export default function DashboardPage() {
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Réservations</p>
-                            <h3 className="text-2xl font-extrabold mt-1">{profile.reservations_handled ?? 0}</h3>
+                            <h3 className="text-2xl font-extrabold mt-1">{incomingCount > 0 ? incomingCount : (profile.reservations_handled ?? 0)}</h3>
                           </div>
                           <div className="bg-blue-50 p-2 rounded-lg text-blue-500"><span className="material-symbols-outlined text-xl">event_available</span></div>
                         </div>
@@ -2913,13 +2920,7 @@ export default function DashboardPage() {
             )}
 
             {role === "guide" && activeItem === "Mes Prestations" && (
-              <div>
-                <button onClick={() => router.push("/dashboard/guide-offerings")}
-                  className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined text-base">open_in_new</span>
-                  Gérer mes prestations de guide
-                </button>
-              </div>
+              <GuideOfferingsManager />
             )}
 
             {role === "provider" && activeItem === "Mes Offres" && (
